@@ -215,7 +215,7 @@ export const extractPdfText = async (blob: Blob) => {
       );
     }),
   );
-  await document.destroy();
+  await document.loadingTask.destroy();
   return {
     pageCount: pages.length,
     pages,

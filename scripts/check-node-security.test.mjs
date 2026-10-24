@@ -22,6 +22,26 @@ test('CLI checks the actual process version and exits safely', () => {
   assert.equal(result.stdout.trim(), `[node-security-build] ${process.version}`);
 });
 
+test('runtime evidence is checked independently from the local build version', () => {
+  for (const [version, expectedStatus] of [['v24.21.0', 1], ['v24.22.1', 0],
+    ['v24.22.1-rc.1', 1], ['v26.12.1', 1], ['24.x', 1]]) {
+    const result = spawnSync(process.execPath,
+      ['scripts/check-node-security.mjs', '--runtime-version', version], { encoding: 'utf8' });
+    assert.equal(result.status, expectedStatus, version);
+    assert.match(result.stdout, /\[node-security-runtime-check\]/);
+    assert.ok(!result.stdout.includes('[node-security-build]'));
+    if (expectedStatus === 1) assert.match(result.stderr, /Runtime não validado/);
+  }
+});
+
+test('runtime CLI rejects missing or unknown arguments', () => {
+  for (const args of [['--runtime-version'], ['--skip'], ['--runtime-version', 'v24.22.1', '--extra']]) {
+    const result = spawnSync(process.execPath, ['scripts/check-node-security.mjs', ...args], { encoding: 'utf8' });
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /Uso:/);
+  }
+});
+
 test('build gate precedes existing build pipeline', async () => {
   const pkg = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
   assert.equal(pkg.engines.node, '24.x');

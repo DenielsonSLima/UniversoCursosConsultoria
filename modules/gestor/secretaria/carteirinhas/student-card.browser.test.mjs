@@ -153,7 +153,7 @@ async function inspectPdf(bytes,name) {
         paths:operators.fnArray.filter(op=>op===OPS.constructPath).length,
       });
     }
-  } finally { await document.destroy(); }
+  } finally { await document.loadingTask.destroy(); }
   await writeFile(resolve(output,name+'.json'),JSON.stringify(evidence,null,2));
   return evidence;
 }

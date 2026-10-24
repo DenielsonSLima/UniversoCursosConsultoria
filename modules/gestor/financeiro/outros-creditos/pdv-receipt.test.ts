@@ -54,7 +54,7 @@ test('cupom imprime documento identificado e matrícula canônica somente quando
         else assert.doesNotMatch(text, /Matrícula:/);
         assert.ok(text.includes(receipt.totalDisplay));
         assert.equal(JSON.stringify(receipt), snapshot);
-      } finally { await pdf.destroy(); }
+      } finally { await pdf.loadingTask.destroy(); }
     }
   }
 });

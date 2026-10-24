@@ -1,5 +1,5 @@
 # Lote ativo
 
-Lote 2026-10-22-node-security: EM_VALIDACAO. Versão 4.8.232/revisão 241. Piso Node 24.22.1 no build e evidência privada do runtime; nenhuma mudança de dados ou credenciais. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-10-22-node-security.md` (10 arquivos). Produção depende de Preview válida e confirmação do runtime.
+Lote 2026-10-23-seguranca-autorizacao-dependencias: EM_VALIDACAO, PR 327. Versão candidata 4.8.233/revisão 242. Correção autorizada nesta conversa da consulta financeira sem identidade, escopo por polo, dependências vulneráveis e validação separada do runtime Node. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-10-23-seguranca-autorizacao-dependencias.md`. Nenhuma migration ou publicação em produção realizada nesta etapa; Preview inicial ainda executa Node 24.21.0.
 
-Entrega anterior: 4.8.231, conferência paginada da composição dos recebimentos. Registro: `ai/operacao/registros/alteracoes/2026-10-21-caixa-composicao-conferencia.md`. Histórico preservado.
+Entrega remota anterior: 4.8.232 / PR 326, gate do build Node 24.22.1 e observação privada do runtime. A cópia local anterior continha referências até 4.8.230; demais alterações paralelas permanecem preservadas.

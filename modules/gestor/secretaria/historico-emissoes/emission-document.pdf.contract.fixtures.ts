@@ -16,7 +16,7 @@ export const extractPdfText = async (blob: Blob) => {
     const content = await page.getTextContent();
     pages.push(content.items.map((item) => ('str' in item ? item.str : '')).join('\n'));
   }
-  await document.destroy();
+  await document.loadingTask.destroy();
   return pages.join('\n\f\n');
 };
 export const REAL_DOCUMENTS_GRID = `

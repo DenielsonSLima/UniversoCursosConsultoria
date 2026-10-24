@@ -4,24 +4,24 @@
     "jsr:@std/assert@*": "1.0.19",
     "jsr:@std/internal@^1.0.12": "1.0.14",
     "npm:@babel/core@^7.29.7": "7.29.7",
-    "npm:@capacitor-firebase/messaging@^8.3.0": "8.3.0_@capacitor+core@8.5.0_firebase@12.17.0",
-    "npm:@capacitor/android@^8.5.0": "8.5.0_@capacitor+core@8.5.0",
-    "npm:@capacitor/app@^8.1.1": "8.1.1_@capacitor+core@8.5.0",
-    "npm:@capacitor/browser@^8.0.4": "8.0.4_@capacitor+core@8.5.0",
-    "npm:@capacitor/cli@^8.5.0": "8.5.0",
-    "npm:@capacitor/core@^8.5.0": "8.5.0",
-    "npm:@capacitor/device@^8.0.3": "8.0.3_@capacitor+core@8.5.0",
-    "npm:@capacitor/ios@^8.5.0": "8.5.0_@capacitor+core@8.5.0",
-    "npm:@capacitor/preferences@^8.0.1": "8.0.1_@capacitor+core@8.5.0",
+    "npm:@capacitor-firebase/messaging@^8.3.0": "8.3.0_@capacitor+core@8.5.1_firebase@12.17.0",
+    "npm:@capacitor/android@8.5.1": "8.5.1_@capacitor+core@8.5.1",
+    "npm:@capacitor/app@^8.1.1": "8.1.1_@capacitor+core@8.5.1",
+    "npm:@capacitor/browser@^8.0.4": "8.0.4_@capacitor+core@8.5.1",
+    "npm:@capacitor/cli@8.5.1": "8.5.1",
+    "npm:@capacitor/core@8.5.1": "8.5.1",
+    "npm:@capacitor/device@^8.0.3": "8.0.3_@capacitor+core@8.5.1",
+    "npm:@capacitor/ios@8.5.1": "8.5.1_@capacitor+core@8.5.1",
+    "npm:@capacitor/preferences@^8.0.1": "8.0.1_@capacitor+core@8.5.1",
     "npm:@eslint/js@^10.0.1": "10.0.1_eslint@10.8.0",
     "npm:@supabase/supabase-js@^2.95.3": "2.112.0",
     "npm:@tanstack/react-query@^5.101.0": "5.101.4_react@19.2.7",
     "npm:@types/node@^22.14.0": "22.20.1",
     "npm:@types/qrcode@^1.5.5": "1.5.6",
     "npm:@typescript-eslint/parser@^8.59.4": "8.66.0_eslint@10.8.0_typescript@5.8.3",
-    "npm:@vitejs/plugin-react@5": "5.2.0_vite@6.4.3__@types+node@22.20.1_@types+node@22.20.1",
+    "npm:@vitejs/plugin-react@5": "5.2.0_vite@6.4.5__@types+node@22.20.1_@types+node@22.20.1",
     "npm:autoprefixer@^10.4.21": "10.5.4_postcss@8.5.25",
-    "npm:dompurify@^3.4.13": "3.4.13",
+    "npm:dompurify@3.4.17": "3.4.17",
     "npm:esbuild@~0.25.12": "0.25.12",
     "npm:eslint-plugin-react-hooks@^7.1.1": "7.1.1_eslint@10.8.0",
     "npm:eslint@^10.4.0": "10.8.0",
@@ -30,7 +30,8 @@
     "npm:jspdf@^4.2.1": "4.2.1",
     "npm:jszip@^3.10.1": "3.10.1",
     "npm:lucide-react@0.564": "0.564.0_react@19.2.7",
-    "npm:pdfjs-dist@^5.6.205": "5.7.284",
+    "npm:pdf-lib@^1.17.1": "1.17.1",
+    "npm:pdfjs-dist@6.2.108": "6.2.108",
     "npm:postcss@^8.5.6": "8.5.25",
     "npm:qrcode@^1.5.4": "1.5.4",
     "npm:react-dom@19.2.7": "19.2.7_react@19.2.7",
@@ -39,7 +40,7 @@
     "npm:sharp@~0.35.2": "0.35.3",
     "npm:tailwindcss@^3.4.17": "3.4.19",
     "npm:typescript@~5.8.2": "5.8.3",
-    "npm:vite@^6.4.3": "6.4.3_@types+node@22.20.1"
+    "npm:vite@6.4.5": "6.4.5_@types+node@22.20.1"
   },
   "jsr": {
     "@std/assert@1.0.19": {
@@ -196,7 +197,7 @@
         "@babel/helper-validator-identifier"
       ]
     },
-    "@capacitor-firebase/messaging@8.3.0_@capacitor+core@8.5.0_firebase@12.17.0": {
+    "@capacitor-firebase/messaging@8.3.0_@capacitor+core@8.5.1_firebase@12.17.0": {
       "integrity": "sha512-gjlpPH8nFN2D4PGpg+Bi7Pk1Apy+nRh6DHTI8hr4o3QfCmZPnNCT0mhhT8Rcdpwf2D+E5NxkaVy4/2GYiXoF8Q==",
       "dependencies": [
         "@capacitor/core",
@@ -206,26 +207,26 @@
         "firebase"
       ]
     },
-    "@capacitor/android@8.5.0_@capacitor+core@8.5.0": {
-      "integrity": "sha512-Rb3prJeQiTp0pQhSSOReJuG9VgibOGMG4ECs+UhMwr6TCCHZ3NCZO811bDA0HxD0xrT/gCrJAsY5yfEATu84JQ==",
+    "@capacitor/android@8.5.1_@capacitor+core@8.5.1": {
+      "integrity": "sha512-o8fUIPDSEASeXHHrDz26WU7OlyiRb+QqtI9KFdnLS1jUL77o5iGrvegibaZX8rWpiCyDJ6jlUhhhHlfeq3ou9A==",
       "dependencies": [
         "@capacitor/core"
       ]
     },
-    "@capacitor/app@8.1.1_@capacitor+core@8.5.0": {
+    "@capacitor/app@8.1.1_@capacitor+core@8.5.1": {
       "integrity": "sha512-xM2ZTX5jK60tFtmjsmJv+Cdj1Qsb6NcavkqmdEnCPQBeya9oKhamZJxYOnQNj1ZvcJM7sWfG6BEtSLx42pisbA==",
       "dependencies": [
         "@capacitor/core"
       ]
     },
-    "@capacitor/browser@8.0.4_@capacitor+core@8.5.0": {
+    "@capacitor/browser@8.0.4_@capacitor+core@8.5.1": {
       "integrity": "sha512-ORZ4u/y+7aMuu6yVuk6SP529fUZyqcbnuHB1q5McpA3o2SYfVoi28iB8rsQjI2ad1qlKJd29ZUuGtspXLBDlWg==",
       "dependencies": [
         "@capacitor/core"
       ]
     },
-    "@capacitor/cli@8.5.0": {
-      "integrity": "sha512-rLdzMUM5QV4WITcqoWv04p32i14BXgUH2diqEH6MWQlWaJfiyNrvOyt/+d5vHAfOxOm1klBu637VDEobctlwBA==",
+    "@capacitor/cli@8.5.1": {
+      "integrity": "sha512-LKQFSyLg1QbTN6CGDoFqeRtAlj8C3c9OymP8OuhwlmkbSQwh9i1HQjwUCaNyVem2XkY9rv0v2UOfVlgoxH5pAw==",
       "dependencies": [
         "@ionic/cli-framework-output",
         "@ionic/utils-subprocess",
@@ -233,7 +234,7 @@
         "commander@12.1.0",
         "debug",
         "env-paths",
-        "fs-extra@11.4.0",
+        "fs-extra@11.4.1",
         "kleur@4.1.5",
         "native-run",
         "open",
@@ -242,31 +243,31 @@
         "rimraf",
         "semver@7.8.5",
         "tar",
-        "tslib",
+        "tslib@2.8.1",
         "xcode",
         "xml2js"
       ],
       "bin": true
     },
-    "@capacitor/core@8.5.0": {
-      "integrity": "sha512-Ca4krtqH1hothjtBIwf2J2TW7IhYq1ujp8QeItTiJohNsqij8ja2DYYH3DU0l8RmxCWaBAFTGA2TgOgOMCSNsQ==",
+    "@capacitor/core@8.5.1": {
+      "integrity": "sha512-IOQ7ynG1qgrJ/RLuCO3WgyRGmkmmG/cdStRR4ftU2dWEN1FdtLrnI/XpZmZuUsOEHEnzBRJY/PmRH8eTLiXfhA==",
       "dependencies": [
-        "tslib"
+        "tslib@2.8.1"
       ]
     },
-    "@capacitor/device@8.0.3_@capacitor+core@8.5.0": {
+    "@capacitor/device@8.0.3_@capacitor+core@8.5.1": {
       "integrity": "sha512-rliPCCZwxtjU6200jJNDAsQhioyozV3fGgiP+NgRqtDOI7i+Jdz+DYNwEup+3MGZZ4NEmkuFaBeWLM3T01vJRg==",
       "dependencies": [
         "@capacitor/core"
       ]
     },
-    "@capacitor/ios@8.5.0_@capacitor+core@8.5.0": {
-      "integrity": "sha512-7k1TfohJu5BzRXc1F3g04Q8QQ0fyQgms6h1AvhnHb04VaNr9EdHOx03hL8O+OigEKMQnyJd1ZOjTPPNHCqL5Yw==",
+    "@capacitor/ios@8.5.1_@capacitor+core@8.5.1": {
+      "integrity": "sha512-0EVqwCYf3RUp2JAjUGZ04xmG6dSpIsPmPacI9zKxn6mu9RSiHhmFF230ghe00HrkyB6ig6SfNdoADvVODxYhlQ==",
       "dependencies": [
         "@capacitor/core"
       ]
     },
-    "@capacitor/preferences@8.0.1_@capacitor+core@8.5.0": {
+    "@capacitor/preferences@8.0.1_@capacitor+core@8.5.1": {
       "integrity": "sha512-T6no3ebi79XJCk91U3Jp/liJUwgBdvHR+s6vhvPkPxSuch7z3zx5Rv1bdWM6sWruNx+pViuEGqZvbfCdyBvcHQ==",
       "dependencies": [
         "@capacitor/core"
@@ -275,7 +276,7 @@
     "@emnapi/runtime@1.11.3": {
       "integrity": "sha512-Xz4Tpyki7XyrpbUK1jR1AhdAdaXyhhY4lZ3neLodmhpuWfy2PAQN5B46sAiU4liOXGLkHypn/qU+jvfWSCYYLA==",
       "dependencies": [
-        "tslib"
+        "tslib@2.8.1"
       ]
     },
     "@esbuild/aix-ppc64@0.25.12": {
@@ -466,7 +467,7 @@
         "@firebase/component",
         "@firebase/logger",
         "@firebase/util",
-        "tslib"
+        "tslib@2.8.1"
       ]
     },
     "@firebase/analytics-compat@0.2.29_@firebase+app@0.16.0_@firebase+app-compat@0.5.16": {
@@ -478,7 +479,7 @@
         "@firebase/app-compat",
         "@firebase/component",
         "@firebase/util",
-        "tslib"
+        "tslib@2.8.1"
       ]
     },
     "@firebase/analytics-types@0.8.4": {
@@ -492,7 +493,7 @@
         "@firebase/installations",
         "@firebase/logger",
         "@firebase/util",
-        "tslib"
+        "tslib@2.8.1"
       ]
     },
     "@firebase/app-check-compat@0.4.6_@firebase+app@0.16.0_@firebase+app-compat@0.5.16": {
@@ -505,7 +506,7 @@
         "@firebase/component",
         "@firebase/logger",
         "@firebase/util",
-        "tslib"
+        "tslib@2.8.1"
       ]
     },
     "@firebase/app-check-interop-types@0.3.4": {
@@ -521,7 +522,7 @@
         "@firebase/component",
         "@firebase/logger",
         "@firebase/util",
-        "tslib"
+        "tslib@2.8.1"
       ]
     },
     "@firebase/app-compat@0.5.16": {
@@ -531,7 +532,7 @@
         "@firebase/component",
         "@firebase/logger",
         "@firebase/util",
-        "tslib"
+        "tslib@2.8.1"
       ]
     },
     "@firebase/app-types@0.9.5": {
@@ -547,7 +548,7 @@
         "@firebase/logger",
         "@firebase/util",
         "idb",
-        "tslib"
+        "tslib@2.8.1"
       ]
     },
     "@firebase/auth-compat@0.6.9_@firebase+app@0.16.0_@firebase+app-compat@0.5.16_@firebase+app-types@0.9.5": {
@@ -559,7 +560,7 @@
         "@firebase/auth-types",
         "@firebase/component",
         "@firebase/util",
-        "tslib"
+        "tslib@2.8.1"
       ]
     },
     "@firebase/auth-interop-types@0.2.5": {
@@ -579,14 +580,14 @@
         "@firebase/component",
         "@firebase/logger",
         "@firebase/util",
-        "tslib"
+        "tslib@2.8.1"
       ]
     },
     "@firebase/component@0.7.4": {
       "integrity": "sha512-tLpOaaCol9ugUIYp2R3CbWPPA8Ajg/papX/XHEy8U52b/QXH3BbX8tTJX9aShDCjp+9sMAxMLD94i7lresdugQ==",
       "dependencies": [
         "@firebase/util",
-        "tslib"
+        "tslib@2.8.1"
       ]
     },
     "@firebase/data-connect@0.7.2_@firebase+app@0.16.0": {
@@ -597,7 +598,7 @@
         "@firebase/component",
         "@firebase/logger",
         "@firebase/util",
-        "tslib"
+        "tslib@2.8.1"
       ]
     },
     "@firebase/database-compat@2.1.5_@firebase+app@0.16.0_@firebase+app-compat@0.5.16": {
@@ -610,7 +611,7 @@
         "@firebase/database-types",
         "@firebase/logger",
         "@firebase/util",
-        "tslib"
+        "tslib@2.8.1"
       ],
       "optionalPeers": [
         "@firebase/app",
@@ -633,7 +634,7 @@
         "@firebase/logger",
         "@firebase/util",
         "faye-websocket",
-        "tslib"
+        "tslib@2.8.1"
       ]
     },
     "@firebase/firestore-compat@0.4.12_@firebase+app@0.16.0_@firebase+app-compat@0.5.16_@firebase+app-types@0.9.5": {
@@ -645,7 +646,7 @@
         "@firebase/firestore",
         "@firebase/firestore-types",
         "@firebase/util",
-        "tslib"
+        "tslib@2.8.1"
       ]
     },
     "@firebase/firestore-types@3.0.4_@firebase+app-types@0.9.5_@firebase+util@1.15.2": {
@@ -666,7 +667,7 @@
         "@grpc/grpc-js",
         "@grpc/proto-loader",
         "re2js",
-        "tslib"
+        "tslib@2.8.1"
       ]
     },
     "@firebase/functions-compat@0.4.6_@firebase+app@0.16.0_@firebase+app-compat@0.5.16": {
@@ -678,7 +679,7 @@
         "@firebase/functions",
         "@firebase/functions-types",
         "@firebase/util",
-        "tslib"
+        "tslib@2.8.1"
       ]
     },
     "@firebase/functions-types@0.6.4": {
@@ -693,7 +694,7 @@
         "@firebase/component",
         "@firebase/messaging-interop-types",
         "@firebase/util",
-        "tslib"
+        "tslib@2.8.1"
       ]
     },
     "@firebase/installations-compat@0.2.23_@firebase+app@0.16.0_@firebase+app-compat@0.5.16_@firebase+app-types@0.9.5": {
@@ -705,7 +706,7 @@
         "@firebase/installations",
         "@firebase/installations-types",
         "@firebase/util",
-        "tslib"
+        "tslib@2.8.1"
       ]
     },
     "@firebase/installations-types@0.5.4_@firebase+app-types@0.9.5": {
@@ -721,13 +722,13 @@
         "@firebase/component",
         "@firebase/util",
         "idb",
-        "tslib"
+        "tslib@2.8.1"
       ]
     },
     "@firebase/logger@0.5.1": {
       "integrity": "sha512-vZKLsqE1ABOy8OjQiE7cUTFn4gvaqlk88yp8N94Pk/sDpq61YqZGqmVFZTvOyflTwuYFcWirBdYGoJgbDaXKYQ==",
       "dependencies": [
-        "tslib"
+        "tslib@2.8.1"
       ]
     },
     "@firebase/messaging-compat@0.2.28_@firebase+app@0.16.0_@firebase+app-compat@0.5.16": {
@@ -738,7 +739,7 @@
         "@firebase/component",
         "@firebase/messaging",
         "@firebase/util",
-        "tslib"
+        "tslib@2.8.1"
       ]
     },
     "@firebase/messaging-interop-types@0.2.5": {
@@ -753,7 +754,7 @@
         "@firebase/messaging-interop-types",
         "@firebase/util",
         "idb",
-        "tslib"
+        "tslib@2.8.1"
       ]
     },
     "@firebase/performance-compat@0.2.26_@firebase+app@0.16.0_@firebase+app-compat@0.5.16": {
@@ -766,7 +767,7 @@
         "@firebase/performance",
         "@firebase/performance-types",
         "@firebase/util",
-        "tslib"
+        "tslib@2.8.1"
       ]
     },
     "@firebase/performance-types@0.2.4": {
@@ -780,7 +781,7 @@
         "@firebase/installations",
         "@firebase/logger",
         "@firebase/util",
-        "tslib",
+        "tslib@2.8.1",
         "web-vitals"
       ]
     },
@@ -794,7 +795,7 @@
         "@firebase/remote-config",
         "@firebase/remote-config-types",
         "@firebase/util",
-        "tslib"
+        "tslib@2.8.1"
       ]
     },
     "@firebase/remote-config-types@0.5.1": {
@@ -808,7 +809,7 @@
         "@firebase/installations",
         "@firebase/logger",
         "@firebase/util",
-        "tslib"
+        "tslib@2.8.1"
       ]
     },
     "@firebase/storage-compat@0.4.4_@firebase+app@0.16.0_@firebase+app-compat@0.5.16_@firebase+app-types@0.9.5": {
@@ -820,7 +821,7 @@
         "@firebase/storage",
         "@firebase/storage-types",
         "@firebase/util",
-        "tslib"
+        "tslib@2.8.1"
       ]
     },
     "@firebase/storage-types@0.8.4_@firebase+app-types@0.9.5_@firebase+util@1.15.2": {
@@ -836,13 +837,13 @@
         "@firebase/app",
         "@firebase/component",
         "@firebase/util",
-        "tslib"
+        "tslib@2.8.1"
       ]
     },
     "@firebase/util@1.15.2": {
       "integrity": "sha512-974pWIZVLDMc5GW5YAsj8y0XxULxIy/sPUy7tsxmWbF93KRIyh9xpuHlh0zDL+shUcf5nHDjFOg9YLiQ763eiA==",
       "dependencies": [
-        "tslib"
+        "tslib@2.8.1"
       ],
       "scripts": true
     },
@@ -1062,14 +1063,14 @@
       "dependencies": [
         "@ionic/utils-terminal",
         "debug",
-        "tslib"
+        "tslib@2.8.1"
       ]
     },
     "@ionic/utils-array@2.1.6": {
       "integrity": "sha512-0JZ1Zkp3wURnv8oq6Qt7fMPo5MpjbLoUoa9Bu2Q4PJuSDWM8H8gwF3dQO7VTeUj3/0o1IB1wGkFWZZYgUXZMUg==",
       "dependencies": [
         "debug",
-        "tslib"
+        "tslib@2.8.1"
       ]
     },
     "@ionic/utils-fs@3.1.7": {
@@ -1078,14 +1079,14 @@
         "@types/fs-extra",
         "debug",
         "fs-extra@9.1.0",
-        "tslib"
+        "tslib@2.8.1"
       ]
     },
     "@ionic/utils-object@2.1.6": {
       "integrity": "sha512-vCl7sl6JjBHFw99CuAqHljYJpcE88YaH2ZW4ELiC/Zwxl5tiwn4kbdP/gxi2OT3MQb1vOtgAmSNRtusvgxI8ww==",
       "dependencies": [
         "debug",
-        "tslib"
+        "tslib@2.8.1"
       ]
     },
     "@ionic/utils-process@2.1.12": {
@@ -1096,14 +1097,14 @@
         "debug",
         "signal-exit",
         "tree-kill",
-        "tslib"
+        "tslib@2.8.1"
       ]
     },
     "@ionic/utils-stream@3.1.7": {
       "integrity": "sha512-eSELBE7NWNFIHTbTC2jiMvh1ABKGIpGdUIvARsNPMNQhxJB3wpwdiVnoBoTYp+5a6UUIww4Kpg7v6S7iTctH1w==",
       "dependencies": [
         "debug",
-        "tslib"
+        "tslib@2.8.1"
       ]
     },
     "@ionic/utils-subprocess@3.0.1": {
@@ -1116,7 +1117,7 @@
         "@ionic/utils-terminal",
         "cross-spawn",
         "debug",
-        "tslib"
+        "tslib@2.8.1"
       ]
     },
     "@ionic/utils-terminal@2.3.5": {
@@ -1128,7 +1129,7 @@
         "slice-ansi",
         "string-width",
         "strip-ansi",
-        "tslib",
+        "tslib@2.8.1",
         "untildify",
         "wrap-ansi@7.0.0"
       ]
@@ -1166,63 +1167,63 @@
         "@jridgewell/sourcemap-codec"
       ]
     },
-    "@napi-rs/canvas-android-arm64@0.1.100": {
-      "integrity": "sha512-hjhCKhntPv9+t4ckHymdx0phYNcVW+GKQR6Lzw2zE+pOVjOplSmtx9nNNknTjbEDLcuLZqA1y8ufKg1XfgftzQ==",
+    "@napi-rs/canvas-android-arm64@1.0.13": {
+      "integrity": "sha512-trn7AaDzQ+yeeA0ezhkC7cB1ZDPtp4UYk0EvB5F8qtYL9jEVWtVrU30WOpI52DszoTxaTsCgf5PP4ZVaOlOIHQ==",
       "os": ["android"],
       "cpu": ["arm64"]
     },
-    "@napi-rs/canvas-darwin-arm64@0.1.100": {
-      "integrity": "sha512-2PcswRaC7Ly645DGt88///zuFDhJxJYdKAs1uU3mfk1atYkXufgcgLfBpk6Tm12nCQBaNt1wpybuPZ4qOhTo8A==",
+    "@napi-rs/canvas-darwin-arm64@1.0.13": {
+      "integrity": "sha512-6Y2djEetL8copxfNK6hg7oig/xqTwOchv19hBOm+zBNdKc/02Z3kjZN5wrLzv/l5O04/bAQS6I/AlQpwBlXgPg==",
       "os": ["darwin"],
       "cpu": ["arm64"]
     },
-    "@napi-rs/canvas-darwin-x64@0.1.100": {
-      "integrity": "sha512-ePNZtj7pNIva/siZMg+HmbeozkIjqUIYdoymH8HaA3qK7LfzFN4WMBM8G6HQ9ZC+H3+Dnn5pqtiXpgLykaPOhw==",
+    "@napi-rs/canvas-darwin-x64@1.0.13": {
+      "integrity": "sha512-OZoPwwu4TMMg8GTCFBrg8UFExwQTU/55i3uTC/izDat6PHE+ro9dimyQoOboFf91+NY7Pnn70ScR8f8I8+eZXw==",
       "os": ["darwin"],
       "cpu": ["x64"]
     },
-    "@napi-rs/canvas-linux-arm-gnueabihf@0.1.100": {
-      "integrity": "sha512-d5cDB48oWFGU8/XPhUOFAlySgb/VAu7D+s8fi55K1Pcfg8aPplHWqMgibhVLU8ky7Pyg/fuiVLz4Nf3JrSTuUA==",
+    "@napi-rs/canvas-linux-arm-gnueabihf@1.0.13": {
+      "integrity": "sha512-dZSYaKROuswU2eUWG5aBKndNVe68elo1YX93xtRax7q658tj8rYE+HwduovWJgs6qwv1r1/CLR60nDeBbyjvyg==",
       "os": ["linux"],
       "cpu": ["arm"]
     },
-    "@napi-rs/canvas-linux-arm64-gnu@0.1.100": {
-      "integrity": "sha512-rDxgxRu69RvDlX/bh9o22DxLsGr8EqsNgotL9+RwQE1S0b0cqeatqsw6aW45mukm0B42DIAaAacKaYQ8cqS1nw==",
+    "@napi-rs/canvas-linux-arm64-gnu@1.0.13": {
+      "integrity": "sha512-W6FzYE8ADHI93In1vi80KBL6btDtAMuj50Ch5ptkWS8xuntyzbR4h5JDUmXoakxZn2yMInksudTEqVSWoFqFGg==",
       "os": ["linux"],
       "cpu": ["arm64"]
     },
-    "@napi-rs/canvas-linux-arm64-musl@0.1.100": {
-      "integrity": "sha512-K3mDW66N+xT2/V439u1alFANiBUjdEx2gLiNYnCmUsva5jZMxWTjafBYwTzYK+EMFMHrUoabuU+T1BIP5CgbYQ==",
+    "@napi-rs/canvas-linux-arm64-musl@1.0.13": {
+      "integrity": "sha512-+6fQ+rR49hkAa4voh2stLIwQ+4t+gmoseM8Bc53/DlMXb73IKymDPWK9A/NtWeqTW4ijWppYuyuxS2hPI8tzNA==",
       "os": ["linux"],
       "cpu": ["arm64"]
     },
-    "@napi-rs/canvas-linux-riscv64-gnu@0.1.100": {
-      "integrity": "sha512-mooqUBTIsccZpnoQC4NgrC1v6C1vof39etLNMnBwCY+p0gajWJvAHLGQ6g/gGyS5YrpDW+GefSN4+Cvcr08UWw==",
+    "@napi-rs/canvas-linux-riscv64-gnu@1.0.13": {
+      "integrity": "sha512-17XEMO3t9RW/TtHtSFf2AkaSWuCWdzbPeidz7zrOFawHxoLSJCnpTI1hN5aUvrZNnkNNmt/vZVJCh0ryUaik3A==",
       "os": ["linux"],
       "cpu": ["riscv64"]
     },
-    "@napi-rs/canvas-linux-x64-gnu@0.1.100": {
-      "integrity": "sha512-1eCvkDCazm7FFhsT7DfGOdSaHgZVK3bt/dSBl5EWHOWmnz+I7j8tPseJqqD81NF+MH21jKUK4wQSDjN0mdhnTg==",
+    "@napi-rs/canvas-linux-x64-gnu@1.0.13": {
+      "integrity": "sha512-lc48IwknVHBsNzXn9Xs5OkUsRX38Ml3Z1aOybQ51mMEzZckm8+4A0qROlyYHEoBPzr1kL3IU8ZUAqDb7wtdX8w==",
       "os": ["linux"],
       "cpu": ["x64"]
     },
-    "@napi-rs/canvas-linux-x64-musl@0.1.100": {
-      "integrity": "sha512-20arT6lnI19S68qNlii73TSEDbECNgzMz2EpldC1V3mZFuRkeujXkcebRk0LRJe9SEUAooYiLokfMViY8IX7yA==",
+    "@napi-rs/canvas-linux-x64-musl@1.0.13": {
+      "integrity": "sha512-bGY1r26S2bs8UNFJcPWcCSNdCFbKep5PATsvtgtC9A5u6SRgr2/jJE/RlhHL5m9ZpixNDhVkLY/5h16Kx5V9YA==",
       "os": ["linux"],
       "cpu": ["x64"]
     },
-    "@napi-rs/canvas-win32-arm64-msvc@0.1.100": {
-      "integrity": "sha512-DZFFT1wIAg37LJw37yhMRFfjATd3vTQzjZ1Yki8u2vhO6Hi5VE6BVaGQ1aaDu7xb4iMErz+9EOwjpS7xcxFeBw==",
+    "@napi-rs/canvas-win32-arm64-msvc@1.0.13": {
+      "integrity": "sha512-2vRPBZoaIvJrUkDhZTE2Hn0YrnpJRCWVM3EJACoBKjuWI6WgPxGtUoRMsxRviCsyks8bKTSFdyw14CellnG2qA==",
       "os": ["win32"],
       "cpu": ["arm64"]
     },
-    "@napi-rs/canvas-win32-x64-msvc@0.1.100": {
-      "integrity": "sha512-MyT1j3mHC2+Lu4pBi9mKyMJhtP6U7k7EldY7sj/uS5gJA65gTXt8MefJQXLJo5d/vZbuWmfxzkEUNc/urV3pHA==",
+    "@napi-rs/canvas-win32-x64-msvc@1.0.13": {
+      "integrity": "sha512-DUlW3lZPz63kYsf8mxgyyZuevhlH0T3/BGP9l+NazhB0F1+gL6D4hqZdnhZpw24DlWmTpATDcyYSZlJOi+DdfQ==",
       "os": ["win32"],
       "cpu": ["x64"]
     },
-    "@napi-rs/canvas@0.1.100": {
-      "integrity": "sha512-xglYA6q3XO5P3BNJYxVZ1IV7DLVjp1Py6nwag88YntrS+3vKHyYcMqXVS4ZztJmwz2uGvz1FWhI/4LgbR5uQDA==",
+    "@napi-rs/canvas@1.0.13": {
+      "integrity": "sha512-b87ugZpQ5ViwqVBkjervxpwa0GmJPsKHLBNoZN6GpjWeHzTbDUGryriq+2DYW2XbB+xCqSIINQysC0/I87nPbw==",
       "optionalDependencies": [
         "@napi-rs/canvas-android-arm64",
         "@napi-rs/canvas-darwin-arm64",
@@ -1257,6 +1258,18 @@
       "dependencies": [
         "@nodelib/fs.scandir",
         "fastq"
+      ]
+    },
+    "@pdf-lib/standard-fonts@1.0.0": {
+      "integrity": "sha512-hU30BK9IUN/su0Mn9VdlVKsWBS6GyhVfqjwl1FjZN4TxP6cCw0jP2w7V3Hf5uX7M0AZJ16vey9yE0ny7Sa59ZA==",
+      "dependencies": [
+        "pako@1.0.11"
+      ]
+    },
+    "@pdf-lib/upng@1.0.1": {
+      "integrity": "sha512-dQK2FUMQtowVP00mtIksrlZhdFXQZPC+taih1q4CvPZ5vqdxR/LKBaFg0oAfzd1GlHZXXSPdQfzQnt+ViGvEIQ==",
+      "dependencies": [
+        "pako@1.0.11"
       ]
     },
     "@protobufjs/aspromise@1.1.2": {
@@ -1420,13 +1433,13 @@
     "@supabase/auth-js@2.112.0": {
       "integrity": "sha512-8qAdObNQHKbSeVBLmf2WLNT7+bCE8zBofpCFiNUqGBAl5qw9VagSvcmPXlh78McAU7iHrGik1oeJxiB2A6B29w==",
       "dependencies": [
-        "tslib"
+        "tslib@2.8.1"
       ]
     },
     "@supabase/functions-js@2.112.0": {
       "integrity": "sha512-2DdaEZs0vq86orMIZBO+eM5w5/UxZb1EZyg2JraBKS4W9BzfFO+fOFD6YStmZ7iAOWvxNTGPjPNItsofpGgTCA==",
       "dependencies": [
-        "tslib"
+        "tslib@2.8.1"
       ]
     },
     "@supabase/phoenix@0.4.5": {
@@ -1435,21 +1448,21 @@
     "@supabase/postgrest-js@2.112.0": {
       "integrity": "sha512-4HKCVq32Jlk/wS8Ud8QgaAuQ4u6w1hZfw/gS5IcIN7wYddElMj4kfiCZpHMPfncomMnYzAKBUhwBZPpRcTH2Yw==",
       "dependencies": [
-        "tslib"
+        "tslib@2.8.1"
       ]
     },
     "@supabase/realtime-js@2.112.0": {
       "integrity": "sha512-McFFP+ivFDMTaCEh8JDpG+sPEmv5IjKvrP0uTH3Lbsriai4KbxB8ycY8TqPQnbjhOVjEifQm1q0y2tL1CUw9Zg==",
       "dependencies": [
         "@supabase/phoenix",
-        "tslib"
+        "tslib@2.8.1"
       ]
     },
     "@supabase/storage-js@2.112.0": {
       "integrity": "sha512-X44Bl045X/e5e2tJqWsY+JmQvgtm04BJuijiWprIWYLn0mDvGnu8hLdzPOPcTVji7wlqbt2ZUHttsv+rGKQYXw==",
       "dependencies": [
         "iceberg-js",
-        "tslib"
+        "tslib@2.8.1"
       ]
     },
     "@supabase/supabase-js@2.112.0": {
@@ -1599,7 +1612,7 @@
         "eslint-visitor-keys@5.0.1"
       ]
     },
-    "@vitejs/plugin-react@5.2.0_vite@6.4.3__@types+node@22.20.1_@types+node@22.20.1": {
+    "@vitejs/plugin-react@5.2.0_vite@6.4.5__@types+node@22.20.1_@types+node@22.20.1": {
       "integrity": "sha512-YmKkfhOAi3wsB1PhJq5Scj3GXMn3WvtQ/JC0xoopuHoXSdmtdStOpFrYaT1kie2YgFBcIe64ROzMYRjCrYOdYw==",
       "dependencies": [
         "@babel/core",
@@ -1611,8 +1624,8 @@
         "vite"
       ]
     },
-    "@xmldom/xmldom@0.9.10": {
-      "integrity": "sha512-A9gOqLdi6cV4ibazAjcQufGj0B1y/vDqYrcuP6d/6x8P27gRS8643Dj9o1dEKtB6O7fwxb2FgBmJS2mX7gpvdw=="
+    "@xmldom/xmldom@0.9.12": {
+      "integrity": "sha512-5AXjrcMClTryPe9LgZrygpB1lj7s0S9E0+W+AHaVKAVyHanafK86iPSvG5xHVSp/jC+VH1UXu0TAEmY279xH7A=="
     },
     "acorn-jsx@5.3.2_acorn@8.18.0": {
       "integrity": "sha512-rq9s+JNhf0IChjtDXxllJ7g41oZk5SlXtp0LHwyA5cejwn7vKmKp4pPri6YEePv2PU65sAsegbXtIinmDFDXgQ==",
@@ -1865,8 +1878,8 @@
     "dlv@1.1.3": {
       "integrity": "sha512-+HlytyjlPKnIG8XuRG8WvmBP8xs8P71y+SKKS6ZXWoEgLuePxtDoUEiH7WkdePWrQ5JBpE6aoVqfZfJUQkjXwA=="
     },
-    "dompurify@3.4.13": {
-      "integrity": "sha512-2vmYIoqjze2d+kakP8S/nS5shfsl587kzwEjcGlTdiksUVgFHnFCsLYDVj/JNqJVOQZGSYBTmuycv0PodwmnMQ==",
+    "dompurify@3.4.17": {
+      "integrity": "sha512-B/pSlYVHQ58kqISD/yDjuJ1yfzI34m1gF4lAod2bwSRhiN4K5Cl3H8Af7hqB2PmTL911tdEudnnXn5FnhRoz0w==",
       "optionalDependencies": [
         "@types/trusted-types"
       ]
@@ -2145,8 +2158,8 @@
     "fraction.js@5.3.4": {
       "integrity": "sha512-1X1NTtiJphryn/uLQz3whtY6jK3fTqoE3ohKs0tT+Ujr1W59oopxmoEh7Lu5p6vBaPbgoM0bzveAW4Qi5RyWDQ=="
     },
-    "fs-extra@11.4.0": {
-      "integrity": "sha512-EQsFzMUJkCKGr1ePqlYADkIUmHW1s3ZXr5Yqy6wbGrfUCphpl2maM/kyOIRA2HpP3AaFQTZXD4ldjek+nccddA==",
+    "fs-extra@11.4.1": {
+      "integrity": "sha512-KYAb4c9BJQI6QqGKthV68OHe0badztdXJWKo0WtBA9IuCFPTKvE5ZdUBglP833aMjhaSPNO4A5j/EkzZtGlKjA==",
       "dependencies": [
         "graceful-fs",
         "jsonfile",
@@ -2396,8 +2409,8 @@
     "long@5.3.2": {
       "integrity": "sha512-mNAgZ1GmyNhD7AuqnTG3/VQ26o760+ZYBPKjPvugO8+nLbYfX6TVpJPseBvopbdY+qpZ/lKUnmEc1LeZYS3QAA=="
     },
-    "lru-cache@11.5.2": {
-      "integrity": "sha512-4pfM1Ff0x50o0tQwb5ucw/RzNyD0/YJME6IVcStalZuMWxdt3sR3huStTtxz4PUmvZfRguvDejasvQ2kifR11g=="
+    "lru-cache@11.5.3": {
+      "integrity": "sha512-U4N8FgzmWxc8k1VH8Kr6lQg18U7Fjvby6wXHVRX/ZZ7IwWbRMgrRbP0Wrb5q5NVinryp4SQampHKdvtecItxUg=="
     },
     "lru-cache@5.1.1": {
       "integrity": "sha512-KpNARQA3Iwv+jTA0utUVVbrh+Jlrr1Fv0e56GGzAFOXN7dk/FviaDW8LHmK52DlcH4WP2n6gI8vN1aesBFgo9w==",
@@ -2463,7 +2476,7 @@
         "plist",
         "split2",
         "through2",
-        "tslib",
+        "tslib@2.8.1",
         "yauzl"
       ],
       "bin": true
@@ -2550,12 +2563,21 @@
     "path-scurry@2.0.2": {
       "integrity": "sha512-3O/iVVsJAPsOnpwWIeD+d6z/7PmqApyQePUtCndjatj/9I5LylHvt5qluFaBT3I5h3r1ejfR056c+FCv+NnNXg==",
       "dependencies": [
-        "lru-cache@11.5.2",
+        "lru-cache@11.5.3",
         "minipass"
       ]
     },
-    "pdfjs-dist@5.7.284": {
-      "integrity": "sha512-h4EdYQczmGhbOlqc3PPZwxevn7ApdWPbovAuWXOB/DjIyigSnwfy2oze7c6mRcSr9XgLp3eN3EeL4DyySTPMFw==",
+    "pdf-lib@1.17.1": {
+      "integrity": "sha512-V/mpyJAoTsN4cnP31vc0wfNA1+p20evqqnap0KLoRUN0Yk/p3wN52DOEsL4oBFcLdb76hlpKPtzJIgo67j/XLw==",
+      "dependencies": [
+        "@pdf-lib/standard-fonts",
+        "@pdf-lib/upng",
+        "pako@1.0.11",
+        "tslib@1.14.1"
+      ]
+    },
+    "pdfjs-dist@6.2.108": {
+      "integrity": "sha512-YxFb+SQcodN2rnX9Tn3dHYlqfb7NjlzzfONPpJd+AKoKtUjEdevTfbC07d5TcczzOK6261auRkP/M8OBHs9vFQ==",
       "optionalDependencies": [
         "@napi-rs/canvas"
       ]
@@ -3058,6 +3080,9 @@
     "ts-interface-checker@0.1.13": {
       "integrity": "sha512-Y/arvbn+rrz3JCKl9C4kVNfTfSm2/mEp5FSz5EsZSANGPSlQrpRI5M4PKF+mJnE52jOO90PnPSc3Ur3bTQw0gA=="
     },
+    "tslib@1.14.1": {
+      "integrity": "sha512-Xni35NKzjgMrwevysHTCArtLDpPvye8zV/0E4EyYn43P7/7qvQwPh9BGkHewbMulVntbigmcT7rdX3BNo9wRJg=="
+    },
     "tslib@2.8.1": {
       "integrity": "sha512-oJFu94HQb+KVduSUQL7wnpmqnfmLsOA/nAh6b6EH0wCEoK0/mPeXU6c3wKDV83MkOuHPRHtSXKKU99IBazS/2w=="
     },
@@ -3108,8 +3133,8 @@
       "integrity": "sha512-vIYxrBCC/N/K+Js3qSN88go7kIfNPssr/hHCesKCQNAjmgvYS2oqr69kIufEG+O4+PfezOH4EbIeHCfFov8ZgQ==",
       "bin": true
     },
-    "vite@6.4.3_@types+node@22.20.1": {
-      "integrity": "sha512-NTKlcQjlAK7MlQoyb6LgaqHc8sso/pVyUJYWMws3jg21uTJw/LddqIFPcPqP6PzpgbIcZyKI85sFE4HBrQDA8A==",
+    "vite@6.4.5_@types+node@22.20.1": {
+      "integrity": "sha512-4enwjFfi4IwtEh0w+jPzpLVOFQiPHmmzPxcHXQOyEur47o6u0jE573DmGpjA+7irXoMLYRZD5ZaFUEneS3abPg==",
       "dependencies": [
         "@types/node",
         "esbuild",
@@ -3265,13 +3290,13 @@
       "dependencies": [
         "npm:@babel/core@^7.29.7",
         "npm:@capacitor-firebase/messaging@^8.3.0",
-        "npm:@capacitor/android@^8.5.0",
+        "npm:@capacitor/android@8.5.1",
         "npm:@capacitor/app@^8.1.1",
         "npm:@capacitor/browser@^8.0.4",
-        "npm:@capacitor/cli@^8.5.0",
-        "npm:@capacitor/core@^8.5.0",
+        "npm:@capacitor/cli@8.5.1",
+        "npm:@capacitor/core@8.5.1",
         "npm:@capacitor/device@^8.0.3",
-        "npm:@capacitor/ios@^8.5.0",
+        "npm:@capacitor/ios@8.5.1",
         "npm:@capacitor/preferences@^8.0.1",
         "npm:@eslint/js@^10.0.1",
         "npm:@supabase/supabase-js@^2.95.3",
@@ -3281,7 +3306,7 @@
         "npm:@typescript-eslint/parser@^8.59.4",
         "npm:@vitejs/plugin-react@5",
         "npm:autoprefixer@^10.4.21",
-        "npm:dompurify@^3.4.13",
+        "npm:dompurify@3.4.17",
         "npm:esbuild@~0.25.12",
         "npm:eslint-plugin-react-hooks@^7.1.1",
         "npm:eslint@^10.4.0",
@@ -3291,7 +3316,7 @@
         "npm:jszip@^3.10.1",
         "npm:lucide-react@0.564",
         "npm:pdf-lib@^1.17.1",
-        "npm:pdfjs-dist@^5.6.205",
+        "npm:pdfjs-dist@6.2.108",
         "npm:postcss@^8.5.6",
         "npm:qrcode@^1.5.4",
         "npm:react-dom@19.2.7",
@@ -3300,7 +3325,7 @@
         "npm:sharp@~0.35.2",
         "npm:tailwindcss@^3.4.17",
         "npm:typescript@~5.8.2",
-        "npm:vite@^6.4.3"
+        "npm:vite@6.4.5"
       ],
       "overrides": {
         "xcode": {

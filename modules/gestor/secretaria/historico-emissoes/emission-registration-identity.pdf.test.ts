@@ -40,7 +40,7 @@ const render = async (source: EmissionPdfSource) => {
     const page = await pdf.getPage(1);
     const content = await page.getTextContent();
     return content.items.filter((item) => 'str' in item).map((item) => item.str).join(' ');
-  } finally { await pdf.destroy(); }
+  } finally { await pdf.loadingTask.destroy(); }
 };
 
 for (const documento of ['pasta_identificacao', 'ficha_matricula'] as const) {

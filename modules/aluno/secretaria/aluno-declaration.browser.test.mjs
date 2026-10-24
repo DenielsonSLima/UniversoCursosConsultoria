@@ -103,7 +103,7 @@ async function inspect(bytes, name, render = false) {
     }
     return { text: items.map(item => item.str).join(' ').replace(/\s+/g, ' '), items,
       size: page.view.slice(2), images: operators.fnArray.filter(op => op === OPS.paintImageXObject).length };
-  } finally { await pdf.destroy(); }
+  } finally { await pdf.loadingTask.destroy(); }
 }
 
 test('student receives the complete configured declaration with birth date, one CIN, signature and QR positions', async () => {

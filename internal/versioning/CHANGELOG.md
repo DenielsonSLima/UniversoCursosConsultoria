@@ -10,6 +10,11 @@ Histórico arquivado: [30/09/2026 — versões 4.8.138 a 4.8.144](./changelog/20
 
 Histórico arquivado: [01/10/2026 a 04/10/2026 — versões 4.8.145 a 4.8.168](./changelog/2026-10-01-a-04-versoes-4-8-145-a-168.md).
 
+## [4.8.233] - 2026-10-23
+
+- Consulta financeira passa a negar identidade ausente e restringir resultados aos polos autorizados; calculadora mantém resultados com search_path fixo.
+- Dependências de segurança atualizadas, prévias adaptadas ao PDF.js 6 e conferência do runtime Node separada do build. Aplicação das migrations, produção e distribuição móvel ainda pendentes.
+
 ## [4.8.232] - 2026-10-22
 
 - Build exige Node estável 24.22.1 ou posterior na linha 24.x antes de gerar o site; CI seleciona esse piso e testa o gate, sem reutilizar Node antigo em cache.

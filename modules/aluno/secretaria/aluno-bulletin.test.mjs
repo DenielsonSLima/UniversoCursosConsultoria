@@ -122,7 +122,7 @@ test('pipeline do gestor compõe o boletim aluno com modelo, marca e tabela sele
     const canvas = createCanvas(viewport.width, viewport.height);
     await page.render({ canvas, canvasContext: canvas.getContext('2d'), viewport }).promise;
     await writeFile('/tmp/universo-boletim-aluno-local.png', canvas.toBuffer('image/png'));
-  } finally { await document.destroy(); }
+  } finally { await document.loadingTask.destroy(); }
 });
 
 test('modal oferece emissão imediata do módulo iniciado sem registrar solicitação genérica', () => {

@@ -121,4 +121,3 @@ export default async function socialPreview(request, response) {
     response.status(500).send('Não foi possível montar a prévia social.');
   }
 }
-

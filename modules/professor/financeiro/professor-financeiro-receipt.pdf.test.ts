@@ -91,7 +91,7 @@ const extractText = async (blob: Blob) => {
     const content = await page.getTextContent();
     pages.push(content.items.map((item) => ('str' in item ? item.str : '')).join(' '));
   }
-  await document.destroy();
+  await document.loadingTask.destroy();
   return pages.join('\n').replace(/\s+/g, ' ').trim();
 };
 

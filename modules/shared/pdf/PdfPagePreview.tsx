@@ -67,7 +67,7 @@ const PdfPagePreview: React.FC<PdfPagePreviewProps> = ({ blob, pageNumber, title
         loadingTaskRef.current = loadingTask;
         const loaded = await loadingTask.promise;
         if (cancelled) {
-          await loaded.destroy();
+          await loaded.loadingTask.destroy();
           return;
         }
         setPdf(loaded);
@@ -164,4 +164,3 @@ const PdfPagePreview: React.FC<PdfPagePreviewProps> = ({ blob, pageNumber, title
 };
 
 export default PdfPagePreview;
-
