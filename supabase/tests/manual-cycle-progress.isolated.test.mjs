@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { readFile } from 'node:fs/promises';
 import { createManagerDatabase, seedManagerEnrollment, previewManager, prepareManager, id } from './manager-cycle-integration-setup.mjs';
-const migration = () => readFile(new URL('../migrations/20261027163500_scoped_manual_cycle_progress.sql',import.meta.url),'utf8');
+const migration = () => readFile(new URL('../migrations/20261027175524_scoped_manual_cycle_progress.sql',import.meta.url),'utf8');
 const progress = async (db,enrollment,cycle=2) => (await db.query(
   'select public.obter_progresso_ciclo_financeiro_tecnico_manual_secure($1,$2) as value',[enrollment,cycle])).rows[0].value;
 

@@ -51,10 +51,10 @@ Rollback: não apagar arquivo, reescrever ledger, restaurar token antigo com ter
 - `supabase/functions/technical-rejected-fee-correction/contract.ts`
 - `supabase/functions/technical-rejected-fee-correction/issuance-request.ts`
 - `supabase/functions/technical-rejected-fee-correction/worker-action.ts`
-- `supabase/migrations/20261027164000_rejected_technical_fee_correction_proofs.sql`
-- `supabase/migrations/20261027164100_rejected_fee_absence_inspection.sql`
-- `supabase/migrations/20261027164200_rejected_fee_preparation_overlay.sql`
-- `supabase/migrations/20261027164300_rejected_fee_manager_consent.sql`
+- `supabase/migrations/20261027175544_rejected_technical_fee_correction_proofs.sql`
+- `supabase/migrations/20261027175552_rejected_fee_absence_inspection.sql`
+- `supabase/migrations/20261027175600_rejected_fee_preparation_overlay.sql`
+- `supabase/migrations/20261027175607_rejected_fee_manager_consent.sql`
 - `supabase/tests/fixtures/rejected-fee-canonical-audit.sql`
 - `supabase/tests/rejected-fee-correction.isolated.test.mjs`
 - `supabase/tests/rejected-fee-setup.mjs`

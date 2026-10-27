@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {readFile} from 'node:fs/promises';
 import {createManagerDatabase,seedManagerEnrollment,previewManager,prepareManager,id,polo} from './manager-cycle-integration-setup.mjs';
-const patch=()=>readFile(new URL('../migrations/20261027163600_financial_projection_read_efficiency.sql',import.meta.url),'utf8');
+const patch=()=>readFile(new URL('../migrations/20261027175535_financial_projection_read_efficiency.sql',import.meta.url),'utf8');
 
 test('35 matrículas/590 títulos mistos: projeções e decisões idênticas; leitura dentro de 8s',async(t)=>{
   const db=await createManagerDatabase();

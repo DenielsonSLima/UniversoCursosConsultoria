@@ -53,8 +53,8 @@ Rollback: UI anterior continua compatível com as rotas preservadas. Funções d
 - `modules/gestor/gestao/tecnicos/detalhes/components/financeiro/manual-cycle-progress.service.ts`
 - `modules/gestor/gestao/tecnicos/detalhes/components/financeiro/manual-technical-cycle-issuance-progress.contract.test.ts`
 - `modules/gestor/gestao/tecnicos/detalhes/components/financeiro/manual-technical-cycle-ui.contract.test.ts`
-- `supabase/migrations/20261027163500_scoped_manual_cycle_progress.sql`
-- `supabase/migrations/20261027163600_financial_projection_read_efficiency.sql`
+- `supabase/migrations/20261027175524_scoped_manual_cycle_progress.sql`
+- `supabase/migrations/20261027175535_financial_projection_read_efficiency.sql`
 - `supabase/tests/financial-projection-workload.isolated.test.mjs`
 - `supabase/tests/manual-cycle-progress-runtime.mjs`
 - `supabase/tests/manual-cycle-progress.isolated.test.mjs`

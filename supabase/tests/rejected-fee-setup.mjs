@@ -2,8 +2,8 @@ import {readFile} from 'node:fs/promises';
 import {createManagerDatabase,seedManagerEnrollment,prepareManager,applyManagerPatch,id,actor,polo} from './manager-cycle-integration-setup.mjs';
 export {id,actor,polo};
 export const operation=id(96001),oldRequest=id(96002);
-const files=['20261027164000_rejected_technical_fee_correction_proofs.sql','20261027164100_rejected_fee_absence_inspection.sql',
- '20261027164200_rejected_fee_preparation_overlay.sql','20261027164300_rejected_fee_manager_consent.sql'];
+const files=['20261027175544_rejected_technical_fee_correction_proofs.sql','20261027175552_rejected_fee_absence_inspection.sql',
+ '20261027175600_rejected_fee_preparation_overlay.sql','20261027175607_rejected_fee_manager_consent.sql'];
 export const call=async(db,name,args=[])=>(await db.query(`select ${name}(${args.map((_,i)=>`$${i+1}`).join(',')}) value`,args)).rows[0].value;
 export async function mockedIssuance(db,receipt,request,n) {
  const nn=String(n).padStart(9,'0');
@@ -37,8 +37,8 @@ export async function setupRejectedFee() {
  const preview=await call(db,'public.preview_ciclo_financeiro_tecnico_manual_secure',[enrollment,2,'2026-10-18',null]);
  await db.exec('begin');const created=await prepareManager(db,preview,id(96003));await db.exec('commit');
  await db.exec(definition);await db.exec(reviewDefinition);await applyManagerPatch(db);
- for (const file of ['20261027163500_scoped_manual_cycle_progress.sql',
-  '20261027163600_financial_projection_read_efficiency.sql']) {
+ for (const file of ['20261027175524_scoped_manual_cycle_progress.sql',
+  '20261027175535_financial_projection_read_efficiency.sql']) {
   await db.exec(await readFile(new URL('../migrations/'+file,import.meta.url),'utf8'));
  }
  const fee=created.ciclo.recebiveis.find(r=>r.tipo==='REMATRICULA').id;
