@@ -13,6 +13,7 @@ import {
 import EadVideoPlayer from '../EadVideoPlayer';
 import { EadActivitiesPanel } from './EadActivitiesPanel';
 import { EadQuizPanel } from './EadQuizPanel';
+import { EadLessonArticle } from './EadLessonArticle';
 import {
   MAIN_EAD_VIDEO_ID,
   getEmbedUrl,
@@ -260,11 +261,7 @@ const EadLearningContent: React.FC<EadLearningContentProps> = ({ view }) => {
                     </div>
 
                     {selectedLessonText && (
-                      <article className="prose prose-slate max-w-none">
-                        <div className="whitespace-pre-line text-sm leading-8 text-slate-700 font-medium bg-slate-50/70 border border-slate-100 rounded-3xl p-5">
-                          {selectedLessonText}
-                        </div>
-                      </article>
+                      <EadLessonArticle lesson={selectedLesson} fallback={selectedLessonText} />
                     )}
                   </>
                 ) : <EadActivitiesPanel view={view} />}

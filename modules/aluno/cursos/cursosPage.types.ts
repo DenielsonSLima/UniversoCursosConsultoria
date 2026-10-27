@@ -46,12 +46,14 @@ export interface EadActivityAssessmentFeedback {
   selectedIndex: number | null;
   correctIndex: number | null;
   isCorrect: boolean | null;
+  explanation?: string;
 }
 
 export interface EadQuizQuestionFeedback {
   selectedIndex: number;
   correctIndex: number;
   isCorrect: boolean;
+  explanation?: string;
 }
 
 export interface EadAssessmentFeedback {
@@ -68,6 +70,13 @@ export interface EadProgressState {
   progress: EadProgress;
   summary: EadProgressSummary;
   assessmentFeedback?: EadAssessmentFeedback;
+  effectiveEadConfig?: Record<string, any>;
+  assessmentRevision?: {
+    current: string | null;
+    available: string | null;
+    canUpgrade: boolean;
+    isHistorical: boolean;
+  };
 }
 
 export type LearningTab = 'video' | 'aulas' | 'prova' | 'certificado';
