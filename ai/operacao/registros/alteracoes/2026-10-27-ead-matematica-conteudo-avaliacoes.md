@@ -105,5 +105,6 @@ Total: 49 arquivos.
 - Readback após infraestrutura: progresso anterior, certificados e metadados dos dois cursos com fingerprints idênticos ao baseline, desconsiderando apenas o marcador de versão acrescentado.
 - ACL: anon sem acesso ao snapshot/troca; authenticated sem acesso aos pacotes privados.
 - CI inicial encontrou divergência na contagem do manifesto; corrigida a listagem da oitava migration. CI do pacote matemático aprovado; aguardar todos os checks no novo head.
+- O gate operacional encontrou 82 trechos RAG, por quatro parágrafos no resumo do lote ativo. Resumo consolidado em dois parágrafos coesos, sem alterar política, limite ou fontes; reindexação de fechamento executada uma vez.
 - Publicação da UI, consumo dos dois pacotes e readback final ainda pendentes nesta revisão do registro.
 
