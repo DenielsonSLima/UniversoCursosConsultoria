@@ -3,6 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../../../../../../../lib/supabase';
 import { isFinanceiroRequestReconciled } from '../matricula-tecnica-financeiro.echo';
 import { matriculaTecnicaFinanceiroKeys } from '../matricula-tecnica-financeiro.keys';
+import { isManualCycleObservationActive } from '../manual-cycle-activity';
 
 type FinanceiroBroadcastEvent = 'config-changed' | 'title-changed' | 'rule-changed';
 
@@ -60,7 +61,9 @@ export const useMatriculaTecnicaFinanceiroRealtime = (turmaId: string) => {
       refreshTimer = setTimeout(() => {
         const messages = pendingMessages;
         pendingMessages = [];
-        if (messages.every(isSafelyReconciledEcho)) return;
+        // Issuance has a narrow, read-only progress query. Do not reload the entire
+        // class for each registered title or make its timeout hide confirmed progress.
+        if (isManualCycleObservationActive(turmaId) || messages.every(isSafelyReconciledEcho)) return;
         void queryClient.invalidateQueries({
           queryKey: matriculaTecnicaFinanceiroKeys.turma(turmaId),
           refetchType: 'active',

@@ -1,8 +1,8 @@
 {
-  "version": "4.8.237",
+  "version": "4.8.239",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 246,
+  "revision": 248,
   "releasedAt": "2026-10-27",
-  "summary": "Alinhamento auditável das migrations do financeiro por matrícula ao ledger de produção"
+  "summary": "Correção auditável de taxa técnica rejeitada com prova oficial de ausência, preservação do histórico e novo consentimento"
 }

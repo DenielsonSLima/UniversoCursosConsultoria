@@ -74,6 +74,7 @@ const fixture = () => {
       return query;
     },
     rpc(name: string) {
+      if (name === "resolve_rejected_fee_request_service") return Promise.resolve({ data: { required: false }, error: null });
       if (name === "technical_manual_banese_expected_terms_service") {
         termChecks += 1;
         return Promise.resolve({ data: null, error: { message: "STOP_BEFORE_BANK" } });

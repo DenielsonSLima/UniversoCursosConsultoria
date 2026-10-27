@@ -1,3 +1,5 @@
+import { REJECTED_FEE_ACTION } from "../technical-rejected-fee-correction/contract.ts";
+import { runRejectedFeeAbsenceInspection } from "../technical-rejected-fee-correction/worker-action.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { safeEqual } from "../banese-reconciliation-worker/request-guards.ts";
 import {
@@ -87,6 +89,9 @@ Deno.serve(async (request: Request) => {
 
   try {
     const body = await readBody(request);
+    if (body && typeof body === "object" && !Array.isArray(body) && (body as Record<string, unknown>).action === REJECTED_FEE_ACTION) {
+      return json(await runRejectedFeeAbsenceInspection(admin, body));
+    }
     if (body && typeof body === "object" && !Array.isArray(body) && (body as Record<string, unknown>).action === CORRECTION_ACTION) {
       // The bounded bank stage returns here. Never fall through to automatic issuance.
       const result = await runApprovedCorrectionItem(admin, body);

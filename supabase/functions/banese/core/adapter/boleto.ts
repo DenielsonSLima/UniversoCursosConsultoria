@@ -1,3 +1,4 @@
+import { loadRejectedFeeBankPolicy, enforceRejectedFeePreflight, assertRejectedFeeMatchedTitle } from "../../../technical-rejected-fee-correction/bank-policy.ts";
 import {
   advanceBaneseNossoNumeroAfterCollision,
   claimBaneseApiSubmissionAttempt,
@@ -98,6 +99,8 @@ export const createBaneseBoletoCharge = async (
   // registro remoto e erros locais nao podem ser promovidos a API_AMBIGUOUS.
   validateBaneseBoletoPayloadInput(input);
 
+  const rejectedFeePolicy = input.receivable?.regra_financeira_tecnica_snapshot
+    ? await loadRejectedFeeBankPolicy(input.admin, receivableId, expectedCreationToken) : null;
   let reservation = await reserveBaneseNossoNumero(input.admin, {
     receivableId,
     environment: input.environment,
@@ -112,6 +115,7 @@ export const createBaneseBoletoCharge = async (
     input.admin,
     input.environment,
   );
+  if (rejectedFeePolicy && reservation.recoveryPending) throw new Error("REJECTED_FEE_RESERVATION_REVIEW_REQUIRED");
   if (reservation.recoveryPending) {
     const recovery = await recoverBaneseIncidentReservation({
       charge: input,
@@ -162,7 +166,8 @@ export const createBaneseBoletoCharge = async (
       requireRemoteFinancialIdentity: true,
       requireRemoteTitleIdentity: true,
     });
-    if (input.allowPendingBolePix === true) {
+    if (rejectedFeePolicy) await assertRejectedFeeMatchedTitle(raw, `${endpoint}/${payload.NossoNumero}`, token);
+    if (!rejectedFeePolicy && input.allowPendingBolePix === true) {
       await assertBanesePixRecoveryEligible({
         raw,
         baseEndpoint: `${endpoint}/${payload.NossoNumero}`,
@@ -212,6 +217,7 @@ export const createBaneseBoletoCharge = async (
     if (collision.classification === "MATCH") {
       return { result: await recoveredResult(raw, payload), advanced: false };
     }
+    if (rejectedFeePolicy) throw new Error("REJECTED_FEE_EXISTING_TITLE_REQUIRES_REVIEW");
     if (collision.classification !== "FOREIGN") {
       throw new BaneseAdapterError(
         "O Banese retornou um titulo cuja identidade nao pode ser determinada com seguranca. Nenhum novo POST foi enviado.",
@@ -255,6 +261,7 @@ export const createBaneseBoletoCharge = async (
         }`,
       );
     }
+    enforceRejectedFeePreflight(rejectedFeePolicy, { environment: input.environment, convenio, nossoNumero }, preflightStatus, preflightRaw);
     if (preflightStatus >= 200 && preflightStatus < 300) {
       const collision = await advanceCollision(
         preflightRaw,

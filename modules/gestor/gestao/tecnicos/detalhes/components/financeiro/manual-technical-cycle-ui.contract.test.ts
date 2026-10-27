@@ -458,7 +458,7 @@ test("fingerprints e requestId impedem retry ou prévia silenciosamente diferent
     manualMutation.indexOf("} catch (error)"),
   );
   assert.doesNotMatch(catchBlock, /requestIds\.current\.delete/);
-  assert.match(listSource, /sem duplicar cobranças/);
+  assert.match(listSource, /Consulte o progresso ou o extrato antes de qualquer retomada\. Não gere novamente\./);
 });
 
 test("geração e retomada atualizam workspace e listas financeiras inclusive em falha parcial", () => {

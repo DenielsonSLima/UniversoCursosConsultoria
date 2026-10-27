@@ -1,3 +1,4 @@
+import { resolveRejectedFeeRequest } from "../technical-rejected-fee-correction/issuance-request.ts";
 import { correctionAuthorizationRequestId } from './bounded-correction-context.ts';
 import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
 import { queryBaneseBoleto } from "../banese/core/adapter.ts";
@@ -186,7 +187,7 @@ const claimAmbiguousReconciliation = async (input: {
 const recoverAmbiguousBaneseResult = async (input: {
   admin: Client;
   loaded: LoadedReceivable;
-  scope: IssuanceScope;
+  scope: IssuanceScope; strictEffectivePayments?: boolean;
 }): Promise<GatewayChargeResult> => {
   const receivable = input.loaded.receivable;
   const { data: credential, error: credentialError } = await input.admin
@@ -209,7 +210,7 @@ const recoverAmbiguousBaneseResult = async (input: {
         metadata.baneseBoletoConvenio || metadata.baneseConvenio,
       nossoNumero: receivable.gateway_boleto_nosso_numero,
       recoverPix: true,
-      validateTitleIdentity: true,
+      validateTitleIdentity: true, strictEffectivePayments: input.strictEffectivePayments === true,
       expectedAmount: receivable.valor,
       expectedDueDate: String(receivable.data_vencimento || "").slice(0, 10),
       expectedAgency: receivable.gateway_boleto_agencia ||
@@ -340,11 +341,14 @@ async (context: ManualCycleContext, receivableId: string) => {
     loaded.receivable.polo_id !== scope.poloId
   ) throw new Error("Recebível mudou de escopo durante a emissão.");
 
-  const authorizationRequestId = correctionAuthorizationRequestId(context, receivableId)
+  const defaultRequestId = correctionAuthorizationRequestId(context, receivableId)
     ?? await deterministicReceivableRequestId(
     context.requestId,
     receivableId,
   );
+  const authorizationRequestId = await resolveRejectedFeeRequest(input.admin, {
+    receivableId, cycleRequestId: context.requestId, defaultRequestId, internalRecovery: Boolean(input.authorizeReceivable),
+  });
   const authorization = input.authorizeReceivable
     ? await input.authorizeReceivable(receivableId, authorizationRequestId)
     : await input.userClient.rpc(
@@ -402,7 +406,7 @@ async (context: ManualCycleContext, receivableId: string) => {
       result = await recoverAmbiguousBaneseResult({
         admin: input.admin,
         loaded: { ...loaded, receivable: locked },
-        scope,
+        scope, strictEffectivePayments: authorizationRequestId !== defaultRequestId,
       });
     } else {
       const financialTerms = await resolveCanonicalManualCycleBaneseTerms(
