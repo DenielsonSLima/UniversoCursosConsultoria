@@ -43,6 +43,7 @@ const TurmaFinanceiroTecnico: React.FC<TurmaFinanceiroTecnicoProps> = ({ turma }
         regra={workspaceQuery.data.regra}
         resumo={workspaceQuery.data.resumo}
         alunos={workspaceQuery.data.matriculas}
+          diagnosticosMatriculas={workspaceQuery.data.diagnosticosMatriculas}
         isLoading={false}
         isError={false}
         isFetching={workspaceQuery.isFetching}

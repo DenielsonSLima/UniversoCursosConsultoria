@@ -1,3 +1,6 @@
+import { hasCycleChoice } from '@/modules/shared/financeiro/matricula/selectors';
+import { cycleDecisionReasons } from '@/modules/shared/financeiro/matricula/labels';
+import FinanceiroMatriculaSources from './FinanceiroMatriculaSources';
 import FinanceiroLocalWaiverHistory from './FinanceiroLocalWaiverHistory';
 import FinanceiroBoundedCorrectionStatus from './FinanceiroBoundedCorrectionStatus';
 import { correctionLabels, usesCanonicalCycleAfterCorrection } from './bounded-correction';
@@ -21,7 +24,7 @@ interface FinanceiroCicloManualStatusProps {
   disabled: boolean;
   reviewingProesc?: boolean;
   onGenerate: () => void;
-  onResume: () => void;
+  onResume: (cycle?: number) => void;
 }
 
 const cycleLabel = (cycle: number | null | undefined) => (
@@ -41,6 +44,9 @@ const isIssuedInProesc = (generated: GeneratedCycle | null) => (
 );
 
 export const getFinanceiroSituationLabel = (row: MatriculaTecnicaFinanceiroRow) => {
+  if (row.cicloManual.diagnosticoFinanceiro) return 'Dados financeiros desta matrícula em revisão';
+  if (row.cicloManual.decisaoGestor) return row.cicloManual.cicloGerado?.pendentesEmissao
+    ? 'Operação existente com emissão incompleta' : 'Emissão por decisão do gestor';
   if (row.cicloManual.correcaoEmissao && row.cicloManual.estado !== 'PROTEGIDO_EXISTENTE' && !usesCanonicalCycleAfterCorrection(row.cicloManual.correcaoEmissao)) return correctionLabels[row.cicloManual.correcaoEmissao.status];
   if (row.cicloManual.habilitado && row.cicloManual.modo === 'MANUAL') {
     const generated = row.cicloManual.cicloGerado;
@@ -144,7 +150,7 @@ const FinanceiroCicloManualStatus = ({
 
   if (!cicloManual.habilitado || cicloManual.modo !== 'MANUAL') return null;
 
-  if (cicloManual.estado === 'PROTEGIDO_EXISTENTE') {
+  if (cicloManual.estado === 'PROTEGIDO_EXISTENTE' && !cicloManual.decisaoGestor) {
     const individualHistory = cicloManual.bloqueio?.codigo === 'HISTORICO_FINANCEIRO_EXISTENTE'
       && !isIssuedInProesc(generated)
       && (!generated || !isFullyIssued(generated));
@@ -185,6 +191,23 @@ const FinanceiroCicloManualStatus = ({
     );
   }
 
+  if (cicloManual.decisaoGestor) {
+    const resumable = generated && cicloManual.decisaoGestor.opcoes.some((o) =>
+      o.cicloNumero === generated.numero && o.acao === 'RETOMAR');
+    return <div className="space-y-2">
+      {generated && (resumable
+        ? <GeneratedCycleStatus generated={generated} disabled={disabled} onResume={() => onResume(generated.numero)} />
+        : <p className="text-xs font-semibold text-slate-600">{cycleLabel(generated.numero)}: histórico existente preservado para consulta.</p>)}
+      {cicloManual.decisaoGestor.opcoes.filter((o) => o.acao === 'RETOMAR' && o.cicloNumero !== generated?.numero).map((o) =>
+        <button key={o.cicloNumero} type="button" disabled={disabled} onClick={() => onResume(o.cicloNumero)}
+          className="mr-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-[9px] font-black uppercase text-blue-700 disabled:opacity-50">Retomar emissão do {o.cicloNumero}º ciclo</button>)}
+      {hasCycleChoice(cicloManual) && <button type="button" disabled={disabled} onClick={onGenerate}
+        className="rounded-lg bg-emerald-700 px-3 py-2 text-[9px] font-black uppercase text-white disabled:opacity-50">Escolher ciclo / não emitir</button>}
+      {!hasCycleChoice(cicloManual) && <p className="text-[10px] text-slate-600">{[...new Set(cicloManual.decisaoGestor.opcoes
+        .map((o) => o.motivo && (cycleDecisionReasons[o.motivo] ?? o.motivo)))].filter(Boolean).join(' · ')}</p>}
+    </div>;
+  }
+
   if (generated && !isFullyIssued(generated)) {
     return <GeneratedCycleStatus generated={generated} disabled={disabled} onResume={onResume} />;
   }
@@ -202,7 +225,7 @@ const FinanceiroCicloManualStatus = ({
   if (cicloManual.estado === 'ELEGIVEL' && cicloManual.podeGerar) {
     return (
       <div className="flex flex-wrap items-center gap-2">
-        {generated ? <GeneratedCycleStatus generated={generated} disabled={disabled} onResume={onResume} /> : null}
+        {generated ? <GeneratedCycleStatus generated={generated} disabled={disabled} onResume={() => onResume(generated.numero)} /> : null}
         <div className={`flex flex-wrap items-center gap-1.5 ${generated ? 'border-l border-slate-200 pl-2' : ''}`}>
           <span className="inline-flex items-center gap-1 rounded bg-emerald-100 px-2 py-1 text-[9px] font-black uppercase text-emerald-800">
             <CheckCircle2 size={12} /> {cycleLabel(cicloManual.proximoCicloNumero)} elegível
@@ -223,7 +246,7 @@ const FinanceiroCicloManualStatus = ({
   if (cicloManual.estado === 'BLOQUEADO') {
     return (
       <div className="flex max-w-80 flex-wrap items-center gap-2" role="status">
-        {generated ? <GeneratedCycleStatus generated={generated} disabled={disabled} onResume={onResume} /> : null}
+        {generated ? <GeneratedCycleStatus generated={generated} disabled={disabled} onResume={() => onResume(generated.numero)} /> : null}
         <div className={generated ? 'border-l border-slate-200 pl-2' : ''}>
           <span className="inline-flex items-center gap-1 rounded bg-rose-100 px-2 py-1 text-[9px] font-black uppercase text-rose-800">
             <LockKeyhole size={12} /> {cycleLabel(cicloManual.proximoCicloNumero)} bloqueado
@@ -239,7 +262,7 @@ const FinanceiroCicloManualStatus = ({
   if (cicloManual.estado === 'CICLOS_CONCLUIDOS') {
     return (
       <div className="flex flex-wrap items-center gap-2" role="status">
-        {generated ? <GeneratedCycleStatus generated={generated} disabled={disabled} onResume={onResume} /> : null}
+        {generated ? <GeneratedCycleStatus generated={generated} disabled={disabled} onResume={() => onResume(generated.numero)} /> : null}
         <span className="inline-flex items-center gap-1 rounded bg-slate-100 px-2 py-1 text-[9px] font-black uppercase text-slate-600">
           <CheckCircle2 size={12} /> Sem novas cobranças
         </span>
@@ -256,6 +279,7 @@ const FinanceiroCicloManualStatus = ({
 
 const FinanceiroCicloManualStatusWithHistory = (props: FinanceiroCicloManualStatusProps) => <>
   <FinanceiroCicloManualStatus {...props} />
+  {props.cicloManual.financeiroMatricula && <FinanceiroMatriculaSources context={props.cicloManual.financeiroMatricula} />}
   <FinanceiroLocalWaiverHistory cicloManual={props.cicloManual} />
 </>;
 

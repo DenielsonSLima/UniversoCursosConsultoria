@@ -34,7 +34,7 @@ interface FinanceiroAlunosTableProps {
   onOpenManualCycle: (matriculaId: string) => void;
   onActivateNow: (row: MatriculaTecnicaFinanceiroRow) => void;
   onSchedule: (row: MatriculaTecnicaFinanceiroRow) => void;
-  onResumeCycle: (row: MatriculaTecnicaFinanceiroRow) => void;
+  onResumeCycle: (row: MatriculaTecnicaFinanceiroRow, cycle?: number) => void;
   onSettleEnrollment?: (row: MatriculaTecnicaFinanceiroRow) => void;
   onCarnetFeedback: FinanceiroAlunoCarneFeedback;
 }
@@ -138,7 +138,7 @@ const FinanceiroAlunosTable = ({
           </tr>
         ) : rows.map((row, index) => {
           const manualMode = row.cicloManual.habilitado && row.cicloManual.modo === 'MANUAL';
-          const canActivate = !manualMode
+          const canActivate = !row.cicloManual.diagnosticoFinanceiro && !manualMode
             && row.financeiro.status === 'PENDENTE'
             && Boolean(row.regraEfetiva);
           const protectedExisting = manualMode
@@ -207,6 +207,7 @@ const FinanceiroAlunosTable = ({
               <td className="px-3 py-3 align-top">
                 <div className="space-y-1.5">
                   <MatriculaAcademicaBadge status={row.statusAcademico} />
+                  {row.cicloManual.diagnosticoFinanceiro && <p role="alert" className="text-xs text-rose-700">{row.cicloManual.diagnosticoFinanceiro} Atualize esta matrícula; emissão indisponível.</p>}
                   {manualMode
                     ? <p className="max-w-52 text-[9px] font-bold leading-4 text-slate-600">Cobrança: {situationLabel(row)}</p>
                     : statusBadge(row)}
@@ -239,7 +240,7 @@ const FinanceiroAlunosTable = ({
                               disabled={pending}
                               reviewingProesc={reviewingProesc && row.cicloManual.conferenciaProesc?.necessaria}
                               onGenerate={() => onOpenManualCycle(row.matriculaId)}
-                              onResume={() => onResumeCycle(row)}
+                              onResume={(cycle) => onResumeCycle(row, cycle)}
                             />
                           ) : null}
                           {row.cicloManual.matriculaLocal && onSettleEnrollment

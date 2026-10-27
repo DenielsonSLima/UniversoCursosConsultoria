@@ -146,7 +146,7 @@ test('emissão Banese incompleta conserva contagem e botão de retomada', () => 
   state.cicloGerado!.emitidosBanese = 24;
   state.cicloGerado!.pendentesEmissao = 1;
   const html = renderStatus(state);
-  assert.match(html, /24\/25 emitidos/);
+  assert.match(html, /24\/25 títulos emitidos/);
   assert.match(html, /<button/);
   assert.match(html, /Retomar emissão/);
   assert.doesNotMatch(html, /Proesc/);

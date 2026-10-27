@@ -40,7 +40,7 @@ test('mudança ociosa C1 para C2 reinicia datas e confirmação sem reaproveitar
   for (const operation of [
     'setCycleNumber(requestedCycleNumber)', 'setStep(1)', 'setEnrollmentMode(null)',
     "setDateSource(requestedCycleNumber === 2 || plannedEntry || explicitSchedule ? 'INDIVIDUAL' : 'TURMA')",
-    "setIndividualDate(row.cicloManual.primeiroVencimentoSugerido ?? '')",
+    "setIndividualDate(transferSetup.firstDueDate ?? row.cicloManual.primeiroVencimentoSugerido ?? '')",
     'setExternalHistoryConfirmed(false)', 'setIssuanceSnapshot(null)', 'lastPreviewRef.current = null',
   ]) assert.ok(transitionBody.includes(operation), `reset ausente: ${operation}`);
   assert.match(dialog, /const previewEnabled = !pending && !cycleIdentityChanged/);

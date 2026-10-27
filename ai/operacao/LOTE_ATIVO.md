@@ -1,5 +1,5 @@
 # Lote ativo
 
-Lote 2026-10-27-retomada-segura-documentos-banese: PUBLICADO E CONFERIDO, versão4.8.235/revisão244, PR329 integrado em e937cc1b811e42afa4d31d72b6043648c3427272. Usuário autorizou aplicação em produção. Três agentes; 56 testes focados, CI completo e Preview final aprovados. Nenhuma emissão, cancelamento ou baixa executada pelo agente.
+Lote 2026-10-27-financeiro-central-por-matricula: VALIDADO LOCALMENTE, PUBLICAÇÃO AUTORIZADA. Versão 4.8.236/revisão 245. Três análises independentes e revisão cruzada; aplicação remota depende de CI completo, drift guard, readback e preservação dos registros financeiros. Usuário fará aceite manual.
 
-Manifesto explícito: `ai/operacao/registros/alteracoes/2026-10-27-retomada-segura-documentos-banese.md`. Projeto Universo confirmado; migration20261027104210 aplicada, emissorv13 e catálogov8 ACTIVE/JWTtrue, readback exato e autorizações/totais preservados. Vercel dpl_GLEf9QGEEeqbfhVxFQhWZYzATSx6 production READY; aliases da Universo e rota /gestor HTTP200 conferidos. Aceite manual na sessão real e pendências individuais de endereço/proveniência permanecem explícitos no registro.
+Manifesto explícito: `ai/operacao/registros/alteracoes/2026-10-27-financeiro-central-por-matricula.md`. Nenhuma emissão, cancelamento, baixa ou alteração de vencimento integra este lote. A migration 20261027113154 já aplicada é somente recuperada para versionamento e não será reaplicada.
