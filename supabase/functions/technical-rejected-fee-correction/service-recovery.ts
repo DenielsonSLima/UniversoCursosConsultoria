@@ -15,6 +15,13 @@ export const serviceQueryDiagnostic = (error: unknown): string => {
   try { assertOfficialAbsence(Number(match[1]), JSON.parse(match[2])); absent = true; } catch { /* No proof. */ }
   return `QUERY_HTTP_${match[1]}_${absent ? "ABSENT" : "UNCONFIRMED"}`;
 };
+export const servicePixDiagnostic = (raw: unknown): string => {
+  const diagnostic = record(record(raw).pixDiagnostic);
+  const payment = record(diagnostic.paymentEnvelope);
+  return [diagnostic, payment].flatMap((item) =>
+    [item.payloadCandidatePresent === true, item.payloadValid === true, item.imageValid === true]
+  ).map(Number).join("");
+};
 export const recoverServiceFeeExactTitle = async (input: {
   admin: SupabaseClient;
   loaded: LoadedReceivable;
@@ -57,7 +64,7 @@ export const recoverServiceFeeExactTitle = async (input: {
     const flags = [snapshot.paid, snapshot.payments.length > 0, Boolean(snapshot.paymentsError),
       Boolean(snapshot.financialTermsError) || !snapshot.financialTerms,
       !snapshot.pixPayload || !snapshot.pixEncodedImage, snapshot.remoteStatus !== "PENDING"];
-    throw new Error(`REJECTED_FEE_SERVICE_SNAPSHOT_${flags.map(Boolean).map(Number).join("")}`);
+    throw new Error(`REJECTED_FEE_SERVICE_SNAPSHOT_${flags.map(Boolean).map(Number).join("")}_PIX_${servicePixDiagnostic(snapshot.raw)}`);
   }
   const raw = record(snapshot.raw);
   return {

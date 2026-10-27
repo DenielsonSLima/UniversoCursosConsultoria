@@ -10,6 +10,13 @@ Histórico arquivado: [30/09/2026 — versões 4.8.138 a 4.8.144](./changelog/20
 
 Histórico arquivado: [01/10/2026 a 04/10/2026 — versões 4.8.145 a 4.8.168](./changelog/2026-10-01-a-04-versoes-4-8-145-a-168.md).
 
+## [4.8.241] - 2026-10-27
+
+- Disponibiliza capacidade isolada de cancelamento sem reemissão para um conjunto nativo completo explicitamente aprovado, com ator Sistema e evidência da solicitação separada da autorização humana original.
+- Exige consulta bancária estrita antes e depois, intenção durável, controle de concorrência e recusa de pagamentos ou divergências; preserva identidades, referências e histórico. Resultado incerto permite somente confirmação.
+- Implantação e execução dependem de aprovação operacional específica. Arquivamento acadêmico e novo recebimento de transferência permanecem separados deste cancelamento.
+- Registra separadamente o diagnóstico sanitizado de recuperação de taxa já implantado: apenas indicadores booleanos de resposta Pix, sem dados bancários, mudança de emissão ou nova tentativa automática.
+
 ## [4.8.240] - 2026-10-27
 
 - Permite execução interna de uma taxa já corrigida somente após aprovação administrativa específica, com operação, manifesto e identidade fixos, registrada como Sistema sem personificar gestor.

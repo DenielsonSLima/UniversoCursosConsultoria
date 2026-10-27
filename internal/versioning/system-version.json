@@ -1,8 +1,8 @@
 {
-  "version": "4.8.240",
+  "version": "4.8.241",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 249,
+  "revision": 250,
   "releasedAt": "2026-10-27",
-  "summary": "Emissão de taxa corrigida por capacidade de serviço específica, auditada como Sistema, sem alterar autorizações humanas"
+  "summary": "Cancelamento bancário isolado de inclusão indevida, com aprovação auditável, confirmação estrita e preservação do histórico"
 }
