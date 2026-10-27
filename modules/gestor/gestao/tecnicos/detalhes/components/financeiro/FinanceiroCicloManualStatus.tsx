@@ -1,5 +1,5 @@
-import { hasCycleChoice } from '@/modules/shared/financeiro/matricula/selectors';
-import { cycleDecisionReasons } from '@/modules/shared/financeiro/matricula/labels';
+import { hasCycleChoice } from '../../../../../../shared/financeiro/matricula/selectors';
+import { cycleDecisionReasons } from '../../../../../../shared/financeiro/matricula/labels';
 import FinanceiroMatriculaSources from './FinanceiroMatriculaSources';
 import FinanceiroLocalWaiverHistory from './FinanceiroLocalWaiverHistory';
 import FinanceiroBoundedCorrectionStatus from './FinanceiroBoundedCorrectionStatus';

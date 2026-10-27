@@ -1,7 +1,7 @@
 import React from 'react';
-import type { EnrollmentFinancialContext } from '@/modules/shared/financeiro/matricula/contract';
-import { financialOriginLabels } from '@/modules/shared/financeiro/matricula/labels';
-import type { FinancialOriginFilter } from '@/modules/shared/financeiro/matricula/selectors';
+import type { EnrollmentFinancialContext } from '../../../../../../shared/financeiro/matricula/contract';
+import { financialOriginLabels } from '../../../../../../shared/financeiro/matricula/labels';
+import type { FinancialOriginFilter } from '../../../../../../shared/financeiro/matricula/selectors';
 
 export const FinanceiroMatriculaSourceFilter = ({ value, onChange }: {
   value: FinancialOriginFilter; onChange: (value: FinancialOriginFilter) => void;

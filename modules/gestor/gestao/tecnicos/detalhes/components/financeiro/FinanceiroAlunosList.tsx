@@ -1,6 +1,6 @@
 import { isolateFinancialCycleRows } from './financial-row-isolation';
 import { FinanceiroMatriculaSourceFilter } from './FinanceiroMatriculaSources';
-import { matchesFinancialOrigin, type FinancialOriginFilter } from '@/modules/shared/financeiro/matricula/selectors';
+import { matchesFinancialOrigin, type FinancialOriginFilter } from '../../../../../../shared/financeiro/matricula/selectors';
 import { usesCanonicalCycleAfterCorrection } from './bounded-correction';
 import FinanceiroBoundedCorrectionDialog from './FinanceiroBoundedCorrectionDialog';
 import React, { useMemo, useRef, useState } from 'react';

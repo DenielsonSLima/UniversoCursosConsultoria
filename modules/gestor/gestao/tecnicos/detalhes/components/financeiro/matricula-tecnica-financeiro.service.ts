@@ -1,4 +1,4 @@
-import { isolateFinancialWorkspaceRows } from '@/modules/shared/financeiro/matricula/parser';
+import { isolateFinancialWorkspaceRows } from '../../../../../../shared/financeiro/matricula/parser';
 import type {
   AtivarFinanceiroMatriculaTecnicaResult,
   AtivarFinanceiroMatriculasTecnicasLoteResult,

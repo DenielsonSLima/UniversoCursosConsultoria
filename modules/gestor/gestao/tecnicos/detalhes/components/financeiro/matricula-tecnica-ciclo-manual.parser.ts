@@ -1,4 +1,4 @@
-import { requireEnrollmentFinancialContext, requireManagerCycleDecision } from '@/modules/shared/financeiro/matricula/parser';
+import { requireEnrollmentFinancialContext, requireManagerCycleDecision } from '../../../../../../shared/financeiro/matricula/parser';
 import { parseCorrectionSummary, usesCanonicalCycleAfterCorrection } from './bounded-correction';
 import { isFeeOnlyExternalTransferPlan, isProvenLocalEnrollment, readCycleQuantities } from './matricula-tecnica-ciclo-manual-destination';
 import { isExternalTransferConditions } from '../academic/external-transfer.contract';

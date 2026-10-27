@@ -1,4 +1,4 @@
-import type { EnrollmentFinancialProjection } from '@/modules/shared/financeiro/matricula/contract';
+import type { EnrollmentFinancialProjection } from '../../../../../../shared/financeiro/matricula/contract';
 import type { CorrectionSummary } from './bounded-correction';
 import type { ExternalTransferConditions } from '../academic/external-transfer.contract';
 import type { TransferEntrySnapshot } from '../../../../../../../supabase/functions/_shared/technical-transfer-schedule';

@@ -35,6 +35,8 @@ Rollback operacional: interromper publicação se qualquer guard/readback diverg
 
 - Gates locais: TypeScript, lint, versão, build e limite de linhas aprovados; 27 testes novos e 56 de recuperação aprovados. Contratos anteriores foram atualizados apenas nas expectativas substituídas pela decisão canônica, data do plano e rótulo de títulos. CI completo ainda é condição para aplicação.
 
+- Primeiro CI identificou alias de import não resolvido pelo Deno. Imports do novo módulo foram convertidos para caminhos relativos, sem alterar regras, testes ou configuração do runner; revalidação completa é exigida no novo head.
+
 ## Manifesto explícito
 - `.github/workflows/technical-cycle-recovery.yml`
 - `ai/operacao/LOTE_ATIVO.md`

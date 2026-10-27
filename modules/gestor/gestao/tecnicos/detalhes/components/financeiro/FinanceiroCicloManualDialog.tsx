@@ -1,4 +1,4 @@
-import { canChooseCycle } from '@/modules/shared/financeiro/matricula/selectors';
+import { canChooseCycle } from '../../../../../../shared/financeiro/matricula/selectors';
 import FinanceiroManagerCycleChoice from './FinanceiroManagerCycleChoice';
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';

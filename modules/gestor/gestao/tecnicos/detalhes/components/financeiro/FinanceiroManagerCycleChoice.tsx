@@ -1,6 +1,6 @@
 import React from 'react';
-import type { ManagerCycleDecision } from '@/modules/shared/financeiro/matricula/contract';
-import { cycleDecisionReasons } from '@/modules/shared/financeiro/matricula/labels';
+import type { ManagerCycleDecision } from '../../../../../../shared/financeiro/matricula/contract';
+import { cycleDecisionReasons } from '../../../../../../shared/financeiro/matricula/labels';
 
 export default function FinanceiroManagerCycleChoice({ decision, value, disabled, onChange, onDoNotIssue }: {
   decision: ManagerCycleDecision; value: number | null; disabled: boolean;

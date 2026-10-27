@@ -1,4 +1,4 @@
-import type { FinancialRowDiagnostic } from '@/modules/shared/financeiro/matricula/contract';
+import type { FinancialRowDiagnostic } from '../../../../../../shared/financeiro/matricula/contract';
 import type { MatriculaTecnicaCicloManual } from './matricula-tecnica-ciclo-manual.types';
 
 export type MatriculaTecnicaFinanceiroStatus =
