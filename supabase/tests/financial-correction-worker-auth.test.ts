@@ -19,6 +19,10 @@ async function workerHarness() {
   const bindings = {
     createClient: () => ({ rpc: async () => ({ data: secret, error: null }) }),
     safeEqual: (a: string, b: string) => a === b,
+    REPLACEMENT_ACTION: "replace_approved_service_fee",
+    runServiceFeeReplacement: async () => { calls.push("service-replacement"); return { completed: true }; },
+    REJECTED_FEE_SERVICE_ACTION: "issue_approved_rejected_fee_service",
+    runApprovedRejectedFeeService: async () => { calls.push("service-fee"); return { completed: true }; },
     REJECTED_FEE_ACTION: "inspect_rejected_fee_absence",
     runRejectedFeeAbsenceInspection: async () => {
       calls.push("inspect-only");
@@ -98,3 +102,20 @@ test("authorized rejected-fee inspection returns without cancellation or legacy 
     absenceConfirmed: true, financiallyChanged: false, issued: false,
   });
 });
+
+for (const [action, expected] of [
+  ["replace_approved_service_fee", "service-replacement"],
+  ["issue_approved_rejected_fee_service", "service-fee"],
+]) {
+  test(`${action} requires the worker secret and cannot fall through to legacy issuance`, async () => {
+    for (const authorized of [false, true]) {
+      const h = await workerHarness();
+      const response = await h.handler(new Request("https://example.invalid", {
+        method: "POST", headers: authorized ? { "X-Banese-Worker-Token": h.secret } : {},
+        body: JSON.stringify({ action }),
+      }));
+      assert.equal(response.status, authorized ? 200 : 401);
+      assert.deepEqual(h.calls, authorized ? [expected] : []);
+    }
+  });
+}

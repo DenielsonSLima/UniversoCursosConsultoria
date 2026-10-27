@@ -1,3 +1,4 @@
+import { resumeServiceFee } from './service-fee-resume.ts';
 import { parseBoundedCorrectionContext } from './bounded-correction-context.ts';
 import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
 import type { GestorAutorizado } from "../_shared/authz.ts";
@@ -237,7 +238,22 @@ export const createManualCycleIssuanceDependencies = (input: {
 
     resume: loadContext,
     reload: loadContext,
-    issueReceivable,
+    async issueReceivable(context, receivableId) {
+      const item = context.ciclo.recebiveis.find(row => row.id === receivableId);
+      if (!input.internalRecovery && context.ciclo.numero === 2 && item?.tipo === 'REMATRICULA') {
+        await resumeServiceFee(input.userClient, receivableId, context.requestId);
+      }
+      await issueReceivable(context, receivableId);
+    },
   };
+};
+
+
+// Uses the same production route, enrollment and issuer checks without inventing a user.
+export const loadServiceFeeIssuanceScope = async (admin: Client, matriculaId: string): Promise<IssuanceScope> => {
+  const [baseScope, credentialId, issuer] = await Promise.all([
+    loadEnrollmentScope(admin, matriculaId), assertProductionRoute(admin), resolveGatewayIssuer(admin),
+  ]);
+  return { ...baseScope, credentialId, issuerPoloId: issuer.id };
 };
 

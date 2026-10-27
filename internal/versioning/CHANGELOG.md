@@ -10,6 +10,12 @@ Histórico arquivado: [30/09/2026 — versões 4.8.138 a 4.8.144](./changelog/20
 
 Histórico arquivado: [01/10/2026 a 04/10/2026 — versões 4.8.145 a 4.8.168](./changelog/2026-10-01-a-04-versoes-4-8-145-a-168.md).
 
+## [4.8.241] - 2026-10-27
+
+- Retomada de rematrícula aprovada pelo serviço consulta a mesma tentativa sem alterar o consentimento histórico.
+- Substituição individual autorizada confirma baixa e ausência de pagamento antes de reservar um único título novo; resposta Pix da criação fica preservada e retries consultam a mesma identidade.
+- Operação desta entrega concluiu 13/13 títulos, mantendo valor, vencimento e as doze mensalidades. Dois QR Codes do PDF nativo foram conferidos contra o Pix oficial.
+
 ## [4.8.240] - 2026-10-27
 
 - Matemática Básica e Matemática para Enem recebem aulas próprias, exercícios resolvidos, atividades por habilidade e provas matemáticas revisadas com fontes INEP e OBMEP/IMPA.
