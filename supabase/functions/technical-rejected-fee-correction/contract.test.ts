@@ -7,28 +7,33 @@ const rejects = async (fn: () => unknown | Promise<unknown>) => { let failed=fal
 const operationId="20000000-0000-4000-8000-000000096001", leaseToken="20000000-0000-4000-8000-000000096002";
 const receivableId="20000000-0000-4000-8000-000000096003",cycleRequestId="20000000-0000-4000-8000-000000096004";
 const manifestHash="a".repeat(64), official={Erros:[{CodigoErroProcessamento:"ERRO_BOLETO_NAO_ENCONTRADO"}]};
-Deno.test("strict official absence excludes generic404/multiple/200/400/body supplied scope",async()=>{
- assertOfficialAbsence(404,official);
- for(const [status,body] of [[404,{}],[200,official],[400,official],[404,{Erros:[...official.Erros,...official.Erros]}]])
+Deno.test("strict official absence excludes generic400/404/multiple/200/auth/body supplied scope",async()=>{
+ assertOfficialAbsence(404,official);assertOfficialAbsence(400,official);
+ assertOfficialAbsence(400,{Erros:[{CodigoErroProcessamento:" ERRO_BOLETO_NAO_ENCONTRADO "}],LogId:"0"});
+ for(const [status,body] of [[404,{}],[400,{}],[200,official],[401,official],[403,official],[500,official],
+ [400,"<html>gateway error</html>"],[400,null],[400,{Codigo:"ERRO_BOLETO_NAO_ENCONTRADO"}],
+ [400,{Erros:[{CodigoErroProcessamento:"400",Descricao:"ERRO_BOLETO_NAO_ENCONTRADO"}]}],
+ [400,{Erros:[{CodigoErroProcessamento:"ERRO_BOLETO_NAO_ENCONTRADO_OTHER"}]}],
+ [400,{Erros:[...official.Erros,...official.Erros]}],[404,{Erros:[...official.Erros,...official.Erros]}]])
  await rejects(()=>assertOfficialAbsence(Number(status),body));
  await rejects(()=>parseInspectionRequest({action:"inspect_rejected_fee_absence",operationId,manifestHash,convenio:"123"}));
 });
 Deno.test("authenticated worker performs exactly one GET, no financial mutation or fallthrough; failure never commits absence",async()=>{
- for(const status of [404,200,500]) {
+ for(const status of [400,404,200,500]) {
  const calls:string[]=[],methods:string[]=[];
- const admin={rpc:async(name:string)=>{calls.push(name);return {error:null,data:name.startsWith("claim_")?
+ const admin={rpc:async(name:string,args?:Record<string,unknown>)=>{calls.push(name);if(name.startsWith("confirm_")){const e=args?.p_evidence as Record<string,unknown>;assert(e.httpStatus===status&&e.normalizer==="BANESE_GET_SINGLE_ERROR_V1"&&e.errorCount===1&&e.responseShape==="Erros[1].CodigoErroProcessamento");}return {error:null,data:name.startsWith("claim_")?
  {operationId,manifestHash,receivableId,leaseToken,environment:"production",convenio:"12345",nossoNumero:"000099001"}:{confirmed:true}};}};
  const deps={token:async()=>({accessToken:"synthetic-test",tokenType:"Bearer",expiresIn:null,scope:null,raw:{}}),
  fetch:async(url:RequestInfo|URL,init?:RequestInit)=>{methods.push(String(init?.method));assert(String(url).endsWith("/convenios/12345/boletos/000099001"));return new Response(JSON.stringify(official),{status});}};
  const run=()=>runRejectedFeeAbsenceInspection(admin,{action:"inspect_rejected_fee_absence",operationId,manifestHash},deps);
- if(status===404){const result=await run();assert(result.issued===false&&result.financiallyChanged===false);assert(calls.length===2);}
+ if(status===400||status===404){const result=await run();assert(result.issued===false&&result.financiallyChanged===false);assert(calls.length===2);}
  else {await rejects(run);assert(calls.length===1);}
  assert(methods.join()==="GET");
  }
 });
 Deno.test("fresh preflight permits only exact reserved identity; positive response goes to strict matching recovery, never number advance",async()=>{
  const p={allowNewPost:true,environment:"production",convenio:"12345",nossoNumero:"000099001"};
- enforceRejectedFeePreflight(p,p,404,official);enforceRejectedFeePreflight(p,p,200,{existing:true});
+ enforceRejectedFeePreflight(p,p,400,official);enforceRejectedFeePreflight(p,p,404,official);enforceRejectedFeePreflight(p,p,200,{existing:true});
  await rejects(()=>enforceRejectedFeePreflight(p,p,404,{}));
  await rejects(()=>enforceRejectedFeePreflight(p,{...p,nossoNumero:"000099002"},200,{}));
 });
@@ -56,4 +61,12 @@ Deno.test("inspection diagnostic retains HTTP and bounded codes only; rejected r
  assert(calls.join()==="claim_rejected_fee_absence_service");
  }
  }
+});
+
+Deno.test("inspection transport timeout never commits evidence",async()=>{
+ const calls:string[]=[];
+ const admin={rpc:async(name:string)=>{calls.push(name);return {error:null,data:{operationId,manifestHash,receivableId,leaseToken,environment:"production",convenio:"12345",nossoNumero:"000099001"}};}};
+ const deps={token:async()=>({accessToken:"synthetic-test",tokenType:"Bearer",expiresIn:null,scope:null,raw:{}}),fetch:async()=>{throw new Error("synthetic timeout");}};
+ await rejects(()=>runRejectedFeeAbsenceInspection(admin,{action:"inspect_rejected_fee_absence",operationId,manifestHash},deps));
+ assert(calls.join()==="claim_rejected_fee_absence_service");
 });

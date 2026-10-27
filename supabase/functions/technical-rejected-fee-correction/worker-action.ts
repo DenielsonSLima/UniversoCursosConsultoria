@@ -21,8 +21,9 @@ export const runRejectedFeeAbsenceInspection = async (
     { method: "GET", headers: { Authorization: `${access.tokenType} ${access.accessToken}`, Accept: "application/json" }, signal },
   );
   const raw = await readResponseBody(response);
+  let normalized: ReturnType<typeof assertOfficialAbsence>;
   try {
-    assertOfficialAbsence(response.status, raw);
+    normalized = assertOfficialAbsence(response.status, raw);
   } catch {
     // Never log the bank body, payer details, identifiers or free-text descriptions.
     const row = record(raw);
@@ -43,7 +44,8 @@ export const runRejectedFeeAbsenceInspection = async (
   const hash = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(JSON.stringify(raw)));
   const evidence = {
     operation: "EXACT_RESERVED_TITLE_ABSENCE", method: "GET", environment: "production",
-    convenio: lease.convenio, nossoNumero: lease.nossoNumero, httpStatus: 404,
+    convenio: lease.convenio, nossoNumero: lease.nossoNumero, httpStatus: response.status,
+    ...normalized,
     errorCode: "ERRO_BOLETO_NAO_ENCONTRADO", checkedAt: new Date().toISOString(),
     responseHash: Array.from(new Uint8Array(hash), byte => byte.toString(16).padStart(2, "0")).join(""),
   };

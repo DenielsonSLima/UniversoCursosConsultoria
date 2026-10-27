@@ -23,8 +23,13 @@ export const parseInspectionLease = (value: unknown, operationId: string, manife
 };
 export const assertOfficialAbsence = (status: number, body: unknown) => {
   const errors = record(body).Erros;
-  if (status !== 404 || !Array.isArray(errors) || errors.length !== 1 ||
-    record(errors[0]).CodigoErroProcessamento !== "ERRO_BOLETO_NAO_ENCONTRADO") {
+  const code = Array.isArray(errors) && errors.length === 1
+    ? record(errors[0]).CodigoErroProcessamento : null;
+  // Banese API manual v1.6, GET section 2.3: one Erros entry, exact code.
+  // Only surrounding whitespace is normalized; no description or substring match.
+  if ((status !== 400 && status !== 404) || typeof code !== "string" ||
+    code.trim() !== "ERRO_BOLETO_NAO_ENCONTRADO") {
     throw new Error("REJECTED_FEE_EXACT_OFFICIAL_ABSENCE_NOT_CONFIRMED");
   }
+  return { normalizer: "BANESE_GET_SINGLE_ERROR_V1", responseShape: "Erros[1].CodigoErroProcessamento", errorCount: 1 };
 };

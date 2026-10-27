@@ -60,13 +60,30 @@ test('preparo pós-COMMIT preserva13 itens/run/ledger/12mensais e arquivo; só g
 test('ausência exige lease/TTL/identidade/status/código exatos; nenhum erro altera taxa ou permite preparo',async()=>{
  const {db,fee}=await setupRejectedFee();
  try {const a=await approve(db,fee);const before=await feeRow(db,fee);
- for(const change of [{httpStatus:200},{httpStatus:404,errorCode:'NOT_FOUND'},{convenio:'999'},{nossoNumero:'000099002'},
+ for(const change of [{httpStatus:200},{httpStatus:404,errorCode:'NOT_FOUND'},
+  {httpStatus:400},{httpStatus:400,normalizer:'BANESE_GET_SINGLE_ERROR_V1'},
+  {httpStatus:400,normalizer:'BANESE_GET_SINGLE_ERROR_V1',responseShape:'Erros[1].CodigoErroProcessamento',errorCount:2},
+  {httpStatus:400,normalizer:'BANESE_GET_SINGLE_ERROR_V1',responseShape:'Codigo',errorCount:1},
+  {httpStatus:400,normalizer:'OTHER',responseShape:'Erros[1].CodigoErroProcessamento',errorCount:1},
+  {httpStatus:400,normalizer:'BANESE_GET_SINGLE_ERROR_V1',responseShape:'Erros[1].CodigoErroProcessamento',errorCount:'1'},
+  {httpStatus:400,normalizer:'BANESE_GET_SINGLE_ERROR_V1',responseShape:'Erros[1].CodigoErroProcessamento',errorCount:1,convenio:'999'},
+  {httpStatus:400,normalizer:'BANESE_GET_SINGLE_ERROR_V1',responseShape:'Erros[1].CodigoErroProcessamento',errorCount:1,errorCode:'OTHER'},{convenio:'999'},{nossoNumero:'000099002'},
   {environment:'sandbox'},{method:'POST'},{checkedAt:'2026-10-01T00:00:00Z'},{responseHash:null}]) {
  await isolated(db,async()=>{const lease=await call(db,'public.claim_rejected_fee_absence_service',[operation,a.manifestHash]);
  const evidence={operation:'EXACT_RESERVED_TITLE_ABSENCE',method:'GET',environment:'production',convenio:lease.convenio,nossoNumero:lease.nossoNumero,httpStatus:404,errorCode:'ERRO_BOLETO_NAO_ENCONTRADO',responseHash:'a'.repeat(64),checkedAt:new Date().toISOString(),...change};
  await reject(db,()=>call(db,'public.confirm_rejected_fee_absence_service',[operation,a.manifestHash,lease.leaseToken,evidence]),/ABSENCE_PROOF_INVALID/);
  await reject(db,()=>preparation(db,a),/FRESH_ABSENCE/);assert.deepEqual(await feeRow(db,fee),before);});
  }
+ await isolated(db,async()=>{const lease=await call(db,'public.claim_rejected_fee_absence_service',[operation,a.manifestHash]);
+ const evidence={operation:'EXACT_RESERVED_TITLE_ABSENCE',method:'GET',environment:'production',convenio:lease.convenio,
+  nossoNumero:lease.nossoNumero,httpStatus:400,errorCode:'ERRO_BOLETO_NAO_ENCONTRADO',responseHash:'a'.repeat(64),
+  checkedAt:new Date().toISOString(),normalizer:'BANESE_GET_SINGLE_ERROR_V1',responseShape:'Erros[1].CodigoErroProcessamento',errorCount:1};
+ const result=await call(db,'public.confirm_rejected_fee_absence_service',[operation,a.manifestHash,lease.leaseToken,evidence]);
+ assert.equal(result.confirmed,true);assert.equal(result.financiallyChanged,false);assert.equal(result.issued,false);
+ assert.deepEqual(await feeRow(db,fee),before);
+ const stored=(await rows(db,'select absence_evidence from internal_academic.technical_rejected_fee_corrections where id=$1',[operation]))[0];
+ assert.equal(stored.absence_evidence.httpStatus,400);
+ });
  await isolated(db,async()=>{const lease=await call(db,'public.claim_rejected_fee_absence_service',[operation,a.manifestHash]);
  await reject(db,()=>call(db,'public.claim_rejected_fee_absence_service',[operation,a.manifestHash]),/BUSY/);
  assert.ok(lease.leaseToken);});
