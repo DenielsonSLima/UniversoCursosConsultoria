@@ -34,3 +34,11 @@ readback de migrations/ACL/dependências, manifesto privado conferido, aprovaç�
 da operação e GET bancário fresco. O arquivamento recuperável do episódio
 acadêmico/financeiro e futura continuidade correta são trabalho separado.
 Nenhum dado pessoal, ID de aluno ou evidência privada integra este lote público.
+
+## Delta de diagnóstico já implantado — separado do cancelador
+Três arquivos de `technical-rejected-fee-correction` registram o estado existente:
+`service-issuance.ts`, `service-recovery.ts` e `service-issuance.test.ts`.
+Apenas seis indicadores booleanos sanitizados de Pix, regex de diagnóstico e teste;
+nenhuma mudança de guarda, POST, SQL ou fluxo financeiro. Este pacote não
+reimplanta o worker de recuperação. Manifesto:21 arquivos cancel-only/registro +3
+de diagnóstico preexistente, revisados e conferidos por hash separadamente.

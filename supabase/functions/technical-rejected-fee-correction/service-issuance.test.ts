@@ -47,3 +47,10 @@ Deno.test("service query diagnostic emits only bounded status and strict officia
  }
  assert(serviceQueryDiagnostic(new Error("PII_SECRET_SENTINEL"))==="QUERY_UNCONFIRMED");
 });
+
+Deno.test("service Pix diagnostic exposes fixed booleans only, never bank keys or content",async()=>{
+ const {servicePixDiagnostic}=await import("./service-recovery.ts");
+ assert(servicePixDiagnostic({pixDiagnostic:{payloadCandidatePresent:true,payloadValid:false,imageValid:false,
+ pixFieldShapes:["PII_SECRET_SENTINEL"],paymentEnvelope:{payloadCandidatePresent:true,payloadValid:true,imageValid:true}}})==="100111");
+ assert(servicePixDiagnostic({pixDiagnostic:{payloadCandidatePresent:"PII_SECRET_SENTINEL",payloadValid:1,imageValid:{secret:true}}})==="000000");
+});

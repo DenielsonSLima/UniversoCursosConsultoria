@@ -88,7 +88,7 @@ export const runApprovedRejectedFeeService = async (
     }
     return { operationId: request.operationId, completed: true, replayed: false, issued: true };
   } catch (error) {
-    const safeDetail = error instanceof Error && /^REJECTED_FEE_SERVICE_(QUERY_UNCONFIRMED|QUERY_HTTP_[1-5]\d{2}_(ABSENT|UNCONFIRMED)|SNAPSHOT_[01]{6})$/.test(error.message)
+    const safeDetail = error instanceof Error && /^REJECTED_FEE_SERVICE_(QUERY_UNCONFIRMED|QUERY_HTTP_[1-5]\d{2}_(ABSENT|UNCONFIRMED)|SNAPSHOT_[01]{6}_PIX_[01]{6})$/.test(error.message)
       ? error.message : "REJECTED_FEE_SERVICE_UNCONFIRMED";
     try {
       if (claim.completed !== true) {
