@@ -26,3 +26,12 @@ jobs:
         env:
           PGLITE_MODULE_PATH: /tmp/universo-cycle-sql/node_modules/@electric-sql/pglite/dist/index.js
         run: node scripts/test-technical-cycle-recovery.mjs
+      - name: Testar proveniência, decisão do gestor e geração após COMMIT
+        env:
+          PGLITE_MODULE_PATH: /tmp/universo-cycle-sql/node_modules/@electric-sql/pglite/dist/index.js
+        run: >-
+          node --test
+          supabase/tests/manager_financial_context.isolated.test.mjs
+          supabase/tests/manager-cycle-generation.isolated.test.mjs
+          supabase/tests/manager-cycle-legacy-proof.isolated.test.mjs
+          supabase/tests/manager-cycle-ui.test.mjs

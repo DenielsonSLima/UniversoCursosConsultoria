@@ -1,3 +1,4 @@
+import type { EnrollmentFinancialProjection } from '../../../../../../shared/financeiro/matricula/contract';
 import type { CorrectionSummary } from './bounded-correction';
 import type { ExternalTransferConditions } from '../academic/external-transfer.contract';
 import type { TransferEntrySnapshot } from '../../../../../../../supabase/functions/_shared/technical-transfer-schedule';
@@ -13,6 +14,7 @@ export type MatriculaTecnicaCicloManualCriterio =
   | "QUITACAO_TOTAL"
   | "PENULTIMA_SEM_ATRASO"
   | "MANUAL_APOS_EMISSAO"
+  | "MANUAL_DECISAO_GESTOR"
   | "TRANSFERENCIA_PLANEJADA"
   | "TRANSFERENCIA_INTERNA_CANONICA"
   | "HISTORICO_EXTERNO";
@@ -46,7 +48,7 @@ export interface CicloManualMatriculaLocal {
   localSemBoletoComprovado: true;
 }
 
-export interface MatriculaTecnicaCicloManual {
+export interface MatriculaTecnicaCicloManual extends EnrollmentFinancialProjection {
   correcaoEmissao?: CorrectionSummary | null;
   planoEntrada?: CicloManualPlanoEntrada | null;
   continuidadeFinanceira?: {

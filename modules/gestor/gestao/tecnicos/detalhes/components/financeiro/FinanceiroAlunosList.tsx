@@ -1,3 +1,6 @@
+import { isolateFinancialCycleRows } from './financial-row-isolation';
+import { FinanceiroMatriculaSourceFilter } from './FinanceiroMatriculaSources';
+import { matchesFinancialOrigin, type FinancialOriginFilter } from '../../../../../../shared/financeiro/matricula/selectors';
 import { usesCanonicalCycleAfterCorrection } from './bounded-correction';
 import FinanceiroBoundedCorrectionDialog from './FinanceiroBoundedCorrectionDialog';
 import React, { useMemo, useRef, useState } from 'react';
@@ -43,7 +46,6 @@ import {
 import {
   getCicloFinanceiroTecnicoManualRecoveryGuidance,
   isCicloFinanceiroTecnicoManualIssuanceError,
-  requireMatriculaTecnicaCicloManual,
 } from './matricula-tecnica-ciclo-manual.service';
 
 interface FinanceiroAlunosListProps {
@@ -54,6 +56,7 @@ interface FinanceiroAlunosListProps {
   regra: MatriculaTecnicaRegra;
   resumo: Pick<MatriculaTecnicaFinanceiroWorkspace['resumo'], 'total' | 'recebido' | 'inadimplencia'>;
   alunos: MatriculaTecnicaFinanceiroRow[];
+  diagnosticosMatriculas?: MatriculaTecnicaFinanceiroWorkspace['diagnosticosMatriculas'];
   isLoading: boolean;
   isError: boolean;
   isFetching: boolean;
@@ -77,13 +80,16 @@ const FinanceiroAlunosList: React.FC<FinanceiroAlunosListProps> = ({
   valuesVisible = false,
   regra,
   resumo,
-  alunos,
+  alunos: receivedAlunos,
+  diagnosticosMatriculas = [],
   isLoading,
   isError,
   isFetching,
   onRetry,
 }) => {
   const { toasts, removeToast, toast } = useToast();
+  const alunos = useMemo(() => isolateFinancialCycleRows(receivedAlunos), [receivedAlunos]);
+  const [originFilter, setOriginFilter] = useState<FinancialOriginFilter>('TODAS');
   const settlement = useCicloManualEnrollmentSettlement({ turmaId: turma.id, poloId: turma.poloId, canSettle: canSettleEnrollment, toast });
   const [searchTerm, setSearchTerm] = useState('');
   const [focusedMatriculaId, setFocusedMatriculaId] = useState(initialMatriculaId);
@@ -113,37 +119,16 @@ const FinanceiroAlunosList: React.FC<FinanceiroAlunosListProps> = ({
   const filteredAlunos = useMemo(() => {
     if (focusedMatriculaId) return alunos.filter((row) => row.matriculaId === focusedMatriculaId);
     const search = searchTerm.trim().toLocaleLowerCase('pt-BR');
-    if (!search) return alunos;
+    const scoped = alunos.filter((row) => matchesFinancialOrigin(row.cicloManual, originFilter));
+    if (!search) return scoped;
     const searchDigits = search.replace(/\D/g, '');
-    return alunos.filter((row) => row.alunoNome.toLocaleLowerCase('pt-BR').includes(search)
+    return scoped.filter((row) => row.alunoNome.toLocaleLowerCase('pt-BR').includes(search)
       || row.matriculaExibicao.toLocaleLowerCase('pt-BR').includes(search)
       || (searchDigits.length > 0 && row.alunoCpf.replace(/\D/g, '').includes(searchDigits)));
-  }, [alunos, searchTerm, focusedMatriculaId]);
-  const manualContractError = useMemo(() => {
-    try {
-      alunos.forEach((row) => {
-        requireMatriculaTecnicaCicloManual(row.cicloManual);
-        if (row.cicloManual.correcaoEmissao && row.cicloManual.correcaoEmissao.matriculaId !== row.matriculaId) {
-          throw new Error('A correção financeira pertence a outra matrícula.');
-        }
-      });
-      return null;
-    } catch (error) {
-      return error instanceof Error ? error : new Error('Estado manual inválido.');
-    }
-  }, [alunos]);
-  if (!isLoading && !isError && manualContractError) {
-    return (
-      <TechnicalDataError
-        title="Ciclos financeiros não carregados"
-        message={`${manualContractError.message} A lista foi bloqueada para impedir uma geração permissiva.`}
-        retrying={isFetching}
-        onRetry={onRetry}
-      />
-    );
-  }
+  }, [alunos, searchTerm, focusedMatriculaId, originFilter]);
   const pendingRows = alunos.filter((row) => (
     row.financeiro.status === 'PENDENTE'
+    && !row.cicloManual.diagnosticoFinanceiro
     && !(row.cicloManual.habilitado && row.cicloManual.modo === 'MANUAL')
   ));
   const pendingIds = new Set(pendingRows.map((row) => row.matriculaId));
@@ -321,12 +306,12 @@ const FinanceiroAlunosList: React.FC<FinanceiroAlunosListProps> = ({
     }
   };
 
-  const resumeManualCycle = (row: MatriculaTecnicaFinanceiroRow) => {
+  const resumeManualCycle = (row: MatriculaTecnicaFinanceiroRow, cycle?: number) => {
     if (row.cicloManual.correcaoEmissao && !usesCanonicalCycleAfterCorrection(row.cicloManual.correcaoEmissao)) { setManualCycleMatriculaId(row.matriculaId); return; }
     resumeCycleMutation.mutate({
       turmaId: turma.id,
       matriculaId: row.matriculaId,
-      cicloNumero: row.cicloManual.cicloGerado!.numero,
+      cicloNumero: cycle ?? row.cicloManual.cicloGerado!.numero,
     }, {
       onSuccess: (result) => toast.success(
         'Emissão retomada',
@@ -351,6 +336,10 @@ const FinanceiroAlunosList: React.FC<FinanceiroAlunosListProps> = ({
 
   return (
     <>
+      {diagnosticosMatriculas.length > 0 && <p role="alert" className="mb-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
+        {diagnosticosMatriculas.length} matrícula(s) com dados incompletos ficaram indisponíveis para operação. As demais permanecem acessíveis; o resumo mantém os totais do servidor.
+        <button type="button" onClick={onRetry} className="ml-2 font-bold underline">Atualizar dados</button>
+      </p>}
       <section className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_18px_45px_-36px_rgba(15,23,42,0.45)]">
         <div className="flex flex-col justify-between gap-3 border-b border-slate-200/80 bg-white px-4 py-3.5 lg:flex-row lg:items-center">
           <div className="min-w-0">
@@ -377,6 +366,7 @@ const FinanceiroAlunosList: React.FC<FinanceiroAlunosListProps> = ({
                 setSearchTerm(event.target.value);
               }} placeholder="Nome, CPF ou matrícula" aria-label="Buscar aluno por nome, CPF ou matrícula" className="h-9 w-full rounded-xl border border-slate-200 bg-slate-50/70 pl-9 pr-3 text-xs text-slate-700 outline-none transition focus:border-blue-400 focus:bg-white focus:ring-2 focus:ring-blue-100" />
             </div>
+            <FinanceiroMatriculaSourceFilter value={originFilter} onChange={setOriginFilter} />
             <FinancialReportExportButton
               buttonLabel="Exportar"
               buttonClassName="border-0 bg-slate-100 text-slate-600 hover:bg-slate-200"

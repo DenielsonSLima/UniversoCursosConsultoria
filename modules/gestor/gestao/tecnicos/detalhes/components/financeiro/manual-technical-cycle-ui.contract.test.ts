@@ -39,7 +39,7 @@ const between = (source: string, startMarker: string, endMarker: string) => {
   return source.slice(start, end);
 };
 
-test("histórico protegido informa o bloqueio sem presumir emissão nem oferecer ações", () => {
+test("histórico legado protegido informa o bloqueio sem presumir emissão nem oferecer ações", () => {
   const summary = between(statusSource,
     "if (row.cicloManual.estado === 'PROTEGIDO_EXISTENTE')",
     "if (row.cicloManual.estado === 'JA_GERADO')");
@@ -47,7 +47,7 @@ test("histórico protegido informa o bloqueio sem presumir emissão nem oferecer
   assert.ok(summary.indexOf('if (isIssuedInProesc(generated))') < summary.indexOf('HISTORICO_FINANCEIRO_EXISTENTE'));
   assert.match(summary, /&& !fullyIssued/);
   const badge = between(statusSource,
-    "if (cicloManual.estado === 'PROTEGIDO_EXISTENTE')",
+    "if (cicloManual.estado === 'PROTEGIDO_EXISTENTE' && !cicloManual.decisaoGestor)",
     "const academicBlocked =");
   assert.match(badge, /individualHistory = cicloManual\.bloqueio\?\.codigo === 'HISTORICO_FINANCEIRO_EXISTENTE'/);
   assert.match(badge, /&& !isIssuedInProesc\(generated\)\s*&& \(!generated \|\| !isFullyIssued\(generated\)\)/);
@@ -205,10 +205,10 @@ test("parser rejeita estados terminais anteriores ao ciclo máximo", () => {
   );
 });
 
-test("matrícula protegida não tem botão de gerar, emitir, reemitir ou configurar", () => {
+test("matrícula legada protegida sem decisão canônica não oferece novas cobranças", () => {
   const protectedBranch = between(
     statusSource,
-    "if (cicloManual.estado === 'PROTEGIDO_EXISTENTE')",
+    "if (cicloManual.estado === 'PROTEGIDO_EXISTENTE' && !cicloManual.decisaoGestor)",
     "const academicBlocked =",
   );
   assert.match(protectedBranch, /Protegido contra novas cobranças/);
@@ -245,7 +245,7 @@ test("modo manual sai integralmente da ativação AGORA, AGENDADA e lote legados
     listSource,
     /row\.financeiro\.status === 'PENDENTE'[\s\S]*?!\(row\.cicloManual\.habilitado && row\.cicloManual\.modo === 'MANUAL'\)/,
   );
-  assert.match(listSource, /const canActivate = !manualMode/);
+  assert.match(listSource, /const canActivate = !row\.cicloManual\.diagnosticoFinanceiro && !manualMode/);
   assert.match(
     listSource,
     /\{!manualMode && actionMenuId === row\.matriculaId/,

@@ -158,6 +158,7 @@ const TurmaFinanceiro: React.FC<TurmaFinanceiroProps> = ({ turma, canSettleEnrol
           canSettleEnrollment={canSettleEnrollment}
           regra={workspace.regra}
           alunos={workspace.matriculas}
+          diagnosticosMatriculas={workspace.diagnosticosMatriculas}
           resumo={workspace.resumo}
           isLoading={false}
           isError={false}

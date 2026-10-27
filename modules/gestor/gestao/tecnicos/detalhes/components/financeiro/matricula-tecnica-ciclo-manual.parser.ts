@@ -1,3 +1,4 @@
+import { requireEnrollmentFinancialContext, requireManagerCycleDecision } from '../../../../../../shared/financeiro/matricula/parser';
 import { parseCorrectionSummary, usesCanonicalCycleAfterCorrection } from './bounded-correction';
 import { isFeeOnlyExternalTransferPlan, isProvenLocalEnrollment, readCycleQuantities } from './matricula-tecnica-ciclo-manual-destination';
 import { isExternalTransferConditions } from '../academic/external-transfer.contract';
@@ -21,6 +22,7 @@ const ELIGIBILITY_LABELS: Record<MatriculaTecnicaCicloManualCriterio, string> = 
   QUITACAO_TOTAL: 'Ciclo anterior totalmente quitado',
   PENULTIMA_SEM_ATRASO: 'Penúltima parcela paga e nenhuma cobrança vencida',
   MANUAL_APOS_EMISSAO: 'Geração manual por ciclo',
+  MANUAL_DECISAO_GESTOR: 'O gestor escolhe o ciclo; histórico, emissão e pagamento são informações distintas.',
   TRANSFERENCIA_PLANEJADA: 'Ciclo inicial definido na transferência; sem presumir pagamento de ciclo anterior',
   TRANSFERENCIA_INTERNA_CANONICA: 'Continuidade do 1º ciclo emitido na matrícula de origem',
 };
@@ -94,7 +96,7 @@ export const requireMatriculaTecnicaCicloManual = (
     && generated.origemEmissao === 'PROESC'
     && (generated.abrangencia === 'CONTRATO_COMPLETO' || generated.abrangencia === 'SEGUNDO_CICLO')
     && generated.status === 'EXTERNAL_COVERAGE'
-    && value.estado === 'PROTEGIDO_EXISTENTE'
+    && (value.estado === 'PROTEGIDO_EXISTENTE' || value.decisaoGestor !== undefined)
     && generated.emitidosBanese === 0
     && generated.pendentesEmissao === 0
     && generated.emRevisao === 0
@@ -236,6 +238,15 @@ export const requireMatriculaTecnicaCicloManual = (
       return value as unknown as MatriculaTecnicaCicloManual;
     }
     // A completed C1-only correction must still pass every normal eligibility check below.
+  }
+  if (value.decisaoGestor !== undefined || value.financeiroMatricula !== undefined) {
+    const decision = requireManagerCycleDecision(value.decisaoGestor);
+    requireEnrollmentFinancialContext(value.financeiroMatricula);
+    if (value.podeGerar && (!value.habilitado || value.modo !== 'MANUAL'
+      || value.politica === null || !decision.opcoes.some((o) => o.cicloNumero === next && o.podeGerar))) {
+      throw new Error('A escolha de ciclo diverge da projeção canônica.');
+    }
+    return value as unknown as MatriculaTecnicaCicloManual;
   }
   if (protectedHistoryOnly) {
     return value as unknown as MatriculaTecnicaCicloManual;

@@ -1,8 +1,6 @@
 import { isFeeOnlyExternalTransferPlan, isIssuedCycleReceivable, readCycleQuantities } from './matricula-tecnica-ciclo-manual-destination';
 import { requireTransferSchedulePreview } from './manual-cycle-transfer-schedule';
 import { supabase } from "../../../../../../../lib/supabase";
-import { reviewProescCycles } from './proesc-cycle-review.service';
-import { requireEligibleProescCycleReview } from './proesc-cycle-review.parser';
 import type {
   CicloFinanceiroTecnicoManualEmissaoProgress,
   GerarCicloFinanceiroTecnicoManualInput,
@@ -219,7 +217,19 @@ const invokeIssuance = async (
 const reconcileIssuedCycle = (
   result: GerarCicloFinanceiroTecnicoManualResult,
   cycleNumber: number,
+  matriculaId: string,
 ) => {
+  if (result.cicloManual.decisaoGestor) {
+    const option = result.cicloManual.decisaoGestor.opcoes.find((o) => o.cicloNumero === cycleNumber);
+    const context = result.cicloManual.financeiroMatricula;
+    const operation = context?.operacoes.find((o) => o.cicloNumero === cycleNumber);
+    if (result.ciclo.numero !== cycleNumber || context?.matriculaId !== matriculaId
+      || !option || option.podeGerar || operation?.estado !== 'LOCAL_CREATED'
+      || operation.quantidadeItens !== result.ciclo.quantidadeItens) {
+      throw new Error('O servidor não reconciliou a operação emitida desta matrícula.');
+    }
+    return;
+  }
   const generated = result.cicloManual.cicloGerado;
   const finalCycle = cycleNumber === result.cicloManual.cicloMaximo;
   const validTransition = finalCycle
@@ -280,11 +290,6 @@ const unwrap = async <T>(
 
 export const matriculaTecnicaCicloManualService = {
   async preview(input: PreviewCicloFinanceiroTecnicoManualInput) {
-    if (input.conferirProesc) {
-      requireEligibleProescCycleReview(
-        await reviewProescCycles(input.matriculaId),
-      );
-    }
     requireIndividualSecondCycleDate(
       input.cicloNumero,
       input.primeiroVencimento,
@@ -321,11 +326,6 @@ export const matriculaTecnicaCicloManualService = {
   },
 
   async generate(input: GerarCicloFinanceiroTecnicoManualInput) {
-    if (input.conferirProesc) {
-      requireEligibleProescCycleReview(
-        await reviewProescCycles(input.matriculaId),
-      );
-    }
     requireIndividualSecondCycleDate(
       input.cicloNumero,
       input.primeiroVencimento,
@@ -360,7 +360,7 @@ export const matriculaTecnicaCicloManualService = {
       && reviewedInstallments.some((item) => !issuedInstallments.some((issued) => issued.chave === item.chave))) {
       throw new Error('A emissão não reconciliou as mensalidades revisadas.');
     }
-    reconcileIssuedCycle(result, input.cicloNumero);
+    reconcileIssuedCycle(result, input.cicloNumero, input.matriculaId);
     return result;
   },
 
@@ -381,7 +381,7 @@ export const matriculaTecnicaCicloManualService = {
       }
       return result;
     }
-    reconcileIssuedCycle(result, input.cicloNumero);
+    reconcileIssuedCycle(result, input.cicloNumero, input.matriculaId);
     return result;
   },
 };

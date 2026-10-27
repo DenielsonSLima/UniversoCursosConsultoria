@@ -1,6 +1,6 @@
 # Passagem de ciclos, proveniência e trancamento técnico
 
-Contrato detalhado sob demanda, confirmado em 30/09/2026. Implantação acompanhada no registro
+Contrato detalhado sob demanda; decisão do gestor atualizada em 27/10/2026. Implantação acompanhada no registro
 `2026-10-01-ciclos-confiaveis-e-trancamento.md`; este contrato não declara deploy.
 
 ## Unidade da decisão
@@ -12,10 +12,11 @@ pode seguir C1 nativo, desde que a elegibilidade canônica assim confirme.
 | Origem e cobertura confirmada | Operação |
 | --- | --- |
 | Proesc C1 e C2 | Histórico consultável; nenhuma nova geração desses ciclos |
-| Proesc C1; C2 comprovadamente ainda não gerado | C2 Universo/Banese sem exigir quitação local do C1 |
+| Proesc C1; sem operação ou prova positiva de C2 existente | Gestor escolhe C2 Universo/Banese; não exige resposta online ou quitação do C1 |
 | Banese importado | Administrar o título existente, preservando a identidade e a origem |
-| Universo/Banese nativo | Regras locais; C2 após formação/emissão bancária de C1, sem exigir quitação |
-| Evidência ausente, incompleta ou contraditória | Revisão individual; não converter quantidade/valor em prova |
+| Universo/Banese nativo | Gestor escolhe C1, C2 ou não emitir; operação existente é retomada, não duplicada |
+| Evidência ausente ou consulta indisponível | Aviso informativo; não inventar prova nem veto comercial |
+| Identidade conflitante ou efeito externo positivo já registrado | Revisão técnica antes de novo POST da mesma obrigação; preservar consulta/retomada segura |
 
 Fatos confirmados de cobertura e decisões de passagem não expiram com token,
 cache ou falha de rede. Uma observação UNKNOWN não apaga prova positiva anterior.
@@ -26,6 +27,16 @@ Não inferir C1 por exatamente 12 parcelas, pagamento de 12 parcelas, número da
 turma ou ausência de resposta Proesc. Os classificadores de ingestão precisam de
 completude e identidade; a decisão de continuidade já comprovada não reexecuta
 uma conferência remota a cada abertura do modal.
+
+## Projeção central e decisão durável
+
+`internal_academic.enrollment_financial_context` classifica títulos e projeta fontes múltiplas por matrícula; `modules/shared/financeiro/matricula` valida e apresenta esse contrato. Origem histórica, provedor bancário, canal, destino e pagamento são dimensões distintas. A turma não recebe uma origem exclusiva.
+
+Mensalidades lançadas, emitidas no banco e externas conhecidas são contagens distintas; taxas e ajustes residuais não completam ciclos. Quantidade 12/24, quitação, política de origem da turma e TTL Proesc não autorizam nem vetam a escolha comercial. Prova positiva de cobertura não é apagada por UNKNOWN.
+
+A escolha é validada no preview e persistida exclusivamente pelo gerador no `manager_decision` do run, vinculada à matrícula/ciclo/request/ator original/fingerprints/revisão. Não há backfill em runs históricos ou `PROTECTED_EXISTING`. Autorização e primeiro claim consomem a mesma intenção após COMMIT, revalidando RBAC, polo, identidade, snapshot e evidência positiva posterior. Resposta bancária ambígua conserva token e operação; não libera novo POST.
+
+Ciclos de transferência preservam a cadeia da matrícula de origem, composição e vencimentos do plano individual. Mais de uma operação local pode ser retomada por seu ciclo explícito. “Não emitir” fecha a escolha sem mutação. Cobranças parciais legadas sem run não são declaradas ciclo emitido nem reconstruídas artificialmente.
 
 ## Propriedade e operações
 

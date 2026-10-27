@@ -12,6 +12,7 @@ export const cicloManualTransferSetup = (
       enrollmentAvailable: cycle === 1 && items.some((item) => item.tipo === 'MATRICULA'),
       installments: items.filter((item) => item.tipo === 'PARCELA').length,
       fingerprint: plan.cronogramaFingerprint,
+      firstDueDate: [...items].sort((a, b) => Number(a.tipo === 'PARCELA') - Number(b.tipo === 'PARCELA') || a.ordem - b.ordem)[0]?.vencimento ?? null,
     };
   }
   return {
@@ -19,5 +20,6 @@ export const cicloManualTransferSetup = (
     enrollmentAvailable: true,
     installments: plan?.quantidadeParcelas ?? null,
     fingerprint: null,
+    firstDueDate: plan?.cicloInicial === cycle ? plan.primeiroVencimento : null,
   };
 };

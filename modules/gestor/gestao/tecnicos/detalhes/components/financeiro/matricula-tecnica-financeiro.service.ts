@@ -1,3 +1,4 @@
+import { isolateFinancialWorkspaceRows } from '../../../../../../shared/financeiro/matricula/parser';
 import type {
   AtivarFinanceiroMatriculaTecnicaResult,
   AtivarFinanceiroMatriculasTecnicasLoteResult,
@@ -319,7 +320,9 @@ const requireWorkspace = (value: unknown): MatriculaTecnicaFinanceiroWorkspace =
   ) throw new Error('O workspace financeiro retornado está incompleto.');
   requireMatriculaTecnicaCicloFinanceiroPolicy(turma.cicloFinanceiroTecnico);
   requireRegra(value.regra);
-  value.matriculas.forEach(requireMatricula);
+  const isolated = isolateFinancialWorkspaceRows(value.matriculas, requireMatricula);
+  value.matriculas = isolated.valid;
+  value.diagnosticosMatriculas = isolated.diagnostics;
   return value as unknown as MatriculaTecnicaFinanceiroWorkspace;
 };
 

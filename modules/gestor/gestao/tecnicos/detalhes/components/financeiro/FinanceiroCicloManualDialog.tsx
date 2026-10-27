@@ -1,3 +1,5 @@
+import { canChooseCycle } from '../../../../../../shared/financeiro/matricula/selectors';
+import FinanceiroManagerCycleChoice from './FinanceiroManagerCycleChoice';
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import FinanceiroSecondCycleWarning from './FinanceiroSecondCycleWarning';
@@ -60,12 +62,12 @@ const FinanceiroCicloManualDialog: React.FC<FinanceiroCicloManualDialogProps> = 
 }) => {
   const [acceptedWarningContext, setAcceptedWarningContext] = useState<string | null>(null);
   const requestedCycleNumber = row.cicloManual.proximoCicloNumero;
-  const warningContext = JSON.stringify([turmaId, row.matriculaId, requestedCycleNumber]);
-  const showWarning = requestedCycleNumber === 2 && acceptedWarningContext !== warningContext && !pending;
   const [cycleNumber, setCycleNumber] = useState(requestedCycleNumber);
+  const warningContext = JSON.stringify([turmaId, row.matriculaId, cycleNumber]);
+  const showWarning = cycleNumber === 2 && acceptedWarningContext !== warningContext && !pending;
   const externalHistory = row.cicloManual.criterioElegibilidade === 'HISTORICO_EXTERNO';
   const [externalHistoryConfirmed, setExternalHistoryConfirmed] = useState(false);
-  const plannedEntry = row.cicloManual.criterioElegibilidade === 'TRANSFERENCIA_PLANEJADA';
+  const plannedEntry = Boolean(row.cicloManual.planoEntrada);
   const transferSetup = cicloManualTransferSetup(row.cicloManual.planoEntrada, cycleNumber);
   const explicitSchedule = transferSetup.explicitSchedule;
   const requiresIndividualDate = cycleNumber === 2 || plannedEntry || explicitSchedule;
@@ -78,7 +80,7 @@ const FinanceiroCicloManualDialog: React.FC<FinanceiroCicloManualDialogProps> = 
     requiresIndividualDate ? 'INDIVIDUAL' : 'TURMA',
   );
   const [individualDate, setIndividualDate] = useState(
-    () => row.cicloManual.primeiroVencimentoSugerido ?? '',
+    () => transferSetup.firstDueDate ?? row.cicloManual.primeiroVencimentoSugerido ?? '',
   );
   const [issuanceSnapshot, setIssuanceSnapshot] = useState<
     CicloFinanceiroTecnicoManualPreview | null
@@ -86,9 +88,9 @@ const FinanceiroCicloManualDialog: React.FC<FinanceiroCicloManualDialogProps> = 
   const issuanceStartedRef = useRef(false);
   const scrollAreaRef = useRef<HTMLElement>(null);
   const firstDueDate = explicitSchedule
-    ? row.cicloManual.primeiroVencimentoSugerido
+    ? transferSetup.firstDueDate
     : dateSource === 'INDIVIDUAL' ? individualDate || null : null;
-  const cycleIdentityChanged = requestedCycleNumber !== cycleNumber;
+  const cycleIdentityChanged = cycleNumber !== null && !canChooseCycle(row.cicloManual, cycleNumber);
   const revisionContext = explicitSchedule
     ? `${row.matriculaId}:${cycleNumber}:${transferSetup.fingerprint}`
     : `${row.matriculaId}:${cycleNumber}:${dateSource}:${individualDate}:${cycleNumber === 1 ? enrollmentMode : 'SEM_MATRICULA'}`;
@@ -104,14 +106,13 @@ const FinanceiroCicloManualDialog: React.FC<FinanceiroCicloManualDialogProps> = 
     setEnrollmentMode(null);
     setOpenSettlement(false);
     setDateSource(requestedCycleNumber === 2 || plannedEntry || explicitSchedule ? 'INDIVIDUAL' : 'TURMA');
-    setIndividualDate(row.cicloManual.primeiroVencimentoSugerido ?? '');
+    setIndividualDate(transferSetup.firstDueDate ?? row.cicloManual.primeiroVencimentoSugerido ?? '');
     setExternalHistoryConfirmed(false);
     setIssuanceSnapshot(null);
     lastPreviewRef.current = null;
-  }, [pending, cycleIdentityChanged, requestedCycleNumber, plannedEntry, explicitSchedule, row.cicloManual.primeiroVencimentoSugerido]);
+  }, [pending, cycleIdentityChanged, requestedCycleNumber, plannedEntry, explicitSchedule, transferSetup.firstDueDate, row.cicloManual.primeiroVencimentoSugerido]);
   const previewEnabled = !pending && !cycleIdentityChanged && !showWarning && cycleNumber !== null
-    && row.cicloManual.estado === 'ELEGIVEL'
-    && row.cicloManual.podeGerar
+    && canChooseCycle(row.cicloManual, cycleNumber)
     && (cycleNumber !== 1 || effectiveEnrollmentMode !== null)
     && (explicitSchedule ? Boolean(firstDueDate) : dateSource === 'TURMA' || Boolean(individualDate));
   const previewQuery = usePreviewCicloFinanceiroTecnicoManual({
@@ -271,6 +272,15 @@ const FinanceiroCicloManualDialog: React.FC<FinanceiroCicloManualDialogProps> = 
                 <h3 id="manual-cycle-step-1" className="mt-1 text-2xl font-black text-[#001a33]">Dados e vencimento</h3>
                 <p className="mt-1 max-w-2xl text-sm font-medium text-slate-500">{explicitSchedule ? 'Confira o cronograma recebido. Os valores e vencimentos serão preservados e podem ser revisados individualmente.' : `${cycleNumber === 1 ? 'Escolha como tratar a matrícula e defina a data inicial.' : 'Defina a data inicial.'} O sistema apresentará a ${cycleNumber === 1 ? 'matrícula' : 'rematrícula'} e as mensalidades para revisão antes de emitir.`}</p>
               </div>
+
+              {row.cicloManual.decisaoGestor && <FinanceiroManagerCycleChoice
+                decision={row.cicloManual.decisaoGestor} value={cycleNumber} disabled={pending}
+                onDoNotIssue={onClose} onChange={(next) => {
+                  setCycleNumber(next); setStep(1); setEnrollmentMode(null); setOpenSettlement(false);
+                  setDateSource(next === 2 || plannedEntry || explicitSchedule ? 'INDIVIDUAL' : 'TURMA');
+                  setIndividualDate(cicloManualTransferSetup(row.cicloManual.planoEntrada, next).firstDueDate ?? '');
+                  setIssuanceSnapshot(null); lastPreviewRef.current = null;
+                }} />}
 
               {eligibilityLabel ? (
                 <div className="flex items-start gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-semibold leading-relaxed text-emerald-900">

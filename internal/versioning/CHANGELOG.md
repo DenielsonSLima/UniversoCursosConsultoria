@@ -10,6 +10,13 @@ Histórico arquivado: [30/09/2026 — versões 4.8.138 a 4.8.144](./changelog/20
 
 Histórico arquivado: [01/10/2026 a 04/10/2026 — versões 4.8.145 a 4.8.168](./changelog/2026-10-01-a-04-versoes-4-8-145-a-168.md).
 
+## [4.8.236] - 2026-10-27
+
+- Módulo financeiro central por matrícula distingue Proesc, Banese importado, emissão própria e registro local, sem confundir mensalidades lançadas com títulos efetivamente emitidos.
+- Gestor escolhe primeiro ciclo, segundo ciclo ou não emitir; consulta Proesc não impede a decisão. Histórico, continuidade de transferência e operações existentes permanecem protegidos.
+- Intenção auditada acompanha geração, autorização e primeiro claim após COMMIT; retomada por ciclo preserva request, valores, datas, pagamentos e identidade bancária. Compatibilidade legada exige prova histórica estrita, sem backfill.
+- Diagnóstico individual impede que uma matrícula inválida derrube a lista; regressões de UI e PostgreSQL isolado cobrem origens mistas, composição, concorrência simulada e recuperação ambígua.
+
 ## [4.8.235] - 2026-10-27
 
 - Retomada da mesma emissão por gestor autorizado preserva autorização original, chave e dados financeiros, com auditoria idempotente; divergências de conteúdo ou vínculo exigem revisão.
