@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {setupRejectedFee,approve,absence,call,operation,id} from './rejected-fee-setup.mjs';
-const sql=()=>readFile(new URL('../migrations/20261027182200_rejected_fee_service_capability.sql',import.meta.url),'utf8');
+const sql=()=>readFile(new URL('../migrations/20261027184900_rejected_fee_service_capability.sql',import.meta.url),'utf8');
 const row=async(db,query,args=[])=>(await db.query(query,args)).rows[0];
 const isolated=async(db,fn)=>{await db.exec('begin');try{await fn()}finally{await db.exec('rollback')}};
 const denied=async(db,fn,re)=>{await db.exec('savepoint denied');try{await assert.rejects(fn,re)}finally{await db.exec('rollback to denied;release denied')}};

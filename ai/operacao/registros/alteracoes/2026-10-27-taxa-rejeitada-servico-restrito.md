@@ -20,8 +20,8 @@ Validação: testes SQL isolados e contratos do worker; revisão independente ob
 - `supabase/functions/technical-rejected-fee-correction/service-issuance.ts`
 - `supabase/functions/technical-rejected-fee-correction/service-issuance.test.ts`
 - `supabase/functions/technical-rejected-fee-correction/service-recovery.ts`
-- `supabase/migrations/20261027182200_rejected_fee_service_capability.sql`
-- `supabase/migrations/20261027182300_rejected_fee_service_dispatch.sql`
+- `supabase/migrations/20261027184900_rejected_fee_service_capability.sql`
+- `supabase/migrations/20261027184910_rejected_fee_service_dispatch.sql`
 - `supabase/tests/financial-correction-worker-auth.test.ts`
 - `supabase/tests/rejected-fee-service-capability.isolated.test.mjs`
 
