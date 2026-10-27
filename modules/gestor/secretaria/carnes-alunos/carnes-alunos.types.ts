@@ -39,10 +39,26 @@ export interface BaneseDocumentGroupsResponse {
   total: number;
   page: number;
   pageSize: number;
+  diagnostics?: BaneseDocumentDiagnostics;
   filters: {
     courses: Array<{ id: string; name: string }>;
     classes: Array<{ id: string; name: string; courseId: string }>;
   };
+}
+
+export type BaneseDocumentExclusionReason =
+  | 'OTHER_OR_MISSING_BANK_PROVIDER'
+  | 'NOT_PAYABLE'
+  | 'UNSUPPORTED_LAUNCH_TYPE'
+  | 'BANK_EVIDENCE_MISSING'
+  | 'BANK_EVIDENCE_INVALID'
+  | 'DOCUMENT_GROUP_INCONSISTENT';
+
+export interface BaneseDocumentDiagnostics {
+  inspectedCount: number;
+  availableCount: number;
+  complete: boolean;
+  exclusions: Array<{ reason: BaneseDocumentExclusionReason; count: number }>;
 }
 
 export interface BaneseDocumentRequest {
@@ -69,3 +85,4 @@ export interface PreparedBaneseDocument {
   groups: BaneseDocumentGroup[];
   requestCount: number;
 }
+

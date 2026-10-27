@@ -1,0 +1,28 @@
+name: Regressão da retomada de ciclos e documentos Banese
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  recovery-contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '>=24.22.1 <25'
+          cache: npm
+      - run: npm ci
+      - name: Preparar PostgreSQL isolado sem acesso bancário
+        run: npm install --prefix /tmp/universo-cycle-sql --no-save --package-lock=false --ignore-scripts @electric-sql/pglite@0.3.14
+      - name: Testar autorização real, retomada e catálogo documental
+        env:
+          PGLITE_MODULE_PATH: /tmp/universo-cycle-sql/node_modules/@electric-sql/pglite/dist/index.js
+        run: node scripts/test-technical-cycle-recovery.mjs

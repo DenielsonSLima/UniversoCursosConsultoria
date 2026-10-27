@@ -10,6 +10,12 @@ Histórico arquivado: [30/09/2026 — versões 4.8.138 a 4.8.144](./changelog/20
 
 Histórico arquivado: [01/10/2026 a 04/10/2026 — versões 4.8.145 a 4.8.168](./changelog/2026-10-01-a-04-versoes-4-8-145-a-168.md).
 
+## [4.8.235] - 2026-10-27
+
+- Retomada da mesma emissão por gestor autorizado preserva autorização original, chave e dados financeiros, com auditoria idempotente; divergências de conteúdo ou vínculo exigem revisão.
+- Catálogo individual explica motivos de indisponibilidade documental e permite preparar um ou dois boletos pelo fluxo existente; validações bancárias preservadas.
+- Regressão SQL isolada cobre papéis reais e primeiro claim, com testes do serviço, orquestração e catálogo. Implantação do backend e validação autenticada são etapas separadas da preparação desta versão.
+
 ## [4.8.234] - 2026-10-24
 
 - Caixa preserva status HTTP e interrompe tentativas após negação de acesso, sem trocar para versão anterior da consulta.
@@ -403,3 +409,4 @@ Histórico arquivado: [01/10/2026 a 04/10/2026 — versões 4.8.145 a 4.8.168](.
 
 - Consultas de pagamentos tardios têm espaço garantido mesmo com uma fila contínua de cancelamentos em análise.
 - Gestores financeiros podem consultar as revisões dos seus polos autorizados, preservando as permissões e a restrição de acesso aos demais polos.
+

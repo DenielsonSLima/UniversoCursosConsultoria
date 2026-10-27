@@ -306,6 +306,33 @@ const localEnrollmentContext = (issued: number, localStatus = "PENDENTE") => {
   return context;
 };
 
+Deno.test("conflito de autorização mantém código específico e progresso sem continuar emissão", async () => {
+  for (const code of [
+    "CYCLE_AUTHORIZATION_FINGERPRINT_MISMATCH",
+    "CYCLE_AUTHORIZATION_CONTEXT_MISMATCH",
+  ]) {
+    const scenario = dependenciesAt({ initial: 3 });
+    let attempts = 0;
+    scenario.dependencies.issueReceivable = () => {
+      attempts += 1;
+      return Promise.reject({ code: "PT422", details: code, message: "diagnóstico SQL" });
+    };
+    await assert.rejects(
+      () => runManualCycleIssuance({ ...request, action: "resume" }, scenario.dependencies),
+      (error: unknown) => {
+        assert.ok(error instanceof IssuanceHttpError);
+        assert.equal(error.status, 409);
+        assert.equal(error.code, code);
+        assert.equal(error.progress?.emitidosBanese, 3);
+        assert.equal(error.progress?.pendentesEmissao, 10);
+        assert.match(error.message, /revisão/);
+        return true;
+      },
+    );
+    assert.equal(attempts, 1);
+  }
+});
+
 const localRequest: ManualCycleIssuanceRequest = {
   ...request, cicloNumero: 1,
   revisao: { emitirMatricula: false, modoMatricula: "REGISTRO_SEM_BOLETO", itens: revisionItems(localEnrollmentContext(0)) },
@@ -378,3 +405,4 @@ Deno.test("registro local sem prova ou fora da matrícula C1 bloqueia antes de q
     assert.equal(calls, 0);
   }
 });
+

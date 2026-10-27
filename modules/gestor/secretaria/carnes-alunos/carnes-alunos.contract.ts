@@ -2,6 +2,7 @@ import type {
   BaneseDocumentGroup,
   BaneseDocumentGroupsResponse,
 } from './carnes-alunos.types';
+import { parseDocumentDiagnostics } from './carnes-alunos.diagnostics';
 
 const DATABASE_UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -164,5 +165,7 @@ export const parseDocumentGroupsResponse = (value: unknown): BaneseDocumentGroup
     page,
     pageSize,
     filters: { courses, classes },
+    ...(payload.diagnostics === undefined ? {} : { diagnostics: parseDocumentDiagnostics(payload.diagnostics) }),
   };
 };
+

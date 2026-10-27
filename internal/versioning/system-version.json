@@ -1,8 +1,9 @@
 {
-  "version": "4.8.234",
+  "version": "4.8.235",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 243,
-  "releasedAt": "2026-10-24",
-  "summary": "Correções de carregamento da composição do Caixa e conexões Cloudflare sob demanda"
+  "revision": 244,
+  "releasedAt": "2026-10-27",
+  "summary": "Retomada auditada da mesma emissão e diagnóstico individual dos documentos Banese"
 }
+

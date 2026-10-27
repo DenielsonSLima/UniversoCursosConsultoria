@@ -1,5 +1,5 @@
 # Lote ativo
 
-Lote 2026-10-24-caixa-avisos-carregamento: EM VALIDAÇÃO/PUBLICAÇÃO AUTORIZADA, PR328. Versão 4.8.234/revisão 243. Três agentes; timeout SQL57014 confirmado, V2 otimizada para uma leitura por core. Sem navegador ou CUA. Registros de carteira de R$ 839,70 fora do escopo.
+Lote 2026-10-27-retomada-segura-documentos-banese: BACKEND APLICADO E CONFERIDO, WEB EM VALIDAÇÃO, PR329, candidata4.8.235/revisão244. Usuário autorizou explicitamente aplicação em produção. Três agentes; 56 testes focados e CI/Preview inicial aprovados. Nenhuma emissão, cancelamento ou baixa executada.
 
-Manifesto explícito: `ai/operacao/registros/alteracoes/2026-10-24-caixa-avisos-carregamento.md`. Migration 20261024161437 aplicada no Universo kfekgwyqozhicpfuunpo; contrato remoto idêntico, autorização preservada e amostra de 1.789 para 1.588 ms. Testes locais e Preview inicial aprovados; candidato final em CI. Smoke interativo não autorizado.
+Manifesto explícito: `ai/operacao/registros/alteracoes/2026-10-27-retomada-segura-documentos-banese.md`. Projeto Universo confirmado; migration20261027104210 aplicada, emissorv13 e catálogov8 ACTIVE/JWTtrue, readback exato e autorizações/totais preservados. Fonte alinhada ao ledger sem alterar SQL. CI/Preview final, publicação web e smoke manual pendentes. Última web confirmada:4.8.234/PR328.

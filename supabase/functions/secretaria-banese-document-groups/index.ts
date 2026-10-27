@@ -18,7 +18,6 @@ import {
   BANESE_CARNET_ALLOWED_LAUNCH_TYPES,
   BANESE_DOCUMENT_PAYABLE_LOCAL_STATUSES,
   type BaneseCarnetReceivableRow,
-  isRegisteredBaneseDocumentRow,
 } from "../banese-carnet-document/document-policy.ts";
 import {
   buildBaneseDocumentFilters,
@@ -30,6 +29,7 @@ import {
   paginateBaneseDocumentGroups,
   type StudentCatalogRow,
 } from "./document-groups.ts";
+import { buildEnrollmentDocumentDiagnostics, isCatalogBankCandidate } from "./document-diagnostics.ts";
 
 const RECEIVABLE_SELECT = `
   id, cliente_id, matricula_id, turma_id, polo_id,
@@ -193,14 +193,19 @@ const readReceivables = async (
   ) {
     let query = admin.from("contas_receber")
       .select(RECEIVABLE_SELECT)
-      .eq("gateway_provider", "banese_card")
-      .eq("gateway_payment_method", "BOLETO")
-      .in("tipo_lancamento", [...BANESE_CARNET_ALLOWED_LAUNCH_TYPES])
-      .in("status", [...BANESE_DOCUMENT_PAYABLE_LOCAL_STATUSES])
-      .not("gateway_boleto_issued_at", "is", null)
-      .not("gateway_financial_terms_confirmed_at", "is", null)
       .order("id", { ascending: true })
       .range(offset, offset + QUERY_PAGE_SIZE - 1);
+
+    // Only an explicitly selected enrollment gets exclusion diagnostics.
+    // The unfiltered catalog retains its existing bounded, bank-only query.
+    if (!input.enrollmentId) {
+      query = query.eq("gateway_provider", "banese_card")
+        .eq("gateway_payment_method", "BOLETO")
+        .in("tipo_lancamento", [...BANESE_CARNET_ALLOWED_LAUNCH_TYPES])
+        .in("status", [...BANESE_DOCUMENT_PAYABLE_LOCAL_STATUSES])
+        .not("gateway_boleto_issued_at", "is", null)
+        .not("gateway_financial_terms_confirmed_at", "is", null);
+    }
 
     if (input.poloId !== "todos") {
       query = query.eq("polo_id", input.poloId);
@@ -233,8 +238,15 @@ const loadCatalog = async (
     filters: { courses: [], classes: [] },
   };
   const queriedRows = await readReceivables(admin, input, gestor);
-  const receivables = queriedRows.filter(isRegisteredBaneseDocumentRow);
-  if (!receivables.length) return emptyCatalog;
+  const diagnosticsFor = (groups: ReturnType<typeof buildBaneseDocumentGroups>) => (
+    input.enrollmentId ? {
+      diagnostics: buildEnrollmentDocumentDiagnostics(
+        queriedRows, groups, queriedRows.length < MAX_RECEIVABLE_ROWS,
+      ),
+    } : {}
+  );
+  const receivables = queriedRows.filter(isCatalogBankCandidate);
+  if (!receivables.length) return { ...emptyCatalog, ...diagnosticsFor([]) };
 
   const enrollmentIds = unique(receivables.map((row) => row.matricula_id));
   const enrollments = await readRowsByIds(
@@ -289,6 +301,7 @@ const loadCatalog = async (
       input.pageSize,
     ),
     filters,
+    ...diagnosticsFor(filteredGroups),
   };
 };
 
@@ -352,3 +365,4 @@ Deno.serve(async (req: Request) => {
     return jsonError(req, 500, "Não foi possível consultar os documentos.");
   }
 });
+
