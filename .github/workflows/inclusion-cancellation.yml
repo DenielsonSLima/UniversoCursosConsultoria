@@ -1,0 +1,65 @@
+name: Inclusion cancellation
+on:
+  pull_request:
+    paths:
+      - 'supabase/functions/enrollment-inclusion-cancellation/**'
+      - 'supabase/functions/banese/core/adapter/boleto-cancellation*'
+      - 'supabase/migrations/*inclusion_cancel_only*'
+      - 'supabase/tests/inclusion-cancellation*'
+      - '.github/workflows/inclusion-cancellation.yml'
+permissions:
+  contents: read
+jobs:
+  contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9.1
+      - name: Install isolated pinned test dependency
+        run: |
+          npm install --prefix "$RUNNER_TEMP/inclusion-tests" --no-save --package-lock=false --ignore-scripts @electric-sql/pglite@0.3.14
+          echo "INCLUSION_PGLITE_MODULE=$RUNNER_TEMP/inclusion-tests/node_modules/@electric-sql/pglite/dist/index.js" >> "$GITHUB_ENV"
+      - name: Typecheck dedicated Edge graph
+        run: deno check --node-modules-dir=auto --no-lock supabase/functions/enrollment-inclusion-cancellation/index.ts
+      - name: Verify scoped runtime, ACL and payment guards
+        run: |
+          node --test supabase/tests/inclusion-cancellation-processor.test.ts supabase/tests/inclusion-cancellation-store.test.ts supabase/tests/inclusion-cancellation-worker.test.ts supabase/tests/inclusion-cancellation-sql.runtime.test.mjs
+          deno test --node-modules-dir=auto --no-lock --allow-read --allow-env supabase/functions/banese/core/adapter/boleto-cancellation.test.ts supabase/functions/banese/core/adapter/boleto-payment-query-strict.test.ts supabase/functions/banese/core/adapter/boleto-cancellation-processing.test.ts
+  concurrency:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: inclusion_ci
+          POSTGRES_PASSWORD: synthetic_ephemeral_ci_only
+          POSTGRES_DB: inclusion_cancellation_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U inclusion_ci -d inclusion_cancellation_ci"
+          --health-interval 5s --health-timeout 5s --health-retries 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Install isolated pinned PostgreSQL client
+        run: |
+          npm install --prefix "$RUNNER_TEMP/inclusion-pg" --no-save --package-lock=false --ignore-scripts pg@8.16.3
+          echo "INCLUSION_PG_MODULE=$RUNNER_TEMP/inclusion-pg/node_modules/pg" >> "$GITHUB_ENV"
+      - name: Verify independent-session races on synthetic database
+        env:
+          INCLUSION_EPHEMERAL_POSTGRES: synthetic-postgres-17-only
+        run: node supabase/tests/inclusion-cancellation-postgres-concurrency.mjs
