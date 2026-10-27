@@ -61,9 +61,9 @@ Rollback: não apagar arquivo, reescrever ledger, restaurar token antigo com ter
 
 - `supabase/tests/financial-correction-worker-auth.test.ts`
 
-- `supabase/migrations/20261027180400_rejected_fee_official_absence_http_status.sql`
+- `supabase/migrations/20261027181211_rejected_fee_official_absence_http_status.sql`
 
 Total: 27 arquivos.
 
 - Normalização de ausência GET Banese v1.6 §2.3: HTTP400/404 exige Erros singleton e código exato; nenhuma aceitação genérica ou por descrição.
-- Migration adicional `20261027180400_rejected_fee_official_absence_http_status.sql`: guard de hash e metadados de normalização; autorização, identidade, lease e CAS preservados.
+- Migration adicional `20261027181211_rejected_fee_official_absence_http_status.sql`: guard de hash e metadados de normalização; autorização, identidade, lease e CAS preservados.

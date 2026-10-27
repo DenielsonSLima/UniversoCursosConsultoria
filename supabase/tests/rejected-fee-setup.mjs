@@ -4,7 +4,7 @@ export {id,actor,polo};
 export const operation=id(96001),oldRequest=id(96002);
 const files=['20261027175544_rejected_technical_fee_correction_proofs.sql','20261027175552_rejected_fee_absence_inspection.sql',
  '20261027175600_rejected_fee_preparation_overlay.sql','20261027175607_rejected_fee_manager_consent.sql',
- '20261027180400_rejected_fee_official_absence_http_status.sql'];
+ '20261027181211_rejected_fee_official_absence_http_status.sql'];
 export const call=async(db,name,args=[])=>(await db.query(`select ${name}(${args.map((_,i)=>`$${i+1}`).join(',')}) value`,args)).rows[0].value;
 export async function mockedIssuance(db,receipt,request,n) {
  const nn=String(n).padStart(9,'0');
