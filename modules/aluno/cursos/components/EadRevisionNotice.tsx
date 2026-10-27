@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { EadLessonArticle } from './EadLessonArticle';
+import { getAvailableRevisionLessons } from '../eadAssessmentRevision';
 
 export const EadRevisionNotice: React.FC<{ view: any }> = ({ view }) => {
   const [confirming, setConfirming] = useState(false);
@@ -7,7 +8,7 @@ export const EadRevisionNotice: React.FC<{ view: any }> = ({ view }) => {
   const [reading, setReading] = useState(false);
   const { assessmentRevision: revision, revisionPending, revisionError, isUpdatingProgress } = view;
   if (!revision?.isHistorical) return null;
-  const lessons = view.selectedCourse?.ead_config?.conteudos || [];
+  const lessons = getAvailableRevisionLessons(view.selectedCourse?.ead_config, revision);
   return (
     <section aria-label="Revisão do curso" className="space-y-4 rounded-2xl border border-blue-200 bg-blue-50 p-5 text-sm text-slate-700">
       <h3 className="font-black text-[#001a33]">Conteúdo e avaliações revisados</h3>
@@ -26,9 +27,9 @@ export const EadRevisionNotice: React.FC<{ view: any }> = ({ view }) => {
             </div>
           </div>
         ) : <button type="button" disabled={isUpdatingProgress} onClick={() => setConfirming(true)} className="rounded-xl bg-blue-600 px-4 py-3 font-bold text-white disabled:opacity-50">Iniciar conteúdo e avaliação revisados</button>
-      ) : <p>Sua conclusão, nota e certificado permanecem vinculados à avaliação realizada. Você pode consultar as novas aulas abaixo.</p>}
+      ) : <p>Sua conclusão, nota e certificado permanecem vinculados à avaliação realizada. {lessons.length ? 'Você pode consultar as novas aulas abaixo.' : 'Reabra o curso para consultar as novas aulas.'}</p>}
       {revisionError && <p role="alert" className="font-bold text-red-700">{revisionError}</p>}
-      <button type="button" aria-expanded={reading} onClick={() => setReading(value => !value)} className="font-bold text-blue-700 underline">{reading ? 'Fechar consulta às novas aulas' : 'Consultar novas aulas sem alterar o progresso'}</button>
+      {lessons.length > 0 && <button type="button" aria-expanded={reading} onClick={() => setReading(value => !value)} className="font-bold text-blue-700 underline">{reading ? 'Fechar consulta às novas aulas' : 'Consultar novas aulas sem alterar o progresso'}</button>}
       {reading && <div className="space-y-4">{lessons.map((lesson: any) => (
         <details key={lesson.id} className="rounded-2xl border border-slate-200 bg-white p-4">
           <summary className="cursor-pointer font-bold">{lesson.titulo}</summary>

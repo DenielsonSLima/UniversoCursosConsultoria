@@ -1,5 +1,10 @@
 import type { EadProgressState } from './cursosPage.types';
 
+export const getAvailableRevisionLessons = (catalogConfig: any, revision?: EadProgressState['assessmentRevision']) => (
+  revision?.available && catalogConfig?.assessmentRevision === revision.available
+    && Array.isArray(catalogConfig.conteudos) ? catalogConfig.conteudos : []
+);
+
 export const getEffectiveEadConfig = (catalogConfig: any, state?: EadProgressState) => {
   if (state?.assessmentRevision) return state.effectiveEadConfig || null;
   return catalogConfig || {};
