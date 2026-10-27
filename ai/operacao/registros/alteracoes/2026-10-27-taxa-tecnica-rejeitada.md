@@ -59,4 +59,6 @@ Rollback: não apagar arquivo, reescrever ledger, restaurar token antigo com ter
 - `supabase/tests/rejected-fee-correction.isolated.test.mjs`
 - `supabase/tests/rejected-fee-setup.mjs`
 
-Total: 25 arquivos.
+- `supabase/tests/financial-correction-worker-auth.test.ts`
+
+Total: 26 arquivos.

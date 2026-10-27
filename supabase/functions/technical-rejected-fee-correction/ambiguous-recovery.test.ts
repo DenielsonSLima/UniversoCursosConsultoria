@@ -27,7 +27,7 @@ Deno.test("user resume after due date: authorize real route boundary -> API_AMBI
  throw new Error(`Unexpected RPC ${name}`);}};
  const user={rpc:async(name:string,args:Record<string,unknown>)=>{calls.push(name);assert.equal(name,"authorize_technical_manual_receivable_issuance_secure");assert.equal(args.p_request_id,request);return {data:{authorized:true},error:null};}};
  const realDate=globalThis.Date;
- class AfterDueDate extends realDate {constructor(value?:string|number){super(value??"2026-10-31T12:00:00Z");}static now(){return realDate.parse("2026-10-31T12:00:00Z");}}
+ class AfterDueDate extends realDate {constructor(value?:string|number){super(value??"2026-10-31T12:00:00Z");}static override now(){return realDate.parse("2026-10-31T12:00:00Z");}}
  globalThis.Date=AfterDueDate as DateConstructor;
  globalThis.fetch=async(url,init)=>{const endpoint=String(url),method=String(init?.method||"GET");
  if(endpoint.includes("/autenticacao/"))return new Response(JSON.stringify({access_token:"synthetic",token_type:"Bearer"}));
