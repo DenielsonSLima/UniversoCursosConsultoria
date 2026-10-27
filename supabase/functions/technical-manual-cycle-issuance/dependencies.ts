@@ -241,3 +241,11 @@ export const createManualCycleIssuanceDependencies = (input: {
   };
 };
 
+
+// Uses the same production route, enrollment and issuer checks without inventing a user.
+export const loadServiceFeeIssuanceScope = async (admin: Client, matriculaId: string): Promise<IssuanceScope> => {
+  const [baseScope, credentialId, issuer] = await Promise.all([
+    loadEnrollmentScope(admin, matriculaId), assertProductionRoute(admin), resolveGatewayIssuer(admin),
+  ]);
+  return { ...baseScope, credentialId, issuerPoloId: issuer.id };
+};
