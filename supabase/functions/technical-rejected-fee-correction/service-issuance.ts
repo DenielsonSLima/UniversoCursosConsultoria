@@ -79,13 +79,17 @@ export const runApprovedRejectedFeeService = async (
       throw new Error("REJECTED_FEE_SERVICE_PERSISTENCE_UNCONFIRMED");
     }
     return { operationId: request.operationId, completed: true, replayed: false, issued: true };
-  } catch (error) {
-    if (claim.completed !== true) {
-      // No provider response or PII is written to this diagnostic. The attempt is never reset.
-      await admin.rpc("fail_rejected_fee_service_issuance", {
-        ...args, p_lease_token: claim.leaseToken, p_diagnostic: "SERVICE_ATTEMPT_REQUIRES_EXACT_GET",
-      });
+  } catch {
+    try {
+      if (claim.completed !== true) {
+        // No provider response or PII is written to this diagnostic. The attempt is never reset.
+        await admin.rpc("fail_rejected_fee_service_issuance", {
+          ...args, p_lease_token: claim.leaseToken, p_diagnostic: "SERVICE_ATTEMPT_REQUIRES_EXACT_GET",
+        });
+      }
+    } catch {
+      // A diagnostic-RPC failure must not expose its provider response either.
     }
-    throw error;
+    throw new Error("REJECTED_FEE_SERVICE_REQUIRES_EXACT_GET");
   }
 };
