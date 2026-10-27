@@ -42,7 +42,7 @@ client.setQueryData(queryKey, state);
     throw new Error('Contrato RPC inesperado no smoke.');
   }
   if (failNext) { failNext = false; return { data: null, error: { message: 'Falha simulada: histórico preservado. Tente novamente.' } }; }
-  history = [...history, structuredClone(state.progress)];
+  history = [...history, window.structuredClone(state.progress)];
   state = {
     ...state,
     progress: { completedContentIds: [], completedActivityIds: [], completedVideoIds: [], activityAnswers: {}, quizAnswers: {} },
