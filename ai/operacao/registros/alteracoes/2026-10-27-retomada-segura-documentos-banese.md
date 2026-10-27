@@ -1,6 +1,6 @@
 # Retomada segura e disponibilidade documental Banese — 27/10/2026
 
-Estado: PREPARADO PARA REVISÃO. Candidata 4.8.235/revisão 244, base main 22552591fc0e441f7d6ea3b10c0ca71bb26c5456. Nenhuma migration, Edge Function ou publicação em produção aplicada nesta tarefa.
+Estado: BACKEND APLICADO E CONFERIDO; WEB EM VALIDAÇÃO. Candidata 4.8.235/revisão 244, base main 22552591fc0e441f7d6ea3b10c0ca71bb26c5456, PR329. Aplicação em produção explicitamente autorizada pelo usuário nesta conversa. Nenhuma operação bancária executada.
 
 ## Objetivo e aceite
 
@@ -25,7 +25,7 @@ Pedido de correção por etapas, com cuidado, para o usuário tentar a emissão 
 ## Manifesto explícito
 - `.github/workflows/technical-cycle-recovery.yml`
 - `scripts/test-technical-cycle-recovery.mjs`
-- `supabase/migrations/20261027133000_allow_audited_manual_cycle_authorization_resume.sql`
+- `supabase/migrations/20261027104210_allow_audited_manual_cycle_authorization_resume.sql`
 - `supabase/functions/technical-manual-cycle-issuance/authorization-error.ts`
 - `supabase/functions/technical-manual-cycle-issuance/authorization-error.test.ts`
 - `supabase/functions/technical-manual-cycle-issuance/orchestrator.ts`
@@ -56,17 +56,22 @@ Total: 24 arquivos.
 - SQL usa PGlite 0.3.14 com corpos canônicos reais de autorização e trigger de primeiro claim, SET LOCAL ROLE authenticated/anon/service_role. Reproduz PT422 antes, valida handoff depois, nega RBAC NULL/fora de escopo, preserva conteúdo/autorização e estado ambíguo, verifica auditoria única e compatibilidade do primeiro claim.
 - Dependências de identidade, polo, snapshot e auditoria são sintéticas; testes isolados não comprovam integração ou concorrência entre conexões na produção.
 - Serviço é exercido com transporte Supabase simulado e payload real de erro: preserva código/progresso e envia apenas resume para matrícula/ciclo, sem nova chave ou retry.
-- TypeScript focado dos contratos/diagnósticos passou; Action e Edge transpilaram. CI completo/Preview permanecem etapas do PR.
+- TypeScript, lint, suíte geral, teto de linhas e build completos aprovados no GitHub no head5399ac1; Preview Vercel READY. O nome da migration foi alinhado ao ledger remoto sem alterar SQL aplicado; nova rodada de CI/Preview acompanha o head final.
 - Controle de versão e conferência direta dos 24 arquivos do manifesto aprovados (todos abaixo de 500 linhas). npm run check:file-lines agregado não concluiu nesta cópia parcial: 360 referências históricas/registries ausentes, fora do lote. Nenhum arquivo histórico foi removido ou alterado; o CI recebe o repositório completo.
 - Não houve emissão bancária, cancelamento, baixa ou alteração de registros reais nos testes.
 
-## Etapa 3 — Aplicação e verificação pendentes
+## Etapa 3 — Aplicação e verificação remotas
 
-O Supabase conectado lista apenas outro projeto. Leitura explícita do projeto Universo kfekgwyqozhicpfuunpo foi recusada por falta de permissão. Não usar outro banco, CLI, credenciais improvisadas ou sessão de usuário fabricada.
+A conexão inicialmente recusou o projeto. Após a liberação indicada pelo usuário, nova consulta confirmou UniversoCursoseConsultoria kfekgwyqozhicpfuunpo. Logs, advisors, migrations, tabelas e funções efetivas conferidos por MCP, sem CLI ou credencial improvisada.
 
-Antes de aplicar: obter acesso MCP ao projeto correto; consultar logs, migrations e definição efetiva das funções; resolver matrículas/recebíveis por IDs canônicos e comparar autorizador original, fingerprint e estados sem mutação. Registrar evidências privadas fora deste arquivo. O diagnóstico atual não distingue ainda a causa real entre troca de ator e alteração financeira dos casos reportados.
+- Definição autorizadora e trigger efetivos são iguais às fixtures canônicas usadas nos testes. Migration aplicada: ledger 20261027104210_allow_audited_manual_cycle_authorization_resume; fonte renomeada para esse ID mantendo SQL byte a byte.
+- Hash da função autorizadora após aplicação: 3cad6685913547a810e706ea8305d636, igual ao esperado. Owner, ACL, SECURITY DEFINER e search_path preservados; anon e service_role continuam sem EXECUTE e authenticated mantém EXECUTE.
+- Emissor technical-manual-cycle-issuance v13 ACTIVE, JWTtrue,75 arquivos: preservado bundle remoto, alterados somente orchestrator e novo authorization-error. Catálogo secretaria-banese-document-groups v8 ACTIVE, JWTtrue,10 arquivos: somente index e novo document-diagnostics.
+- Readback dos dois bundles igual a todos os arquivos esperados, incluindo dependências intocadas e import map. Advisors de segurança antes/depois sem mudança nos grupos/contagens observados; avisos anteriores fora deste lote preservados.
+- Contagens e total nominal de recebíveis, contagem de runs e hash integral das autorizações inalterados. Zero eventos de retomada por outro gestor antes/depois. Nenhum título foi emitido, cancelado, baixado ou reautorizado durante a aplicação.
+- Guarda real de identidade ausente confirmou negação em transação READ ONLY/ROLLBACK, sem identidade fabricada e sem chamar worker ou emissão. Sessão real do gestor ainda exige aceite manual.
 
-Ordem de aplicação: migration validada contra definição remota → Edge technical-manual-cycle-issuance e secretaria-banese-document-groups com dependências remotas preservadas → web do mesmo candidato após CI/Preview. Conferir contratos reais sem emissão; smoke autenticado no Safari ainda pendente. Somente depois orientar a tentativa manual do usuário. Divergência financeira continua exigindo revisão, nunca limpar autorização/chave ou forçar reemissão.
+Diagnóstico individual confirmado por leitura: o caso de retomada tem fingerprint igual ao autorizado e autoria original diferente da sessão mostrada; também possui endereço e bairro ausentes, que precisam ser completados pelo cadastro legítimo antes de o Banese aceitar. Os dois casos de catálogo vazio são histórico ORIGINAL Proesc sem identidade/termos Banese e sem comprovação durável de cobertura C1/C2. A interface passará a explicar a indisponibilidade; não cria títulos nem libera cobertura desconhecida. Evidências identificáveis ficaram fora do repositório.
 
-A candidata no repositório não comprova correção aplicada em produção. Nenhuma pendência de elegibilidade importada foi artificialmente liberada.
+Pendente: CI/Preview do head final, integração e publicação web compatível, conferência do domínio e tentativa consciente na sessão do gestor. Smoke autenticado Safari não realizado. Nenhuma pendência de elegibilidade importada foi artificialmente liberada; divergência financeira continua exigindo revisão.
 

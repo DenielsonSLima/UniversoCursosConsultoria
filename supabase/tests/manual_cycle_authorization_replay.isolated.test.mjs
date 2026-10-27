@@ -12,7 +12,7 @@ const read = (path) => readFile(new URL(path, import.meta.url), 'utf8');
 const fixture = await read('./fixtures/manual-cycle-authorization-replay.sql');
 const original = await read('./fixtures/canonical-authorize_technical_manual_receivable_issuance_secure.sql');
 const firstClaim = await read('./fixtures/canonical-guard_manual_technical_receivable_first_bank_claim.sql');
-const patch = await read('../migrations/20261027133000_allow_audited_manual_cycle_authorization_resume.sql');
+const patch = await read('../migrations/20261027104210_allow_audited_manual_cycle_authorization_resume.sql');
 const id = (n) => `00000000-0000-0000-0000-${String(n).padStart(12, '0')}`;
 const scope = { receivable: id(1), enrollment: id(2), turma: id(3), polo: id(4),
   payer: id(5), request: id(6), cycleRequest: id(7), originalActor: id(8), nextActor: id(9) };
