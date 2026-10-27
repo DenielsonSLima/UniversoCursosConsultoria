@@ -144,6 +144,7 @@ export class CicloFinanceiroTecnicoManualIssuanceError extends Error {
   constructor(
     message: string,
     readonly progress: CicloFinanceiroTecnicoManualEmissaoProgress | null,
+    readonly code: string | null = null,
   ) {
     super(message);
     this.name = "CicloFinanceiroTecnicoManualIssuanceError";
@@ -159,6 +160,17 @@ export const isCicloFinanceiroTecnicoManualIssuanceError = (
 export const getCicloFinanceiroTecnicoManualRecoveryGuidance = (
   error: unknown,
 ) => {
+  if (isCicloFinanceiroTecnicoManualIssuanceError(error)) {
+    if (error.code === 'CYCLE_AUTHORIZATION_FINGERPRINT_MISMATCH') {
+      return 'Os dados da cobrança mudaram após a autorização. Confira a operação existente antes de retomar; não gere outro ciclo.';
+    }
+    if (error.code === 'CYCLE_AUTHORIZATION_CONTEXT_MISMATCH') {
+      return 'O vínculo da autorização precisa de revisão. Confira a matrícula e o ciclo da operação existente; não gere outro ciclo.';
+    }
+    if (/Replay de autorização incompatível/i.test(error.message)) {
+      return 'A autorização existente precisa ser conferida antes de retomar; não gere outro ciclo.';
+    }
+  }
   const progress = isCicloFinanceiroTecnicoManualIssuanceError(error)
     ? error.progress
     : null;
@@ -177,10 +189,8 @@ const createIssuanceError = (body: unknown, fallback: unknown) => {
   const error = new CicloFinanceiroTecnicoManualIssuanceError(
     message,
     isRecord(body) ? readIssuanceProgress(body.progress) : null,
+    isRecord(body) && isNonEmptyString(body.code) ? body.code : null,
   );
-  if (isRecord(body) && isNonEmptyString(body.code)) {
-    Object.assign(error, { code: body.code });
-  }
   return error;
 };
 
@@ -375,3 +385,4 @@ export const matriculaTecnicaCicloManualService = {
     return result;
   },
 };
+

@@ -2,6 +2,10 @@ import { useEffect, useRef, useState } from 'react';
 import { Loader2, NotebookTabs } from 'lucide-react';
 import CarnesDocumentPreviewModal from '../../../../../secretaria/carnes-alunos/components/CarnesDocumentPreviewModal';
 import { carnesAlunosService } from '../../../../../secretaria/carnes-alunos/carnes-alunos.service';
+import {
+  EnrollmentDocumentUnavailableError,
+  selectEnrollmentDocumentGroup,
+} from '../../../../../secretaria/carnes-alunos/carnes-alunos.diagnostics';
 import type {
   BaneseDocumentProgress,
   PreparedBaneseDocument,
@@ -49,7 +53,7 @@ const FinanceiroAlunoCarneAction = ({
     ? 'Conclua ou retome a emissão antes de montar o carnê.'
     : pending
       ? `Montando carnê${progress?.total ? ` (${progress.current}/${progress.total})` : '...'}`
-      : 'Gerar carnê dos títulos Banese emitidos';
+      : 'Gerar carnê ou boletos dos títulos Banese disponíveis';
 
   useEffect(() => () => abortRef.current?.abort(), []);
 
@@ -68,18 +72,7 @@ const FinanceiroAlunoCarneAction = ({
         page: 1,
         pageSize: 2,
       }, controller.signal);
-      if (catalog.total !== 1 || catalog.groups.length !== 1) {
-        throw new Error(catalog.total === 0
-          ? 'Ainda não há um grupo completo de títulos Banese disponível para esta matrícula.'
-          : 'A matrícula retornou mais de um grupo documental. Revise os títulos antes de gerar.');
-      }
-      const [group] = catalog.groups;
-      if (group.enrollmentId !== row.matriculaId) {
-        throw new Error('O catálogo retornou um carnê de outra matrícula.');
-      }
-      if (group.documentType !== 'carnet') {
-        throw new Error('O carnê exige pelo menos três títulos Banese válidos.');
-      }
+      const group = selectEnrollmentDocumentGroup(catalog, row.matriculaId);
       const prepared = await carnesAlunosService.prepareDocument(
         [group],
         setProgress,
@@ -89,10 +82,10 @@ const FinanceiroAlunoCarneAction = ({
     } catch (failure) {
       if (!controller.signal.aborted) {
         onFeedback(
-          failure instanceof Error && /pelo menos três|ainda não há/i.test(failure.message)
+          failure instanceof EnrollmentDocumentUnavailableError
             ? 'info'
             : 'error',
-          'Carnê não preparado',
+          'Documentos não preparados',
           failure instanceof Error ? failure.message : 'Não foi possível montar o carnê Banese.',
         );
       }
@@ -138,3 +131,4 @@ const FinanceiroAlunoCarneAction = ({
 };
 
 export default FinanceiroAlunoCarneAction;
+

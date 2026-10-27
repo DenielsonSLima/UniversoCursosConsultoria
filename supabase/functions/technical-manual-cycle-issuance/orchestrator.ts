@@ -1,3 +1,4 @@
+import { manualCycleAuthorizationDiagnostic } from "./authorization-error.ts";
 import {
   errorMessage,
   IssuanceHttpError,
@@ -149,6 +150,15 @@ const partialError = async (
   } catch {
     // O erro original é mais importante que uma falha secundária de leitura.
   }
+  const authorizationDiagnostic = manualCycleAuthorizationDiagnostic(original);
+  if (authorizationDiagnostic) {
+    return new IssuanceHttpError(
+      409,
+      authorizationDiagnostic.message,
+      authorizationDiagnostic.code,
+      progress,
+    );
+  }
   if (original instanceof IssuanceHttpError && original.progress) {
     return original;
   }
@@ -197,3 +207,4 @@ export const runManualCycleIssuance = async (
     throw await partialError(request, dependencies, error);
   }
 };
+
