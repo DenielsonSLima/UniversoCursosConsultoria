@@ -39,11 +39,11 @@ let c1,c2,observer;
 try{
  c1=await connect();c2=await connect();observer=await connect();
  await loadIntegrationDatabase({exec:sql=>c1.query(sql),query:(sql,args)=>c1.query(sql,args)});
- await c1.query(`create schema internal_receivable_payments;
- create table internal_receivable_payments.attempts(id uuid primary key,receivable_id uuid,state text);
- create table public.financial_payment_events(id uuid primary key,source_kind text,source_id uuid);
- create table public.banese_ead_title_replacement_archive(id uuid primary key,environment text,convenio text,canceled_nosso_numero text);
- create table internal_financial_correction.normal_cycle_reset_archive(id uuid primary key,bank_environment text,bank_convenio text,canceled_nosso_numero text);`);
+ await c1.query(`create schema if not exists internal_receivable_payments;
+ create table if not exists internal_receivable_payments.attempts(id uuid primary key,receivable_id uuid,state text);
+ create table if not exists public.financial_payment_events(id uuid primary key,source_kind text,source_id uuid);
+ create table if not exists public.banese_ead_title_replacement_archive(id uuid primary key,environment text,convenio text,canceled_nosso_numero text);
+ create table if not exists internal_financial_correction.normal_cycle_reset_archive(id uuid primary key,bank_environment text,bank_convenio text,canceled_nosso_numero text);`);
  for(const [n,name] of ['storage_prepare','guards_runtime','completion_fences','dispatch','runtime_grants','receipt_ledger_guards'].entries()){
   await c1.query(await readFile(new URL(`../migrations/2026102718320${n}_inclusion_cancel_only_${name}.sql`,import.meta.url),'utf8'));
  }
