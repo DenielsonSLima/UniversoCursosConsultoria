@@ -10,6 +10,16 @@ Histórico arquivado: [30/09/2026 — versões 4.8.138 a 4.8.144](./changelog/20
 
 Histórico arquivado: [01/10/2026 a 04/10/2026 — versões 4.8.145 a 4.8.168](./changelog/2026-10-01-a-04-versoes-4-8-145-a-168.md).
 
+## [4.8.239] - 2026-10-27
+
+- Acompanhamento da emissão consulta a mesma operação por matrícula e ciclo, independentemente da lista da turma; apresenta dados confirmados, revisão e erro de leitura sem inventar progresso zero.
+- Uma única solicitação de emissão é observada por consultas independentes; conclusão integral pode ser confirmada mesmo quando a resposta inicial atrasa. Recarga e saída do acompanhamento não reenviam cobranças.
+- Reduz o custo repetido da projeção financeira, preservando contagens, proveniência, permissões e regras de emissão. Nenhum título, valor, pagamento ou vencimento é alterado por esta atualização.
+
+- Adiciona preparação estrita de rematrícula rejeitada por vencimento anterior à emissão, condicionada à consulta oficial da mesma identidade bancária, com prazo, comparação de estado e arquivo imutável da tentativa anterior.
+- A correção preserva mensalidades, composição e histórico do ciclo. Nova tentativa exige consentimento do gestor autenticado e mantém retomada da mesma identidade sem duplicar título após resposta perdida.
+- Nenhuma taxa é modificada automaticamente pela implantação; ausência genérica, conflito, pagamento e falha de consulta impedem o preparo.
+
 ## [4.8.237] - 2026-10-27
 
 - Alinha os nomes das três migrations financeiras aos identificadores efetivamente aplicados em produção, preservando integralmente o SQL revisado e sem reaplicação.

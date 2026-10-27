@@ -13,6 +13,10 @@ import type {
   RetomarEmissaoCicloFinanceiroTecnicoManualInput,
 } from '../matricula-tecnica-ciclo-manual.types';
 import { markFinanceiroRequestReconciled } from '../matricula-tecnica-financeiro.echo';
+import { observeManualCycleIssuance, type ManualCycleObservationIdentity } from '../manual-cycle-observation';
+import { manualCycleProgressOptions } from '../manual-cycle-progress.service';
+import { beginManualCycleObservation } from '../manual-cycle-activity';
+import { rememberPendingCycleObservation } from '../manual-cycle-pending-observation';
 
 export const usePreviewCicloFinanceiroTecnicoManual = (
   input: PreviewCicloFinanceiroTecnicoManualInput,
@@ -59,34 +63,42 @@ const invalidateIssuanceQueries = (
   queryClient.invalidateQueries({ queryKey: ['aluno-financeiro'] }),
 ]);
 
+const runObservedCycle = async <T>(queryClient: QueryClient, input: ManualCycleObservationIdentity, send: () => Promise<T>) => {
+  rememberPendingCycleObservation(input);
+  const finish = beginManualCycleObservation(input.turmaId);
+  try {
+    return await observeManualCycleIssuance(send, () => queryClient.fetchQuery(manualCycleProgressOptions(input)));
+  } finally { finish(); }
+};
+
 export const useGerarCicloFinanceiroTecnicoManual = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (input: GerarCicloFinanceiroTecnicoManualInput) => (
-      matriculaTecnicaCicloManualService.generate(input)
+    mutationFn: (input: GerarCicloFinanceiroTecnicoManualInput) => runObservedCycle(
+      queryClient, input, () => matriculaTecnicaCicloManualService.generate(input),
     ),
+    retry: false,
     onSuccess: (result) => {
       markFinanceiroRequestReconciled(result.requestId);
     },
-    onSettled: (_result, _error, input) => invalidateIssuanceQueries(
-      queryClient,
-      input.turmaId,
-    ),
+    onSettled: (_result, _error, input) => {
+      void invalidateIssuanceQueries(queryClient, input.turmaId).catch(() => undefined);
+    },
   });
 };
 
 export const useRetomarEmissaoCicloFinanceiroTecnicoManual = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (input: RetomarEmissaoCicloFinanceiroTecnicoManualInput) => (
-      matriculaTecnicaCicloManualService.resume(input)
-    ),
+    mutationFn: (input: RetomarEmissaoCicloFinanceiroTecnicoManualInput) => input.correctionOperationId
+      ? matriculaTecnicaCicloManualService.resume(input)
+      : runObservedCycle(queryClient, input, () => matriculaTecnicaCicloManualService.resume(input)),
+    retry: false,
     onSuccess: (result) => {
       markFinanceiroRequestReconciled(result.requestId);
     },
-    onSettled: (_result, _error, input) => invalidateIssuanceQueries(
-      queryClient,
-      input.turmaId,
-    ),
+    onSettled: (_result, _error, input) => {
+      void invalidateIssuanceQueries(queryClient, input.turmaId).catch(() => undefined);
+    },
   });
 };

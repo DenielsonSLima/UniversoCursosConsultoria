@@ -19,6 +19,11 @@ async function workerHarness() {
   const bindings = {
     createClient: () => ({ rpc: async () => ({ data: secret, error: null }) }),
     safeEqual: (a: string, b: string) => a === b,
+    REJECTED_FEE_ACTION: "inspect_rejected_fee_absence",
+    runRejectedFeeAbsenceInspection: async () => {
+      calls.push("inspect-only");
+      return { absenceConfirmed: true, financiallyChanged: false, issued: false };
+    },
     CORRECTION_ACTION: "cancel_approved_financial_correction_item",
     CLASS_RULE_ACTION: "apply_approved_financial_correction_class_rule",
     runApprovedClassRule: async () => { calls.push("class-rule"); return { success: true }; },
@@ -66,4 +71,30 @@ test("authorized correction action returns without calling legacy resume/reissue
   assert.equal(response.status, 200);
   assert.deepEqual(h.calls, ["cancel-only"]);
   assert.equal((await response.json()).reissued, false);
+});
+
+test("rejected-fee inspection requires the worker secret before dispatch", async () => {
+  for (const token of [undefined, "invalid"]) {
+    const h = await workerHarness();
+    const response = await h.handler(new Request("https://example.invalid", {
+      method: "POST",
+      headers: token ? { "X-Banese-Worker-Token": token } : {},
+      body: JSON.stringify({ action: "inspect_rejected_fee_absence" }),
+    }));
+    assert.equal(response.status, 401);
+    assert.deepEqual(h.calls, []);
+  }
+});
+
+test("authorized rejected-fee inspection returns without cancellation or legacy issuance", async () => {
+  const h = await workerHarness();
+  const response = await h.handler(new Request("https://example.invalid", {
+    method: "POST", headers: { "X-Banese-Worker-Token": h.secret },
+    body: JSON.stringify({ action: "inspect_rejected_fee_absence" }),
+  }));
+  assert.equal(response.status, 200);
+  assert.deepEqual(h.calls, ["inspect-only"]);
+  assert.deepEqual(await response.json(), {
+    absenceConfirmed: true, financiallyChanged: false, issued: false,
+  });
 });

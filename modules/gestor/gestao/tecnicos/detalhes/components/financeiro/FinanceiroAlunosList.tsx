@@ -300,9 +300,10 @@ const FinanceiroAlunosList: React.FC<FinanceiroAlunosListProps> = ({
         return;
       }
       toast.error(
-        'Ciclo não emitido',
-        `${error instanceof Error ? error.message : 'O servidor não confirmou a operação.'} A mesma solicitação pode ser repetida sem duplicar cobranças.`,
+        'Resultado da emissão não confirmado',
+        `${error instanceof Error ? error.message : 'O servidor não confirmou a operação.'} Consulte o progresso ou o extrato antes de qualquer retomada. Não gere novamente.`,
       );
+      setManualCycleMatriculaId(null);
     }
   };
 
@@ -330,12 +331,13 @@ const FinanceiroAlunosList: React.FC<FinanceiroAlunosListProps> = ({
   if (selectedMatriculaId) {
     return <AlunoFinanceiroExtrato matriculaId={selectedMatriculaId} turmaId={turma.id} canSettle={canSettleEnrollment} onBack={() => setSelectedMatriculaId(null)} />;
   }
-  if (isError) {
+  if (isError && !manualCycleMutation.isPending) {
     return <TechnicalDataError title="Situação financeira dos alunos não carregada" message="A lista foi bloqueada para não confundir uma falha de consulta com ausência de cobrança." retrying={isFetching} onRetry={onRetry} />;
   }
 
   return (
     <>
+      {isError && <p role="alert" className="mb-3 rounded-lg bg-amber-50 p-3 text-xs text-amber-900">A lista da turma não pôde ser atualizada. O acompanhamento abaixo consulta somente a operação em andamento; não envie uma nova emissão.</p>}
       {diagnosticosMatriculas.length > 0 && <p role="alert" className="mb-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
         {diagnosticosMatriculas.length} matrícula(s) com dados incompletos ficaram indisponíveis para operação. As demais permanecem acessíveis; o resumo mantém os totais do servidor.
         <button type="button" onClick={onRetry} className="ml-2 font-bold underline">Atualizar dados</button>
@@ -469,6 +471,8 @@ const FinanceiroAlunosList: React.FC<FinanceiroAlunosListProps> = ({
           row={currentManualCycleRow}
           turmaId={turma.id}
           pending={manualCycleMutation.isPending}
+          issuanceRequestId={manualCycleMutation.variables?.requestId}
+          issuanceStartedAt={manualCycleMutation.submittedAt}
           canSettleEnrollment={canSettleEnrollment}
           onClose={() => setManualCycleMatriculaId(null)}
           onConfirm={(preview, primeiroVencimento, revisao, abrirRecebimento) => (

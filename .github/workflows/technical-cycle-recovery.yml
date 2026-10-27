@@ -20,6 +20,13 @@ jobs:
           node-version: '>=24.22.1 <25'
           cache: npm
       - run: npm ci
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9.1
+      - name: Validar bundles Edge e contratos de correção sem rede bancária
+        run: |
+          deno check supabase/functions/technical-manual-cycle-issuance/index.ts supabase/functions/technical-manual-cycle-recovery-worker/index.ts
+          deno test --allow-read --allow-env supabase/functions/technical-rejected-fee-correction/*.test.ts
       - name: Preparar PostgreSQL isolado sem acesso bancário
         run: npm install --prefix /tmp/universo-cycle-sql --no-save --package-lock=false --ignore-scripts @electric-sql/pglite@0.3.14
       - name: Testar autorização real, retomada e catálogo documental
@@ -35,3 +42,15 @@ jobs:
           supabase/tests/manager-cycle-generation.isolated.test.mjs
           supabase/tests/manager-cycle-legacy-proof.isolated.test.mjs
           supabase/tests/manager-cycle-ui.test.mjs
+      - name: Testar acompanhamento leve e turma mista no orçamento de leitura
+        env:
+          PGLITE_MODULE_PATH: /tmp/universo-cycle-sql/node_modules/@electric-sql/pglite/dist/index.js
+        run: >-
+          node --test
+          supabase/tests/manual-cycle-progress.isolated.test.mjs
+          supabase/tests/financial-projection-workload.isolated.test.mjs
+          supabase/tests/manual-cycle-progress.test.mjs
+      - name: Testar correção estrita de taxa rejeitada sem acesso bancário
+        env:
+          PGLITE_MODULE_PATH: /tmp/universo-cycle-sql/node_modules/@electric-sql/pglite/dist/index.js
+        run: node scripts/test-rejected-technical-fee.mjs

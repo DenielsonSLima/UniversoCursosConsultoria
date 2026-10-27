@@ -31,13 +31,15 @@ const toastSource = readFileSync(
 test("a emissão pendente substitui o wizard por uma tela cheia de progresso", () => {
   assert.match(
     dialogSource,
-    /pending\s*\?\s*\(\s*<FinanceiroCicloManualIssuanceProgress/,
+    /pending\s*\?\s*\(\s*<FinanceiroCicloManualLiveProgress/,
   );
   assert.doesNotMatch(dialogSource, /aria-busy=\{pending\}/);
   assert.match(progressSource, /data-testid="manual-cycle-issuance-progress"/);
   assert.match(progressSource, /role="status"/);
   assert.match(progressSource, /aria-live="polite"/);
-  assert.doesNotMatch(progressSource, /<button\b|onClose/);
+  assert.match(progressSource, /onClose/);
+  assert.match(progressSource, /Sair do acompanhamento/);
+  assert.match(progressSource, /não cancela nem repete a emissão/);
 });
 
 test("a prévia revisada é preservada antes do início da mutation", () => {
@@ -74,7 +76,7 @@ test("a barra exibe somente o progresso persistido pelo Banese", () => {
   )?.[0] || "";
   assert.match(progressBar, /aria-label="Progresso real da emissão BolePix"/);
   assert.match(progressBar, /aria-valuetext=/);
-  assert.match(progressBar, /aria-valuenow=\{progressPercent\}/);
+  assert.match(progressBar, /aria-valuenow=\{progressConfirmed \? progressPercent : undefined\}/);
   assert.match(progressBar, /aria-valuemin=\{0\}/);
   assert.match(progressBar, /aria-valuemax=\{100\}/);
   assert.doesNotMatch(progressBar, /elapsedSeconds/);

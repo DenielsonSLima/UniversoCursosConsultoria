@@ -1,5 +1,5 @@
 # Lote ativo
 
-Lote 2026-10-27-financeiro-central-por-matricula: PUBLICADO E CONFERIDO, versão final 4.8.237/revisão 246, PRs 330 e 331 integradas; merge final dfa3c4e3bbf052e45a9e1714f1b8bc0aafaf317d. CI completo e duas revisões independentes aprovados; UI-first retrocompatível e ativação SQL conferidas. Nenhuma operação bancária executada pelo agente.
+Correções financeiras de 27/10/2026: EM VALIDAÇÃO, candidato 4.8.239/revisão 248. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-10-27-progresso-ciclo-leitura-leve.md` e `ai/operacao/registros/alteracoes/2026-10-27-taxa-tecnica-rejeitada.md`. Escopos separados por risco, publicação conjunta autorizada; implantar software não altera cobranças.
 
-Manifesto explícito: `ai/operacao/registros/alteracoes/2026-10-27-financeiro-central-por-matricula.md`. Migrations 151005/151011/151020 com readback exato, ACL e 21 fingerprints financeiros/proveniência preservados; 113154 somente recuperada, não reaplicada. Vercel dpl_5fLd6waPZV4MRPKKU9hWrZ27YLf3 production READY e /gestor HTTP 200 com versão real 4.8.237. Usuário orientado a recarregar abas e realizar aceite manual; API_REVIEW e dados financeiros existentes preservados.
+Aplicar RPC de progresso antes da UI e quatro migrations da taxa antes dos dois bundles Edge. Preparo real da taxa exige autorização específica, GET oficial fresco e CAS; emissão só com consentimento autenticado do gestor. Nenhuma alteração financeira executada nesta etapa.

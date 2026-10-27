@@ -9,6 +9,7 @@ import TechnicalDataError from './TechnicalDataError';
 import { useMatriculaTecnicaFinanceiroWorkspace } from './financeiro/hooks/useMatriculaTecnicaFinanceiro';
 import { useMatriculaTecnicaFinanceiroRealtime } from './financeiro/hooks/useMatriculaTecnicaFinanceiroRealtime';
 import { getFinancialWorkspaceErrorPresentation } from './financeiro/financial-workspace-error';
+import FinanceiroCycleObservationRecovery from './financeiro/FinanceiroCycleObservationRecovery';
 
 interface TurmaFinanceiroProps {
   turma: Turma;
@@ -51,6 +52,7 @@ const TurmaFinanceiro: React.FC<TurmaFinanceiroProps> = ({ turma, canSettleEnrol
 
   return (
     <div className="space-y-5">
+      <FinanceiroCycleObservationRecovery turmaId={turma.id} />
       {workspaceQuery.isLoading ? (
         <div className="flex items-center justify-center rounded-2xl border border-slate-200 bg-white py-8 shadow-sm">
           <Loader2 className="animate-spin text-blue-600" size={22} />

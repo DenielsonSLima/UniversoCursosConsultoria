@@ -25,7 +25,7 @@ import FinanceiroCicloManualSetupFields from './FinanceiroCicloManualSetupFields
 import { cicloManualTransferSetup } from './ciclo-manual-transfer-setup';
 import FinanceiroCicloManualChargeRows from './FinanceiroCicloManualChargeRows';
 import FinanceiroCicloManualDatesSummary from './FinanceiroCicloManualDatesSummary';
-import FinanceiroCicloManualIssuanceProgress from './FinanceiroCicloManualIssuanceProgress';
+import FinanceiroCicloManualLiveProgress from './FinanceiroCicloManualLiveProgress';
 import {
   startCicloManualIssuance,
   type CicloManualOnConfirm,
@@ -39,6 +39,8 @@ interface FinanceiroCicloManualDialogProps {
   turmaId: string;
   row: MatriculaTecnicaFinanceiroRow;
   pending: boolean;
+  issuanceRequestId?: string;
+  issuanceStartedAt?: number;
   canSettleEnrollment?: boolean;
   onClose: () => void;
   onConfirm: CicloManualOnConfirm;
@@ -56,6 +58,8 @@ const FinanceiroCicloManualDialog: React.FC<FinanceiroCicloManualDialogProps> = 
   turmaId,
   row,
   pending,
+  issuanceRequestId,
+  issuanceStartedAt,
   canSettleEnrollment = false,
   onClose,
   onConfirm,
@@ -142,9 +146,6 @@ const FinanceiroCicloManualDialog: React.FC<FinanceiroCicloManualDialogProps> = 
     ?? preview?.cicloNumero
     ?? row.cicloManual.cicloGerado?.numero
     ?? cycleNumber;
-  const persistedIssuance = row.cicloManual.cicloGerado?.numero === issuanceCycleNumber
-    ? row.cicloManual.cicloGerado
-    : null;
   const appliedTerms = preview ? ([
     ['MATRICULA', 'Matrícula', preview.termos.aplicacao.matricula],
     ['REMATRICULA', 'Rematrícula', preview.termos.aplicacao.rematricula],
@@ -204,17 +205,18 @@ const FinanceiroCicloManualDialog: React.FC<FinanceiroCicloManualDialogProps> = 
       className="fixed inset-0 z-[2147483000] flex h-[100dvh] w-screen flex-col overflow-hidden bg-slate-100 text-slate-900 outline-none"
     >
       {pending ? (
-        <FinanceiroCicloManualIssuanceProgress
+        <FinanceiroCicloManualLiveProgress
+          matriculaId={row.matriculaId} turmaId={turmaId} requestId={issuanceRequestId}
+          startedAt={issuanceStartedAt}
           alunoNome={row.alunoNome}
           matriculaExibicao={row.matriculaExibicao}
-          cicloNumero={issuanceCycleNumber}
+          cicloNumero={issuanceCycleNumber ?? 0}
           quantidadeItens={issuanceSnapshot?.quantidadeItens
             ?? preview?.quantidadeItens
             ?? null}
           quantidadeBancaria={issuanceSnapshot?.quantidadeBancaria ?? preview?.quantidadeBancaria}
-          emitidosBanese={persistedIssuance?.emitidosBanese ?? 0}
-          preparacaoConcluida={persistedIssuance !== null}
           total={issuanceSnapshot?.total ?? preview?.total ?? null}
+          onClose={onClose}
         />
       ) : (
         <>
