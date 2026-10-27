@@ -27,7 +27,7 @@ Deno.test("service capability issues one fee; repeated claims are GET-only or co
  const deps={scope:async()=>scope,load:async()=>({receivable:{...r,valor:mode==="foreign"?101:100},payer:{},transactions:[]}),
  create:async(input:Record<string,unknown>)=>{bankCalls.push("POST");assert(input.receivable===undefined|| (input.receivable as Record<string,unknown>).id===receivableId);if(mode==="failure"||mode==="diagnostic-failure")throw new Error("PII_SENTINEL_PROVIDER_SECRET");return result;},
  recover:async()=>{bankCalls.push("GET");if(mode==="recover-failure")throw new Error("PII_SENTINEL_GET_SECRET");return result;},terms:async()=>({}),validate:(v:unknown)=>v,issued:()=>true};
- let failed=false;try{await runApprovedRejectedFeeService(admin as never,"https://synthetic.invalid",body,deps as never);}catch(error){failed=true;assert(error instanceof Error&&error.message==="REJECTED_FEE_SERVICE_REQUIRES_EXACT_GET");assert(!("cause" in error));}
+ let failed=false;try{await runApprovedRejectedFeeService(admin as never,"https://synthetic.invalid",body,deps as never);}catch(error){failed=true;assert(error instanceof Error&&error.message==="REJECTED_FEE_SERVICE_REQUIRES_EXACT_GET"&&!("cause" in error));}
  assert(failed===(mode==="foreign"||mode.endsWith("failure")));
  assert(bankCalls.join()===(mode==="first"?"POST,GET":mode==="failure"||mode==="diagnostic-failure"?"POST":mode==="recover"||mode==="recover-failure"?"GET":""));
  if(failed)assert(rpcCalls.at(-1)==="fail_rejected_fee_service_issuance");
