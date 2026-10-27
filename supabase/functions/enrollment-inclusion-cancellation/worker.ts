@@ -31,7 +31,7 @@ async function readBody(request: Request) {
   } finally { reader.releaseLock(); }
   const joined = new Uint8Array(length); let offset = 0;
   for (const chunk of chunks) { joined.set(chunk, offset); offset += chunk.length; }
-  try { return JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(joined)); }
+  try { return JSON.parse(new globalThis.TextDecoder('utf-8', { fatal: true }).decode(joined)); }
   catch { throw new CorrectionBlocked('INVALID_REQUEST'); }
 }
 

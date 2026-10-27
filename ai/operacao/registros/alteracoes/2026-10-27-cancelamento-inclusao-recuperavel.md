@@ -26,7 +26,8 @@ exige revisão. Evidência de pagamento posterior nunca é apagada.
 Testes sintéticos de processador/HTTP, adapter bancário e SQL isolado. CI inclui
 PostgreSQL17 com sessões independentes para concorrência. Nenhum teste acessa
 banco bancário real. Revisão local não declara deploy nem cancelamento realizado.
-Sem incremento de versão web: pacote backend isolado, sem colisão com releases UI.
+Registro coordenado na versão4.8.241 após4.8.240, sem alterar fluxos UI ou
+republicar workers existentes. A versão não comprova implantação da nova Edge.
 
 Antes de operação real: revisão/CI verde do commit exato, autorização de publicação,
 readback de migrations/ACL/dependências, manifesto privado conferido, aprovação

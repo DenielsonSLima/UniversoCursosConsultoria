@@ -1,3 +1,4 @@
+import { REJECTED_FEE_SERVICE_ACTION, runApprovedRejectedFeeService } from "../technical-rejected-fee-correction/service-issuance.ts";
 import { REJECTED_FEE_ACTION } from "../technical-rejected-fee-correction/contract.ts";
 import { runRejectedFeeAbsenceInspection } from "../technical-rejected-fee-correction/worker-action.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
@@ -89,6 +90,9 @@ Deno.serve(async (request: Request) => {
 
   try {
     const body = await readBody(request);
+    if (body && typeof body === "object" && !Array.isArray(body) && (body as Record<string, unknown>).action === REJECTED_FEE_SERVICE_ACTION) {
+      return json(await runApprovedRejectedFeeService(admin, supabaseUrl, body));
+    }
     if (body && typeof body === "object" && !Array.isArray(body) && (body as Record<string, unknown>).action === REJECTED_FEE_ACTION) {
       return json(await runRejectedFeeAbsenceInspection(admin, body));
     }
