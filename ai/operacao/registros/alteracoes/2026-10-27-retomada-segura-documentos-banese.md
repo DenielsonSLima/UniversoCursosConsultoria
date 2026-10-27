@@ -1,6 +1,6 @@
 # Retomada segura e disponibilidade documental Banese — 27/10/2026
 
-Estado: BACKEND APLICADO E CONFERIDO; WEB EM VALIDAÇÃO. Candidata 4.8.235/revisão 244, base main 22552591fc0e441f7d6ea3b10c0ca71bb26c5456, PR329. Aplicação em produção explicitamente autorizada pelo usuário nesta conversa. Nenhuma operação bancária executada.
+Estado: PUBLICADO E CONFERIDO. Versão 4.8.235/revisão 244, PR329 integrado em e937cc1b811e42afa4d31d72b6043648c3427272. Aplicação em produção explicitamente autorizada pelo usuário nesta conversa. Nenhuma operação bancária executada pelo agente.
 
 ## Objetivo e aceite
 
@@ -56,7 +56,7 @@ Total: 24 arquivos.
 - SQL usa PGlite 0.3.14 com corpos canônicos reais de autorização e trigger de primeiro claim, SET LOCAL ROLE authenticated/anon/service_role. Reproduz PT422 antes, valida handoff depois, nega RBAC NULL/fora de escopo, preserva conteúdo/autorização e estado ambíguo, verifica auditoria única e compatibilidade do primeiro claim.
 - Dependências de identidade, polo, snapshot e auditoria são sintéticas; testes isolados não comprovam integração ou concorrência entre conexões na produção.
 - Serviço é exercido com transporte Supabase simulado e payload real de erro: preserva código/progresso e envia apenas resume para matrícula/ciclo, sem nova chave ou retry.
-- TypeScript, lint, suíte geral, teto de linhas e build completos aprovados no GitHub no head5399ac1; Preview Vercel READY. O nome da migration foi alinhado ao ledger remoto sem alterar SQL aplicado; nova rodada de CI/Preview acompanha o head final.
+- TypeScript, lint, suíte geral, teto de linhas e build completos aprovados no GitHub nos heads5399ac1 e final3b229b3; Preview Vercel READY. Os 56 testes focados passaram novamente após alinhar o nome da migration ao ledger, sem alterar o SQL aplicado. Árvore do merge igual à árvore validada42ba09f5a951502ef86d822a67dce0bb184da7af.
 - Controle de versão e conferência direta dos 24 arquivos do manifesto aprovados (todos abaixo de 500 linhas). npm run check:file-lines agregado não concluiu nesta cópia parcial: 360 referências históricas/registries ausentes, fora do lote. Nenhum arquivo histórico foi removido ou alterado; o CI recebe o repositório completo.
 - Não houve emissão bancária, cancelamento, baixa ou alteração de registros reais nos testes.
 
@@ -73,5 +73,7 @@ A conexão inicialmente recusou o projeto. Após a liberação indicada pelo usu
 
 Diagnóstico individual confirmado por leitura: o caso de retomada tem fingerprint igual ao autorizado e autoria original diferente da sessão mostrada; também possui endereço e bairro ausentes, que precisam ser completados pelo cadastro legítimo antes de o Banese aceitar. Os dois casos de catálogo vazio são histórico ORIGINAL Proesc sem identidade/termos Banese e sem comprovação durável de cobertura C1/C2. A interface passará a explicar a indisponibilidade; não cria títulos nem libera cobertura desconhecida. Evidências identificáveis ficaram fora do repositório.
 
-Pendente: CI/Preview do head final, integração e publicação web compatível, conferência do domínio e tentativa consciente na sessão do gestor. Smoke autenticado Safari não realizado. Nenhuma pendência de elegibilidade importada foi artificialmente liberada; divergência financeira continua exigindo revisão.
+Publicação web concluída: deployment dpl_GLEf9QGEEeqbfhVxFQhWZYzATSx6, target production, READY, commit e937cc1b811e42afa4d31d72b6043648c3427272 e aliases universocc.com.br/www.universocc.com.br. Rota https://www.universocc.com.br/gestor respondeu HTTP200 com título Portal do Gestor; domínio sem www redireciona para www. Backend e web compatíveis, sem qualquer emissão de teste.
+
+Pendente somente aceite consciente na sessão do gestor e conferências individuais de cadastro/proveniência descritas acima. Smoke autenticado Safari não realizado. Nenhuma pendência de elegibilidade importada foi artificialmente liberada; divergência financeira continua exigindo revisão. Este encerramento altera somente documentação, sem nova mudança de produto.
 
