@@ -19,6 +19,8 @@ async function workerHarness() {
   const bindings = {
     createClient: () => ({ rpc: async () => ({ data: secret, error: null }) }),
     safeEqual: (a: string, b: string) => a === b,
+    REJECTED_FEE_SERVICE_ACTION: "issue_approved_rejected_fee_service",
+    runApprovedRejectedFeeService: async () => { calls.push("service-fee-only"); return { completed: true }; },
     REJECTED_FEE_ACTION: "inspect_rejected_fee_absence",
     runRejectedFeeAbsenceInspection: async () => {
       calls.push("inspect-only");
@@ -97,4 +99,15 @@ test("authorized rejected-fee inspection returns without cancellation or legacy 
   assert.deepEqual(await response.json(), {
     absenceConfirmed: true, financiallyChanged: false, issued: false,
   });
+});
+
+test("service fee route requires secret and never falls through to a cycle", async () => {
+ for (const authorized of [false,true]) {
+  const h=await workerHarness();
+  const response=await h.handler(new Request("https://example.invalid",{method:"POST",
+    headers:authorized?{"X-Banese-Worker-Token":h.secret}:{},
+    body:JSON.stringify({action:"issue_approved_rejected_fee_service"})}));
+  assert.equal(response.status,authorized?200:401);
+  assert.deepEqual(h.calls,authorized?["service-fee-only"]:[]);
+ }
 });

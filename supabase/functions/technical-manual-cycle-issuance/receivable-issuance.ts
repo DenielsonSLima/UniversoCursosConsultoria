@@ -57,7 +57,7 @@ const asRecord = (value: unknown): Record<string, unknown> =>
     ? value as Record<string, unknown>
     : {};
 
-const loadReceivable = async (
+export const loadReceivable = async (
   admin: Client,
   receivableId: string,
 ): Promise<LoadedReceivable> => {
@@ -88,7 +88,7 @@ const loadReceivable = async (
   };
 };
 
-const payerForGateway = (payer: Record<string, unknown>) => ({
+export const payerForGateway = (payer: Record<string, unknown>) => ({
   id: payer.id,
   name: payer.nome,
   email: payer.email,

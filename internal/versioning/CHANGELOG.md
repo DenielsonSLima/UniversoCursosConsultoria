@@ -10,6 +10,11 @@ Histórico arquivado: [30/09/2026 — versões 4.8.138 a 4.8.144](./changelog/20
 
 Histórico arquivado: [01/10/2026 a 04/10/2026 — versões 4.8.145 a 4.8.168](./changelog/2026-10-01-a-04-versoes-4-8-145-a-168.md).
 
+## [4.8.240] - 2026-10-27
+
+- Permite execução interna de uma taxa já corrigida somente após aprovação administrativa específica, com operação, manifesto e identidade fixos, registrada como Sistema sem personificar gestor.
+- Preserva autorização humana e mensalidades; usa lease, comparação de estado, consulta bancária estrita e persistência canônica. Após tentativa incerta, apenas consulta a mesma identidade, sem segundo POST automático.
+
 ## [4.8.239] - 2026-10-27
 
 - Acompanhamento da emissão consulta a mesma operação por matrícula e ciclo, independentemente da lista da turma; apresenta dados confirmados, revisão e erro de leitura sem inventar progresso zero.
