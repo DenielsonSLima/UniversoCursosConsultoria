@@ -27,10 +27,23 @@ Deno.test("service capability issues one fee; repeated claims are GET-only or co
  const deps={scope:async()=>scope,load:async()=>({receivable:{...r,valor:mode==="foreign"?101:100},payer:{},transactions:[]}),
  create:async(input:Record<string,unknown>)=>{bankCalls.push("POST");assert(input.receivable===undefined|| (input.receivable as Record<string,unknown>).id===receivableId);if(mode==="failure"||mode==="diagnostic-failure")throw new Error("PII_SENTINEL_PROVIDER_SECRET");return result;},
  recover:async()=>{bankCalls.push("GET");if(mode==="recover-failure")throw new Error("PII_SENTINEL_GET_SECRET");return result;},terms:async()=>({}),validate:(v:unknown)=>v,issued:()=>true};
- let failed=false;try{await runApprovedRejectedFeeService(admin as never,"https://synthetic.invalid",body,deps as never);}catch(error){failed=true;assert(error instanceof Error&&error.message==="REJECTED_FEE_SERVICE_REQUIRES_EXACT_GET"&&!("cause" in error));}
+ let failed=false;try{await runApprovedRejectedFeeService(admin as never,"https://synthetic.invalid",body,deps as never);}catch(error){failed=true;assert(error instanceof Error&&/^REJECTED_FEE_SERVICE_REQUIRES_EXACT_GET STAGE_(LOAD|CREATE|RECOVER) REJECTED_FEE_SERVICE_UNCONFIRMED$/.test(error.message)&&!("cause" in error));}
  assert(failed===(mode==="foreign"||mode.endsWith("failure")));
  assert(bankCalls.join()===(mode==="first"?"POST,GET":mode==="failure"||mode==="diagnostic-failure"?"POST":mode==="recover"||mode==="recover-failure"?"GET":""));
  if(failed)assert(rpcCalls.at(-1)==="fail_rejected_fee_service_issuance");
  else if(mode!=="complete")assert(rpcCalls.at(-1)==="persist_rejected_fee_service_issuance");
  }
+});
+
+Deno.test("service query diagnostic emits only bounded status and strict official absence",async()=>{
+ const {serviceQueryDiagnostic}=await import("./service-recovery.ts");
+ const {BaneseAdapterError}=await import("../banese/core/adapter/types.ts");
+ const code={CodigoErroProcessamento:"ERRO_BOLETO_NAO_ENCONTRADO"};
+ for(const [status,body,expected] of [[400,{Erros:[code]},"ABSENT"],[404,{Erros:[code]},"ABSENT"],
+ [400,{Erros:[code,code]},"UNCONFIRMED"],[401,{Erros:[code]},"UNCONFIRMED"],
+ [400,{Erros:[{CodigoErroProcessamento:"OTHER",Descricao:"PII_SECRET_SENTINEL"}]},"UNCONFIRMED"],
+ [500,"<html>PII_SECRET_SENTINEL</html>","UNCONFIRMED"]] as const){
+ assert(serviceQueryDiagnostic(new BaneseAdapterError(`Banese recusou consulta do boleto (${status}): ${JSON.stringify(body)}`))===`QUERY_HTTP_${status}_${expected}`);
+ }
+ assert(serviceQueryDiagnostic(new Error("PII_SECRET_SENTINEL"))==="QUERY_UNCONFIRMED");
 });

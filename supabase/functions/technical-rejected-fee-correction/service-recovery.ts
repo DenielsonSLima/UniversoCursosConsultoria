@@ -4,7 +4,17 @@ import { documentForGateway } from "../gateways/checkout/utils.ts";
 import type { GatewayChargeResult } from "../gateways/router.ts";
 import type { LoadedReceivable } from "../technical-manual-cycle-issuance/receivable-state.ts";
 import type { IssuanceScope } from "../technical-manual-cycle-issuance/receivable-issuance.ts";
-import { record } from "./contract.ts";
+import { record, assertOfficialAbsence } from "./contract.ts";
+import { BaneseAdapterError } from "../banese/core/adapter/types.ts";
+
+export const serviceQueryDiagnostic = (error: unknown): string => {
+  if (!(error instanceof BaneseAdapterError)) return "QUERY_UNCONFIRMED";
+  const match = /^Banese recusou consulta do boleto \(([1-5]\d{2})\): ([\s\S]*)$/.exec(error.message);
+  if (!match) return "QUERY_UNCONFIRMED";
+  let absent = false;
+  try { assertOfficialAbsence(Number(match[1]), JSON.parse(match[2])); absent = true; } catch { /* No proof. */ }
+  return `QUERY_HTTP_${match[1]}_${absent ? "ABSENT" : "UNCONFIRMED"}`;
+};
 export const recoverServiceFeeExactTitle = async (input: {
   admin: SupabaseClient;
   loaded: LoadedReceivable;
@@ -37,16 +47,17 @@ export const recoverServiceFeeExactTitle = async (input: {
       expectedPayerDocument: documentForGateway(input.loaded.payer.cpf_cnpj),
       signal: AbortSignal.timeout(8_000),
     },
-  );
+  ).catch((error: unknown) => { throw new Error(`REJECTED_FEE_SERVICE_${serviceQueryDiagnostic(error)}`); });
   if (
     snapshot.paid || snapshot.payments.length > 0 || snapshot.paymentsError ||
     snapshot.financialTermsError || !snapshot.financialTerms ||
     !snapshot.pixPayload || !snapshot.pixEncodedImage ||
     snapshot.remoteStatus !== "PENDING"
   ) {
-    throw new Error(
-      "A consulta oficial não confirmou um BolePix aberto e completo.",
-    );
+    const flags = [snapshot.paid, snapshot.payments.length > 0, Boolean(snapshot.paymentsError),
+      Boolean(snapshot.financialTermsError) || !snapshot.financialTerms,
+      !snapshot.pixPayload || !snapshot.pixEncodedImage, snapshot.remoteStatus !== "PENDING"];
+    throw new Error(`REJECTED_FEE_SERVICE_SNAPSHOT_${flags.map(Boolean).map(Number).join("")}`);
   }
   const raw = record(snapshot.raw);
   return {

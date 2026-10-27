@@ -39,8 +39,10 @@ export const runApprovedRejectedFeeService = async (
     throw new Error("REJECTED_FEE_SERVICE_CAPABILITY_INVALID");
   }
   const receivableId = String(claim.receivableId), requestId = String(claim.requestId);
+  let stage: "SCOPE" | "LOAD" | "TERMS" | "CREATE" | "RECOVER" | "VALIDATE" | "PERSIST" = "SCOPE";
   try {
     const scope = await deps.scope(admin, String(claim.matriculaId));
+    stage = "LOAD";
     const loaded = await deps.load(admin, receivableId);
     const r = loaded.receivable;
     if (r.id !== receivableId || r.matricula_id !== scope.matriculaId || r.turma_id !== scope.turmaId ||
@@ -57,9 +59,12 @@ export const runApprovedRejectedFeeService = async (
     let result: GatewayChargeResult;
     if (claim.recoveryOnly) {
       // Once claimed, even an uncertain/failed first attempt can only perform exact GET recovery.
+      stage = "RECOVER";
       result = await deps.recover({ admin, loaded, scope, strictEffectivePayments: true });
     } else {
+      stage = "TERMS";
       const financialTerms = await deps.terms(admin, r);
+      stage = "CREATE";
       await deps.create({
         admin, supabaseUrl, providerCode: "banese_card", credentialId: scope.credentialId,
         environment: "production", paymentMethod: "BOLETO", receivable: r,
@@ -69,9 +74,12 @@ export const runApprovedRejectedFeeService = async (
         financialTerms, allowPendingBolePix: false,
       });
       // A POST response is not enough: re-read the exact title and effective payments.
+      stage = "RECOVER";
       result = await deps.recover({ admin, loaded, scope, strictEffectivePayments: true });
     }
+    stage = "VALIDATE";
     const normalized = deps.validate(result, r);
+    stage = "PERSIST";
     const saved = await admin.rpc("persist_rejected_fee_service_issuance", {
       ...args, p_lease_token: claim.leaseToken, p_result: normalized,
     });
@@ -79,7 +87,9 @@ export const runApprovedRejectedFeeService = async (
       throw new Error("REJECTED_FEE_SERVICE_PERSISTENCE_UNCONFIRMED");
     }
     return { operationId: request.operationId, completed: true, replayed: false, issued: true };
-  } catch {
+  } catch (error) {
+    const safeDetail = error instanceof Error && /^REJECTED_FEE_SERVICE_(QUERY_UNCONFIRMED|QUERY_HTTP_[1-5]\d{2}_(ABSENT|UNCONFIRMED)|SNAPSHOT_[01]{6})$/.test(error.message)
+      ? error.message : "REJECTED_FEE_SERVICE_UNCONFIRMED";
     try {
       if (claim.completed !== true) {
         // No provider response or PII is written to this diagnostic. The attempt is never reset.
@@ -90,6 +100,8 @@ export const runApprovedRejectedFeeService = async (
     } catch {
       // A diagnostic-RPC failure must not expose its provider response either.
     }
-    throw new Error("REJECTED_FEE_SERVICE_REQUIRES_EXACT_GET");
+    // Provider errors can contain payer data or credentials; never retain them as cause.
+    // eslint-disable-next-line preserve-caught-error
+    throw new Error(`REJECTED_FEE_SERVICE_REQUIRES_EXACT_GET STAGE_${stage} ${safeDetail}`);
   }
 };
