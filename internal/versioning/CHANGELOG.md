@@ -10,6 +10,11 @@ Histórico arquivado: [30/09/2026 — versões 4.8.138 a 4.8.144](./changelog/20
 
 Histórico arquivado: [01/10/2026 a 04/10/2026 — versões 4.8.145 a 4.8.168](./changelog/2026-10-01-a-04-versoes-4-8-145-a-168.md).
 
+## [4.8.237] - 2026-10-27
+
+- Alinha os nomes das três migrations financeiras aos identificadores efetivamente aplicados em produção, preservando integralmente o SQL revisado e sem reaplicação.
+- Atualiza caminhos dos testes e evidências de implantação; comportamento financeiro, interface funcional, valores, datas e permissões permanecem iguais à versão4.8.236.
+
 ## [4.8.236] - 2026-10-27
 
 - Módulo financeiro central por matrícula distingue Proesc, Banese importado, emissão própria e registro local, sem confundir mensalidades lançadas com títulos efetivamente emitidos.

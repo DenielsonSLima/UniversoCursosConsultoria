@@ -1,6 +1,6 @@
 # Financeiro central por matrícula — 27/10/2026
 
-Estado: publicação autorizada pelo usuário, aguardando CI e aplicação controlada. Versão 4.8.236/revisão 245. Base main 0845b90521fc3ad4fbe7c1fbf948d5055755d7de, posterior à PR329. Nenhuma operação bancária real integra o lote.
+Estado: PUBLICADO E CONFERIDO. PR330 integrada em 5c309c74239bf2f7ec5c2e71e29c591fbfbfcc1b; CI completo aprovado no head 2b33cf56622b5d679128fcbe517b4a341fe6184c. Versão 4.8.236/revisão 245. Base main 0845b90521fc3ad4fbe7c1fbf948d5055755d7de, posterior à PR329. Nenhuma operação bancária real integra o lote.
 
 ## Escopo e arquitetura
 
@@ -15,10 +15,10 @@ Estado: publicação autorizada pelo usuário, aguardando CI e aplicação contr
 ## Aplicação e reversão
 
 1. Versionar, sem reaplicar, 20261027113154 recuperada byte a byte do ledger: SHA256 35c6445c865f0a425f2a731254a87c589b932f4ba93c1388902591fd94017921.
-2. Aplicar 121000: projeções privadas aditivas, sem ativar mudança de elegibilidade/contagem.
-3. Aplicar 121100: coluna nullable e provas privadas/guard de imutabilidade, sem backfill.
-4. Aplicar 121200: ativação conjunta de contagem, opções, prévia, gerador, guards, autorização e claim na mesma migration/transação. Não separar estes blocos.
-5. Readback de corpos, ACL, owner e search_path; comparar contagens/hashes financeiros antes/depois. Só então integrar web e conferir deployment/versão.
+2. Aplicada 20261027151005: projeções privadas aditivas, sem ativar mudança de elegibilidade/contagem.
+3. Aplicada 20261027151011: coluna nullable e provas privadas/guard de imutabilidade, sem backfill.
+4. Aplicada 20261027151020: ativação conjunta de contagem, opções, prévia, gerador, guards, autorização e claim na mesma migration/transação. Não separar estes blocos.
+5. Readback de corpos, ACL, owner e search_path aprovado; contagens e hashes financeiros preservados. UI nova retrocompatível foi publicada primeiro, conforme validação independente e decisão coordenada, evitando backend novo diante do parser antigo.
 
 Todas as migrations usam lock_timeout e ACL restrita; alterações de corpos existentes exigem hashes e substituições exatas. Nenhuma política de turma, título, pagamento, fato histórico ou autorização é atualizada pela migration. PROTECTED_EXISTING não recebe snapshot nativo artificial.
 
@@ -35,7 +35,20 @@ Rollback operacional: interromper publicação se qualquer guard/readback diverg
 
 - Gates locais: TypeScript, lint, versão, build e limite de linhas aprovados; 27 testes novos e 56 de recuperação aprovados. Contratos anteriores foram atualizados apenas nas expectativas substituídas pela decisão canônica, data do plano e rótulo de títulos. CI completo ainda é condição para aplicação.
 
-- Primeiro CI identificou alias de import não resolvido pelo Deno. Imports do novo módulo foram convertidos para caminhos relativos, sem alterar regras, testes ou configuração do runner; revalidação completa é exigida no novo head.
+- Primeiro CI identificou alias de import não resolvido pelo Deno. Imports do novo módulo foram convertidos para caminhos relativos, sem alterar regras, testes ou configuração do runner; todos os 10 workflows passaram no head final2b33cf56.
+
+## Evidência de produção
+
+- Vercel production dpl_8qaaRHEGRnX4hh9BQXb6iX5362NE READY, commit 5c309c74 e aliases universocc.com.br/www.universocc.com.br. Árvore do merge igual à árvore validada cd516c330f3fa1acb16e21e03cd34088ba3e7ea4.
+- GET público /gestor retornou HTTP200, título Portal do Gestor; asset real main-vblFdGtE.js contém versão 4.8.236. Nenhum smoke autenticado ou chamada bancária foi executado.
+- UI nova/backend antigo validada em 4 cenários independentes. Abas já abertas com JS v235 não são atualizadas automaticamente; usuário foi orientado a evitar ações durante ativação e recarregar/conferir 4.8.236 antes do aceite manual.
+- Antes da DDL: zero runs GENERATING, zero API_AMBIGUOUS, zero claims/autorização recentes e zero chamadas ativas de geração/claim. API_REVIEW existente não estava em execução recente.
+- SQL aplicado às 15:10 via MCP; versões reais 151005/151011/151020, nomes alinhados ao ledger sem alteração de bytes. SHA256 respectivos: 4a011ceaad10e2b3da17a57168239e9698a62a667ad7dc03cb36edbda6d5ec7f;9d4d64a7020b13613516072f936e5ce01599bc097a197a8cdb5c6119af195b4d;739287e8e87126c93876f08fc8c3bb6cd8b89978006a3f171eb2a1b71caab045.
+- Auditor independente confirmou 24 definições exatas, grants/RLS/tabelas/constraints/triggers antigos preservados e coluna/trigger novos esperados. Zero alteração nos 21 fingerprints financeiros/proveniência/proteção entre baseline 15:09 e readback 15:10. 7.219 recebíveis, 38 runs, 454 autorizações e 411 fatos preservados.
+- 29 runs legados passaram prova histórica completa na leitura; isto não elimina outras validações operacionais. O único API_REVIEW possui run comprovado e mantém token/autorização e updated_at original; nenhuma baixa, reemissão ou novo vencimento foi criado.
+- Aceite consciente na sessão do gestor permanece com o usuário. Pagamentos legítimos anteriores ou posteriores à janela comparada não são atribuídos à migration. Regressões simuladas não substituem resposta real do banco.
+
+O alinhamento dos nomes ao ledger e dos caminhos de teste exige avanço de versão pelo gate do repositório: candidato4.8.237/revisão246, sem alteração de lógica financeira ou bytes SQL. A versão funcional4.8.236 já foi verificada em produção; o commit de alinhamento exige CI próprio antes da integração.
 
 ## Manifesto explícito
 - `.github/workflows/technical-cycle-recovery.yml`
@@ -69,9 +82,9 @@ Rollback operacional: interromper publicação se qualquer guard/readback diverg
 - `modules/shared/financeiro/matricula/parser.ts`
 - `modules/shared/financeiro/matricula/selectors.ts`
 - `supabase/migrations/20261027113154_manager_second_cycle_without_proesc_gate.sql`
-- `supabase/migrations/20261027121000_enrollment_financial_source_projection.sql`
-- `supabase/migrations/20261027121100_manual_cycle_manager_decision.sql`
-- `supabase/migrations/20261027121200_manual_cycle_manager_choice.sql`
+- `supabase/migrations/20261027151005_enrollment_financial_source_projection.sql`
+- `supabase/migrations/20261027151011_manual_cycle_manager_decision.sql`
+- `supabase/migrations/20261027151020_manual_cycle_manager_choice.sql`
 - `supabase/tests/fixtures/manager-cycle/calculation.sql`
 - `supabase/tests/fixtures/manager-cycle/creation.sql`
 - `supabase/tests/fixtures/manager-cycle/fixture.sql`
