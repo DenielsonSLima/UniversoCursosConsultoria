@@ -90,6 +90,7 @@ O responsável solicitou três agentes, pesquisa real, reunião, correção e pu
 - `supabase/migrations/20261027223000_create_math_ead_revision_registry.sql`
 - `supabase/migrations/20261027223050_preserve_ead_certificate_revision.sql`
 - `supabase/migrations/20261027223030_validate_ead_mutations_by_revision.sql`
+- `supabase/migrations/20261027223070_create_private_math_publication_packages.sql`
 - `.github/workflows/ead-mathematics-revision.yml`
 - `internal/versioning/system-version.json`
 - `internal/versioning/CHANGELOG.md`
@@ -99,5 +100,10 @@ O responsável solicitou três agentes, pesquisa real, reunião, correção e pu
 Total: 49 arquivos.
 
 ## Publicação e evidências remotas
-Pendentes. Registrar versões do ledger, commit, PR, Preview, implantação de produção e readback sanitizado sem dados pessoais.
+- PR 335, commit inicial 4a9cc06e1b271e162b6b5d6519bf647258c75cbd; Preview dpl_DMmkpJLUpzXe38FeLT591zQGujzc READY.
+- Oito migrations de infraestrutura aplicadas por MCP no Universo. Ledger: 223514 registry, 223516 getter, 223519 correção, 223522 validação, 223524 troca explícita, 223527 certificado, 223529 resoluções privadas e 223531 reserva de pacote, todas no dia 2026-10-27.
+- Readback após infraestrutura: progresso anterior, certificados e metadados dos dois cursos com fingerprints idênticos ao baseline, desconsiderando apenas o marcador de versão acrescentado.
+- ACL: anon sem acesso ao snapshot/troca; authenticated sem acesso aos pacotes privados.
+- CI inicial encontrou divergência na contagem do manifesto; corrigida a listagem da oitava migration. CI do pacote matemático aprovado; aguardar todos os checks no novo head.
+- Publicação da UI, consumo dos dois pacotes e readback final ainda pendentes nesta revisão do registro.
 
