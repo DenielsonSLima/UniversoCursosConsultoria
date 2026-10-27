@@ -21,7 +21,25 @@ export const runRejectedFeeAbsenceInspection = async (
     { method: "GET", headers: { Authorization: `${access.tokenType} ${access.accessToken}`, Accept: "application/json" }, signal },
   );
   const raw = await readResponseBody(response);
-  assertOfficialAbsence(response.status, raw);
+  try {
+    assertOfficialAbsence(response.status, raw);
+  } catch {
+    // Never log the bank body, payer details, identifiers or free-text descriptions.
+    const row = record(raw);
+    const errors = row.Erros;
+    const candidates = Array.isArray(errors)
+      ? errors.slice(0, 3).map(error => record(error).CodigoErroProcessamento) : [];
+    for (const field of ["Codigo", "code"]) {
+      if (row[field] !== undefined) candidates.push(row[field]);
+    }
+    const codes = candidates.slice(0, 5).map(code => {
+      return typeof code === "string" && /^(?:[A-Z][A-Z0-9_]{0,63}|[0-9]{1,4})$/.test(code)
+        ? code : "REDACTED";
+    });
+    const description = typeof row.Descricao === "string" && /^ERRO_[A-Z_]{1,59}$/.test(row.Descricao)
+      ? row.Descricao : "REDACTED";
+    throw new Error(`REJECTED_FEE_EXACT_OFFICIAL_ABSENCE_NOT_CONFIRMED HTTP_${response.status} CODES_${codes.join("_") || "NONE"} DESCRIPTION_${description}`);
+  }
   const hash = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(JSON.stringify(raw)));
   const evidence = {
     operation: "EXACT_RESERVED_TITLE_ABSENCE", method: "GET", environment: "production",

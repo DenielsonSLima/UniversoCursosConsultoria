@@ -40,3 +40,20 @@ Deno.test("per-item new request is backend-bound, replay-stable, internal recove
  await rejects(()=>resolveRejectedFeeRequest(admin,{...input,internalRecovery:true}));
  await rejects(()=>resolveRejectedFeeRequest(admin,{...input,cycleRequestId:leaseToken}));
 });
+Deno.test("inspection diagnostic retains HTTP and bounded codes only; rejected responses never commit proof",async()=>{
+ for(const status of [200,400,404]) {
+ for(const topLevel of [false,true]) {
+ const calls:string[]=[];
+ const admin={rpc:async(name:string)=>{calls.push(name);return {error:null,data:{operationId,manifestHash,receivableId,leaseToken,environment:"production",convenio:"12345",nossoNumero:"000099001"}};}};
+ const raw={Erros:[{CodigoErroProcessamento:"ERRO_OUTRO",DescricaoErroProcessamento:"PRIVATE_PAYER_ADDRESS"},
+ {CodigoErroProcessamento:"12345678901"},{CodigoErroProcessamento:"UNSAFE code@email.invalid"},{CodigoErroProcessamento:"FOURTH_HIDDEN"}],Pagador:{Nome:"PRIVATE_PAYER_NAME"}};
+ const responseBody=topLevel?{Codigo:"ERRO_BOLETO_NAO_ENCONTRADO",code:"12345678901",Descricao:"ERRO_TESTE",Pagador:{Nome:"PRIVATE_PAYER_NAME"}}:raw;
+ const deps={token:async()=>({accessToken:"synthetic-test",tokenType:"Bearer",expiresIn:null,scope:null,raw:{}}),
+ fetch:async()=>new Response(JSON.stringify(responseBody),{status})};
+ let message="";
+ try{await runRejectedFeeAbsenceInspection(admin,{action:"inspect_rejected_fee_absence",operationId,manifestHash},deps);}catch(error){message=(error as Error).message;}
+ assert(message===`REJECTED_FEE_EXACT_OFFICIAL_ABSENCE_NOT_CONFIRMED HTTP_${status} ${topLevel?"CODES_ERRO_BOLETO_NAO_ENCONTRADO_REDACTED DESCRIPTION_ERRO_TESTE":"CODES_ERRO_OUTRO_REDACTED_REDACTED DESCRIPTION_REDACTED"}`);
+ assert(calls.join()==="claim_rejected_fee_absence_service");
+ }
+ }
+});
