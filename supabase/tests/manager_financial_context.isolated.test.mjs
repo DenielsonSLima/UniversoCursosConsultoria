@@ -12,9 +12,9 @@ const database = async () => {
   const db = new PGlite();
   await db.exec(await read('./fixtures/manager-financial-context/schema.sql'));
   await db.exec(await read('./fixtures/manager-financial-context/monthly-count-before.sql'));
-  const patch = new URL('../migrations/20261027121000_enrollment_financial_source_projection.sql', import.meta.url);
+  const patch = new URL('../migrations/20261027151005_enrollment_financial_source_projection.sql', import.meta.url);
   if (await access(patch).then(() => true, () => false)) await db.exec(await readFile(patch, 'utf8'));
-  const activation=await read('../migrations/20261027121200_manual_cycle_manager_choice.sql');
+  const activation=await read('../migrations/20261027151020_manual_cycle_manager_choice.sql');
   await db.exec(activation.match(/create or replace function internal_academic\.technical_manual_monthly_count[\s\S]*?\$function\$;/)[0]);
   return db;
 };

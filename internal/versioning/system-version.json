@@ -1,8 +1,8 @@
 {
-  "version": "4.8.236",
+  "version": "4.8.237",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 245,
+  "revision": 246,
   "releasedAt": "2026-10-27",
-  "summary": "Proveniência financeira por matrícula e decisão auditada do gestor sobre os ciclos"
+  "summary": "Alinhamento auditável das migrations do financeiro por matrícula ao ledger de produção"
 }

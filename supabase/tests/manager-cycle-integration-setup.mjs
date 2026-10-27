@@ -61,7 +61,7 @@ export async function prepareManager(db,context,request=id(8000)) {
 }
 
 export async function applyManagerPatch(db) {
-  for(const file of ['20261027121000_enrollment_financial_source_projection.sql',
-    '20261027121100_manual_cycle_manager_decision.sql','20261027121200_manual_cycle_manager_choice.sql'])
+  for(const file of ['20261027151005_enrollment_financial_source_projection.sql',
+    '20261027151011_manual_cycle_manager_decision.sql','20261027151020_manual_cycle_manager_choice.sql'])
     await sql(db,`../migrations/${file}`);
 }
