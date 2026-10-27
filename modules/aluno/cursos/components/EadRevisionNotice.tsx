@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { EadLessonArticle } from './EadLessonArticle';
 
-export function EadRevisionNotice({ view }: { view: any }) {
+export const EadRevisionNotice: React.FC<{ view: any }> = ({ view }) => {
   const [confirming, setConfirming] = useState(false);
   const [acknowledged, setAcknowledged] = useState(false);
   const [reading, setReading] = useState(false);
@@ -37,4 +37,4 @@ export function EadRevisionNotice({ view }: { view: any }) {
       ))}</div>}
     </section>
   );
-}
+};
