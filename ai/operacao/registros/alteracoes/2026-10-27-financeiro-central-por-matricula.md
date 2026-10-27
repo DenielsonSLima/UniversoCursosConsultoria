@@ -1,6 +1,6 @@
 # Financeiro central por matrícula — 27/10/2026
 
-Estado: PUBLICADO E CONFERIDO. PR330 integrada em 5c309c74239bf2f7ec5c2e71e29c591fbfbfcc1b; CI completo aprovado no head 2b33cf56622b5d679128fcbe517b4a341fe6184c. Versão 4.8.236/revisão 245. Base main 0845b90521fc3ad4fbe7c1fbf948d5055755d7de, posterior à PR329. Nenhuma operação bancária real integra o lote.
+Estado: PUBLICADO E CONFERIDO. PR330 integrada em 5c309c74239bf2f7ec5c2e71e29c591fbfbfcc1b; CI completo aprovado no head 2b33cf56622b5d679128fcbe517b4a341fe6184c. Versão funcional 4.8.236/revisão 245; fechamento 4.8.237/revisão 246, PR331 integrada em dfa3c4e3bbf052e45a9e1714f1b8bc0aafaf317d, com CI integral aprovado no head adf2833d573a8bff10ecc20d53252f6c376438b8. Base main 0845b90521fc3ad4fbe7c1fbf948d5055755d7de, posterior à PR329. Nenhuma operação bancária real integra o lote.
 
 ## Escopo e arquitetura
 
@@ -48,7 +48,9 @@ Rollback operacional: interromper publicação se qualquer guard/readback diverg
 - 29 runs legados passaram prova histórica completa na leitura; isto não elimina outras validações operacionais. O único API_REVIEW possui run comprovado e mantém token/autorização e updated_at original; nenhuma baixa, reemissão ou novo vencimento foi criado.
 - Aceite consciente na sessão do gestor permanece com o usuário. Pagamentos legítimos anteriores ou posteriores à janela comparada não são atribuídos à migration. Regressões simuladas não substituem resposta real do banco.
 
-O alinhamento dos nomes ao ledger e dos caminhos de teste exige avanço de versão pelo gate do repositório: candidato4.8.237/revisão246, sem alteração de lógica financeira ou bytes SQL. A versão funcional4.8.236 já foi verificada em produção; o commit de alinhamento exige CI próprio antes da integração.
+O alinhamento dos nomes ao ledger e dos caminhos de teste exigiu avanço de versão pelo gate: 4.8.237/revisão 246, sem alteração de lógica financeira ou bytes SQL. Todos os 9 workflows do head adf2833d passaram. Deployment final dpl_5fLd6waPZV4MRPKKU9hWrZ27YLf3 production READY, commit dfa3c4e3 e árvore idêntica à validada f873bee1b575927180e873981ec4bc730a858f76. GET público /gestor HTTP 200; asset main-BoEu3bxJ.js confirmou 4.8.237. As três migrations não foram reaplicadas.
+
+Smoke somente leitura: 37 matrículas com runs retornaram projeção sem erro/diagnóstico; retomada e escolhas alternativas coexistem. Advisors de segurança mantiveram os mesmos grupos/contagens anteriores; não houve ampliação de grants. Aceite autenticado/bancário continua exclusivamente com o usuário.
 
 ## Manifesto explícito
 - `.github/workflows/technical-cycle-recovery.yml`
