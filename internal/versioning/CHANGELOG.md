@@ -10,6 +10,11 @@ Histórico arquivado: [30/09/2026 — versões 4.8.138 a 4.8.144](./changelog/20
 
 Histórico arquivado: [01/10/2026 a 04/10/2026 — versões 4.8.145 a 4.8.168](./changelog/2026-10-01-a-04-versoes-4-8-145-a-168.md).
 
+## [4.8.240] - 2026-10-27
+
+- Matemática Básica e Matemática para Enem recebem aulas próprias, exercícios resolvidos, atividades por habilidade e provas matemáticas revisadas com fontes INEP e OBMEP/IMPA.
+- A sala mantém avaliações anteriores por versão e oferece início explícito da revisão, preservando tentativas, notas e certificados; resoluções seguem somente no feedback após resposta.
+
 ## [4.8.239] - 2026-10-27
 
 - Acompanhamento da emissão consulta a mesma operação por matrícula e ciclo, independentemente da lista da turma; apresenta dados confirmados, revisão e erro de leitura sem inventar progresso zero.
@@ -431,4 +436,3 @@ Histórico arquivado: [01/10/2026 a 04/10/2026 — versões 4.8.145 a 4.8.168](.
 
 - Consultas de pagamentos tardios têm espaço garantido mesmo com uma fila contínua de cancelamentos em análise.
 - Gestores financeiros podem consultar as revisões dos seus polos autorizados, preservando as permissões e a restrição de acesso aos demais polos.
-

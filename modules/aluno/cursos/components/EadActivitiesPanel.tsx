@@ -31,6 +31,7 @@ export const EadActivitiesPanel: React.FC<EadActivitiesPanelProps> = ({ view }) 
     progress,
     assessmentFeedback,
     quizError,
+    revisionPending,
     activityAnswerDrafts,
     setActivityAnswerDraft,
     saveActivityAnswer,
@@ -38,11 +39,11 @@ export const EadActivitiesPanel: React.FC<EadActivitiesPanelProps> = ({ view }) 
     updateProgress,
   } = view;
   const requestActivityAnswerSave = (draftKey: string, activityId: string, answer: string) => (
-    saveActivityAnswer(draftKey, activityId, answer)
+    revisionPending ? Promise.resolve() : saveActivityAnswer(draftKey, activityId, answer)
   );
 
   const requestActivityCompletion = (activityId: string) => (
-    updateProgress('complete_activity', activityId)
+    revisionPending ? Promise.resolve() : updateProgress('complete_activity', activityId)
   );
 
   return (
@@ -153,7 +154,7 @@ export const EadActivitiesPanel: React.FC<EadActivitiesPanelProps> = ({ view }) 
                       : 'neutral';
                     const selected = feedback?.selectedIndex === idx;
                     const optionDisabled = activityDone || !activityIdValid
-                      || answerSavePending || completionPending;
+                      || answerSavePending || completionPending || revisionPending;
                     return (
                       <label key={`${draftKey}-${idx}`} className={optionDisabled ? 'cursor-default' : 'cursor-pointer'}>
                         <input
@@ -186,11 +187,16 @@ export const EadActivitiesPanel: React.FC<EadActivitiesPanelProps> = ({ view }) 
                     );
                   })}
                 </fieldset>
+                {feedback?.submitted && feedback.hasValidCorrection && authoritativeFeedback?.explanation && (
+                  <p className="rounded-xl bg-white p-3 text-sm leading-7 text-slate-700">
+                    <strong>Resolução: </strong>{authoritativeFeedback.explanation}
+                  </p>
+                )}
 
                 {!activityDone && activityIdValid && feedback?.hasAnswered && !answerPersisted && (
                   <button
                     type="button"
-                    disabled={answerSavePending || completionPending}
+                    disabled={answerSavePending || completionPending || revisionPending}
                     onClick={() => requestActivityAnswerSave(draftKey, atividade.id, currentAnswer)}
                     className="inline-flex items-center gap-2 rounded-xl border border-blue-200 bg-white px-4 py-2 text-[10px] font-black uppercase tracking-widest text-blue-700 hover:bg-blue-50 disabled:cursor-wait disabled:border-slate-200 disabled:bg-slate-50 disabled:text-slate-400"
                   >
@@ -228,7 +234,7 @@ export const EadActivitiesPanel: React.FC<EadActivitiesPanelProps> = ({ view }) 
                     {feedback.isCorrect === true && !activityDone && (
                       <button
                         type="button"
-                        disabled={completionPending || answerSavePending}
+                        disabled={completionPending || answerSavePending || revisionPending}
                         onClick={() => persistedFeedback?.isCorrect === true
                           ? requestActivityCompletion(atividade.id)
                           : requestActivityAnswerSave(draftKey, atividade.id, currentAnswer)}
@@ -261,12 +267,12 @@ export const EadActivitiesPanel: React.FC<EadActivitiesPanelProps> = ({ view }) 
                   value={currentAnswer}
                   aria-labelledby={questionId}
                   aria-busy={answerSavePending}
-                  disabled={activityDone || !activityIdValid || completionPending}
+                  disabled={activityDone || !activityIdValid || completionPending || revisionPending}
                   onChange={(event) => {
                     const answer = event.target.value;
                     setActivityAnswerDraft(draftKey, answer);
                   }}
-                  onBlur={(event) => !completionPending
+                  onBlur={(event) => !completionPending && !revisionPending
                     && (answerSavePending || event.currentTarget.value !== persistedAnswer)
                     && requestActivityAnswerSave(draftKey, atividade.id, event.currentTarget.value)}
                   placeholder="Escreva sua resposta aqui"
@@ -275,7 +281,7 @@ export const EadActivitiesPanel: React.FC<EadActivitiesPanelProps> = ({ view }) 
                 <button
                   type="button"
                   disabled={activityDone || !activityIdValid || !currentAnswer.trim()
-                    || completionPending || answerSavePending}
+                    || completionPending || answerSavePending || revisionPending}
                   onClick={() => {
                     if (!answerPersisted) requestActivityAnswerSave(draftKey, atividade.id, currentAnswer);
                     else requestActivityCompletion(atividade.id);

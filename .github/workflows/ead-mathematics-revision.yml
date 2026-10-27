@@ -1,0 +1,48 @@
+name: Conteúdo e avaliação de Matemática EAD
+
+on:
+  pull_request:
+    paths:
+      - 'content/ead/matematica-*/**'
+      - 'scripts/ead-mathematics/**'
+      - 'modules/aluno/cursos/**'
+      - 'supabase/migrations/**'
+      - 'supabase/tests/ead_assessment_revision*'
+      - '.github/workflows/ead-mathematics-revision.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'content/ead/matematica-*/**'
+      - 'scripts/ead-mathematics/**'
+      - 'modules/aluno/cursos/**'
+      - 'supabase/migrations/**'
+      - 'supabase/tests/ead_assessment_revision*'
+      - '.github/workflows/ead-mathematics-revision.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  mathematics-revision:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24.22.1'
+      - name: Preparar PostgreSQL isolado sem dados reais
+        run: npm install --prefix "$RUNNER_TEMP/ead-math" --no-save --package-lock=false --ignore-scripts @electric-sql/pglite@0.3.14
+      - name: Conferir conteúdo, gabaritos, versões e conclusão
+        env:
+          PGLITE_MODULE_PATH: ${{ runner.temp }}/ead-math/node_modules/@electric-sql/pglite/dist/index.js
+        run: >-
+          node --test
+          scripts/ead-mathematics/revision-model.test.mjs
+          scripts/ead-mathematics/publication.test.mjs
+          supabase/tests/ead_assessment_revision.isolated.test.mjs
+          modules/aluno/cursos/eadAssessmentRevision.test.ts
+          modules/aluno/cursos/eadAssessmentFeedback.test.ts
+          modules/aluno/cursos/eadAssessmentRuntime.test.ts

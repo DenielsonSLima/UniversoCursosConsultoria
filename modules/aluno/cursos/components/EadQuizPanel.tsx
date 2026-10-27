@@ -189,6 +189,11 @@ export const EadQuizPanel: React.FC<EadQuizPanelProps> = ({ view }) => {
                     );
                   })}
                 </div>
+                {quizReviewMode && feedback.hasValidCorrection && quizFeedback?.results?.[questao.id]?.explanation && (
+                  <p className="mt-4 rounded-xl bg-slate-50 p-3 text-sm leading-7 text-slate-700">
+                    <strong>Resolução: </strong>{quizFeedback.results[questao.id].explanation}
+                  </p>
+                )}
               </fieldset>
             );
           })}

@@ -5,6 +5,8 @@ import type { CertificadoAcademico } from '../../../gestor/secretaria/certificad
 import { getAlunoEadCertificate } from '../ead-certificate.service';
 import { MISSING_EAD_CERTIFICATE_MODEL, selectEadCertificateModel } from '../../../gestor/secretaria/certificados/ead-certificate-model';
 import { usePersistedEadCertificateTemplates } from '../../../gestor/secretaria/certificados/usePersistedEadCertificateTemplates';
+import { useEadAssessmentRevision } from './useEadAssessmentRevision';
+import { getEffectiveEadConfig } from '../eadAssessmentRevision';
 import {
   getStudentCourseAccessKey,
   recordStudentCourseAccess,
@@ -93,7 +95,7 @@ export const useEadLearning = ({ alunoId, hasAlunoContext, selectedCourse, query
 
   useEffect(() => {
     setSelectedLessonIdxState(0);
-    setActiveLearningTabState('video');
+    setActiveLearningTabState(selectedCourse?.ead_config?.assessmentRevision ? 'aulas' : 'video');
     setActiveCourseContentTabState('aulas');
     setQuizAnswers({});
     setQuizSeed(Date.now());
@@ -140,7 +142,8 @@ export const useEadLearning = ({ alunoId, hasAlunoContext, selectedCourse, query
     refetchInterval: selectedCourse?.id ? 30000 : false,
   });
   const hasProgressData = progressQuery.data !== undefined;
-  const hasAuthoritativeProgress = isEadProgressStatePayload(progressQuery.data);
+  const hasAuthoritativeProgress = isEadProgressStatePayload(progressQuery.data)
+    && getEffectiveEadConfig(selectedCourse?.ead_config, progressQuery.data) !== null;
   const progressContractError = hasProgressData && !hasAuthoritativeProgress;
   const progressAvailability = getEadProgressAvailability(
     hasAuthoritativeProgress,
@@ -207,7 +210,21 @@ export const useEadLearning = ({ alunoId, hasAlunoContext, selectedCourse, query
     };
   }, [alunoId, hasAlunoContext, progressQueryKey, queryClient, selectedCourse?.id]);
 
-  const eadConfig = selectedCourse?.ead_config || {};
+  const revisionView = useEadAssessmentRevision({
+    alunoId, courseId: selectedCourse?.id, state: progressQuery.data, queryClient,
+    disabled: !progressAvailability.isReady || progressOperationSnapshot.pendingCount > 0 || progressQuery.isFetching,
+    onAccepted: () => {
+      setSelectedLessonIdxState(0);
+      setActiveLearningTabState('aulas');
+      setActiveCourseContentTabState('aulas');
+      setQuizAnswers({});
+      setQuizSeed(Date.now());
+      activityAnswerDraftsRef.current = {};
+      setActivityAnswerDraftsState({});
+      setQuizError('');
+    },
+  });
+  const eadConfig = getEffectiveEadConfig(selectedCourse?.ead_config, progressQuery.data) || {};
   const conteudos = Array.isArray(eadConfig.conteudos) ? eadConfig.conteudos : [];
   const atividades = Array.isArray(eadConfig.atividades) ? eadConfig.atividades : [];
   const activityConfigurationValidation = useMemo(
@@ -449,6 +466,7 @@ export const useEadLearning = ({ alunoId, hasAlunoContext, selectedCourse, query
   }, [refetchProgress]);
 
   return {
+    ...revisionView,
     activeLearningTab, setActiveLearningTab, activeCourseContentTab, setActiveCourseContentTab,
     progressContextKey,
     selectedLessonIdx, setSelectedLessonIdx, quizAnswers, setQuizAnswers, quizError,
@@ -466,7 +484,7 @@ export const useEadLearning = ({ alunoId, hasAlunoContext, selectedCourse, query
     isProgressRefreshing: progressQuery.isFetching,
     progressQueryError,
     retryProgress,
-    isUpdatingProgress: progressOperationSnapshot.pendingCount > 0,
+    isUpdatingProgress: progressOperationSnapshot.pendingCount > 0 || revisionView.revisionPending,
     isProgressUpdatePending, updateProgress,
   };
 };

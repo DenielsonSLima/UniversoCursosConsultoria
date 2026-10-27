@@ -14,6 +14,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import EadLearningContent from './EadLearningContent';
+import { EadRevisionNotice } from './EadRevisionNotice';
 import type { LearningTab } from '../cursosPage.types';
 
 interface EadCourseRoomProps {
@@ -107,6 +108,7 @@ const EadCourseRoom: React.FC<EadCourseRoomProps> = ({ view }) => {
             </div>
           )}
 
+          <EadRevisionNotice key={`${selectedCourse.id}:${learningView.assessmentRevision?.current}`} view={learningView} />
           <section className="overflow-hidden rounded-[2rem] border border-emerald-100 bg-white shadow-sm">
             <div className="bg-emerald-50/80 p-6 sm:p-8">
               <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
@@ -261,6 +263,7 @@ const EadCourseRoom: React.FC<EadCourseRoomProps> = ({ view }) => {
             #ead-certificate-print-area section { break-after: page; box-shadow: none !important; border-radius: 0 !important; }
           }
         `}</style>
+        <EadRevisionNotice key={`${selectedCourse.id}:${learningView.assessmentRevision?.current}`} view={learningView} />
         <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">
             <button
@@ -332,7 +335,8 @@ const EadCourseRoom: React.FC<EadCourseRoomProps> = ({ view }) => {
 
         <div className="flex flex-wrap gap-2 rounded-[1.5rem] border border-slate-100 bg-white p-2 shadow-sm w-full sm:w-max">
           {[
-            ['video', 'Vídeo', <MonitorPlay size={15} />],
+            ...(!selectedCourse.ead_config?.assessmentRevision || learningView.mainVideoUrl
+              ? [['video', 'Vídeo', <MonitorPlay size={15} />]] : []),
             ['aulas', quizPassed ? 'Conteúdos do curso' : 'Aulas e atividades', <BookOpen size={15} />],
             ['prova', 'Prova final', <FileText size={15} />],
             ...(quizPassed ? [['certificado', 'Certificado', <Award size={15} />]] : [])
