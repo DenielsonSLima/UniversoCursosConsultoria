@@ -1,5 +1,6 @@
 import React from 'react';
 import { AlertCircle, CheckCircle2, Loader2, Lock } from 'lucide-react';
+import { EadAnswerRadio } from './EadAnswerRadio';
 import {
   getEadAnswerFeedback,
   getEadOptionFeedbackState,
@@ -159,22 +160,17 @@ export const EadQuizPanel: React.FC<EadQuizPanelProps> = ({ view }) => {
                     const selected = feedback.selectedIndex === Number(opcao.originalIndex);
                     const optionDisabled = quizReviewMode || quizSubmitting || isUpdatingProgress || !isConfigurationValid;
                     return (
-                      <label
+                      <EadAnswerRadio
                         key={`${visualQuestionKey}:${idx}:${opcao.originalIndex}`}
-                        className={optionDisabled ? 'cursor-default' : 'cursor-pointer'}
+                        name={`prova-${qIdx}-${String(questao.id || 'sem-id')}`}
+                        value={opcao.originalIndex}
+                        checked={selected}
+                        disabled={optionDisabled}
+                        onChange={() => setQuizAnswers((previous: Record<string, number>) => ({
+                          ...previous,
+                          [questao.id]: opcao.originalIndex,
+                        }))}
                       >
-                        <input
-                          type="radio"
-                          name={`prova-${qIdx}-${String(questao.id || 'sem-id')}`}
-                          value={opcao.originalIndex}
-                          checked={selected}
-                          disabled={optionDisabled}
-                          onChange={() => setQuizAnswers((previous: Record<string, number>) => ({
-                            ...previous,
-                            [questao.id]: opcao.originalIndex,
-                          }))}
-                          className="peer sr-only"
-                        />
                         <span className={`block rounded-xl border px-3 py-2 text-left text-xs font-bold transition-all peer-focus-visible:ring-2 peer-focus-visible:ring-blue-500 peer-focus-visible:ring-offset-2 ${optionStateClasses[optionState]}`}>
                           <span className="mr-2 font-black">{String.fromCharCode(65 + idx)}.</span>
                           {opcao.label}
@@ -185,7 +181,7 @@ export const EadQuizPanel: React.FC<EadQuizPanelProps> = ({ view }) => {
                             <span className="ml-2 font-black text-red-700">Sua resposta</span>
                           )}
                         </span>
-                      </label>
+                      </EadAnswerRadio>
                     );
                   })}
                 </div>

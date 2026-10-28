@@ -10,6 +10,15 @@ Histórico arquivado: [30/09/2026 — versões 4.8.138 a 4.8.144](./changelog/20
 
 Histórico arquivado: [01/10/2026 a 04/10/2026 — versões 4.8.145 a 4.8.168](./changelog/2026-10-01-a-04-versoes-4-8-145-a-168.md).
 
+## [4.8.242] - 2026-10-27
+
+### Corrigido
+- Revisão dos 61 cursos EAD restantes: 58 percursos com ensino, prática, atividades e provas próprias; três cursos adequados preservados com sete vínculos de atividades corrigidos.
+- Novos materiais e gabaritos passam por revisão independente e mantêm versões, progresso, notas e certificados anteriores; a troca de versão permanece explícita.
+- Cursos de NR-10, máquinas e transporte escolar delimitados como cursos livres teóricos, sem comprovação de prática ou habilitação profissional.
+- Explicações antecipadas de Serviços Gerais e Vigia reservadas no snapshot privado, sem trocar currículo, gabaritos ou histórico.
+- Área nativa de foco das alternativas vinculada ao retângulo visível; tela branca relatada no Android segue dependente de reteste após atualização.
+
 ## [4.8.241] - 2026-10-27
 
 - Retomada de rematrícula aprovada pelo serviço consulta a mesma tentativa sem alterar o consentimento histórico.

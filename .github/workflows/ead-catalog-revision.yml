@@ -1,0 +1,49 @@
+name: Revisão do catálogo e interação EAD
+
+on:
+  pull_request:
+    paths:
+      - 'content/ead/catalogo-*/**'
+      - 'scripts/ead-catalog/**'
+      - 'modules/aluno/cursos/**'
+      - 'supabase/migrations/**'
+      - '.github/workflows/ead-catalog-revision.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'content/ead/catalogo-*/**'
+      - 'scripts/ead-catalog/**'
+      - 'modules/aluno/cursos/**'
+      - 'supabase/migrations/**'
+      - '.github/workflows/ead-catalog-revision.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  catalog-revision:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24.22.1'
+      - name: Dependências do aplicativo
+        run: npm ci --ignore-scripts
+      - name: Preparar PostgreSQL e DOM isolados
+        run: npm install --prefix "$RUNNER_TEMP/ead-catalog" --no-save --package-lock=false --ignore-scripts @electric-sql/pglite@0.3.14 jsdom@26.1.0
+      - name: Conferir conteúdo, publicação e seleção de respostas
+        env:
+          PGLITE_MODULE_PATH: ${{ runner.temp }}/ead-catalog/node_modules/@electric-sql/pglite/dist/index.js
+          JSDOM_MODULE_PATH: ${{ runner.temp }}/ead-catalog/node_modules/jsdom/lib/api.js
+        run: >-
+          node --test
+          scripts/ead-catalog/content.test.mjs
+          scripts/ead-catalog/publication.test.mjs
+          scripts/ead-catalog/alignment-publication.test.mjs
+          scripts/ead-catalog/protect-preserved-feedback.test.mjs
+          scripts/ead-catalog/native-packages.test.mjs
+          modules/aluno/cursos/eadAnswerRadio.test.mjs
