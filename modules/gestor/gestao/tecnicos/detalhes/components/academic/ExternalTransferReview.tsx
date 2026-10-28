@@ -13,6 +13,9 @@ interface Props {
 }
 const statusLabel = { EQUIVALENCIA: 'Equivalência', APROVEITADO: 'Aproveitado', DISPENSADO: 'Dispensado' };
 const typeLabel = { MATRICULA: 'Matrícula', PARCELA: 'Mensalidade', REMATRICULA: 'Rematrícula' };
+const presentTransferWarning = (warning: string) => warning === 'A entrada registra o cronograma individual sem emitir cobranças.'
+  ? 'O registro salva o cronograma individual. Em seguida, a confirmação inicia a emissão somente do ciclo liberado.'
+  : warning;
 const ExternalTransferReview: React.FC<Props> = ({ draft, studentName, destinationLabel, disciplines, review }) => {
   const credits = disciplines.filter((discipline) => draft.credits[discipline.id]?.selected);
   return <div className="space-y-4 text-sm text-slate-700">
@@ -47,9 +50,10 @@ const ExternalTransferReview: React.FC<Props> = ({ draft, studentName, destinati
       </ol>}
       <div className="space-y-1 border-t border-blue-100 pt-3 text-xs">{review.totais.porCiclo.map((total) => <p key={total.cicloNumero}>C{total.cicloNumero}: {total.quantidadeParcelas} mensalidades · Total nominal {externalTransferMoney(total.totalNominal)}</p>)}</div>
       <p className="text-xs font-bold">Total nominal do plano: {externalTransferMoney(review.totais.totalNominal)}</p>
-      <p className="text-xs text-slate-500">Totais calculados pelo sistema antes de descontos e encargos de pagamento. O recebimento salva o plano; a emissão das cobranças fica no Financeiro.</p>
-      {review.avisos.map((warning, index) => <p key={index} className="text-xs text-amber-800">{warning}</p>)}
+      <p className="text-xs text-slate-500">Totais calculados pelo sistema antes de descontos e encargos de pagamento. Ao finalizar, a matrícula e o plano serão salvos e a emissão começará somente para o ciclo liberado, com progresso nesta tela. Um próximo ciclo exige outra ação.</p>
+      {review.avisos.map((warning, index) => <p key={index} className="text-xs text-amber-800">{presentTransferWarning(warning)}</p>)}
     </section> : <p role="alert" className="rounded-xl bg-amber-50 p-3 text-xs text-amber-800">O cronograma mudou. Volte ao Financeiro para conferir novamente.</p>}
   </div>;
 };
 export default ExternalTransferReview;
+

@@ -107,9 +107,35 @@ test('read-only progress remount recovers completion without generation or resum
   globalThis.progressQueryState = { data, isError: false, isFetching: false, refetch() {} };
   const remounted = ui.renderToStaticMarkup(ui.React.createElement(ui.LiveProgress, props));
   assert.match(remounted, /13\/13 títulos emitidos/); assert.match(remounted, /Emissão concluída/);
-  ui.LiveProgress(props).props.onClose();
+  assert.equal(typeof globalThis.progressViewProps.onClose, 'function');
+  globalThis.progressViewProps.onClose();
   assert.equal(closed, 1);
   assert.equal(sends, 0); assert.equal(reads, 1);
+});
+
+test('LOCAL exclusivo não vira boleto nem percentual bancário', () => {
+  const local = render({ cicloNumero: 1, quantidadeItens: 1, quantidadeBancaria: 0,
+    emitidosBanese: 0, preparacaoConcluida: true, progressConfirmed: true,
+    completionConfirmed: true, pendingCount: 0, reviewCount: 0 });
+  assert.match(local, /Registro local confirmado; sem boleto bancário/);
+  assert.match(local, /não é um boleto nem confirma pagamento/);
+  assert.doesNotMatch(local.replace(/<[^>]+>/g, ''), /0\/0|0%|100%/);
+  assert.doesNotMatch(local, /aria-valuenow=/);
+});
+
+test('revisão e prazo preservam contagem confirmada sem apresentar emissão ativa', () => {
+  for (const state of [
+    { reviewCount: 1, expected: /ciclo em revisão/ },
+    { automaticCheckPaused: true, expected: /Acompanhamento do ciclo pausado/ },
+  ]) {
+    const paused = render({ emitidosBanese: 4, progressConfirmed: true,
+      pendingCount: 8, reviewCount: 0, onCheck() {}, onClose() {}, ...state });
+    assert.match(paused, /4\/13 títulos emitidos/);
+    assert.match(paused, state.expected);
+    assert.match(paused, /Consultar progresso/);
+    assert.match(paused, /Sair do acompanhamento/);
+    assert.doesNotMatch(paused, /Gerando e emitindo|animate-spin|Emissão concluída/);
+  }
 });
 
 test('session recovery preserves only operation identity and refuses another operation/400 without POST', async () => {
@@ -153,3 +179,4 @@ test('concurrent progress observers share one read and an aborted read cannot is
   await assert.rejects(read, /read deadline/);
   assert.equal(aborted, true);
 });
+

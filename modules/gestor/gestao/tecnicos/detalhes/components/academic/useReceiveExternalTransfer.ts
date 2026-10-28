@@ -169,16 +169,20 @@ export const useReceiveExternalTransfer = ({ turmaId, canReceive, initialStudent
     try { return await requestPreview({ adjustments: buildExternalTransferFinancialAdjustments(configurations, context) }); }
     catch (failure) { setError(transferErrorMessage(failure)); return false; }
   };
-  const confirm = async () => {
-    if (attempt.current.busy || result || (!attempt.current.hasInput && (!ready || !review))) return;
+  const confirm = async (): Promise<ExternalTransferResult | null> => {
+    if (attempt.current.busy || result || (!attempt.current.hasInput && (!ready || !review))) return null;
     try {
       setError(null);
       const saved = await attempt.current.run(() => buildExternalTransferInput(draft, turmaId, review!, crypto.randomUUID()), (input) => saveMutation.mutateAsync(input));
-      if (!saved) return;
+      if (!saved) return null;
       setResult(saved);
       setUncertain(false);
-      try { await onSaved(saved); }
-      catch { setError('Recebimento registrado. Atualize a turma para consultar os dados.'); }
+      // The committed admission is independent of a query refresh. The next
+      // step verifies financial identity again directly with the server.
+      void Promise.resolve().then(() => onSaved(saved)).catch(() => {
+        setError('Recebimento registrado. Atualize a turma para consultar os dados.');
+      });
+      return saved;
     } catch (failure) {
       setError(transferErrorMessage(failure));
       setUncertain(attempt.current.uncertain);
@@ -186,6 +190,7 @@ export const useReceiveExternalTransfer = ({ turmaId, canReceive, initialStudent
         setReviewed(null);
         void Promise.all([contextQuery.refetch(), gradeQuery.refetch()]);
       }
+      return null;
     }
   };
   return {
@@ -209,3 +214,4 @@ export const useReceiveExternalTransfer = ({ turmaId, canReceive, initialStudent
     retryFinancial: () => { void contextQuery.refetch(); },
   };
 };
+

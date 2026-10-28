@@ -187,7 +187,7 @@ const SecretariaTransferenciaPage: React.FC<Props> = ({ poloId, gestorPermission
       )}
       {receipt && (
         <ReceiveExternalTransferController key={`${poloId}:${receipt.turma.id}:${receipt.student.id}`}
-          turmaId={receipt.turma.id} canReceive={canReceive}
+          turmaId={receipt.turma.id} poloId={poloId || ''} canReceive={canReceive}
           destinationLabel={`${receipt.turma.cursoNome} — ${receipt.turma.nome} (${receipt.turma.codigo})`}
           initialStudent={{ id: receipt.student.id, nome: receipt.student.nome, cpf_cnpj: receipt.student.cpf }}
           onClose={() => {
@@ -222,3 +222,4 @@ const SecretariaTransferenciaPage: React.FC<Props> = ({ poloId, gestorPermission
 };
 
 export default SecretariaTransferenciaPage;
+

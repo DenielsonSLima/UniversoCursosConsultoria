@@ -1,0 +1,49 @@
+name: Transferência e progresso dos carnês técnicos
+
+on:
+  pull_request:
+    paths:
+      - 'modules/gestor/gestao/tecnicos/detalhes/components/academic/**'
+      - 'modules/gestor/gestao/tecnicos/detalhes/components/financeiro/**'
+      - 'modules/gestor/gestao/tecnicos/detalhes/components/TurmaAcademico.tsx'
+      - 'modules/gestor/secretaria/transferencia/**'
+      - 'modules/shared/financeiro/matricula/**'
+      - 'supabase/functions/_shared/technical-transfer-schedule*.ts'
+      - '.github/workflows/transfer-cycle-progress.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'modules/gestor/gestao/tecnicos/detalhes/components/academic/**'
+      - 'modules/gestor/gestao/tecnicos/detalhes/components/financeiro/**'
+      - 'modules/gestor/gestao/tecnicos/detalhes/components/TurmaAcademico.tsx'
+      - 'modules/gestor/secretaria/transferencia/**'
+      - 'modules/shared/financeiro/matricula/**'
+      - 'supabase/functions/_shared/technical-transfer-schedule*.ts'
+      - '.github/workflows/transfer-cycle-progress.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  transfer-cycle-progress:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24.22.1'
+      - name: Dependências da aplicação
+        run: npm ci --ignore-scripts
+      - name: DOM isolado, sem acesso bancário
+        run: npm install --prefix "$RUNNER_TEMP/cycle-progress" --no-save --package-lock=false --ignore-scripts jsdom@26.1.0
+      - name: Conferir finalização, contrato de emissão e acompanhamento
+        env:
+          CYCLE_WARNING_JSDOM_PATH: ${{ runner.temp }}/cycle-progress/node_modules/jsdom/lib/api.js
+        run: >-
+          node --test
+          modules/gestor/gestao/tecnicos/detalhes/components/academic/external-transfer-issuance.behavior.test.mjs
+          modules/gestor/gestao/tecnicos/detalhes/components/academic/external-transfer-issuance-service.contract.test.mjs
+          modules/gestor/gestao/tecnicos/detalhes/components/financeiro/manual-cycle-live-progress.interaction.test.mjs

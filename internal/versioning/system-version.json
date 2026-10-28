@@ -1,8 +1,8 @@
 {
-  "version": "4.8.242",
+  "version": "4.8.243",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 251,
+  "revision": 252,
   "releasedAt": "2026-10-27",
-  "summary": "Catálogo EAD com ensino, atividades e avaliações alinhados e foco das alternativas corrigido"
+  "summary": "Transferência com emissão do ciclo liberado e acompanhamento de carnês retomado sem F5"
 }

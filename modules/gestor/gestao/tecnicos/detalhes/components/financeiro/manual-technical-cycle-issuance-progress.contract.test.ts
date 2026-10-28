@@ -76,7 +76,9 @@ test("a barra exibe somente o progresso persistido pelo Banese", () => {
   )?.[0] || "";
   assert.match(progressBar, /aria-label="Progresso real da emissão BolePix"/);
   assert.match(progressBar, /aria-valuetext=/);
-  assert.match(progressBar, /aria-valuenow=\{progressConfirmed \? progressPercent : undefined\}/);
+  assert.match(progressSource, /const bankProgressConfirmed = progressConfirmed && itemCount > 0/);
+  assert.match(progressBar, /aria-valuenow=\{bankProgressConfirmed \? progressPercent : undefined\}/);
+  assert.match(progressBar, /aria-valuetext=\{bankProgressConfirmed \?/);
   assert.match(progressBar, /aria-valuemin=\{0\}/);
   assert.match(progressBar, /aria-valuemax=\{100\}/);
   assert.doesNotMatch(progressBar, /elapsedSeconds/);
@@ -102,7 +104,12 @@ test("a tela explica as três etapas reais e o resultado esperado", () => {
   }
   assert.match(progressSource, /quantidadeItens/);
   assert.match(progressSource, /formatMoney\(total\)/);
-  assert.match(progressSource, /preparacaoConcluida \? 'complete' : 'active'/);
+  assert.match(progressSource, /preparacaoConcluida \? 'complete' : waitingForManualCheck \? 'pending' : 'active'/);
+  assert.match(progressSource, /const waitingForManualCheck = automaticCheckPaused \|\| requiresReview/);
+  assert.match(progressSource, /localOnlyCompleted \? 'Sem emissão no Banese'/);
+  assert.match(progressSource, /Registro local confirmado; sem boleto bancário/);
+  assert.match(progressSource, /Acompanhamento do ciclo pausado/);
+  assert.match(progressSource, /ciclo em revisão/);
 });
 
 test("o tempo decorrido é real, limpo no unmount e anunciado sem ruído", () => {
@@ -123,3 +130,4 @@ test("interrupções exibem o toast visual de alerta em vez de falhar em runtime
   assert.match(toastSource, /warning:\s*\{[\s\S]*?border-l-amber-500/);
   assert.match(toastSource, /addToast\(['"]warning['"]/);
 });
+

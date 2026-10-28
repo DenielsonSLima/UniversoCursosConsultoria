@@ -105,7 +105,7 @@ test('footer real gera lista no avanço, preserva C1 quando C2 falha e permite r
   assert.equal(state.review, null);
   assert.equal(state.ready, false);
   assert.equal(state.confirmationIssue.recovery, 'REVIEW');
-  assert.equal(findButton(modal.render(props(state)), 'Registrar recebimento e plano').props.disabled, true);
+  assert.equal(findButton(modal.render(props(state)), 'Finalizar e emitir ciclo liberado').props.disabled, true);
 });
 
 test('avanço sem alterações consulta o cronograma; lista inválida tem caminho de reparo sem perder notas', async () => {
@@ -263,7 +263,7 @@ test('retorno JSONB mantém a revisão, inclusive sem cobranças; valor, data ou
     assert.ok(state.review, 'A ordem das chaves JSONB não deve invalidar o plano conferido.');
     assert.equal(state.ready, true);
     assert.equal(state.confirmationIssue, null);
-    assert.equal(findButton(modal.render(props(state)), 'Registrar recebimento e plano').props.disabled, false);
+    assert.equal(findButton(modal.render(props(state)), 'Finalizar e emitir ciclo liberado').props.disabled, false);
     if (items.length) {
       const original = globalThis.structuredClone(state.draft.items);
       state.change('items', domain.updateExternalTransferItem(original, uuid(11), { valor: '200.01' }));
@@ -285,3 +285,59 @@ test('retorno JSONB mantém a revisão, inclusive sem cobranças; valor, data ou
     assert.equal(state.confirmationIssue.recovery, 'REVIEW');
   }
 });
+
+test('registro confirmado retorna sem esperar projeção pendente e preserva resultado em falha de atualização', async () => {
+  for (const outcome of ['pending', 'async-failure', 'sync-failure']) {
+    let refreshCalls = 0;
+    let bankContinuation = 0;
+    const onSaved = () => {
+      refreshCalls++;
+      if (outcome === 'pending') return new Promise(() => {});
+      if (outcome === 'sync-failure') throw new Error('Falha síncrona de projeção');
+      return Promise.reject(new Error('Falha assíncrona de projeção'));
+    };
+    const runtime = new TransferHookRuntime({ ...options, onSaved }, grade, defaults, async (name, args) => {
+      if (name === 'receber_transferencia_tecnica_v3_secure') return { error: null, data: {
+        versao: 3, requestId: args.p_request_id, replayed: false, matriculaId: uuid(300), transferenciaId: uuid(301),
+        financeiro: preview(args.p_financeiro.itens), cobrancaGerada: false,
+      } };
+      return { error: null, data: preview(args.p_financeiro.itens) };
+    });
+    await runtime.initialize();
+    runtime.state.change('institution', 'Escola sintética');
+    runtime.state.change('reason', 'Continuidade dos estudos');
+    runtime.state.change('transferDate', '2026-10-01');
+    runtime.render();
+    assert.equal(await runtime.state.reviewPlan(), true);
+    runtime.render();
+    const continuation = runtime.state.confirm().then((saved) => {
+      if (saved) bankContinuation++;
+      return saved;
+    });
+    const saved = await Promise.race([continuation, new Promise((resolve) => globalThis.setImmediate(() => resolve('refresh-blocked')))]);
+    assert.notEqual(saved, 'refresh-blocked', 'Uma atualização de consulta não pode prender o registro confirmado.');
+    assert.equal(saved.matriculaId, uuid(300));
+    assert.equal(refreshCalls, 1);
+    assert.equal(bankContinuation, 1);
+    await settleAction();
+    const state = runtime.render();
+    assert.equal(state.result.matriculaId, saved.matriculaId);
+    assert.equal(state.uncertain, false);
+    if (outcome !== 'pending') assert.match(state.error, /Recebimento registrado/);
+  }
+});
+
+test('revisão apresenta o aviso legado de registro no contexto da emissão e preserva os demais avisos', () => {
+  const legacyWarning = 'A entrada registra o cronograma individual sem emitir cobranças.';
+  const otherWarning = 'Confira o vencimento individual antes de finalizar.';
+  const review = { ...defaults, avisos: [legacyWarning, otherWarning] };
+  const draft = domain.createExternalTransferDraft(uuid(9), '2026-10-01');
+  const html = renderToStaticMarkup(React.createElement(domain.Review, { draft, review,
+    studentName: 'Aluno sintético', disciplines: [],
+  }));
+  assert.doesNotMatch(html, /A entrada registra o cronograma individual sem emitir cobranças/);
+  assert.match(html, /O registro salva o cronograma individual\. Em seguida, a confirmação inicia a emissão somente do ciclo liberado\./);
+  assert.ok(html.includes(otherWarning));
+  assert.deepEqual(review.avisos, [legacyWarning, otherWarning]);
+});
+
