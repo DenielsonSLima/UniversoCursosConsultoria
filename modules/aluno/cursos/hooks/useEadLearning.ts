@@ -3,8 +3,7 @@ import { useMutation, useQuery, type QueryClient } from '@tanstack/react-query';
 import { supabase } from '../../../../lib/supabase';
 import type { CertificadoAcademico } from '../../../gestor/secretaria/certificados/certificados.types';
 import { getAlunoEadCertificate } from '../ead-certificate.service';
-import { MISSING_EAD_CERTIFICATE_MODEL, selectEadCertificateModel } from '../../../gestor/secretaria/certificados/ead-certificate-model';
-import { usePersistedEadCertificateTemplates } from '../../../gestor/secretaria/certificados/usePersistedEadCertificateTemplates';
+import { useAlunoEadCertificateModel } from './useAlunoEadCertificateModel';
 import { useEadAssessmentRevision } from './useEadAssessmentRevision';
 import { getEffectiveEadConfig } from '../eadAssessmentRevision';
 import {
@@ -295,13 +294,8 @@ export const useEadLearning = ({ alunoId, hasAlunoContext, selectedCourse, query
       : alunoCertificado
         ? `Código de validação: ${alunoCertificado.codigo_validacao || 'gerado na emissão'}`
         : 'O certificado será liberado automaticamente após a confirmação da conclusão aprovada do curso.';
-  const { data: certificateTemplates = [], isFetching: certificateModelFetching, isPending: certificateModelPending, isError: certificateModelFailed } =
-    usePersistedEadCertificateTemplates(selectedCourse?.id || '', !!selectedCourse?.id && quizPassed);
-  const certificateModelLoading = certificateModelFetching || certificateModelPending;
-  const eadCertificateModel = selectEadCertificateModel(certificateTemplates, selectedCourse);
-  const certificateModelError = certificateModelFailed ? 'Não foi possível atualizar o modelo do certificado. Tente novamente.'
-    : !certificateModelLoading && !eadCertificateModel
-      ? MISSING_EAD_CERTIFICATE_MODEL : '';
+  const { eadCertificateModel, certificateModelLoading, certificateModelError, retryCertificateModel } =
+    useAlunoEadCertificateModel(alunoId, alunoCertificado?.id, hasAlunoContext && quizPassed);
   const randomizedQuizQuestions = useMemo(() => {
     const questoes = Array.isArray(currentProva?.questoes) ? currentProva.questoes : [];
     return shuffleWithSeed(questoes, quizSeed + hashString(selectedCourse?.id || '')).map((questao: any, qIdx: number) => ({
@@ -477,7 +471,8 @@ export const useEadLearning = ({ alunoId, hasAlunoContext, selectedCourse, query
     quizPassed, progressPercent, allLessonsDone, allActivitiesDone, allVideosDone,
     questionsTotal, minimumQuestions, quizRetryBlocked, retryCountdownLabel, canTakeQuiz, completedAtDate,
     startedAtDate, completedLessonCount, alunoCertificado, certificateStatusTitle,
-    certificateStatusMessage, eadCertificateModel, certificateModelLoading, certificateModelError, randomizedQuizQuestions, displayedQuizAnswers,
+    certificateStatusMessage, eadCertificateModel, certificateModelLoading, certificateModelError, retryCertificateModel,
+    randomizedQuizQuestions, displayedQuizAnswers,
     retryAvailableLabel, retryReleaseRefreshing, isLessonLocked,
     isProgressReady: progressAvailability.isReady,
     isProgressLoading: progressAvailability.isLoading,
@@ -488,4 +483,5 @@ export const useEadLearning = ({ alunoId, hasAlunoContext, selectedCourse, query
     isProgressUpdatePending, updateProgress,
   };
 };
+
 

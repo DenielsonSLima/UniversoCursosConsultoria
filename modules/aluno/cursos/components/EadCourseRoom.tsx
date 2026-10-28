@@ -38,7 +38,7 @@ const EadCourseRoom: React.FC<EadCourseRoomProps> = ({ view }) => {
     certificateStatusMessage,
     printCertificate,
     downloadCertificatePdf,
-    isDownloadingCertificate,
+    certificateActions,
     renderCertificatePreview,
     progressPercent,
     completedLessonCount,
@@ -175,7 +175,7 @@ const EadCourseRoom: React.FC<EadCourseRoomProps> = ({ view }) => {
                   <div className="flex flex-col sm:flex-row gap-2">
                     <button
                       onClick={printCertificate}
-                      disabled={!alunoCertificado || isDownloadingCertificate}
+                      disabled={certificateActions.disabled}
                       className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-700 disabled:cursor-not-allowed disabled:text-slate-300"
                     >
                       <Printer size={14} />
@@ -183,11 +183,11 @@ const EadCourseRoom: React.FC<EadCourseRoomProps> = ({ view }) => {
                     </button>
                     <button
                       onClick={downloadCertificatePdf}
-                      disabled={!alunoCertificado || isDownloadingCertificate}
+                      disabled={certificateActions.disabled}
                       className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-150 bg-white px-4 py-3 text-[10px] font-black uppercase tracking-widest text-emerald-700 disabled:cursor-not-allowed disabled:text-slate-300"
                     >
-                      {isDownloadingCertificate ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
-                      {isDownloadingCertificate ? 'Gerando PDF' : 'Baixar PDF'}
+                      {certificateActions.busy ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
+                      {certificateActions.label}
                     </button>
                   </div>
                 </div>
@@ -360,3 +360,4 @@ const EadCourseRoom: React.FC<EadCourseRoomProps> = ({ view }) => {
 };
 
 export default EadCourseRoom;
+
