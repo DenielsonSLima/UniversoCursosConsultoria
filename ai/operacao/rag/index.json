@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "retrieval": "lexical-bm25-with-source-citations",
-  "builtAt": "2026-10-28T18:58:28.511Z",
+  "builtAt": "2026-10-28T19:03:26.242Z",
   "manifestVersion": 2,
-  "sourceSignature": "6c1449072def433a040c0c47e7a201cd59c5490382139268ede375e0c9c1d67a",
+  "sourceSignature": "fa4b7525932d464674b6a0412e5166550d78ce450fc7b65c898ec8f1e7ca9366",
   "sources": [
     {
       "path": "AGENTS.md",
@@ -11,7 +11,7 @@
     },
     {
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "hash": "5c3037f74f9e95c977c1a06b79e46b1baf0db525f2dc63d513f438675b916c64"
+      "hash": "fb27470afc3b12bce9b405c0bdbb6b5842f5d6573673153a8e7c162a0dd32223"
     },
     {
       "path": "ai/operacao/MEMORIA_CANONICA.md",
@@ -218,23 +218,13 @@
       "part": 1
     },
     {
-      "id": "bc3c56e0adf60934b8fb",
-      "hash": "bc3c56e0adf60934b8fb7b4999d39dd30ddecd41934e09cf772a96250bd6c0e1",
+      "id": "46b0e7471e53e31c8132",
+      "hash": "46b0e7471e53e31c8132e6809e44e8890b712514928b6c4e6404e81dd05c9f46",
       "path": "ai/operacao/LOTE_ATIVO.md",
       "section": "Lote ativo",
-      "text": "Manifesto explícito: `ai/operacao/registros/alteracoes/2026-10-28-certificado-ead-aluno-modelo.md`.",
-      "normalizedText": "manifesto explicito ai operacao registros alteracoes 2026 10 28 certificado ead aluno modelo md",
-      "tokenCount": 14,
-      "part": 1
-    },
-    {
-      "id": "7fff22b7e9c7417fbc91",
-      "hash": "7fff22b7e9c7417fbc912f5fb3c2bac35d25ad9de8dade0ee08852afa6a97f8d",
-      "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Lote ativo",
-      "text": "Migration MCP 20261028185541 aplicada e conferida. Testes de autorização e JSDOM passaram com revisão independente; TypeScript e lint focado passaram. Publicação inclui CI e Preview do commit exato. Smoke autenticado Safari e inspeção visual do PDF do aluno não foram realizados por indisponibilidade de sessão, sem contorno do ambiente.",
-      "normalizedText": "migration mcp 20261028185541 aplicada e conferida testes de autorizacao e jsdom passaram com revisao independente typescript e lint focado passaram publicacao inclui ci e preview do commit exato smoke autenticado safari e inspecao visual do pdf do aluno nao foram realizados por indisponibilidade de sessao sem contorno do ambiente",
-      "tokenCount": 44,
+      "text": "Manifesto explícito: `ai/operacao/registros/alteracoes/2026-10-28-certificado-ead-aluno-modelo.md`. Migration MCP 20261028185541 aplicada e conferida. Testes de autorização e JSDOM passaram com revisão independente; TypeScript e lint focado passaram. Publicação inclui CI e Preview do commit exato. Smoke autenticado Safari e inspeção visual do PDF do aluno não foram realizados por indisponibilidade de sessão, sem contorno do ambiente.",
+      "normalizedText": "manifesto explicito ai operacao registros alteracoes 2026 10 28 certificado ead aluno modelo md migration mcp 20261028185541 aplicada e conferida testes de autorizacao e jsdom passaram com revisao independente typescript e lint focado passaram publicacao inclui ci e preview do commit exato smoke autenticado safari e inspecao visual do pdf do aluno nao foram realizados por indisponibilidade de sessao sem contorno do ambiente",
+      "tokenCount": 58,
       "part": 1
     },
     {
