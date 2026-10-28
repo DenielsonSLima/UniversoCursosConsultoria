@@ -8,6 +8,7 @@ import {
   type EadOptionFeedbackState,
 } from '../eadAssessmentFeedback';
 import { getEadActivityDraftKey } from '../eadAssessmentRuntime';
+import { EadAnswerRadio } from './EadAnswerRadio';
 
 interface EadActivitiesPanelProps {
   view: any;
@@ -156,20 +157,18 @@ export const EadActivitiesPanel: React.FC<EadActivitiesPanelProps> = ({ view }) 
                     const optionDisabled = activityDone || !activityIdValid
                       || answerSavePending || completionPending || revisionPending;
                     return (
-                      <label key={`${draftKey}-${idx}`} className={optionDisabled ? 'cursor-default' : 'cursor-pointer'}>
-                        <input
-                          type="radio"
-                          name={`atividade-${domKey}`}
-                          value={idx}
-                          checked={selected}
-                          disabled={optionDisabled}
-                          onChange={() => {
-                            const answer = String(idx);
-                            setActivityAnswerDraft(draftKey, answer);
-                            requestActivityAnswerSave(draftKey, atividade.id, answer);
-                          }}
-                          className="peer sr-only"
-                        />
+                      <EadAnswerRadio
+                        key={`${draftKey}-${idx}`}
+                        name={`atividade-${domKey}`}
+                        value={idx}
+                        checked={selected}
+                        disabled={optionDisabled}
+                        onChange={() => {
+                          const answer = String(idx);
+                          setActivityAnswerDraft(draftKey, answer);
+                          requestActivityAnswerSave(draftKey, atividade.id, answer);
+                        }}
+                      >
                         <span className={`flex items-center justify-between gap-3 rounded-xl border px-3 py-2 text-left text-xs font-bold transition-all peer-focus-visible:ring-2 peer-focus-visible:ring-blue-500 peer-focus-visible:ring-offset-2 ${optionStateClasses[optionState]}`}>
                           <span>{opcao}</span>
                           {optionState === 'correct' && (
@@ -183,7 +182,7 @@ export const EadActivitiesPanel: React.FC<EadActivitiesPanelProps> = ({ view }) 
                             </span>
                           )}
                         </span>
-                      </label>
+                      </EadAnswerRadio>
                     );
                   })}
                 </fieldset>
