@@ -39,10 +39,9 @@ const EadLearningContent: React.FC<EadLearningContentProps> = ({ view }) => {
     progress,
     mainVideoUrl,
     mainVideoDone,
-    alunoCertificado,
     certificateStatusTitle,
     certificateStatusMessage,
-    isDownloadingCertificate,
+    certificateActions,
     printCertificate,
     downloadCertificatePdf,
     renderCertificatePreview,
@@ -184,7 +183,7 @@ const EadLearningContent: React.FC<EadLearningContentProps> = ({ view }) => {
                     <div className="flex flex-col gap-2 sm:flex-row">
                       <button
                         onClick={printCertificate}
-                        disabled={!alunoCertificado || isDownloadingCertificate}
+                        disabled={certificateActions.disabled}
                         className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-700 disabled:cursor-not-allowed disabled:text-slate-300"
                       >
                         <Printer size={14} />
@@ -192,11 +191,11 @@ const EadLearningContent: React.FC<EadLearningContentProps> = ({ view }) => {
                       </button>
                       <button
                         onClick={downloadCertificatePdf}
-                        disabled={!alunoCertificado || isDownloadingCertificate}
+                        disabled={certificateActions.disabled}
                         className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-150 bg-white px-4 py-3 text-[10px] font-black uppercase tracking-widest text-emerald-700 disabled:cursor-not-allowed disabled:text-slate-300"
                       >
-                        {isDownloadingCertificate ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
-                        {isDownloadingCertificate ? 'Gerando PDF' : 'Baixar PDF'}
+                        {certificateActions.busy ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
+                        {certificateActions.label}
                       </button>
                     </div>
                   </div>
@@ -279,3 +278,4 @@ const EadLearningContent: React.FC<EadLearningContentProps> = ({ view }) => {
 };
 
 export default EadLearningContent;
+

@@ -10,6 +10,13 @@ Histórico arquivado: [30/09/2026 — versões 4.8.138 a 4.8.144](./changelog/20
 
 Histórico arquivado: [01/10/2026 a 04/10/2026 — versões 4.8.145 a 4.8.168](./changelog/2026-10-01-a-04-versoes-4-8-145-a-168.md).
 
+## [4.8.243] - 2026-10-28
+
+### Corrigido
+- Portal do Aluno consulta somente o modelo EAD do próprio certificado finalizado, com identidade ativa verificada no servidor e sem liberar o registro administrativo de modelos.
+- Erro de carregamento deixa de aparecer como geração permanente de PDF; repetição explícita e troca de conta/curso descartam respostas antigas.
+- Certificados, códigos, datas, notas, progresso e modelos administrativos permanecem inalterados. Testes isolados cobrem autorização e recuperação da interface; smoke autenticado permanece pendente.
+
 ## [4.8.242] - 2026-10-27
 
 ### Corrigido
@@ -451,3 +458,4 @@ Histórico arquivado: [01/10/2026 a 04/10/2026 — versões 4.8.145 a 4.8.168](.
 
 - Consultas de pagamentos tardios têm espaço garantido mesmo com uma fila contínua de cancelamentos em análise.
 - Gestores financeiros podem consultar as revisões dos seus polos autorizados, preservando as permissões e a restrição de acesso aos demais polos.
+
