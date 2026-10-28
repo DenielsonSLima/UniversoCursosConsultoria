@@ -7,6 +7,7 @@ import {
   ReceiptText,
   ShieldCheck,
   CheckCircle2,
+  AlertTriangle,
 } from 'lucide-react';
 
 interface FinanceiroCicloManualIssuanceProgressProps {
@@ -21,6 +22,7 @@ interface FinanceiroCicloManualIssuanceProgressProps {
   startedAt?: number;
   progressConfirmed?: boolean;
   completionConfirmed?: boolean;
+  automaticCheckPaused?: boolean;
   pendingCount?: number;
   reviewCount?: number;
   observedAt?: string;
@@ -58,6 +60,7 @@ const FinanceiroCicloManualIssuanceProgress: React.FC<
   startedAt,
   progressConfirmed = true,
   completionConfirmed = false,
+  automaticCheckPaused = false,
   pendingCount,
   reviewCount,
   observedAt,
@@ -89,7 +92,12 @@ const FinanceiroCicloManualIssuanceProgress: React.FC<
     ? Math.round((emittedCount / itemCount) * 100)
     : 0;
   const emissionFinished = completionConfirmed;
+  const requiresReview = Boolean(reviewCount);
+  const waitingForManualCheck = automaticCheckPaused || requiresReview;
+  const localOnlyCompleted = completionConfirmed && progressConfirmed && bankCount === 0;
+  const bankProgressConfirmed = progressConfirmed && itemCount > 0;
   const progressLabel = !progressConfirmed ? 'Aguardando confirmação do progresso'
+    : localOnlyCompleted ? 'Registro local confirmado; sem boleto bancário'
     : itemCount > 0
     ? `${emittedCount}/${itemCount} títulos emitidos`
     : 'Preparando cobranças';
@@ -105,20 +113,24 @@ const FinanceiroCicloManualIssuanceProgress: React.FC<
         className="mx-auto w-full max-w-4xl overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-xl shadow-slate-300/40"
       >
         <p role="status" aria-live="polite" aria-atomic="true" className="sr-only">
-          {progressLabel}. {progressConfirmed ? `${progressPercent}% confirmado.` : 'Quantidade emitida ainda não confirmada.'}
+          {requiresReview ? 'Revisão necessária. ' : automaticCheckPaused ? 'Acompanhamento automático pausado. ' : ''}
+          {progressLabel}. {bankProgressConfirmed ? `${progressPercent}% confirmado.` : localOnlyCompleted ? 'Sem emissão bancária.' : 'Quantidade emitida ainda não confirmada.'}
         </p>
         <div className="bg-[#001a33] px-5 py-6 text-white sm:px-8 sm:py-7">
           <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex min-w-0 items-center gap-4">
               <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-emerald-500 text-white shadow-lg shadow-emerald-950/30">
-                {completionConfirmed ? <CheckCircle2 size={24} /> : <Loader2 className="animate-spin motion-reduce:animate-none" size={24} />}
+                {completionConfirmed ? <CheckCircle2 size={24} /> : requiresReview ? <AlertTriangle size={24} />
+                  : automaticCheckPaused ? <Clock3 size={24} /> : <Loader2 className="animate-spin motion-reduce:animate-none" size={24} />}
               </span>
               <div className="min-w-0">
                 <p className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-300">
-                  {completionConfirmed ? 'Emissão confirmada pelo servidor' : 'Acompanhamento da emissão'}
+                  {completionConfirmed ? 'Emissão confirmada pelo servidor' : requiresReview ? 'Revisão necessária'
+                    : automaticCheckPaused ? 'Acompanhamento pausado' : 'Acompanhamento da emissão'}
                 </p>
                 <h2 id="manual-cycle-title" className="mt-1 text-xl font-black sm:text-2xl">
-                  {completionConfirmed ? `${cicloNumero}º ciclo gerado e emitido` : cicloNumero === null
+                  {localOnlyCompleted ? `${cicloNumero}º ciclo registrado sem boleto` : completionConfirmed ? `${cicloNumero}º ciclo gerado e emitido`
+                    : requiresReview ? `${cicloNumero ?? ''}º ciclo em revisão` : automaticCheckPaused ? 'Acompanhamento do ciclo pausado' : cicloNumero === null
                     ? 'Gerando e emitindo o ciclo'
                     : `Gerando e emitindo o ${cicloNumero}º ciclo`}
                 </h2>
@@ -142,11 +154,11 @@ const FinanceiroCicloManualIssuanceProgress: React.FC<
             <div>
               <p className="text-sm font-black text-white">{progressLabel}</p>
               <p className="mt-0.5 text-[10px] font-semibold text-slate-300">
-                {progressConfirmed ? 'Cada avanço confirma um título validado e salvo pelo sistema.' : 'A consulta está em andamento. Ausência de resposta não significa zero títulos emitidos.'}
+                {localOnlyCompleted ? 'O registro local não é um boleto nem confirma pagamento.' : progressConfirmed ? 'Cada avanço confirma um título validado e salvo pelo sistema.' : 'A consulta está em andamento. Ausência de resposta não significa zero títulos emitidos.'}
               </p>
             </div>
             <p className="shrink-0 text-2xl font-black tabular-nums text-emerald-300">
-              {progressConfirmed ? `${progressPercent}%` : '—'}
+              {bankProgressConfirmed ? `${progressPercent}%` : localOnlyCompleted ? 'Sem boleto' : '—'}
             </p>
           </div>
           <div
@@ -154,8 +166,8 @@ const FinanceiroCicloManualIssuanceProgress: React.FC<
             aria-label="Progresso real da emissão BolePix"
             aria-valuemin={0}
             aria-valuemax={100}
-            aria-valuenow={progressConfirmed ? progressPercent : undefined}
-            aria-valuetext={progressConfirmed ? `${progressLabel}, ${progressPercent}% confirmado` : progressLabel}
+            aria-valuenow={bankProgressConfirmed ? progressPercent : undefined}
+            aria-valuetext={bankProgressConfirmed ? `${progressLabel}, ${progressPercent}% confirmado` : progressLabel}
             className="mt-3 h-3 overflow-hidden rounded-full bg-white/15"
           >
             <div
@@ -173,17 +185,18 @@ const FinanceiroCicloManualIssuanceProgress: React.FC<
                 number: '1',
                 title: 'Preparar cobranças',
                 description: `Criar ou reutilizar ${quantityLabel}.`,
-                state: preparacaoConcluida ? 'complete' : 'active',
+                state: preparacaoConcluida ? 'complete' : waitingForManualCheck ? 'pending' : 'active',
               },
               {
                 icon: Landmark,
                 number: '2',
-                title: 'Emitir no Banese',
-                description: bankCount === null
+                title: localOnlyCompleted ? 'Sem emissão no Banese' : 'Emitir no Banese',
+                description: localOnlyCompleted ? 'A obrigação foi registrada localmente, sem boleto.' : bankCount === null
                   ? 'Registrar os títulos BolePix no Banese, um por vez.'
                   : `Registrar os ${bankCount} títulos BolePix, um por vez.`,
                 state: emissionFinished
                   ? 'complete'
+                  : waitingForManualCheck ? 'pending'
                   : preparacaoConcluida
                     ? 'active'
                     : 'pending',
@@ -191,8 +204,8 @@ const FinanceiroCicloManualIssuanceProgress: React.FC<
               {
                 icon: FileCheck2,
                 number: '3',
-                title: 'Conferir o retorno',
-                description: 'Validar Pix, linha digitável e código de barras.',
+                title: localOnlyCompleted ? 'Conferir o registro' : 'Conferir o retorno',
+                description: localOnlyCompleted ? 'Registro local confirmado, sem baixa automática.' : 'Validar Pix, linha digitável e código de barras.',
                 state: emissionFinished ? 'complete' : 'pending',
               },
             ].map(({ icon: Icon, number, title, description, state }) => (
@@ -225,7 +238,8 @@ const FinanceiroCicloManualIssuanceProgress: React.FC<
             <div className="flex items-start gap-3">
               <ShieldCheck aria-hidden="true" className="mt-0.5 shrink-0 text-emerald-700" size={19} />
               <div>
-                <p className="text-xs font-black text-emerald-950">{completionConfirmed ? 'Emissão concluída' : 'Você pode sair do acompanhamento'}</p>
+                <p className="text-xs font-black text-emerald-950">{localOnlyCompleted ? 'Registro local confirmado' : completionConfirmed ? 'Emissão concluída'
+                  : waitingForManualCheck ? 'Consulte a operação existente' : 'Você pode sair do acompanhamento'}</p>
                 <p className="mt-1 text-[10px] font-semibold leading-relaxed text-emerald-800">
                   A solicitação é protegida contra duplicidade. Fechar esta tela não cancela nem repete a emissão. A consulta indicará como retomar com segurança se necessário.
                 </p>

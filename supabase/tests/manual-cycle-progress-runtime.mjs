@@ -27,18 +27,31 @@ export async function progressRuntime() {
       builder.onResolve({ filter: /^@tanstack\/react-query$/ }, () => ({ path: 'query', namespace: 'mock' }));
       builder.onResolve({ filter: /matricula-tecnica-ciclo-manual\.service$/ }, () => ({ path: 'issuance', namespace: 'mock' }));
       builder.onResolve({ filter: /lib\/supabase$/ }, () => ({ path: 'supabase', namespace: 'mock' }));
+      builder.onResolve({ filter: /FinanceiroCicloManualIssuanceProgress$/ }, ({ importer }) => (
+        importer.endsWith('FinanceiroCicloManualLiveProgress.tsx')
+          ? { path: 'progress-view', namespace: 'mock' } : null
+      ));
       builder.onLoad({ filter: /.*/, namespace: 'mock' }, ({ path }) => ({ contents: path === 'query' ? `
         export const useMutation=(config)=>config;
+        export const useIsMutating=()=>globalThis.progressActiveMutations ?? 0;
         export const useQueryClient=()=>globalThis.progressQueryClient;
         export const useQuery=(config)=>{globalThis.progressQueryOptions=config;return globalThis.progressQueryState;};
+      ` : path === 'progress-view' ? `
+        import React from 'react';
+        import Progress from '${base}/FinanceiroCicloManualIssuanceProgress.tsx';
+        export default function CaptureProgressProps(props) {
+          globalThis.progressViewProps=props;
+          return React.createElement(Progress, props);
+        }
       ` : path === 'issuance' ? `
         export const matriculaTecnicaCicloManualService={generate:(input)=>globalThis.sendCycle(input),resume:(input)=>globalThis.sendCycle(input)};
-      ` : `export const supabase={rpc:(...args)=>({abortSignal:(signal)=>globalThis.readProgressTransport(args,signal)})};` }));
+      ` : `export const supabase={rpc:(...args)=>({abortSignal:(signal)=>globalThis.readProgressTransport(args,signal)})};`, resolveDir: repo }));
     } }],
   });
   await writeFile(output, result.outputFiles[0].contents);
   return { ui: await import(pathToFileURL(output).href), cleanup: async () => {
-    for (const key of ['progressQueryClient', 'progressQueryState', 'progressQueryOptions', 'sendCycle', 'readProgressTransport']) delete globalThis[key];
+    for (const key of ['progressQueryClient', 'progressQueryState', 'progressQueryOptions', 'progressActiveMutations', 'progressViewProps', 'sendCycle', 'readProgressTransport']) delete globalThis[key];
     await rm(temporary, { recursive: true, force: true });
   } };
 }
+

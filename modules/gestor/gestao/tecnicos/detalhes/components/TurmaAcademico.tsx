@@ -20,6 +20,7 @@ import AcademicMovementsSection from './academic/AcademicMovementsSection';
 import { getMaceioIsoDate } from '../../technicalClassDates';
 import TechnicalDataError from './TechnicalDataError';
 import ReceiveExternalTransferController from './academic/ReceiveExternalTransferController';
+import { matriculaTecnicaFinanceiroKeys } from './financeiro/matricula-tecnica-financeiro.keys';
 import { gestaoQueryKeys } from '../../../gestao.query-keys';
 import { invalidateSiteTickerQueries } from '../../../../../public/siteTicker.keys';
 import { invalidateTechnicalLandingQueries } from '../../../../../public/landing-pages/cursos-tecnicos/technicalLanding.keys';
@@ -352,10 +353,16 @@ const TurmaAcademico: React.FC<TurmaAcademicoProps> = ({
         <ReceiveExternalTransferController
           key={turma.id}
           turmaId={turma.id}
+          poloId={turma.poloId || ''}
           destinationLabel={`${turma.cursoNome} — ${turma.nome}`}
           canReceive={canReceiveTransfer}
           onClose={() => setShowReceiveTransfer(false)}
-          onSaved={async () => { await invalidate(); }}
+          onSaved={async () => {
+            await Promise.all([
+              invalidate(),
+              queryClient.invalidateQueries({ queryKey: matriculaTecnicaFinanceiroKeys.turma(turma.id) }),
+            ]);
+          }}
           onOpenFinanceiro={onOpenFinanceiro}
         />
       )}
@@ -366,3 +373,4 @@ const TurmaAcademico: React.FC<TurmaAcademicoProps> = ({
 };
 
 export default TurmaAcademico;
+

@@ -122,10 +122,11 @@ const ReceiveExternalTransferModal: React.FC<Props> = ({
         {locked && <Loader2 size={14} className="animate-spin" />}{advanceLabels[step]}<ArrowRight size={14} />
       </button> : <button type="button" onClick={onConfirm} disabled={pending || (!uncertain && !canConfirm)}
         className="flex items-center gap-2 rounded-xl bg-violet-700 px-4 py-3 text-xs font-black text-white disabled:opacity-40">
-        {pending && <Loader2 size={14} className="animate-spin" />}{pending ? 'Registrando...' : uncertain ? 'Conferir a mesma operação' : 'Registrar recebimento e plano'}
+        {pending && <Loader2 size={14} className="animate-spin" />}{pending ? 'Registrando...' : uncertain ? 'Conferir a mesma operação' : 'Finalizar e emitir ciclo liberado'}
       </button>}
     </footer>
   </>;
 };
 
 export default ReceiveExternalTransferModal;
+

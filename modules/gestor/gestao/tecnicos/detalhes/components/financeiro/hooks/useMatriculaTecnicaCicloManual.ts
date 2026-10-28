@@ -17,6 +17,7 @@ import { observeManualCycleIssuance, type ManualCycleObservationIdentity } from 
 import { manualCycleProgressOptions } from '../manual-cycle-progress.service';
 import { beginManualCycleObservation } from '../manual-cycle-activity';
 import { rememberPendingCycleObservation } from '../manual-cycle-pending-observation';
+import { manualCycleObservationMutationKey } from './useCicloManualLiveProgress';
 
 export const usePreviewCicloFinanceiroTecnicoManual = (
   input: PreviewCicloFinanceiroTecnicoManualInput,
@@ -74,6 +75,7 @@ const runObservedCycle = async <T>(queryClient: QueryClient, input: ManualCycleO
 export const useGerarCicloFinanceiroTecnicoManual = () => {
   const queryClient = useQueryClient();
   return useMutation({
+    mutationKey: manualCycleObservationMutationKey,
     mutationFn: (input: GerarCicloFinanceiroTecnicoManualInput) => runObservedCycle(
       queryClient, input, () => matriculaTecnicaCicloManualService.generate(input),
     ),
@@ -90,6 +92,7 @@ export const useGerarCicloFinanceiroTecnicoManual = () => {
 export const useRetomarEmissaoCicloFinanceiroTecnicoManual = () => {
   const queryClient = useQueryClient();
   return useMutation({
+    mutationKey: manualCycleObservationMutationKey,
     mutationFn: (input: RetomarEmissaoCicloFinanceiroTecnicoManualInput) => input.correctionOperationId
       ? matriculaTecnicaCicloManualService.resume(input)
       : runObservedCycle(queryClient, input, () => matriculaTecnicaCicloManualService.resume(input)),

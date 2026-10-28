@@ -1,8 +1,7 @@
 import React from 'react';
-import { useQuery } from '@tanstack/react-query';
 import FinanceiroCicloManualIssuanceProgress from './FinanceiroCicloManualIssuanceProgress';
-import { manualCycleProgressOptions } from './manual-cycle-progress.service';
-import { observedCycleCompletion, type ManualCycleObservationIdentity } from './manual-cycle-observation';
+import type { ManualCycleObservationIdentity } from './manual-cycle-observation';
+import { useCicloManualLiveProgress } from './hooks/useCicloManualLiveProgress';
 
 interface Props extends ManualCycleObservationIdentity {
   alunoNome: string;
@@ -15,10 +14,7 @@ interface Props extends ManualCycleObservationIdentity {
 }
 
 export default function FinanceiroCicloManualLiveProgress(props: Props) {
-  // The mutation observer fetches this same key; QueryClient deduplicates manual
-  // reads. Mounting/reopening only reads status and can never submit a bank POST.
-  const query = useQuery({ ...manualCycleProgressOptions(props), enabled: true,
-    refetchInterval: false, refetchOnMount: 'always' });
+  const { query, completed, automaticCheckPaused } = useCicloManualLiveProgress(props);
   const progress = query.data?.ciclo;
   return <FinanceiroCicloManualIssuanceProgress
     alunoNome={props.alunoNome} matriculaExibicao={props.matriculaExibicao}
@@ -30,10 +26,13 @@ export default function FinanceiroCicloManualLiveProgress(props: Props) {
     total={progress?.total ?? props.total}
     startedAt={props.startedAt}
     progressConfirmed={Boolean(progress)}
-    completionConfirmed={Boolean(query.data && observedCycleCompletion(query.data))}
+    completionConfirmed={completed}
+    automaticCheckPaused={automaticCheckPaused}
     pendingCount={progress?.pendentesEmissao} reviewCount={progress?.emRevisao}
     observedAt={query.data?.observadoEm}
-    readError={query.isError ? 'Não foi possível atualizar o progresso. Isso não significa que a emissão falhou; os últimos dados confirmados foram preservados.' : null}
+    readError={query.isError ? 'Não foi possível atualizar o progresso. Isso não significa que a emissão falhou; os últimos dados confirmados foram preservados.'
+      : automaticCheckPaused ? 'O acompanhamento automático foi pausado sem confirmação final. Consulte o progresso ou o extrato; a emissão pode ter continuado. Não gere novamente.' : null}
     checking={query.isFetching} onCheck={() => { void query.refetch({ cancelRefetch: false }); }} onClose={props.onClose}
   />;
 }
+

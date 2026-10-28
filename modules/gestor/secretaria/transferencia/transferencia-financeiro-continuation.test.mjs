@@ -28,7 +28,7 @@ const row = { matriculaId: target.matriculaId, alunoId: target.alunoId, alunoNom
   matriculaExibicao: 'SINTETICA', totais: { total: '500.00', recebido: '100.00', inadimplencia: '0.00' } };
 const workspace = () => ({
   turma: { turmaId: target.turmaId, poloId: target.poloId, nome: 'Turma sintética', codigo: 'SINT' },
-  aluno: { alunoId: target.alunoId, nome: row.alunoNome }, matriculas: [structuredClone(row)],
+  aluno: { alunoId: target.alunoId, nome: row.alunoNome }, matriculas: [globalThis.structuredClone(row)],
   regra: { fingerprint: 'regra-canonica' },
   resumo: { total: '99999.00', recebido: '999.00', inadimplencia: '999.00',
     recebidoPercentual: '1.00', inadimplenciaPercentual: '1.00' },
@@ -107,28 +107,56 @@ test('falha de leitura com cache não libera emissão e retry permanece na consu
   assert.deepEqual(denied.calls, [['workspace', target.turmaId, target.alunoId, false], ['realtime', '']]);
 });
 
-test('sucesso da transferência oferece emissão por matrícula persistida e emitir depois sem iniciar operação bancária', async () => {
+test('finalizar confirma o recebimento e só então emite; resultado salvo mantém navegação individual sem reenvio', async () => {
   const calls = [];
+  const identities = [];
   const result = { matriculaId: target.matriculaId, financeiro: {
     financeiro: { itens: Array.from({ length: 18 }, (_, index) => ({ itemId: String(index) })) },
     totais: { porCiclo: [{ cicloNumero: 1, quantidadeItens: 6 }, { cicloNumero: 2, quantidadeItens: 12 }] },
   } };
+  let saved = null;
   const Controller = await compile(academic + 'ReceiveExternalTransferController.tsx', (name) => {
-    if (name === 'react' || name === 'lucide-react') return nodeRequire(name);
+    if (name === 'react') return { ...defaultModule(React),
+      useRef: (initial) => ({ current: initial }), useState: (initial) => [initial, () => {}],
+    };
+    if (name === 'lucide-react') return nodeRequire(name);
     if (name.endsWith('useReceiveExternalTransfer')) return {
-      useReceiveExternalTransfer: () => ({ result, canClose: true, canDismiss: () => true }),
+      useReceiveExternalTransfer: () => ({ result: saved, draft: { studentId: target.alunoId },
+        canClose: true, canDismiss: () => true,
+        confirm: async () => { calls.push(['receive']); saved = result; return result; },
+      }),
+    };
+    if (name.endsWith('useExternalTransferIssuance')) return {
+      useExternalTransferIssuance: (identity, allowed) => {
+        identities.push({ identity, allowed });
+        return { run: async (value) => calls.push(['issue', value.matriculaId]) };
+      },
     };
     return defaultModule(Stub);
   });
-  const tree = Controller({ turmaId: target.turmaId, canReceive: true, onSaved: async () => {},
+  const render = () => Controller({ turmaId: target.turmaId, poloId: target.poloId,
+    canReceive: true, onSaved: async () => {},
     onClose: () => calls.push(['close']), onOpenFinanceiro: (id) => calls.push(['open', id]) });
+  const initial = render();
   assert.deepEqual(calls, []);
+  assert.deepEqual(identities, [{ identity: { turmaId: target.turmaId, alunoId: target.alunoId,
+    poloId: target.poloId }, allowed: true }]);
+  const confirmation = elements(initial).find((node) => typeof node.props.onConfirm === 'function');
+  assert.ok(confirmation, 'A emissão deve depender da confirmação explícita do recebimento.');
+  confirmation.props.onConfirm();
+  confirmation.props.onConfirm();
+  await new Promise((resolve) => globalThis.setImmediate(resolve));
+  assert.deepEqual(calls, [['receive'], ['issue', target.matriculaId]],
+    'Clique duplo não pode registrar nem emitir outra operação.');
+
+  const tree = render();
+  assert.equal(calls.length, 2, 'Renderizar o resultado não deve registrar nem emitir novamente.');
   assert.match(text(tree), /18 cobranças planejadas/);
   assert.match(text(tree), /1º ciclo: 6 cobranças planejadas/);
   assert.match(text(tree), /2º ciclo: 12 cobranças planejadas/);
-  button(tree, 'Conferir e emitir BolePix').props.onClick();
-  button(tree, 'Emitir depois').props.onClick();
-  assert.deepEqual(calls, [['open', target.matriculaId], ['close']]);
+  button(tree, 'Ver Financeiro e carnê').props.onClick();
+  button(tree, 'Concluir recebimento').props.onClick();
+  assert.deepEqual(calls, [['receive'], ['issue', target.matriculaId], ['open', target.matriculaId], ['close']]);
 });
 
 test('Secretaria entrega o vínculo salvo ao painel e invalida o workspace financeiro da turma', async () => {
@@ -187,3 +215,4 @@ test('Secretaria entrega o vínculo salvo ao painel e invalida o workspace finan
   assert.strictEqual(next.props.permissions, permissions);
   assert.equal(states[6], null, 'A transferência registrada não deve continuar aberta para outro registro.');
 });
+
