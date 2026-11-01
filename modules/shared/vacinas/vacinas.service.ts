@@ -68,6 +68,7 @@ const validateVacinaFile = (file: File) => {
 };
 
 export const alunoVacinasKeys = {
+  managementAccess: (alunoId: string) => ['aluno-vacinas-management-access', alunoId] as const,
   contexts: (alunoId: string) => ['aluno-vacinas-contexts', alunoId] as const,
   records: (alunoId: string) => ['aluno-vacinas-records', alunoId] as const,
 };
@@ -76,6 +77,14 @@ export const alunoVacinasService = {
   hydrateRegistros,
   mapRegistros,
   getArquivoUrl: getSignedArquivoUrl,
+
+  async canManageAlunoVacinas(alunoId: string): Promise<boolean> {
+    const { data, error } = await supabase.rpc('can_manage_aluno_vacina', {
+      p_aluno_id: alunoId,
+    });
+    if (error) throw error;
+    return data === true;
+  },
 
   async getCursoContexts(alunoId: string): Promise<AlunoVacinaCursoContext[]> {
     const { data, error } = await supabase

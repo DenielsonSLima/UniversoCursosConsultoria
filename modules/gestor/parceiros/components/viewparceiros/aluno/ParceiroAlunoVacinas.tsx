@@ -46,21 +46,28 @@ const getStatusBadge = (status?: VacinaStatus) => {
 const ParceiroAlunoVacinas: React.FC<ParceiroAlunoVacinasProps> = ({ alunoId }) => {
   const queryClient = useQueryClient();
   const [drafts, setDrafts] = useState<Record<string, DoseDraft>>({});
+  const accessQuery = useQuery({
+    queryKey: alunoVacinasKeys.managementAccess(alunoId),
+    queryFn: () => alunoVacinasService.canManageAlunoVacinas(alunoId),
+    enabled: !!alunoId,
+    staleTime: 0,
+  });
+  const canManage = accessQuery.data === true;
 
-  const { data: contexts = [], isLoading: loadingContexts } = useQuery<AlunoVacinaCursoContext[]>({
+  const { data: contexts = [], isLoading: loadingContexts, isError: contextsError } = useQuery<AlunoVacinaCursoContext[]>({
     queryKey: alunoVacinasKeys.contexts(alunoId),
     queryFn: () => alunoVacinasService.getCursoContexts(alunoId),
-    enabled: !!alunoId,
+    enabled: !!alunoId && canManage,
   });
 
-  const { data: registros = [], isLoading: loadingRegistros } = useQuery<AlunoVacinaRegistro[]>({
+  const { data: registros = [], isLoading: loadingRegistros, isError: recordsError } = useQuery<AlunoVacinaRegistro[]>({
     queryKey: alunoVacinasKeys.records(alunoId),
     queryFn: () => alunoVacinasService.getAlunoVacinas(alunoId),
-    enabled: !!alunoId,
+    enabled: !!alunoId && canManage,
   });
 
   useEffect(() => {
-    if (!alunoId) return undefined;
+    if (!alunoId || !canManage) return undefined;
     const recordsInvalidation = createRealtimeInvalidationController({
       invalidate: () => queryClient.invalidateQueries({
         queryKey: alunoVacinasKeys.records(alunoId),
@@ -96,7 +103,7 @@ const ParceiroAlunoVacinas: React.FC<ParceiroAlunoVacinasProps> = ({ alunoId }) 
       contextsInvalidation.dispose();
       void supabase.removeChannel(channel);
     };
-  }, [alunoId, queryClient]);
+  }, [alunoId, canManage, queryClient]);
 
   const registroMap = useMemo(() => {
     const map = new Map<string, AlunoVacinaRegistro>();
@@ -181,10 +188,18 @@ const ParceiroAlunoVacinas: React.FC<ParceiroAlunoVacinasProps> = ({ alunoId }) 
     };
   };
 
-  const isLoading = loadingContexts || loadingRegistros;
+  const isLoading = accessQuery.isLoading || (canManage && (loadingContexts || loadingRegistros));
 
   if (isLoading) {
     return <div className="py-12 text-center text-sm font-medium text-slate-500">Carregando vacinas...</div>;
+  }
+
+  if (accessQuery.isError || (canManage && (contextsError || recordsError))) {
+    return <div role="alert" className="py-12 text-center text-sm font-medium text-red-700">Não foi possível confirmar o acesso ou carregar os comprovantes. Tente novamente.</div>;
+  }
+
+  if (!canManage) {
+    return <div className="py-12 text-center text-sm font-medium text-slate-600">Seu perfil não tem permissão para consultar vacinas deste aluno. Solicite a atribuição de Gestão / Vacinas ao responsável pelos acessos.</div>;
   }
 
   return (

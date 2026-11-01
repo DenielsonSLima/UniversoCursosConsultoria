@@ -4,6 +4,7 @@ import { whatsappService } from '../whatsapp.service';
 import { WhatsAppMessage } from '../whatsapp.types';
 import { mediaDataUrl, mediaPayloadFor } from './mediaUtils';
 import WhatsAppAudioPlayer from './WhatsAppAudioPlayer';
+import { transcribeMessageAudioWithNotice } from '../whatsapp-transcription.service';
 
 interface MediaMessageActionsProps {
   message: WhatsAppMessage;
@@ -25,6 +26,7 @@ const MediaMessageActions: React.FC<MediaMessageActionsProps> = ({ message, outg
   ));
   const [loadError, setLoadError] = useState('');
   const [transcription, setTranscription] = useState(media.transcription || '');
+  const [showTranscriptionNotice, setShowTranscriptionNotice] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const loadMedia = useCallback(async () => {
@@ -68,13 +70,14 @@ const MediaMessageActions: React.FC<MediaMessageActionsProps> = ({ message, outg
   };
 
   const transcribe = async () => {
+    if (!showTranscriptionNotice) return;
+    setShowTranscriptionNotice(false);
     setLoading(true);
     setLoadError('');
     try {
-      setTranscription(await whatsappService.transcribeMessageAudio(message.id));
-    } catch {
-      console.error(`[WhatsApp] Falha ao transcrever o áudio da mensagem ${message.id}.`);
-      setLoadError('Não foi possível transcrever este áudio agora. Tente novamente.');
+      setTranscription(await transcribeMessageAudioWithNotice(message.id));
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : 'Não foi possível transcrever este áudio agora.');
     } finally {
       setLoading(false);
     }
@@ -113,10 +116,21 @@ const MediaMessageActions: React.FC<MediaMessageActionsProps> = ({ message, outg
       <div className={`flex flex-wrap gap-2 text-xs font-bold ${textClass}`}>
         {media.type === 'image' && !preview && !loading && <MediaButton icon={Image} label="Carregar imagem" className={buttonClass} loading={loading} onClick={loadMedia} />}
         {media.type === 'audio' && !preview && !loading && <MediaButton icon={Play} label="Carregar áudio" className={buttonClass} loading={loading} onClick={loadMedia} />}
-        {media.type === 'audio' && <MediaButton icon={Wand2} label="Transcrever" className={buttonClass} loading={loading} onClick={transcribe} />}
+        {media.type === 'audio' && <MediaButton icon={Wand2} label="Transcrever" className={buttonClass} loading={loading} onClick={() => setShowTranscriptionNotice(true)} />}
         {media.type === 'document' && <MediaButton icon={FileText} label="Abrir PDF" className={buttonClass} loading={loading} onClick={download} />}
         {media.type !== 'document' && preview && <MediaButton icon={Download} label="Baixar" className={buttonClass} loading={false} onClick={download} />}
       </div>
+
+      {showTranscriptionNotice && (
+        <div role="region" aria-label="Envio de áudio para transcrição" className="space-y-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs leading-relaxed text-amber-950">
+          <p>O áudio completo será enviado à OpenAI para gerar a transcrição. Ele pode conter dados pessoais. Prossiga somente para uma finalidade de atendimento aprovada pela instituição.</p>
+          <p>O texto ficará disponível nesta visualização e não será salvo como uma nova transcrição no histórico.</p>
+          <div className="flex flex-wrap gap-2">
+            <button type="button" disabled={loading} onClick={transcribe} className="min-h-9 rounded-lg bg-amber-900 px-3 font-bold text-white disabled:opacity-50">Enviar áudio para transcrição</button>
+            <button type="button" onClick={() => setShowTranscriptionNotice(false)} className="min-h-9 rounded-lg border border-amber-300 px-3 font-bold">Cancelar</button>
+          </div>
+        </div>
+      )}
 
       {loadError && (
         <div

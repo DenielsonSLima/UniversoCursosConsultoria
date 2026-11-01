@@ -1,8 +1,8 @@
 {
-  "version": "4.8.243",
+  "version": "4.8.244",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 252,
-  "releasedAt": "2026-10-28",
-  "summary": "Certificado EAD do aluno com leitura restrita do modelo e recuperação explícita de erro"
+  "revision": 253,
+  "releasedAt": "2026-11-01",
+  "summary": "LGPD: fotos privadas, atribuições explícitas, chat por escopo e transcrição governada"
 }

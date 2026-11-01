@@ -2,7 +2,8 @@
 
 import { supabase } from '../../../lib/supabase';
 import { portalActivationService } from './portal-activation.service';
-import { errorMessage, getFileExtension } from './utils/file-utils';
+import { errorMessage } from './utils/file-utils';
+import { profilePhotoReference } from '../../../lib/profile-photo-transport';
 import { mapAlunoLookup, toCamel, toSnake } from './utils/parceiro-mappers';
 import { validateAlunoProfessorIdentity } from './utils/parceiro-validators';
 import { parceirosMatriculasService } from './parceiros-matriculas.service';
@@ -257,18 +258,23 @@ export const parceirosService = {
       throw new Error('Perfil não identificado para atualizar a foto.');
     }
 
-    if (!file.type.startsWith('image/')) {
+    const extensions: Record<string, string> = {
+      'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp',
+    };
+    if (!extensions[file.type]) {
       throw new Error('Envie uma imagem em JPG, PNG ou WEBP.');
     }
+    if (file.size <= 0 || file.size > 5 * 1024 * 1024) {
+      throw new Error('A foto deve ter até 5 MB.');
+    }
 
-    const fileExt = getFileExtension(file, 'jpg');
-    const filePath = `${profileId}/perfil/foto_${Date.now()}.${fileExt}`;
+    const filePath = `${profileId}/perfil/${crypto.randomUUID()}.${extensions[file.type]}`;
     const { data, error: uploadError } = await supabase.storage
-      .from('documentos')
+      .from('fotos-perfil')
       .upload(filePath, file, {
-        cacheControl: '3600',
-        contentType: file.type || 'image/jpeg',
-        upsert: true,
+        cacheControl: '300',
+        contentType: file.type,
+        upsert: false,
       });
 
     if (uploadError) {
@@ -280,14 +286,10 @@ export const parceirosService = {
       throw new Error('Foto enviada, mas o storage não retornou o caminho do arquivo.');
     }
 
-    const { data: urlData } = supabase.storage
-      .from('documentos')
-      .getPublicUrl(data.path);
-
-    const publicUrl = urlData.publicUrl;
+    const reference = profilePhotoReference(data.path);
     const { data: updatedPhoto, error: photoUpdateError } = await supabase
       .from('parceiros')
-      .update({ foto_url: publicUrl })
+      .update({ foto_url: reference })
       .eq('id', profileId)
       .select('foto_url')
       .maybeSingle();
@@ -301,7 +303,10 @@ export const parceirosService = {
       throw new Error('Foto enviada, mas nenhum cadastro foi atualizado. Verifique se o perfil existe e se o usuário tem permissão para alterar este cadastro.');
     }
 
-    return updatedPhoto.foto_url || publicUrl;
+    if (!updatedPhoto.foto_url || updatedPhoto.foto_url.startsWith('profile-photo://')) {
+      throw new Error('Foto salva, mas não foi possível autorizar sua visualização. Atualize o perfil.');
+    }
+    return updatedPhoto.foto_url;
   },
 
   async delete(id: string) {

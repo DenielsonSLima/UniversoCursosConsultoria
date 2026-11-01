@@ -1,0 +1,64 @@
+name: Segurança e privacidade LGPD
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/lgpd-security.yml'
+      - 'lib/profile-photo*'
+      - 'lib/supabase.ts'
+      - 'modules/shared/vacinas/**'
+      - 'modules/gestor/parceiros/**'
+      - 'modules/gestor/comunicacao/**'
+      - 'modules/public/privacy/**'
+      - 'supabase/functions/profile-photo-*/**'
+      - 'supabase/functions/whatsapp-media/**'
+      - 'supabase/migrations/*lgpd*'
+      - 'supabase/tests/lgpd*'
+      - 'supabase/tests/fixtures/lgpd*'
+
+permissions:
+  contents: read
+
+jobs:
+  validate-lgpd:
+    name: RLS, Storage, migração e avisos LGPD
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '>=24.22.1 <25'
+          cache: npm
+
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9.1
+
+      - name: Instalar dependências do produto e de QA isolado
+        run: |
+          npm ci
+          npm install --prefix "$RUNNER_TEMP/lgpd-test-runtime" --no-save --package-lock=false --ignore-scripts @electric-sql/pglite@0.3.14 jsdom@26.1.0
+
+      - name: Testar SQL real isolado com dados sintéticos
+        env:
+          PGLITE_MODULE_PATH: ${{ runner.temp }}/lgpd-test-runtime/node_modules/@electric-sql/pglite/dist/index.js
+        run: |
+          node --test supabase/tests/lgpd_profile_photos.isolated.test.mjs supabase/tests/lgpd_sensitive_data.isolated.test.mjs supabase/tests/lgpd_internal_chat.isolated.test.mjs supabase/tests/lgpd_profile_photo_operations.isolated.test.mjs
+
+      - name: Testar transporte, migração, sessão e interação sem rede externa
+        env:
+          LGPD_JSDOM_PATH: ${{ runner.temp }}/lgpd-test-runtime/node_modules/jsdom
+        run: |
+          node --test lib/profile-photo-transport.test.ts lib/supabase-auth-storage.test.ts supabase/functions/profile-photo-access/access.test.ts supabase/functions/profile-photo-migration/migrate.test.ts supabase/functions/profile-photo-migration/operation-route.test.mjs supabase/functions/whatsapp-media/transcription-route.test.mjs modules/gestor/comunicacao/components/whatsapp/inbox/MediaMessageActions.privacy.interaction.test.mjs modules/gestor/comunicacao/components/StartInternalConversationModal.permissions.interaction.test.mjs
+
+      - name: Testar política de IA e guardas compartilhadas
+        run: |
+          deno test --no-config --no-lock --allow-read supabase/functions/whatsapp-media/transcription.test.ts supabase/functions/_shared/authz.test.ts
+
+      - name: Conferir tipos das Edges candidatas
+        run: |
+          deno check --no-config --no-lock --node-modules-dir=manual supabase/functions/whatsapp-media/index.ts supabase/functions/profile-photo-access/index.ts supabase/functions/profile-photo-migration/index.ts

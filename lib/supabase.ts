@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { Capacitor } from '@capacitor/core';
 import { createPortalAuthRequest } from './portal-auth-client';
+import { createProfilePhotoFetch } from './profile-photo-transport';
 import {
   buildSupabaseAuthStorageKey,
   clearSupabaseAuthStorage,
@@ -50,6 +51,7 @@ const SUPABASE_AUTH_STORAGE_KEY = buildSupabaseAuthStorageKey(supabaseUrl);
 export const requestPublicPortalAuth = createPortalAuthRequest(supabaseUrl, supabaseAnonKey);
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  global: { fetch: createProfilePhotoFetch(supabaseUrl) },
   auth: {
     // Native apps are public OAuth clients. PKCE keeps access and refresh tokens
     // out of the callback URL and binds the one-time code to this app instance.
