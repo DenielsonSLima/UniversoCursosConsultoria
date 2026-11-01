@@ -10,6 +10,15 @@ Histórico arquivado: [30/09/2026 — versões 4.8.138 a 4.8.144](./changelog/20
 
 Histórico arquivado: [01/10/2026 a 04/10/2026 — versões 4.8.145 a 4.8.168](./changelog/2026-10-01-a-04-versoes-4-8-145-a-168.md).
 
+## [4.8.244] - 2026-11-01
+
+### Corrigido
+- Fotos pessoais passam a referências privadas, assinatura em lote por sessão e capability documental válida; migração administrativa com SHA-256, retomada e quarentena.
+- Início deixa de autorizar cadastro completo; vacinas exigem atribuição explícita e polo, inclusive em acesso global.
+- Chat e anexos aplicam identidade, polo e setor; diretório e categorias usam projeções mínimas autorizadas.
+- Transcrição por IA bloqueada por padrão, com aprovação documentada, aviso e texto efêmero; política pública descreve saúde, operadores e conservação.
+- Conferência de três agentes corrigiu N+1 das assinaturas e seleção de categoria fora do setor. Migrations, Edges e migração operacional continuam pendentes de aplicação autorizada em produção.
+
 ## [4.8.243] - 2026-10-28
 
 ### Corrigido

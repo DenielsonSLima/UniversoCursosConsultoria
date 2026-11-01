@@ -1,4 +1,4 @@
-import { createClient } from "npm:@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2.106.1";
 import {
   requireGestorAtivo,
   requireGestorForWhatsAppRoute,
@@ -7,6 +7,7 @@ import {
 import { buildCorsHeaders, getClientIp, isRateLimitExceeded, json } from "../_shared/http.ts";
 import { insertWhatsAppMessage, normalizeWhatsAppPhone, phoneBelongsToAluno, upsertWhatsAppConversation } from "../_shared/whatsapp.ts";
 import { getWhatsAppMetaContext } from "../_shared/whatsapp-connection.ts";
+import { requireTranscriptionApproval, transcribeApprovedAudio, TranscriptionError } from "./transcription.ts";
 
 type MediaKind = "image" | "audio" | "document";
 type MediaFile = { base64?: string; type?: string; name?: string };
@@ -257,33 +258,8 @@ const getMessage = async (admin: any, messageId: string) => {
   return data;
 };
 
-const transcribeAudio = async (admin: any, context: Awaited<ReturnType<typeof getContext>>, message: any) => {
-  if (trim(message.message_type) !== "audio") throw new Error("Apenas mensagens de audio podem ser transcritas.");
-  const media = await downloadMedia(context, mediaIdFromMessage(message));
-  const apiKey = trim(Deno.env.get("OPENAI_API_KEY"));
-  if (!apiKey) throw new Error("OPENAI_API_KEY nao configurada para transcricao.");
-
-  const form = new FormData();
-  form.append("model", trim(Deno.env.get("OPENAI_TRANSCRIBE_MODEL")) || "gpt-4o-mini-transcribe");
-  form.append("file", new Blob([media.bytes], { type: media.mime }), media.filename || "audio.ogg");
-
-  const response = await fetch("https://api.openai.com/v1/audio/transcriptions", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${apiKey}` },
-    body: form,
-  });
-  const payload = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(payload?.error?.message || "Falha ao transcrever audio.");
-
-  const transcription = trim(payload.text);
-  await admin
-    .from("whatsapp_mensagens")
-    .update({ raw_payload: { ...(message.raw_payload || {}), transcription } })
-    .eq("id", message.id);
-  return transcription;
-};
-
 Deno.serve(async (req: Request) => {
+  let transcribing = false;
   const respondJson = (body: unknown, status = 200) => json(body, status, req);
   if (req.method === "OPTIONS") return new Response("ok", { headers: buildCorsHeaders(req) });
   if (req.method !== "POST") return respondJson({ error: "Metodo nao permitido." }, 405);
@@ -297,7 +273,12 @@ Deno.serve(async (req: Request) => {
     requireGestorTab(gestor, "comunicacao", "comunicacao-whatsapp");
     const body = await req.json();
     const action = trim(body.action);
+    transcribing = action === "transcribe";
     if (action === "send") return respondJson(await sendMedia(admin, req, body));
+    if (action === "transcribe") {
+      // Fecha antes de ler a mensagem, a conexão ou baixar qualquer áudio.
+      requireTranscriptionApproval((name) => Deno.env.get(name), body);
+    }
 
     const message = await getMessage(admin, trim(body.messageId));
     const conversation = Array.isArray(message.whatsapp_conversas)
@@ -318,10 +299,24 @@ Deno.serve(async (req: Request) => {
       return respondJson({ ok: true, media });
     }
     if (action === "transcribe") {
-      return respondJson({ ok: true, transcription: await transcribeAudio(admin, context, message) });
+      const transcription = await transcribeApprovedAudio({
+        messageType: message.message_type,
+        readEnvironment: (name) => Deno.env.get(name),
+        acknowledgement: body,
+        download: () => downloadMedia(context, mediaIdFromMessage(message)),
+      });
+      return respondJson({ ok: true, transcription });
     }
     return respondJson({ error: "Acao invalida." }, 400);
   } catch (error) {
+    if (error instanceof TranscriptionError) {
+      return respondJson({ error: error.message, code: error.code }, error.status);
+    }
+    if (transcribing) {
+      // Inclui falhas de consulta/credencial anteriores ao download; não ecoa
+      // mensagens do banco, da Meta ou conteúdo do áudio em resposta/log.
+      return respondJson({ error: "Não foi possível transcrever este áudio agora. Tente novamente mais tarde.", code: "transcription_failed" }, 502);
+    }
     console.error("whatsapp-media error:", error);
     return respondJson({ error: error instanceof Error ? error.message : "Erro inesperado em midia WhatsApp." }, 400);
   }

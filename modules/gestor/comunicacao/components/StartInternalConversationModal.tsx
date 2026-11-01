@@ -8,15 +8,12 @@ export interface InternalConversationContact {
   id: string;
   nome: string;
   tipo: 'Aluno';
-  email?: string | null;
-  telefone?: string | null;
   status?: string | null;
   cidade?: string | null;
-  foto?: string | null;
 }
 
 interface CategoryOption {
-  id: string;
+  id: string | null;
   nome: string;
   ativo: boolean;
 }
@@ -45,7 +42,6 @@ const defaultMessageFor = (name?: string) => {
 
 const StartInternalConversationModal: React.FC<StartInternalConversationModalProps> = ({
   open,
-  categories,
   onClose,
   onStart,
 }) => {
@@ -55,15 +51,22 @@ const StartInternalConversationModal: React.FC<StartInternalConversationModalPro
   const [categoryId, setCategoryId] = useState<string>('');
   const [starting, setStarting] = useState(false);
 
+  const { data: categories = [], isFetching: checkingCategories, isError: categoriesFailed } = useQuery({
+    queryKey: ['comunicacao', 'start-internal-categories'],
+    enabled: open,
+    queryFn: async (): Promise<CategoryOption[]> => {
+      const { data, error } = await supabase.rpc('comunicacao_categorias_internas_listar');
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
   const { data: students = [], isLoading } = useQuery({
     queryKey: ['comunicacao', 'start-internal-students'],
     enabled: open,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('parceiros')
-        .select('id,nome,tipo,email,telefone,status,cidade,foto_url')
-        .eq('tipo', 'Aluno')
-        .order('nome', { ascending: true });
+        .rpc('comunicacao_contatos_internos_listar');
 
       if (error) throw error;
 
@@ -71,11 +74,8 @@ const StartInternalConversationModal: React.FC<StartInternalConversationModalPro
         id: row.id,
         nome: row.nome,
         tipo: 'Aluno' as const,
-        email: row.email,
-        telefone: row.telefone,
         status: row.status,
         cidade: row.cidade,
-        foto: row.foto_url,
       }));
     },
   });
@@ -86,8 +86,6 @@ const StartInternalConversationModal: React.FC<StartInternalConversationModalPro
 
     return students.filter((student) => [
       student.nome,
-      student.email,
-      student.telefone,
       student.cidade,
       student.status,
     ].filter(Boolean).join(' ').toLowerCase().includes(term));
@@ -112,14 +110,18 @@ const StartInternalConversationModal: React.FC<StartInternalConversationModalPro
 
   React.useEffect(() => {
     if (!open) return;
-    const firstActive = categories.find((category) => category.ativo);
-    setCategoryId((current) => current || firstActive?.id || '');
+    const allowed = categories.filter((category) => category.ativo);
+    setCategoryId((current) => allowed.some((category) => (category.id || '') === current)
+      ? current : allowed[0]?.id || '');
   }, [open, categories]);
+
+  const categoryAllowed = !categoriesFailed
+    && categories.some((category) => category.ativo && (category.id || '') === categoryId);
 
   if (!open) return null;
 
   const handleStart = async () => {
-    if (!selectedStudent || !message.trim()) return;
+    if (!selectedStudent || !message.trim() || checkingCategories || !categoryAllowed) return;
     setStarting(true);
     try {
       await onStart(selectedStudent, message.trim(), categoryId || null);
@@ -189,16 +191,12 @@ const StartInternalConversationModal: React.FC<StartInternalConversationModalPro
                       }`}
                     >
                       <div className="h-11 w-11 shrink-0 overflow-hidden rounded-xl bg-blue-600 text-white shadow-sm">
-                        {student.foto ? (
-                          <img src={student.foto} alt={student.nome} className="h-full w-full object-cover" />
-                        ) : (
-                          <div className="flex h-full w-full items-center justify-center text-xs font-bold">{initials(student.nome)}</div>
-                        )}
+                        <div className="flex h-full w-full items-center justify-center text-xs font-bold">{initials(student.nome)}</div>
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-bold text-[#001a33]">{student.nome}</p>
                         <p className="mt-1 truncate text-xs font-medium text-slate-400">
-                          {student.email || student.cidade || student.status || 'Aluno'}
+                          {student.cidade || student.status || 'Aluno'}
                         </p>
                       </div>
                     </button>
@@ -213,14 +211,12 @@ const StartInternalConversationModal: React.FC<StartInternalConversationModalPro
               <div className="space-y-5">
                 <div className="flex items-center gap-4 rounded-2xl border border-slate-100 bg-slate-50 p-4">
                   <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl bg-blue-600 text-lg font-bold text-white">
-                    {selectedStudent.foto ? (
-                      <img src={selectedStudent.foto} alt={selectedStudent.nome} className="h-full w-full object-cover" />
-                    ) : initials(selectedStudent.nome)}
+                    {initials(selectedStudent.nome)}
                   </div>
                   <div className="min-w-0">
                     <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Aluno selecionado</p>
                     <h4 className="truncate text-xl font-bold text-[#001a33]">{selectedStudent.nome}</h4>
-                    <p className="mt-1 text-xs font-medium text-slate-500">{selectedStudent.email || 'Sem e-mail cadastrado'}</p>
+                    <p className="mt-1 text-xs font-medium text-slate-500">{selectedStudent.cidade || selectedStudent.status || 'Aluno do portal'}</p>
                   </div>
                 </div>
 
@@ -228,14 +224,20 @@ const StartInternalConversationModal: React.FC<StartInternalConversationModalPro
                   <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Setor do atendimento</span>
                   <select
                     value={categoryId}
+                    disabled={checkingCategories || categoriesFailed || categories.length === 0}
                     onChange={(event) => setCategoryId(event.target.value)}
                     className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 outline-none transition-all focus:border-blue-500"
                   >
-                    <option value="">Geral</option>
                     {categories.filter((category) => category.ativo).map((category) => (
-                      <option key={category.id} value={category.id}>{category.nome}</option>
+                      <option key={category.id || 'geral'} value={category.id || ''}>{category.nome}</option>
                     ))}
                   </select>
+                  {(categoriesFailed || (!checkingCategories && categories.length === 0)) && (
+                    <span className="block text-xs font-medium text-amber-700">
+                      {categoriesFailed ? 'Não foi possível conferir os setores permitidos. Tente abrir novamente.'
+                        : 'Seu perfil não possui setor disponível para iniciar atendimento.'}
+                    </span>
+                  )}
                 </label>
 
                 <label className="block space-y-2">
@@ -250,7 +252,7 @@ const StartInternalConversationModal: React.FC<StartInternalConversationModalPro
 
                 <button
                   onClick={handleStart}
-                  disabled={starting || !message.trim()}
+                  disabled={starting || !message.trim() || checkingCategories || !categoryAllowed}
                   className="inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-2xl bg-[#001a33] px-5 text-xs font-bold uppercase tracking-wide text-white shadow-sm transition-colors hover:bg-blue-900 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {starting ? <RefreshCw size={15} className="animate-spin" /> : <Send size={15} />}
