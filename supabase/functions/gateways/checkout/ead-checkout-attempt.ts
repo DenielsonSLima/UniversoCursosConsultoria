@@ -59,6 +59,7 @@ export const prepareEadCheckoutAttempt = async (
     p_description: context.charge.description,
     p_fee_value: null,
     p_net_value: null,
+    ...(context.managerEnrollment ? { p_manager_enrollment: true } : {}),
   });
   if (error) throw error;
   const attempt = parseEadCheckoutAttempt(data);

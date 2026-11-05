@@ -10,6 +10,14 @@ Histórico arquivado: [30/09/2026 — versões 4.8.138 a 4.8.144](./changelog/20
 
 Histórico arquivado: [01/10/2026 a 04/10/2026 — versões 4.8.145 a 4.8.168](./changelog/2026-10-01-a-04-versoes-4-8-145-a-168.md).
 
+## [4.8.245] - 2026-11-05
+
+### Corrigido
+- Matrícula EAD pelo gestor exige confirmação da cobrança e mantém o acesso pendente até pagamento confirmado pelo fluxo canônico.
+- Outros créditos recebidos localmente permitem estorno auditado com motivo e preservação do histórico financeiro; liquidações de gateway exigem tratamento próprio.
+- Créditos avulsos sem classificação legada são reconhecidos para seleção e cancelamento com as mesmas guardas dos demais títulos.
+- Entrega candidata via GitHub e Preview; migrations e Edge Functions deste lote dependem de implantação autorizada antes da ativação em produção.
+
 ## [4.8.244] - 2026-11-01
 
 ### Corrigido

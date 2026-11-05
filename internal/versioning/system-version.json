@@ -1,8 +1,8 @@
 {
-  "version": "4.8.244",
+  "version": "4.8.245",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 253,
-  "releasedAt": "2026-11-01",
-  "summary": "LGPD: fotos privadas, atribuições explícitas, chat por escopo e transcrição governada"
+  "revision": 254,
+  "releasedAt": "2026-11-05",
+  "summary": "Matrícula EAD com cobrança confirmada, estorno auditado de crédito local e seleção de avulsos"
 }

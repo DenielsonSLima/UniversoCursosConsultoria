@@ -152,8 +152,9 @@ try {
   await issue(b,2);
   assert.deepEqual(await scalar('select to_jsonb(c) value from public.contas_receber c where id=$1',[a.receivableId]),aOld,'Rebuy preserves original title');
   await db.query('update public.banese_ead_checkout_expiration_jobs set next_attempt_at=now(),observe_until=now()-interval \'30 days\' where id=$1',[canceledClaim.jobId]);
+  const futurePaymentDate=await scalar('select (current_date+1)::text value');
   for(const badEvidence of [{totalAmountCents:9989},{totalAmountCents:9991},{paymentCount:2},
-    {settlementMethod:'MISTO'},{paymentDate:'2026-11-01'},{paymentDate:'2026-02-30'},
+    {settlementMethod:'MISTO'},{paymentDate:futurePaymentDate},{paymentDate:'2026-02-30'},
     {lastPaymentDate:'2026-12-30'},{paymentCount:null}]) {
     await db.exec('begin');const badClaim=await claim('OBSERVE');const bad=await recover(badClaim,badEvidence);
     assert.equal(bad.paid,false,JSON.stringify(badEvidence));assert.equal(bad.state,'REVIEW_REQUIRED');assert.ok(bad.reviewId);

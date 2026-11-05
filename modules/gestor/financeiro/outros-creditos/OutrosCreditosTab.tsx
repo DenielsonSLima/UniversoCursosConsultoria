@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Banknote, BookOpen, ChevronDown, ChevronLeft, ChevronRight, Loader2, Plus, QrCode, Search, WalletCards, XCircle } from 'lucide-react';
 import ToastNotification from '../../components/ToastNotification';
 import { ReceivablePaymentModal } from '../settlements/ReceivablePaymentModal';
@@ -15,12 +15,16 @@ import { useOtherCreditCancellation } from './useOtherCreditCancellation';
 import { OtherCreditCancellationModal } from './OtherCreditCancellationModal';
 import { OtherCreditSelectionCheckbox } from './OtherCreditSelectionCheckbox';
 import { OTHER_CREDIT_CANCELLATION_LIMIT, selectableOtherCredits } from './other-credit-cancellation.selection';
+import type { ContasReceber } from '../financeiro.types';
+import { OtherCreditReversalModal } from './OtherCreditReversalModal';
 
 interface OutrosCreditosTabProps { poloId?: string | null; }
 
 const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId }) => {
   const model = useOutrosCreditos(poloId);
   const planModel = useOtherCreditPlan(poloId);
+  const [reversalItem, setReversalItem] = useState<ContasReceber | null>(null);
+  useEffect(() => setReversalItem(null), [poloId]);
   const {
     toasts, removeToast, statusScope, setStatusScope, search, setSearch,
     startDate, setStartDate, endDate, setEndDate, categoryFilterId, setCategoryFilterId,
@@ -220,7 +224,7 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId }) => {
               </thead>
               {groupMode === 'none' ? (
                 <tbody className="divide-y divide-slate-100">
-                  {pageItems.map((item, index) => <OtherCreditRow key={item.id} item={item} index={index} model={model} onOpenPlan={planModel.openPlan} cancellation={cancellation} />)}
+                  {pageItems.map((item, index) => <OtherCreditRow key={item.id} item={item} index={index} model={model} onOpenPlan={planModel.openPlan} onReverse={setReversalItem} cancellation={cancellation} />)}
                 </tbody>
               ) : pageGroups.map((group) => {
                 const isExpanded = expandedGroups.has(group.key);
@@ -277,7 +281,7 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId }) => {
                         </button>
                       </td>
                     </tr>
-                    {isExpanded && group.items.map((item, index) => <OtherCreditRow key={item.id} item={item} index={index} model={model} onOpenPlan={planModel.openPlan} cancellation={cancellation} />)}
+                    {isExpanded && group.items.map((item, index) => <OtherCreditRow key={item.id} item={item} index={index} model={model} onOpenPlan={planModel.openPlan} onReverse={setReversalItem} cancellation={cancellation} />)}
                   </tbody>
                 );
               })}
@@ -318,6 +322,8 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId }) => {
       <OtherCreditPdvModal model={model} />
       <OtherCreditPlanModal model={planModel} resources={model} />
       <OtherCreditCancellationModal model={cancellation} />
+      {reversalItem && <OtherCreditReversalModal key={reversalItem.id} item={reversalItem}
+        onClose={() => setReversalItem(null)} onSuccess={() => setReversalItem(null)} />}
       {model.paymentReceivableId && (
         <OtherCreditPaymentModal
           key={model.paymentReceivableId}

@@ -59,4 +59,5 @@ export type EadCheckoutContext = CheckoutRuntime & {
   charge: EadCharge;
   route: CheckoutRoute;
   checkoutAttempt?: EadCheckoutAttempt;
+  managerEnrollment?: boolean;
 };

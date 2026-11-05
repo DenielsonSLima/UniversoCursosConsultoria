@@ -1,6 +1,7 @@
 import { supabase } from '../../../../../lib/supabase';
 import { AlunoDisponivel, EadAlunoTurma, EadPagamentoTurma, EadTurmaResumo } from './ead-turma.types';
 import { normalizeRpcList, normalizeRpcRecord } from './ead-rpc.utils';
+import type { PublicCheckoutResult } from '../../../../asaas/checkout-result';
 
 export const eadTurmaService = {
   async getResumo(turmaId: string): Promise<EadTurmaResumo> {
@@ -35,16 +36,19 @@ export const eadTurmaService = {
     return normalizeRpcList<EadPagamentoTurma>(data, 'inscricoes_online');
   },
 
-  async liberarMatricula(matriculaId: string) {
-    const { error } = await supabase.rpc('ead_liberar_matricula', { p_matricula_id: matriculaId });
-    if (error) throw error;
-  },
-
-  async matricularAlunoManual(turmaId: string, alunoId: string) {
-    const { error } = await supabase.rpc('ead_matricular_aluno_manual', {
-      p_turma_id: turmaId,
-      p_aluno_id: alunoId,
+  async matricularAlunoComCobranca(turmaId: string, cursoId: string, alunoId: string) {
+    const { data, error } = await supabase.functions.invoke('payment-checkout', {
+      body: {
+        courseId: cursoId, alunoId, turmaId, managerEnrollment: true,
+        requestId: crypto.randomUUID(), method: 'BOLETO', installments: 1,
+      },
     });
-    if (error) throw error;
+    if (error) {
+      const body = await error.context?.json?.().catch(() => null);
+      throw new Error(body?.error || error.message || 'Não foi possível gerar a cobrança EAD.');
+    }
+    if (data?.error) throw new Error(data.error);
+    if (!data?.matriculaId) throw new Error('O checkout não confirmou a matrícula EAD.');
+    return data as PublicCheckoutResult;
   },
 };
