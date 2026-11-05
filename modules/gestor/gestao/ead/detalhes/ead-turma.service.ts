@@ -2,6 +2,7 @@ import { supabase } from '../../../../../lib/supabase';
 import { AlunoDisponivel, EadAlunoTurma, EadPagamentoTurma, EadTurmaResumo } from './ead-turma.types';
 import { normalizeRpcList, normalizeRpcRecord } from './ead-rpc.utils';
 import type { PublicCheckoutResult } from '../../../../asaas/checkout-result';
+import type { EadEnrollmentInput, EadEnrollmentResult } from './ead-enrollment.model';
 
 export const eadTurmaService = {
   async getResumo(turmaId: string): Promise<EadTurmaResumo> {
@@ -36,11 +37,26 @@ export const eadTurmaService = {
     return normalizeRpcList<EadPagamentoTurma>(data, 'inscricoes_online');
   },
 
-  async matricularAlunoComCobranca(turmaId: string, cursoId: string, alunoId: string) {
+  async adicionarAluno(turmaId: string, cursoId: string, input: EadEnrollmentInput): Promise<EadEnrollmentResult> {
+    if (input.mode === 'GERAR_COBRANCA') {
+      return { mode: input.mode, checkout: await eadTurmaService.matricularAlunoComCobranca(turmaId, cursoId, input.alunoId, input.requestId) };
+    }
+    if (input.mode !== 'SEM_COBRANCA') throw new Error('Escolha como adicionar o aluno.');
+    const { data, error } = await supabase.rpc('ead_adicionar_aluno_sem_cobranca_secure', {
+      p_turma_id: turmaId, p_aluno_id: input.alunoId, p_request_id: input.requestId, p_confirm: true,
+    });
+    if (error) throw new Error(error.message || 'Não foi possível adicionar o aluno sem cobrança.');
+    if (data?.success !== true || data?.mode !== 'SEM_COBRANCA' || data?.status !== 'ATIVO' || !data?.matriculaId) {
+      throw new Error('O servidor não confirmou a matrícula sem cobrança. Atualize a turma antes de tentar novamente.');
+    }
+    return { mode: 'SEM_COBRANCA', matriculaId: data.matriculaId, status: 'ATIVO', replayed: data.replayed === true };
+  },
+
+  async matricularAlunoComCobranca(turmaId: string, cursoId: string, alunoId: string, requestId: string = crypto.randomUUID()) {
     const { data, error } = await supabase.functions.invoke('payment-checkout', {
       body: {
         courseId: cursoId, alunoId, turmaId, managerEnrollment: true,
-        requestId: crypto.randomUUID(), method: 'BOLETO', installments: 1,
+        requestId, method: 'BOLETO', installments: 1,
       },
     });
     if (error) {

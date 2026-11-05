@@ -1,6 +1,7 @@
 import {
   requireFinanceWriteAccess,
   requireGestorAtivo,
+  requireGestorModule,
 } from "../../_shared/authz.ts";
 import type { CheckoutRuntime } from "./types.ts";
 import { UUID_RE } from "./utils.ts";
@@ -14,6 +15,7 @@ export const authorizeManagerEadEnrollment = async (runtime: CheckoutRuntime) =>
     throw new Error("Informe o aluno e a turma para a matrícula EAD pelo gestor.");
   }
   const gestor = await requireGestorAtivo(runtime.req, runtime.admin);
+  requireGestorModule(gestor, "financeiro");
   requireFinanceWriteAccess(gestor);
   return gestor;
 };

@@ -14,7 +14,7 @@ const runtime = (overrides: Record<string, unknown> = {}) => {
   const resultFor = (table: string) => {
     if (table === 'usuarios_sistema') return fixture.staff ? {
       id: actorId, email: 'gestor@example.com', perfil: 'gestor', status: 'ativo',
-      polo_ids: [fixture.polo], permissoes: { modules: fixture.financial ? ['financeiro'] : ['gestao'] },
+      polo_ids: [fixture.polo], permissoes: { modules: fixture.modules || (fixture.financial ? ['financeiro'] : ['gestao']) },
     } : null;
     if (table === 'cursos') return { id: courseId, nome: 'Curso sintético', modalidade: 'EAD',
       valor: 129.9, publicar_site: !fixture.private, status: fixture.active ? 'ATIVO' : 'INATIVO',
@@ -64,7 +64,8 @@ Deno.test('gestor autorizado cobra curso EAD privado na turma selecionada e usa 
 
 for (const [label, fixture, message] of [
   ['aluno não ganha privilégio enviando flag', { staff: false }, /interno ativo/],
-  ['gestor sem escrita financeira', { financial: false }, /movimentacao financeira/],
+  ['gestor sem Financeiro', { financial: false }, /financeiro nao autorizado/],
+  ['Caixa isolado sem Financeiro', { modules: ['caixa'] }, /financeiro nao autorizado/],
   ['polo de outra unidade', { polo: id(50) }, /polo/],
   ['curso inativo', { active: false }, /indisponivel/],
   ['turma diferente da selecionada', { turma: id(51) }, /turma selecionada/],

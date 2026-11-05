@@ -8,6 +8,7 @@ on:
       - 'supabase/functions/asaas/api/other-credit*'
       - 'supabase/migrations/20261105*'
       - 'supabase/tests/ead_manager_enrollment*'
+      - 'supabase/tests/ead_no_charge_enrollment*'
       - 'supabase/tests/other_credit_reversal*'
       - 'supabase/tests/other_credit_untyped*'
       - 'scripts/test-ead-credit-corrections-ui.mjs'
@@ -39,7 +40,7 @@ jobs:
           echo "EAD_JSDOM_PATH=$RUNNER_TEMP/corrections/node_modules/jsdom/lib/api.js" >> "$GITHUB_ENV"
       - name: Validate corrected contracts and interactions
         run: |
-          node --test supabase/tests/ead_manager_enrollment.isolated.test.mjs supabase/tests/other_credit_untyped_cancellation.test.mjs supabase/tests/other_credit_reversal.sql.test.mjs modules/gestor/financeiro/outros-creditos/other-credit-reversal.test.ts modules/gestor/financeiro/outros-creditos/other-credit-standalone-selection.test.ts
+          node --test supabase/tests/ead_manager_enrollment.isolated.test.mjs supabase/tests/ead_no_charge_enrollment.isolated.test.mjs supabase/tests/other_credit_untyped_cancellation.test.mjs supabase/tests/other_credit_reversal.sql.test.mjs modules/gestor/financeiro/outros-creditos/other-credit-reversal.test.ts modules/gestor/financeiro/outros-creditos/other-credit-standalone-selection.test.ts
           node scripts/test-ead-credit-corrections-ui.mjs
           node --test --test-force-exit modules/gestor/gestao/ead/detalhes/ead-enrollment.smoke.test.mjs
           deno test --node-modules-dir=auto --no-lock --allow-read --allow-env supabase/functions/gateways/checkout/ead-manager.test.ts supabase/functions/gateways/checkout/ead-context.test.ts supabase/functions/gateways/checkout/ead-checkout-attempt.test.ts supabase/functions/asaas/api/other-credit-standalone-kind.test.ts

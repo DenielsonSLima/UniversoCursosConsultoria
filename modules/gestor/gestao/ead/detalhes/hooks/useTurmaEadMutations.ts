@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { eadTurmaKeys } from '../ead-turma.keys';
 import { eadTurmaService } from '../ead-turma.service';
 import { AlunoDisponivel } from '../ead-turma.types';
-import type { PublicCheckoutResult } from '../../../../../asaas/checkout-result';
+import type { EadEnrollmentInput, EadEnrollmentResult } from '../ead-enrollment.model';
 
 export const useTurmaEadInvalidation = (turmaId: string) => {
   const queryClient = useQueryClient();
@@ -17,17 +17,21 @@ export const useMatricularAlunoEadMutation = (
   turmaId: string,
   cursoId: string,
   alunosDisponiveis: AlunoDisponivel[],
+  canManageEnrollment: boolean,
   callbacks: {
-    onSuccess: (alunoNome: string, result: PublicCheckoutResult) => void;
+    onSuccess: (alunoNome: string, result: EadEnrollmentResult) => void;
     onError: (error: any) => void;
   },
 ) => {
   const invalidateTurma = useTurmaEadInvalidation(turmaId);
 
   return useMutation({
-    mutationFn: (alunoId: string) => eadTurmaService.matricularAlunoComCobranca(turmaId, cursoId, alunoId),
-    onSuccess: (result, alunoId) => {
-      const alunoSelecionado = alunosDisponiveis.find((item) => item.id === alunoId);
+    mutationFn: (input: EadEnrollmentInput) => {
+      if (!canManageEnrollment) throw new Error('Acesso ao Financeiro obrigatório para adicionar alunos EAD.');
+      return eadTurmaService.adicionarAluno(turmaId, cursoId, input);
+    },
+    onSuccess: (result, input) => {
+      const alunoSelecionado = alunosDisponiveis.find((item) => item.id === input.alunoId);
       callbacks.onSuccess(alunoSelecionado?.nome || 'Aluno', result);
       invalidateTurma();
     },

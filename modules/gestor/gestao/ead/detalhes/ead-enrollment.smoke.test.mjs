@@ -5,12 +5,12 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
-import { build } from 'esbuild';
+import { build, stop } from 'esbuild';
 
 const require = createRequire(import.meta.url);
 const rootDirectory = fileURLToPath(new URL('../../../../../', import.meta.url));
 
-test('React DOM: selecionar e voltar não cobram; confirmação única gera checkout da turma, pendente e sem liberação manual', async () => {
+test('React DOM: Financeiro escolhe sem cobrança ou BolePix; só a confirmação executa uma operação', async () => {
   const { JSDOM } = require(process.env.EAD_JSDOM_PATH ? resolve(process.env.EAD_JSDOM_PATH) : 'jsdom');
   const temporary = await mkdtemp(join(tmpdir(), 'ead-enrollment-smoke-'));
   const dom = new JSDOM('<!doctype html><html><body></body></html>', { url: 'http://localhost', pretendToBeVisual: true });
@@ -19,7 +19,10 @@ test('React DOM: selecionar e voltar não cobram; confirmação única gera chec
     previous.set(key, Object.getOwnPropertyDescriptor(globalThis, key));
     Object.defineProperty(globalThis, key, { configurable: true, writable: true, value: key === 'IS_REACT_ACT_ENVIRONMENT' ? true : dom.window[key] });
   }
-  const fake = { calls: [], finish: null, functions: { invoke: async (name, { body }) => {
+  const fake = { calls: [], finish: null, rpc: async (name, args) => {
+    fake.calls.push({ name, args });
+    return new Promise(resolveResult => { fake.finish = resolveResult; });
+  }, functions: { invoke: async (name, { body }) => {
     fake.calls.push({ name, body });
     return new Promise(resolveResult => { fake.finish = resolveResult; });
   } } };
@@ -34,6 +37,8 @@ test('React DOM: selecionar e voltar não cobram; confirmação única gera chec
       export { createRoot } from 'react-dom/client';
       export { QueryClient, QueryClientProvider } from '@tanstack/react-query';
       export { default as Modal } from './modules/gestor/gestao/ead/detalhes/components/AdicionarAlunoEadModal';
+      export { EadEnrollmentAction } from './modules/gestor/gestao/ead/detalhes/components/EadEnrollmentAction';
+      export { EadFinanceiroPanel } from './modules/gestor/gestao/ead/detalhes/components/EadFinanceiroPanel';
       export { useMatricularAlunoEadMutation } from './modules/gestor/gestao/ead/detalhes/hooks/useTurmaEadMutations';
     `, resolveDir: rootDirectory, loader: 'ts' }, outfile: output, bundle: true, platform: 'node', format: 'cjs', logLevel: 'silent', plugins: [{
       name: 'synthetic-client', setup(builder) {
@@ -42,7 +47,7 @@ test('React DOM: selecionar e voltar não cobram; confirmação única gera chec
       },
     }] });
     const components = require(output);
-    const { React, createRoot, QueryClient, QueryClientProvider, Modal, useMatricularAlunoEadMutation } = components;
+    const { React, createRoot, QueryClient, QueryClientProvider, Modal, EadEnrollmentAction, EadFinanceiroPanel, useMatricularAlunoEadMutation } = components;
     act = components.act;
     const h = React.createElement;
     const aluno = { id: '00000000-0000-4000-8000-000000000001', nome: 'Aluno sintético', email: 'qa@example.com' };
@@ -50,16 +55,22 @@ test('React DOM: selecionar e voltar não cobram; confirmação única gera chec
     const curso = '00000000-0000-4000-8000-000000000003';
     let outcome;
     let lastError;
+    let canEnroll = true;
+    let courseValue = 129.9;
+    let unsafeMutation;
+    const permissions = { modules: ['gestao', 'financeiro'], financeiroTabs: [], allPolos: false };
     function Harness() {
       const [open, setOpen] = React.useState(true);
-      const mutation = useMatricularAlunoEadMutation(turma, curso, [aluno], {
+      const mutation = useMatricularAlunoEadMutation(turma, curso, [aluno], canEnroll, {
         onSuccess: (_name, result) => { outcome = result; setOpen(false); }, onError: error => { lastError = error; },
       });
-      return h(React.Fragment, null, h('button', { onClick: () => setOpen(true) }, 'Abrir'), h(Modal, {
-        open, cursoNome: 'Curso sintético', valor: 129.9, search: '', alunos: [aluno],
+      unsafeMutation = mutation;
+      return h(React.Fragment, null, h('button', { onClick: () => setOpen(true) }, 'Abrir'),
+        h(EadEnrollmentAction, { permissions: canEnroll ? permissions : { ...permissions, modules: ['gestao', 'caixa'] }, onClick: () => setOpen(true) }), h(Modal, {
+        open: open && canEnroll, cursoNome: 'Curso sintético', valor: courseValue, search: '', alunos: [aluno],
         isLoading: false, isFetching: false, isSearchSettling: false, isError: false,
-        pendingAlunoId: mutation.isPending ? mutation.variables : null, onSearchChange() {},
-        onClose: () => setOpen(false), onRetry() {}, onMatricular: id => mutation.mutate(id),
+        pendingAlunoId: mutation.isPending ? mutation.variables?.alunoId : null, onSearchChange() {},
+        onClose: () => setOpen(false), onRetry() {}, onMatricular: input => mutation.mutate(input),
       }));
     }
     const flush = () => new Promise(resolveTick => setTimeout(resolveTick, 5));
@@ -71,7 +82,7 @@ test('React DOM: selecionar e voltar não cobram; confirmação única gera chec
     await act(async () => { reactRoot.render(h(QueryClientProvider, { client }, h(Harness))); await flush(); });
     await click(button('Selecionar'));
     assert.equal(fake.calls.length, 0);
-    assert.match(document.body.textContent, /Gerar cobrança automática/);
+    assert.match(document.body.textContent, /Como deseja adicionar o aluno/);
     assert.match(document.body.textContent, /129,90/);
     assert.match(document.body.textContent, /sem acesso às aulas/);
     await click(button('Voltar'));
@@ -93,7 +104,8 @@ test('React DOM: selecionar e voltar não cobram; confirmação única gera chec
     assert.ok(document.querySelector('[role="dialog"]'));
     await act(async () => { fake.finish({ data: { matriculaId: 'matricula', receivableId: 'titulo', awaitingConfirmation: true }, error: null }); await flush(); });
     assert.equal(document.querySelector('[role="dialog"]'), null);
-    assert.equal(outcome.awaitingConfirmation, true);
+    assert.equal(outcome.mode, 'GERAR_COBRANCA');
+    assert.equal(outcome.checkout.awaitingConfirmation, true);
     await click(button('Abrir'));
     assert.ok(button('Selecionar'), 'Reabrir limpa a confirmação anterior');
     assert.equal(fake.calls.length, 1);
@@ -105,6 +117,40 @@ test('React DOM: selecionar e voltar não cobram; confirmação única gera chec
     await click(button('Confirmar e gerar cobrança'));
     assert.equal(fake.calls.length, 3, 'Submission ref reseta após erro, sem fechar o modal');
     await act(async () => { fake.finish({ data: { matriculaId: 'matricula', receivableId: 'titulo' }, error: null }); await flush(); });
+    assert.equal(fake.calls[1].body.requestId, fake.calls[2].body.requestId, 'Retry mantém a identidade da solicitação');
+    courseValue = 0;
+    await click(button('Abrir'));
+    await click(button('Selecionar'));
+    assert.ok(button('Confirmar e gerar cobrança').disabled, 'Cobrança exige preço positivo');
+    const freeMode = document.querySelector('input[value="SEM_COBRANCA"]');
+    await click(freeMode);
+    assert.equal(fake.calls.length, 3, 'Escolher sem cobrança ainda não executa nada');
+    assert.match(document.body.textContent, /Acesso imediato, sem cobrança/);
+    assert.match(document.body.textContent, /Nenhum valor será lançado/);
+    const freeConfirm = button('Confirmar sem cobrança');
+    assert.equal(freeConfirm.disabled, false, 'Sem cobrança funciona no curso sem preço');
+    await act(async () => { freeConfirm.click(); freeConfirm.click(); await flush(); });
+    assert.equal(fake.calls.length, 4);
+    assert.equal(fake.calls[3].name, 'ead_adicionar_aluno_sem_cobranca_secure');
+    assert.equal(fake.calls[3].args.p_aluno_id, aluno.id);
+    assert.equal(fake.calls[3].args.p_turma_id, turma);
+    assert.equal(fake.calls[3].args.p_confirm, true);
+    assert.match(fake.calls[3].args.p_request_id, /^[0-9a-f-]{36}$/);
+    assert.equal('p_amount' in fake.calls[3].args, false, 'Sem cobrança não envia preço');
+    await act(async () => { fake.finish({ data: { success: true, mode: 'SEM_COBRANCA', status: 'ATIVO', matriculaId: 'matricula-gratuita' }, error: null }); await flush(); });
+    assert.equal(outcome.mode, 'SEM_COBRANCA');
+    assert.equal(document.querySelector('[role="dialog"]'), null);
+    canEnroll = false;
+    await act(async () => { reactRoot.render(h(QueryClientProvider, { client }, h(Harness))); await flush(); });
+    assert.equal(button('Adicionar aluno'), undefined, 'Caixa/gestão sem Financeiro não oferecem matrícula');
+    await act(async () => { unsafeMutation.mutate({ alunoId: aluno.id, mode: 'SEM_COBRANCA', requestId: crypto.randomUUID() }); await flush(); });
+    assert.match(lastError.message, /Financeiro obrigatório/);
+    assert.equal(fake.calls.length, 4, 'A mutação também bloqueia disparo programático sem permissão');
+    await act(async () => { reactRoot.render(h(EadFinanceiroPanel, { resumo: { valor: 129.9 }, alunos: [{ matriculaId: 'sem-cobranca', nome: 'Aluno sintético', status: 'ATIVO' }], pagamentos: [], isLoading: false, isError: false })); await flush(); });
+    assert.match(container.textContent, /Sem cobrança vinculada/);
+    assert.doesNotMatch(container.textContent, /129,90|Manual/);
+    assert.equal([...container.querySelectorAll('span')].some(node => node.textContent === 'Confirmado'), false);
+
   } finally {
     if (reactRoot && act) await act(async () => reactRoot.unmount());
     client?.clear(); dom.window.close();
@@ -112,5 +158,6 @@ test('React DOM: selecionar e voltar não cobram; confirmação única gera chec
       if (descriptor) Object.defineProperty(globalThis, key, descriptor); else delete globalThis[key];
     }
     await rm(temporary, { recursive: true, force: true });
+    stop();
   }
 });

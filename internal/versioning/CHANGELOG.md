@@ -13,10 +13,10 @@ Histórico arquivado: [01/10/2026 a 04/10/2026 — versões 4.8.145 a 4.8.168](.
 ## [4.8.245] - 2026-11-05
 
 ### Corrigido
-- Matrícula EAD pelo gestor exige confirmação da cobrança e mantém o acesso pendente até pagamento confirmado pelo fluxo canônico.
+- Matrícula EAD exige acesso ao módulo Financeiro e confirmação entre adicionar sem financeiro, com liberação imediata auditada, ou gerar cobrança e aguardar pagamento.
 - Outros créditos recebidos localmente permitem estorno auditado com motivo e preservação do histórico financeiro; liquidações de gateway exigem tratamento próprio.
 - Créditos avulsos sem classificação legada são reconhecidos para seleção e cancelamento com as mesmas guardas dos demais títulos.
-- Entrega candidata via GitHub e Preview; migrations e Edge Functions deste lote dependem de implantação autorizada antes da ativação em produção.
+- Resumo e painel EAD usam fatos financeiros, sem inferir pagamento ou receita a partir do acesso acadêmico. Produção autorizada; implantação e conferência registradas no lote.
 
 ## [4.8.244] - 2026-11-01
 
