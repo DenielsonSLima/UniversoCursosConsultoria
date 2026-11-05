@@ -2,12 +2,9 @@ import React, { useEffect, useState } from 'react';
 import {
   ArrowLeft,
   BarChart3,
-  CheckCircle2,
   CreditCard,
   GraduationCap,
-  Loader2,
   LockKeyhole,
-  Plus,
   Settings,
   ShieldCheck,
   Users,
@@ -22,11 +19,16 @@ import {
   useTurmaEadResumo,
 } from './hooks/useTurmaEadQueries';
 import {
-  useLiberarMatriculaEadMutation,
   useMatricularAlunoEadMutation,
 } from './hooks/useTurmaEadMutations';
 import { useTurmaEadRealtime } from './hooks/useTurmaEadRealtime';
+import useDebouncedValue from './hooks/useDebouncedValue';
+import { EadFinanceiroPanel } from './components/EadFinanceiroPanel';
+import { EadEnrollmentAction } from './components/EadEnrollmentAction';
+import { canAddAlunoEad } from './ead-enrollment.model';
 import AdicionarAlunoEadModal from './components/AdicionarAlunoEadModal';
+import StatCard from './components/EadStatCard';
+import { formatCurrency, statusStyle, statusLabel, normalizeStatus, isEadEnrollmentActive, isEadEnrollmentPending } from './ead-turma.presentation';
 import {
   canAccessGestaoTurmaTab,
   type GestorPermissions,
@@ -38,118 +40,10 @@ interface TurmaEadDetalhesProps {
   permissions: GestorPermissions;
 }
 
-const formatCurrency = (value?: number | null) =>
-  Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-
-const formatDateTime = (value?: string | null) => {
-  if (!value) return '-';
-  return new Date(value).toLocaleString('pt-BR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-};
-
-const paymentMethodLabel = (value?: string | null) => {
-  switch (value) {
-    case 'PIX':
-      return 'Pix';
-    case 'BOLETO':
-      return 'Boleto';
-    case 'CREDIT_CARD':
-    case 'CARTAO':
-      return 'Cartão';
-    default:
-      return value || '-';
-  }
-};
-
-const statusStyle = (status?: string | null) => {
-  switch (normalizeStatus(status)) {
-    case 'PENDENTE':
-    case 'AGUARDANDO_PAGAMENTO':
-    case 'AGUARDANDO_CONFIRMACAO':
-      return 'bg-amber-50 text-amber-700 border-amber-100';
-    case 'ATIVO':
-      return 'bg-emerald-50 text-emerald-700 border-emerald-100';
-    case 'CONCLUIDO':
-      return 'bg-blue-50 text-blue-700 border-blue-100';
-    case 'CANCELADO':
-    case 'DESISTENTE':
-      return 'bg-rose-50 text-rose-700 border-rose-100';
-    default:
-      return 'bg-slate-50 text-slate-600 border-slate-100';
-  }
-};
-
-const statusLabel = (status?: string | null) => {
-  switch (normalizeStatus(status)) {
-    case 'PENDENTE':
-    case 'AGUARDANDO_PAGAMENTO':
-    case 'AGUARDANDO_CONFIRMACAO':
-      return 'Aguardando pagamento';
-    case 'ATIVO':
-      return 'Liberado';
-    case 'CONCLUIDO':
-      return 'Concluido';
-    case 'TRANCADO':
-      return 'Trancado';
-    case 'CANCELADO':
-      return 'Cancelado';
-    case 'DESISTENTE':
-      return 'Desistente';
-    default:
-      return status || 'Sem status';
-  }
-};
-
-const EAD_ACTIVE_STATUSES = new Set(['ATIVO', 'CONCLUIDO']);
-const EAD_PENDING_STATUSES = new Set(['PENDENTE', 'AGUARDANDO_PAGAMENTO', 'AGUARDANDO_CONFIRMACAO']);
-const normalizeStatus = (status?: string | null) =>
-  String(status || '')
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toUpperCase()
-    .trim();
-const isEadEnrollmentActive = (status?: string | null) => EAD_ACTIVE_STATUSES.has(normalizeStatus(status));
-const isEadEnrollmentPending = (status?: string | null) => EAD_PENDING_STATUSES.has(normalizeStatus(status));
-
-const useDebouncedValue = <T,>(value: T, delayMs: number) => {
-  const [debouncedValue, setDebouncedValue] = useState(value);
-
-  useEffect(() => {
-    const timeoutId = window.setTimeout(() => setDebouncedValue(value), delayMs);
-    return () => window.clearTimeout(timeoutId);
-  }, [delayMs, value]);
-
-  return debouncedValue;
-};
-
-const StatCard = ({ label, value, icon, tone = 'slate' }: { label: string; value: string | number; icon: React.ReactNode; tone?: 'slate' | 'purple' | 'emerald' | 'amber' | 'blue' }) => {
-  const tones = {
-    slate: 'bg-white border-slate-200 text-slate-500',
-    purple: 'bg-purple-50 border-purple-100 text-purple-700',
-    emerald: 'bg-emerald-50 border-emerald-100 text-emerald-700',
-    amber: 'bg-amber-50 border-amber-100 text-amber-700',
-    blue: 'bg-blue-50 border-blue-100 text-blue-700',
-  };
-
-  return (
-    <div className={`rounded-2xl border p-5 ${tones[tone]}`}>
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <span className="text-[10px] font-black uppercase tracking-widest">{label}</span>
-        {icon}
-      </div>
-      <p className="text-3xl font-black text-[#001a33]">{value}</p>
-    </div>
-  );
-};
-
 const TurmaEadDetalhes: React.FC<TurmaEadDetalhesProps> = ({ turma, onBack, permissions }) => {
   const { toasts, removeToast, toast } = useToast();
   const [activeTab, setActiveTab] = useState<'resumo' | 'alunos' | 'financeiro' | 'configuracoes'>('resumo');
+  const canManageEnrollment = canAddAlunoEad(permissions);
   const canViewFinanceiro = canAccessGestaoTurmaTab(permissions, 'financeiro');
   const [searchAluno, setSearchAluno] = useState('');
   const [showAddAluno, setShowAddAluno] = useState(false);
@@ -164,22 +58,28 @@ const TurmaEadDetalhes: React.FC<TurmaEadDetalhesProps> = ({ turma, onBack, perm
 
   const resumoQuery = useTurmaEadResumo(turma.id);
   const alunosQuery = useTurmaEadAlunos(turma.id);
-  const alunosDisponiveisQuery = useTurmaEadAlunosDisponiveis(turma.id, debouncedSearchAluno, showAddAluno);
-  const liberarMutation = useLiberarMatriculaEadMutation(
-    turma.id,
-    (error: any) => toast.error('Não foi possível liberar', error?.message || 'Tente novamente em alguns instantes.'),
-  );
+  const alunosDisponiveisQuery = useTurmaEadAlunosDisponiveis(turma.id, debouncedSearchAluno, showAddAluno && canManageEnrollment);
   const matricularMutation = useMatricularAlunoEadMutation(
     turma.id,
+    turma.cursoId,
     (alunosDisponiveisQuery.data || []) as AlunoDisponivel[],
+    canManageEnrollment,
     {
-      onSuccess: (alunoNome) => {
-      toast.success(
-        'Aluno adicionado',
-        `${alunoNome} foi adicionado(a) à turma sem gerar pagamento e com acesso liberado.`
-      );
-      setShowAddAluno(false);
-      setSearchAluno('');
+      onSuccess: (alunoNome, result) => {
+        if (result.mode === 'SEM_COBRANCA') {
+          toast.success('Aluno adicionado sem cobrança', `${alunoNome} já tem acesso às aulas. Nenhum lançamento financeiro foi gerado.`);
+        } else if (result.checkout.paymentReviewRequired) {
+          toast.error('Cobrança em conferência', 'A matrícula permanece sem acesso. Confira a tentativa financeira antes de continuar.');
+        } else {
+          toast.success(
+            result.checkout.alreadyPaid ? 'Matrícula já existente' : 'Aguardando pagamento',
+            result.checkout.alreadyPaid
+              ? `${alunoNome} já possui vínculo com este curso. Confira a situação da matrícula.`
+              : `${alunoNome} está aguardando pagamento. O acesso será liberado automaticamente após a confirmação.`,
+          );
+        }
+        setShowAddAluno(false);
+        setSearchAluno('');
       },
       onError: (error: any) => {
         toast.error('Não foi possível adicionar', error?.message || 'Tente novamente em alguns instantes.');
@@ -284,13 +184,7 @@ const TurmaEadDetalhes: React.FC<TurmaEadDetalhesProps> = ({ turma, onBack, perm
           <h3 className="text-lg font-black uppercase tracking-tight text-[#001a33]">Alunos da turma EAD</h3>
           <p className="text-xs font-bold text-slate-500">Somente matrículas com acesso liberado à turma.</p>
         </div>
-        <button
-          type="button"
-          onClick={() => setShowAddAluno(true)}
-          className="flex items-center justify-center gap-2 rounded-xl bg-purple-600 px-5 py-3 text-[10px] font-black uppercase tracking-widest text-white shadow-lg shadow-purple-900/20 hover:bg-purple-700"
-        >
-          <Plus size={15} /> Adicionar aluno
-        </button>
+        <EadEnrollmentAction permissions={permissions} onClick={() => setShowAddAluno(true)} />
       </div>
 
       {alunosQuery.isLoading ? (
@@ -383,15 +277,7 @@ const TurmaEadDetalhes: React.FC<TurmaEadDetalhesProps> = ({ turma, onBack, perm
                     <p className="text-[10px] font-bold text-slate-400">Prova: {aluno.notaProva ?? '-'}</p>
                   </div>
                   <div className="text-right">
-                    <button
-                      type="button"
-                      disabled={liberarMutation.isPending}
-                      onClick={() => liberarMutation.mutate(aluno.matriculaId)}
-                      className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-[10px] font-black uppercase text-white hover:bg-emerald-700 disabled:opacity-60"
-                    >
-                      {liberarMutation.isPending ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle2 size={13} />}
-                      Liberar
-                    </button>
+                    <span className="text-[10px] font-bold text-amber-700">Liberação automática após pagamento</span>
                   </div>
                 </div>
               ))}
@@ -401,94 +287,30 @@ const TurmaEadDetalhes: React.FC<TurmaEadDetalhesProps> = ({ turma, onBack, perm
       )}
 
       <AdicionarAlunoEadModal
-        open={showAddAluno}
+        open={showAddAluno && canManageEnrollment}
+        cursoNome={resumo?.cursoNome || turma.cursoNome || turma.nome}
+        valor={resumo?.valor}
         search={searchAluno}
         alunos={(alunosDisponiveisQuery.data || []) as AlunoDisponivel[]}
         isLoading={alunosDisponiveisQuery.isLoading}
         isFetching={alunosDisponiveisQuery.isFetching}
         isSearchSettling={showAddAluno && normalizedSearchAluno !== debouncedSearchAluno}
         isError={alunosDisponiveisQuery.isError}
-        pendingAlunoId={matricularMutation.isPending ? matricularMutation.variables : null}
+        pendingAlunoId={matricularMutation.isPending ? matricularMutation.variables?.alunoId : null}
         onSearchChange={setSearchAluno}
         onClose={() => {
+          if (matricularMutation.isPending) return;
           setShowAddAluno(false);
           setSearchAluno('');
         }}
         onRetry={() => void alunosDisponiveisQuery.refetch()}
-        onMatricular={(alunoId) => matricularMutation.mutate(alunoId)}
+        onMatricular={(input) => matricularMutation.mutate(input)}
       />
     </div>
   );
 
-  const renderFinanceiro = () => (
-    <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-      <StatCard label="Receita prevista" value={formatCurrency(resumo?.receitaPrevista)} icon={<CreditCard size={18} />} tone="purple" />
-      <StatCard label="Receita liberada" value={formatCurrency(resumo?.receitaConfirmada)} icon={<ShieldCheck size={18} />} tone="emerald" />
-      <StatCard label="Pendentes" value={resumo?.alunosPendentes ?? 0} icon={<CreditCard size={18} />} tone="amber" />
-      <section className="rounded-3xl border border-slate-200 bg-white p-6 lg:col-span-3">
-        <div className="mb-6 flex flex-col justify-between gap-3 md:flex-row md:items-center">
-          <div>
-            <h3 className="text-lg font-black uppercase tracking-tight text-[#001a33]">Recebimentos dos alunos</h3>
-            <p className="text-xs font-bold text-slate-500">A configuração do checkout fica no cadastro do curso EAD.</p>
-          </div>
-          {resumo?.asaasUrl && (
-            <a
-              href={resumo.asaasUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center justify-center rounded-xl border border-slate-200 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-slate-50"
-            >
-              Abrir link Asaas
-            </a>
-          )}
-        </div>
-
-        {pagamentosQuery.isLoading ? (
-          <div className="rounded-2xl bg-slate-50 p-8 text-center text-sm font-black text-slate-400">Carregando pagamentos...</div>
-        ) : pagamentosQuery.isError ? (
-          <div className="rounded-2xl bg-rose-50 p-4 text-sm font-black text-rose-700">Nao foi possivel carregar os pagamentos desta turma.</div>
-        ) : (
-          <div className="overflow-x-auto rounded-2xl border border-slate-100">
-            <div className="grid min-w-[980px] grid-cols-[1.4fr_0.75fr_0.85fr_1fr_1fr_0.8fr] gap-3 bg-slate-50 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400">
-              <span>Aluno</span>
-              <span>Valor</span>
-              <span>Status</span>
-              <span>Recebido em</span>
-              <span>Confirmado em</span>
-              <span>Forma</span>
-            </div>
-            <div className="divide-y divide-slate-100">
-              {alunos.map((aluno) => {
-                const pagamento = (pagamentosQuery.data || []).find(item => item.matricula_id === aluno.matriculaId);
-                const matriculaStatus = normalizeStatus(aluno.status);
-                const statusPagamento = pagamento?.status || (matriculaStatus === 'ATIVO' || matriculaStatus === 'CONCLUIDO' ? 'PAGO' : 'PENDENTE');
-                return (
-                  <div key={aluno.matriculaId} className="grid min-w-[980px] grid-cols-[1.4fr_0.75fr_0.85fr_1fr_1fr_0.8fr] gap-3 px-4 py-4 text-sm">
-                    <div className="min-w-0">
-                      <p className="truncate font-black text-[#001a33]" title={aluno.nome}>{aluno.nome}</p>
-                      <p className="truncate text-xs font-bold text-slate-400" title={aluno.email || pagamento?.email || ''}>{aluno.email || pagamento?.email || 'Sem email'}</p>
-                    </div>
-                    <p className="font-black text-emerald-700">{formatCurrency(pagamento?.valor ?? aluno.valorPago ?? resumo?.valor)}</p>
-                    <span className={`w-fit rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-wider ${statusPagamento === 'PAGO' ? 'border-emerald-100 bg-emerald-50 text-emerald-700' : 'border-amber-100 bg-amber-50 text-amber-700'}`}>
-                      {statusPagamento === 'PAGO' ? 'Confirmado' : 'Pendente'}
-                    </span>
-                    <p className="text-xs font-bold text-slate-600">{formatDateTime(pagamento?.pago_em)}</p>
-                    <p className="text-xs font-bold text-slate-600">{formatDateTime(pagamento?.confirmado_em || pagamento?.pago_em)}</p>
-                    <p className="text-xs font-black uppercase text-slate-500">
-                      {pagamento?.forma_pagamento ? paymentMethodLabel(pagamento.forma_pagamento) : matriculaStatus === 'ATIVO' && !pagamento ? 'Manual' : '-'}
-                    </p>
-                  </div>
-                );
-              })}
-              {alunos.length === 0 && (
-                <div className="px-4 py-10 text-center text-sm font-bold text-slate-400">Nenhum aluno matriculado nesta turma.</div>
-              )}
-            </div>
-          </div>
-        )}
-      </section>
-    </div>
-  );
+  const renderFinanceiro = () => <EadFinanceiroPanel resumo={resumo} alunos={alunos}
+    pagamentos={pagamentosQuery.data || []} isLoading={pagamentosQuery.isLoading} isError={pagamentosQuery.isError} />;
 
   const renderConfiguracoes = () => (
     <section className="rounded-3xl border border-slate-200 bg-white p-6">

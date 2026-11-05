@@ -218,6 +218,7 @@ export const buildOtherCreditPayload = (
     data_vencimento: input.dueDate,
     status: isPaid ? "PAGO" : "PENDENTE",
     categoria: "OUTROS_CREDITOS",
+    tipo_lancamento: "OUTRO_CREDITO",
     categoria_financeira_id: input.categoryId,
     cliente_id: input.clientId,
     forma_pagamento: input.paymentMethod,

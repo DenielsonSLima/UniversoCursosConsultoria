@@ -1,10 +1,14 @@
-import React, { useEffect, useId, useRef } from 'react';
+import React, { useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AlertCircle, Loader2, Search, UserPlus, X } from 'lucide-react';
 import { AlunoDisponivel } from '../ead-turma.types';
+import type { EadEnrollmentInput, EadEnrollmentMode } from '../ead-enrollment.model';
+import { generateSafeUuid } from '../../../../../../lib/randomUuid';
 
 interface AdicionarAlunoEadModalProps {
   open: boolean;
+  cursoNome: string;
+  valor?: number;
   search: string;
   alunos: AlunoDisponivel[];
   isLoading: boolean;
@@ -15,11 +19,13 @@ interface AdicionarAlunoEadModalProps {
   onSearchChange: (value: string) => void;
   onClose: () => void;
   onRetry: () => void;
-  onMatricular: (alunoId: string) => void;
+  onMatricular: (input: EadEnrollmentInput) => void;
 }
 
 const AdicionarAlunoEadModal: React.FC<AdicionarAlunoEadModalProps> = ({
   open,
+  cursoNome,
+  valor,
   search,
   alunos,
   isLoading,
@@ -33,15 +39,32 @@ const AdicionarAlunoEadModal: React.FC<AdicionarAlunoEadModalProps> = ({
   onMatricular,
 }) => {
   const titleId = useId();
+  const [selectedAluno, setSelectedAluno] = useState<AlunoDisponivel | null>(null);
+  const [mode, setMode] = useState<EadEnrollmentMode>('GERAR_COBRANCA');
+  const [requestId, setRequestId] = useState(generateSafeUuid);
+  const chargeAvailable = Number.isFinite(valor) && Number(valor) > 0;
   const descriptionId = useId();
   const dialogRef = useRef<HTMLElement>(null);
+  const submissionRef = useRef(false);
   const onCloseRef = useRef(onClose);
   const searchPending = isFetching || isSearchSettling;
   const normalizedSearch = search.trim();
 
   useEffect(() => {
-    onCloseRef.current = onClose;
-  }, [onClose]);
+    if (!open) setSelectedAluno(null);
+  }, [open]);
+
+  useEffect(() => {
+    if (!pendingAlunoId) submissionRef.current = false;
+  }, [pendingAlunoId]);
+
+  useEffect(() => {
+    onCloseRef.current = () => {
+      if (pendingAlunoId || submissionRef.current) return;
+      setSelectedAluno(null);
+      onClose();
+    };
+  }, [onClose, pendingAlunoId]);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -98,7 +121,7 @@ const AdicionarAlunoEadModal: React.FC<AdicionarAlunoEadModalProps> = ({
       className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/60 p-3 sm:p-6"
       role="presentation"
       onMouseDown={(event) => {
-        if (event.currentTarget === event.target) onClose();
+        if (event.currentTarget === event.target) onCloseRef.current();
       }}
     >
       <section
@@ -120,13 +143,14 @@ const AdicionarAlunoEadModal: React.FC<AdicionarAlunoEadModalProps> = ({
               Adicionar aluno à turma EAD
             </h2>
             <p id={descriptionId} className="mt-1 text-sm font-medium leading-5 text-slate-600">
-              O acesso será liberado sem gerar recebimento financeiro.
+              Selecione o aluno e confirme se deseja gerar cobrança ou liberar o acesso sem cobrança.
             </p>
           </div>
 
           <button
             type="button"
-            onClick={onClose}
+            onClick={() => onCloseRef.current()}
+            disabled={Boolean(pendingAlunoId)}
             className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 transition-colors hover:border-slate-300 hover:bg-slate-50 hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
             aria-label="Fechar"
           >
@@ -134,6 +158,47 @@ const AdicionarAlunoEadModal: React.FC<AdicionarAlunoEadModalProps> = ({
           </button>
         </header>
 
+        {selectedAluno ? (
+          <div className="space-y-5 overflow-y-auto px-5 py-6 sm:px-7">
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+              <h3 className="font-bold">Como deseja adicionar o aluno?</h3>
+              <p className="mt-2"><strong>{selectedAluno.nome}</strong> · {cursoNome}</p>
+              <fieldset disabled={Boolean(pendingAlunoId)} className="mt-4 space-y-3">
+                <legend className="sr-only">Cobrança da matrícula</legend>
+                {([
+                  ['GERAR_COBRANCA', 'Gerar cobrança', 'Cria a cobrança BolePix e mantém o acesso bloqueado até o pagamento confirmado.'],
+                  ['SEM_COBRANCA', 'Adicionar sem cobrança', 'Libera o acesso imediatamente, sem gerar lançamento financeiro, boleto ou pagamento.'],
+                ] as const).map(([value, label, description]) => <label key={value}
+                  className={`flex cursor-pointer items-start gap-3 rounded-xl border p-4 ${mode === value ? 'border-blue-500 bg-blue-50' : 'border-slate-200 bg-white'}`}>
+                  <input type="radio" name={`${titleId}-mode`} value={value} checked={mode === value}
+                    onChange={() => { setMode(value); setRequestId(generateSafeUuid()); }} className="mt-1" />
+                  <span><span className="block font-bold text-[#001a33]">{label}</span><span className="mt-1 block leading-5">{description}</span></span>
+                </label>)}
+              </fieldset>
+            </div>
+            <div role="status" className={`rounded-xl border p-4 text-sm ${mode === 'GERAR_COBRANCA' ? 'border-amber-200 bg-amber-50 text-amber-900' : 'border-emerald-200 bg-emerald-50 text-emerald-900'}`}>
+              {mode === 'GERAR_COBRANCA' ? <>
+                <p className="font-bold">Valor do curso: {Number(valor || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
+                <p className="mt-2">A matrícula ficará aguardando pagamento, sem acesso às aulas. O pagamento confirmado libera o curso automaticamente. Uma cobrança existente será reutilizada.</p>
+                {!chargeAvailable && <p className="mt-2 font-bold">Configure um valor maior que zero no curso para gerar cobrança.</p>}
+              </> : <>
+                <p className="font-bold">Acesso imediato, sem cobrança</p>
+                <p className="mt-2">A confirmação adiciona o aluno à turma com acesso às aulas. Nenhum valor será lançado como recebido ou a receber.</p>
+              </>}
+            </div>
+            <div className="flex flex-wrap justify-end gap-3">
+              <button type="button" disabled={Boolean(pendingAlunoId)} onClick={() => setSelectedAluno(null)} className="rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-600 disabled:opacity-50">Voltar</button>
+              <button type="button" disabled={Boolean(pendingAlunoId) || (mode === 'GERAR_COBRANCA' && !chargeAvailable)} onClick={() => {
+                if (submissionRef.current) return;
+                submissionRef.current = true;
+                onMatricular({ alunoId: selectedAluno.id, mode, requestId });
+              }} className="inline-flex items-center gap-2 rounded-xl bg-blue-700 px-4 py-3 text-sm font-semibold text-white disabled:opacity-50">
+                {pendingAlunoId ? <Loader2 size={16} className="animate-spin" /> : <UserPlus size={16} />}
+                {pendingAlunoId ? 'Adicionando aluno...' : mode === 'GERAR_COBRANCA' ? 'Confirmar e gerar cobrança' : 'Confirmar sem cobrança'}
+              </button>
+            </div>
+          </div>
+        ) : <>
         <div className="px-5 pb-4 pt-5 sm:px-7">
           <label htmlFor={`${titleId}-search`} className="mb-2 block text-sm font-semibold text-slate-700">
             Localizar aluno
@@ -217,12 +282,12 @@ const AdicionarAlunoEadModal: React.FC<AdicionarAlunoEadModalProps> = ({
                       <button
                         type="button"
                         disabled={Boolean(pendingAlunoId) || searchPending}
-                        onClick={() => onMatricular(aluno.id)}
-                        aria-label={`Matricular ${aluno.nome}`}
+                        onClick={() => { setSelectedAluno(aluno); setMode('GERAR_COBRANCA'); setRequestId(generateSafeUuid()); }}
+                        aria-label={`Selecionar ${aluno.nome}`}
                         className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-lg bg-blue-700 px-4 text-xs font-semibold uppercase tracking-[0.08em] text-white shadow-sm transition-colors hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-wait disabled:opacity-55"
                       >
                         {isPending ? <Loader2 size={15} className="animate-spin" /> : <UserPlus size={15} />}
-                        {isPending ? 'Matriculando' : 'Matricular'}
+                        {isPending ? 'Gerando cobrança' : 'Selecionar'}
                       </button>
                     </li>
                   );
@@ -231,6 +296,7 @@ const AdicionarAlunoEadModal: React.FC<AdicionarAlunoEadModalProps> = ({
             )}
           </div>
         </div>
+        </>}
       </section>
     </div>,
     document.body,

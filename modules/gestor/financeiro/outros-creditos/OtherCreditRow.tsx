@@ -1,5 +1,5 @@
 import React from 'react';
-import { Banknote, BookOpen, CheckCircle2, Copy, ExternalLink, Link as LinkIcon, QrCode, XCircle } from 'lucide-react';
+import { Banknote, BookOpen, CheckCircle2, Copy, ExternalLink, Link as LinkIcon, QrCode, RotateCcw, XCircle } from 'lucide-react';
 import { FinancialPaymentBalance, hasPartialPayment } from '../settlements/financial-payment.presentation';
 import type { ContasReceber } from '../financeiro.types';
 import { ReceivableAmountSummary } from '../receber/components/modalidade-receber/ReceivableAmountSummary';
@@ -8,6 +8,7 @@ import { formatDate, statusClass, origemLabel } from './outros-creditos.presenta
 import { OtherCreditSelectionCheckbox } from './OtherCreditSelectionCheckbox';
 import { otherCreditCancellationBlockReason } from './other-credit-cancellation.selection';
 import type { OtherCreditCancellationModel } from './useOtherCreditCancellation';
+import { canReverseOtherCredit } from './other-credit-reversal.model';
 
 type RowModel = Pick<OutrosCreditosModel,
   | 'syncMutation'
@@ -18,8 +19,9 @@ type RowModel = Pick<OutrosCreditosModel,
 
 export const OtherCreditRow: React.FC<{
   item: ContasReceber; index: number; model: RowModel; onOpenPlan?: (id: string) => void;
+  onReverse?: (item: ContasReceber) => void;
   cancellation?: Pick<OtherCreditCancellationModel, 'selectedIds' | 'pending' | 'selectionLocked' | 'reservedIds' | 'toggle' | 'open'>;
-}> = ({ item, index, model, onOpenPlan, cancellation }) => {
+}> = ({ item, index, model, onOpenPlan, onReverse, cancellation }) => {
   const {
     syncMutation, copyLink, openReceiveModal, openPaymentModal,
   } = model;
@@ -65,6 +67,10 @@ export const OtherCreditRow: React.FC<{
       </td>
       <td className="px-5 py-4">
         <div className="flex flex-wrap gap-2">
+          {onReverse && canReverseOtherCredit(item) ? <button type="button" onClick={() => onReverse(item)}
+            className="inline-flex items-center gap-1 rounded-xl border border-rose-200 px-3 py-2 text-[10px] font-black uppercase text-rose-700 hover:bg-rose-50">
+            <RotateCcw size={13} /> Estornar recebimento
+          </button> : null}
           {item.paymentSummary?.hasEvents ? <button type="button" onClick={() => openReceiveModal(item)} className="rounded-xl border border-emerald-200 px-3 py-2 text-[10px] font-black text-emerald-700">Histórico</button> : null}
           {item.outrosCreditosPlanoId && onOpenPlan ? (
             <button type="button" onClick={() => onOpenPlan(item.outrosCreditosPlanoId!)}

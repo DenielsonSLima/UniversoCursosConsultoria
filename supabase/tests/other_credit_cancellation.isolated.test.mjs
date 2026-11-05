@@ -79,6 +79,7 @@ try {
     .filter(name=>/^20261014175\d{3}_other_credit_cancellation_.*\.sql$/.test(name)).sort();
   assert.equal(files.length,4,'All four cancellation migrations are tested');
   for(const file of files) await db.exec(source(`../migrations/${file}`));
+  await db.exec(source('../migrations/20261105193000_other_credit_untyped_cancellation.sql'));
 
   const local=await add(100),bank=await add(101,true),operation=id(20100);
   const created=await begin(operation,[bank,local]);
@@ -242,5 +243,5 @@ try {
   const list=await scalar('SELECT public.listar_outros_creditos_secure($1) value',[polo]);
   assert.equal(list.find(row=>row.id===local).other_credit_cancellation_eligible,false);
   assert.equal(list.find(row=>row.id===id(200)).other_credit_cancellation_eligible,false);
-  console.log('PASS other credit cancellation: 4 actual migrations, scoped ACL/replay, one lease, LOCAL/Banese completion, immutable history, ambiguous retries, payments, drift, external ownership and reconciliation guards.');
+  console.log('PASS other credit cancellation: 5 actual migrations, scoped ACL/replay, one lease, LOCAL/Banese completion, immutable history, ambiguous retries, payments, drift, external ownership and reconciliation guards.');
 } finally { await db.close(); }

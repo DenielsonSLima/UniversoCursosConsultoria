@@ -23,6 +23,7 @@ import {
   UUID_RE,
 } from "./utils.ts";
 import { getGatewayRuntimeConfig } from "../runtime-config.ts";
+import { authorizeManagerEadEnrollment } from "./ead-manager.ts";
 
 const BLOCKING_ENROLLMENT_STATUSES = new Set([
   "ATIVO",
@@ -328,6 +329,9 @@ export const buildEadCheckoutContext = async (
     throw new Error("Cobranca EAD nao corresponde a turma informada.");
   }
 
+  let gestor: GestorAutorizado | null = await authorizeManagerEadEnrollment(runtime);
+  const managerEnrollment = gestor !== null && body.managerEnrollment === true;
+
   const { data: course, error: courseError } = await runtime.admin
     .from("cursos")
     .select(
@@ -350,7 +354,7 @@ export const buildEadCheckoutContext = async (
 
   if (
     !checkoutTarget &&
-    (course.publicar_site !== true ||
+    ((!managerEnrollment && course.publicar_site !== true) ||
       String(course.status || "").toLowerCase() !== "ativo")
   ) {
     throw new Error("Curso EAD indisponivel para matricula online.");
@@ -360,7 +364,8 @@ export const buildEadCheckoutContext = async (
     method: body.eadPaymentMethod ?? body.paymentMethod ?? body.method ??
       body.billingType,
     installments: body.eadInstallments ?? body.installments,
-    presentation: body.presentation ?? body.eadPaymentPresentation,
+    presentation: managerEnrollment && course.financeiro_config?.metodosRecebimento?.pix !== false
+      ? "PIX" : body.presentation ?? body.eadPaymentPresentation,
   };
   const chargeCourse = checkoutTarget
     ? { ...course, valor: checkoutTarget.receivable.valor }
@@ -382,7 +387,6 @@ export const buildEadCheckoutContext = async (
     ? resolveTargetedEadCharge(configuredCharge, checkoutTarget.receivable)
     : configuredCharge;
 
-  let gestor: GestorAutorizado | null = null;
   let aluno = checkoutTarget?.aluno || null;
   if (!checkoutTarget) {
     const token = String(runtime.req.headers.get("Authorization") || "")
@@ -405,7 +409,7 @@ export const buildEadCheckoutContext = async (
     if (authenticatedAlunoError) throw authenticatedAlunoError;
     aluno = authenticatedAluno;
     if (requestedAlunoId && requestedAlunoId !== authenticatedAluno?.id) {
-      gestor = await requireGestorAtivo(runtime.req, runtime.admin);
+      gestor = gestor || await requireGestorAtivo(runtime.req, runtime.admin);
       requireFinanceWriteAccess(gestor);
       const { data: requestedAluno, error: requestedAlunoError } = await runtime
         .admin.from("parceiros").select("*").eq("tipo", "Aluno")
@@ -448,6 +452,9 @@ export const buildEadCheckoutContext = async (
   if (!turma?.id || turma.curso_id && turma.curso_id !== course.id) {
     throw new Error("Cobranca EAD sem turma canonica vinculada ao curso.");
   }
+  if (managerEnrollment && turma.id !== requestedTurmaId) {
+    throw new Error("A matrícula EAD deve permanecer na turma selecionada pelo gestor.");
+  }
   if (gestor) requireGestorForPolo(gestor, turma.polo_id);
 
   if (checkoutTarget && checkoutTarget.turmaId !== turma.id) {
@@ -461,6 +468,7 @@ export const buildEadCheckoutContext = async (
     turma,
     charge,
     route,
+    managerEnrollment,
   };
   const checkoutAttempt = await prepareEadCheckoutAttempt(preparedContext);
   const receivable = checkoutAttempt.receivable;
