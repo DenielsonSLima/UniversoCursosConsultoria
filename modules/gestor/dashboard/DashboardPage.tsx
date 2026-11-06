@@ -36,6 +36,10 @@ import {
   type DashboardQuickActionMode,
 } from './dashboard.presentation';
 import { getDashboardStudentFinanceAccess } from './student-finance/dashboard-student-finance.access';
+import './dashboard-workspace.css';
+import './dashboard-agenda.css';
+import './dashboard-activity.css';
+import './dashboard-responsive.css';
 
 interface DashboardPageProps {
   poloId?: string | null;
@@ -177,7 +181,17 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
   };
 
   return (
-    <div className="dashboard-readable animate-fadeIn space-y-6 pb-10 text-[#001a33]">
+    <div className="dashboard-readable gestor-home">
+      <div className="home-heading">
+        <div>
+          <p className="home-eyebrow">Seu espaço de gestão</p>
+          <h1>Visão geral<span aria-hidden="true">.</span></h1>
+        </div>
+        <time dateTime={todayKey} className="home-today">
+          <span>{today.toLocaleDateString('pt-BR', { weekday: 'long' })}</span>
+          {today.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
+        </time>
+      </div>
       {hasQuickActionsContent ? (
         <DashboardQuickActionsHeader
           canCreatePartner={canCreatePartner}
@@ -187,7 +201,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
       ) : null}
 
       {showAcademicWorkspace ? (
-        <section className={`grid grid-cols-1 gap-3 sm:grid-cols-2 ${metricGridClass}`}>
+        <section aria-label="Indicadores e agenda" className={`home-metrics grid grid-cols-2 ${metricGridClass}`}>
           <DashboardMetricCard
             label="Agenda do dia"
             value={formatShortDate(todayKey)}
@@ -241,7 +255,9 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
           loading={loadingCalendar}
           canUseCalendar={canUseCalendar}
           onOpenCalendar={openCalendar}
-        />
+        >
+          {showRecentActivity && <DashboardRecentActivity activities={recentActivity} loading={loadingActivity} now={now} />}
+        </DashboardAgendaSection>
       ) : canUseCalendar ? (
         <DashboardOfficialCalendar
           events={officialEvents}
@@ -252,7 +268,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
         />
       ) : null}
 
-      {showRecentActivity && (
+      {!showAcademicWorkspace && showRecentActivity && (
         <DashboardRecentActivity activities={recentActivity} loading={loadingActivity} now={now} />
       )}
 

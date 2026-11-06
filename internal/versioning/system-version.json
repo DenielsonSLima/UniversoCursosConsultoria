@@ -1,8 +1,8 @@
 {
-  "version": "4.8.246",
+  "version": "4.8.247",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 255,
+  "revision": 256,
   "releasedAt": "2026-11-05",
-  "summary": "Filtros do catálogo público EAD alinhados e pesquisáveis no Safari"
+  "summary": "Início do Gestor compacto, com hierarquia visual leve e navegação refinada"
 }

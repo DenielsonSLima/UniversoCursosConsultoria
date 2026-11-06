@@ -1,0 +1,234 @@
+.gestor-home {
+  --home-ink: #122b42;
+  --home-muted: #607286;
+  --home-line: #e3e9ee;
+  --home-accent: #2563eb;
+  color: var(--home-ink);
+  padding-bottom: 20px;
+}
+.gestor-home > * + * {
+  margin-top: 18px;
+}
+.gestor-home button {
+  -webkit-tap-highlight-color: transparent;
+}
+.gestor-home button:focus-visible {
+  outline: 2px solid var(--home-accent);
+  outline-offset: 4px;
+}
+.gestor-home button:disabled {
+  cursor: default;
+}
+.gestor-home .home-eyebrow {
+  font-size: 11px;
+  line-height: 1.5;
+  font-weight: 600;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--home-muted);
+}
+.gestor-home .home-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 20px;
+  padding: 0 2px 4px;
+}
+.gestor-home .home-heading h1 {
+  margin-top: 6px;
+  font-size: 25px;
+  font-weight: 500;
+  letter-spacing: -.04em;
+  line-height: 1.15;
+}
+.gestor-home .home-heading h1 > span {
+  color: var(--home-accent);
+}
+.gestor-home .home-today {
+  color: var(--home-ink);
+  font-size: 13px;
+  line-height: 1.6;
+  text-align: right;
+}
+.gestor-home .home-today > span {
+  display: block;
+  color: var(--home-muted);
+  text-transform: capitalize;
+  font-size: 12px;
+}
+.gestor-home .home-shortcuts {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  border-radius: 12px;
+  background: #0c2942;
+  padding: 16px 20px;
+  color: white;
+  position: relative;
+  overflow: hidden;
+}
+.gestor-home .home-shortcuts::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  width: 30%;
+  pointer-events: none;
+  background: linear-gradient(115deg, transparent, #17476465);
+}
+.gestor-home .home-shortcuts-label {
+  flex: 0 0 100px;
+  position: relative;
+}
+.gestor-home .home-shortcuts .home-eyebrow {
+  color: #adc5da;
+}
+.gestor-home .home-shortcuts-label > span + span {
+  display: block;
+  margin-top: 7px;
+  color: #edf4fc;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.gestor-home .home-shortcuts-actions {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  position: relative;
+}
+.gestor-home .home-shortcut {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 11px 13px;
+  border: 1px solid #ffffff24;
+  border-radius: 8px;
+  background: #ffffff06;
+  text-align: left;
+  transition: background .18s, border-color .18s;
+}
+.gestor-home .home-shortcut:hover {
+  background: #ffffff0e;
+  border-color: #ffffff55;
+}
+.gestor-home .home-shortcut > svg {
+  flex-shrink: 0;
+  color: #adc5da;
+}
+.gestor-home .home-shortcut-icon {
+  color: #b9d5ef;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+}
+.gestor-home .home-shortcut-copy {
+  flex: 1;
+  min-width: 0;
+}
+.gestor-home .home-shortcut-copy > strong {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.5;
+}
+.gestor-home .home-shortcut-copy > span {
+  display: block;
+  color: #b7c9da;
+  font-size: 11px;
+  line-height: 1.5;
+  margin-top: 3px;
+}
+.gestor-home .home-metrics {
+  border: 1px solid var(--home-line);
+  border-radius: 12px;
+  background: white;
+  overflow: hidden;
+}
+.gestor-home .home-metric {
+  min-width: 0;
+  padding: 17px 20px;
+  text-align: left;
+  position: relative;
+  transition: background .18s;
+}
+.gestor-home .home-metric + .home-metric::before {
+  position: absolute;
+  content: '';
+  left: 0;
+  top: 20px;
+  bottom: 20px;
+  width: 1px;
+  background: var(--home-line);
+}
+.gestor-home .home-metric:is(button):hover {
+  background: #f8fafc;
+}
+.gestor-home .home-metric-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 18px;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--home-muted);
+}
+.gestor-home .home-metric-label > svg {
+  color: #6e859b;
+  flex-shrink: 0;
+}
+.gestor-home .home-metric-value {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 7px 0 6px;
+  font-size: 26px;
+  line-height: 1.15;
+  font-weight: 500;
+  letter-spacing: -.05em;
+  font-variant-numeric: tabular-nums;
+}
+.gestor-home .home-metric-value > svg {
+  color: #92a2b2;
+}
+.gestor-home .home-metric-helper {
+  display: block;
+  font-size: 11px;
+  line-height: 1.55;
+  color: var(--home-muted);
+}
+.gestor-home .home-panel {
+  background: white;
+  border: 1px solid var(--home-line);
+  border-radius: 12px;
+}
+.gestor-home .home-panel-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.gestor-home .home-panel-heading h2 {
+  font-size: 16px;
+  letter-spacing: -.025em;
+  font-weight: 600;
+  line-height: 1.4;
+  margin-top: 5px;
+}
+.gestor-home .home-text-link {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--home-accent);
+  min-height: 36px;
+}
+.gestor-home .home-text-link:hover {
+  color: #173f94;
+}
