@@ -1,5 +1,5 @@
 import type React from 'react';
-import { ChevronRight, type LucideIcon } from 'lucide-react';
+import { ArrowUpRight, type LucideIcon } from 'lucide-react';
 
 interface DashboardMetricCardProps {
   label: string;
@@ -12,42 +12,17 @@ interface DashboardMetricCardProps {
 }
 
 const DashboardMetricCard: React.FC<DashboardMetricCardProps> = ({
-  label,
-  value,
-  helper,
-  icon: Icon,
-  tone,
-  loading = false,
-  onClick,
+  label, value, helper, icon: Icon, loading = false, onClick,
 }) => {
   const Element = onClick ? 'button' : 'div';
-
   return (
-    <Element
-      type={onClick ? 'button' : undefined}
-      onClick={onClick}
-      className={`group flex min-h-28 w-full items-center gap-4 rounded-2xl border border-slate-200/80 bg-white px-5 py-4 text-left shadow-sm transition-[border-color,box-shadow] ${
-        onClick ? 'hover:border-blue-200 hover:shadow-md' : ''
-      }`}
-    >
-      <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${tone}`}>
-        <Icon size={19} strokeWidth={2.2} />
+    <Element type={onClick ? 'button' : undefined} onClick={onClick} className="home-metric">
+      <span className="home-metric-label"><Icon size={15} strokeWidth={1.7} />{label}</span>
+      <span className="home-metric-value">
+        {loading ? <span className="home-skeleton h-9 w-20" /> : value}
+        {onClick && <ArrowUpRight size={18} aria-hidden="true" />}
       </span>
-      <span className="min-w-0 flex-1">
-        <span className="block text-xs font-medium uppercase leading-5 tracking-wide text-slate-600">{label}</span>
-        {loading ? (
-          <span className="mt-2 block h-7 w-16 animate-pulse rounded-lg bg-slate-100" />
-        ) : (
-          <span className="mt-0.5 block text-[28px] font-bold leading-none tracking-tight text-[#001a33]">{value}</span>
-        )}
-        <span className="mt-1.5 block truncate text-xs font-medium leading-5 text-slate-600">{helper}</span>
-      </span>
-      {onClick && (
-        <ChevronRight
-          size={16}
-          className="shrink-0 text-slate-300 transition-transform group-hover:translate-x-0.5 group-hover:text-blue-600"
-        />
-      )}
+      <span className="home-metric-helper">{helper}</span>
     </Element>
   );
 };

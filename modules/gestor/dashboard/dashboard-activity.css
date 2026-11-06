@@ -1,0 +1,130 @@
+.gestor-home .home-activity {
+  padding: 20px;
+}
+.gestor-home .home-activity-list {
+  list-style: none;
+  margin: 20px 0 0;
+  padding: 0;
+}
+.gestor-home .home-activity-item {
+  display: flex;
+  align-items: start;
+  gap: 12px;
+  padding: 13px 0;
+  position: relative;
+}
+.gestor-home .home-activity-item + .home-activity-item {
+  border-top: 1px solid #edf1f5;
+}
+.gestor-home .home-activity-item:last-child {
+  padding-bottom: 0;
+}
+.gestor-home .home-activity-icon {
+  background: #f0f4f9;
+  color: #536f8b;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  position: relative;
+}
+.gestor-home .home-activity-icon.is-payment {
+  color: #267e66;
+  background: #eef7f3;
+}
+.gestor-home .home-activity-copy {
+  min-width: 0;
+  flex: 1;
+}
+.gestor-home .home-activity-copy strong {
+  font-size: 12px;
+  line-height: 1.5;
+  font-weight: 600;
+  display: block;
+  overflow-wrap: anywhere;
+}
+.gestor-home .home-activity-copy p {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--home-muted);
+  margin-top: 4px;
+  overflow-wrap: anywhere;
+}
+.gestor-home .home-activity-time {
+  font-size: 11px;
+  line-height: 1.6;
+  white-space: nowrap;
+  color: var(--home-muted);
+}
+.gestor-home .home-finance {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  width: 100%;
+  text-align: left;
+  border-top: 1px solid #d8e1e9;
+  border-bottom: 1px solid #d8e1e9;
+  padding: 18px 4px;
+  transition: border-color .18s;
+}
+.gestor-home .home-finance:hover {
+  border-color: #95abc0;
+}
+.gestor-home .home-finance-icon {
+  color: #536f8b;
+  flex-shrink: 0;
+}
+.gestor-home .home-finance-copy {
+  min-width: 0;
+  flex: 1;
+}
+.gestor-home .home-finance-copy > strong {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+}
+.gestor-home .home-finance-copy > span:not(.home-finance-labels) {
+  display: block;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--home-muted);
+  margin-top: 4px;
+}
+.gestor-home .home-finance-labels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 18px;
+  margin-top: 11px;
+}
+.gestor-home .home-finance-labels > span {
+  color: #4d6379;
+  font-size: 11px;
+  line-height: 1.6;
+}
+.gestor-home .home-finance-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--home-accent);
+}
+.gestor-home .home-empty {
+  padding: 24px 0 8px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--home-muted);
+}
+.gestor-home .home-skeleton {
+  display: block;
+  border-radius: 6px;
+  background: #edf1f5;
+  animation: home-pulse 1.5s ease-in-out infinite alternate;
+}
+@keyframes home-pulse {
+  to {
+    opacity: .45;
+  }
+}

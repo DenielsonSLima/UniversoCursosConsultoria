@@ -1,5 +1,5 @@
 import type React from 'react';
-import { ChevronRight, DollarSign } from 'lucide-react';
+import { ArrowUpRight, WalletCards } from 'lucide-react';
 
 interface DashboardFinancialShortcutProps {
   labels: string[];
@@ -9,33 +9,17 @@ interface DashboardFinancialShortcutProps {
 }
 
 const DashboardFinancialShortcut: React.FC<DashboardFinancialShortcutProps> = ({
-  labels,
-  onOpen,
-  title = 'Resumo financeiro',
+  labels, onOpen, title = 'Resumo financeiro',
   description = 'Consulte os dados completos no módulo Financeiro.',
 }) => (
-  <button
-    type="button"
-    onClick={onOpen}
-    className="group flex w-full flex-col gap-3 rounded-2xl border border-slate-200/80 bg-white px-5 py-4 text-left shadow-sm transition-colors hover:border-blue-200 sm:flex-row sm:items-center"
-  >
-    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600 group-hover:bg-blue-50 group-hover:text-blue-600">
-      <DollarSign size={17} />
+  <button type="button" onClick={onOpen} className="home-finance">
+    <span className="home-finance-icon"><WalletCards size={24} strokeWidth={1.4} /></span>
+    <span className="home-finance-copy">
+      <strong>{title}</strong>
+      <span>{description}</span>
+      <span className="home-finance-labels">{labels.map((label) => <span key={label}>{label}</span>)}</span>
     </span>
-    <span className="min-w-0 flex-1">
-      <span className="block text-xs font-bold text-[#001a33]">{title}</span>
-      <span className="mt-0.5 block text-[11px] font-medium text-slate-500">{description}</span>
-      <span className="mt-2 flex flex-wrap gap-1.5">
-        {labels.map((label) => (
-          <span key={label} className="rounded-full bg-slate-100 px-2 py-1 text-[9px] font-bold uppercase tracking-wide text-slate-500">
-            {label}
-          </span>
-        ))}
-      </span>
-    </span>
-    <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-blue-600">
-      Acessar <ChevronRight size={13} />
-    </span>
+    <span className="home-finance-link">Acessar <ArrowUpRight size={18} aria-hidden="true" /></span>
   </button>
 );
 

@@ -97,13 +97,13 @@ const GestorPortalShell: React.FC<GestorPortalShellProps> = ({
   return (
     <div className="flex h-screen supports-[height:100dvh]:h-dvh bg-slate-100 font-sans antialiased overflow-hidden">
 
-      <aside className="hidden lg:flex flex-col w-64 bg-[#001a33] text-white shadow-xl z-20">
-        <div className="border-b border-white/10 px-5 py-3">
-          <div className="flex h-[60px] items-center justify-center rounded-2xl bg-white px-4 py-2 shadow-md">
+      <aside className="hidden lg:flex flex-col w-56 shrink-0 bg-[#001a33] text-white z-20">
+        <div className="border-b border-white/10 px-4 py-2.5">
+          <div className="flex h-[48px] items-center justify-center rounded-xl bg-white px-3 py-2">
             <img
               src="/LogoUniverso.png"
               alt="Universo Cursos e Consultoria"
-              className="h-10 w-full max-w-[180px] object-contain"
+              className="h-8 w-full max-w-[160px] object-contain"
             />
           </div>
         </div>
@@ -126,14 +126,14 @@ const GestorPortalShell: React.FC<GestorPortalShellProps> = ({
                 onFocus={() => preloadModule(item.id)}
                 onTouchStart={() => preloadModule(item.id)}
                 aria-expanded={item.subItems ? isDesktopMenuExpanded(item.id) : undefined}
-                className={`group flex min-h-11 w-full items-center justify-between rounded-xl px-4 py-2 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 ${
+                className={`group flex min-h-10 w-full items-center justify-between rounded-lg px-3 py-2 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 ${
                   activeModule === item.id || (item.subItems && activeModule.startsWith(item.id))
-                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/50 font-semibold'
-                    : 'text-slate-400 hover:bg-white/5 hover:text-white font-normal'
+                    ? 'bg-white/10 text-white font-medium ring-1 ring-inset ring-white/10'
+                    : 'text-slate-300/80 hover:bg-white/5 hover:text-white font-normal'
                 }`}
               >
-                <div className="flex items-center gap-3">
-                  <div className={`relative ${(activeModule === item.id || (item.subItems && activeModule.startsWith(item.id))) ? 'text-white' : 'text-slate-400 group-hover:text-blue-400'}`}>
+                <div className="flex items-center gap-2.5">
+                  <div className={`relative [&>svg]:h-[18px] [&>svg]:w-[18px] ${(activeModule === item.id || (item.subItems && activeModule.startsWith(item.id))) ? 'text-white' : 'text-slate-400 group-hover:text-blue-400'}`}>
                     {item.icon}
                     {'badge' in item && (item as any).badge > 0 && activeModule !== item.id && (
                       <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center px-0.5 shadow-md animate-pulse">
@@ -141,7 +141,7 @@ const GestorPortalShell: React.FC<GestorPortalShellProps> = ({
                       </span>
                     )}
                   </div>
-                  <span className="text-sm whitespace-nowrap">{item.label}</span>
+                  <span className="text-[13px] whitespace-nowrap">{item.label}</span>
                 </div>
                 {item.subItems && (
                   <div className="transition-transform duration-300">
@@ -164,7 +164,7 @@ const GestorPortalShell: React.FC<GestorPortalShellProps> = ({
                       <button
                         key={sub.id}
                         onClick={() => setActiveModule(sub.id)}
-                        className={`w-full flex items-center gap-3 px-4 py-1.5 rounded-lg text-xs transition-all ${
+                        className={`w-full flex items-center gap-2.5 px-4 py-1.5 rounded-lg text-xs transition-all ${
                           activeModule === sub.id
                             ? 'text-blue-400 bg-white/5 font-semibold'
                             : 'text-slate-500 hover:text-white hover:bg-white/5 font-normal'
@@ -181,15 +181,15 @@ const GestorPortalShell: React.FC<GestorPortalShellProps> = ({
           ))}
         </nav>
 
-        <div className="p-4 border-t border-white/10 mt-auto">
-          <div className="flex items-center justify-between p-3 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all duration-300">
+        <div className="p-3 border-t border-white/10 mt-auto">
+          <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all duration-300">
             <button
               type="button"
               onClick={() => setActiveModule('meu-perfil')}
-              className="flex min-w-0 flex-1 items-center gap-3 rounded-xl text-left focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+              className="flex min-w-0 flex-1 items-center gap-2.5 rounded-xl text-left focus:outline-none focus:ring-2 focus:ring-blue-500/40"
               title="Abrir Meu Perfil"
             >
-              <div className="h-10 w-10 flex-shrink-0 overflow-hidden rounded-xl bg-blue-600 text-white shadow-md">
+              <div className="h-8 w-8 flex-shrink-0 overflow-hidden rounded-xl bg-blue-600 text-white shadow-md">
                 {profileAvatarUrl ? (
                   <img src={profileAvatarUrl} alt={`Foto de ${profile.nome}`} className="h-full w-full object-cover" />
                 ) : (
@@ -199,7 +199,7 @@ const GestorPortalShell: React.FC<GestorPortalShellProps> = ({
                 )}
               </div>
               <div className="min-w-0">
-                <p className="text-xs font-bold text-white truncate leading-tight">
+                <p className="text-[11px] font-medium text-white truncate leading-tight">
                   {profile?.nome || 'Administrador'}
                 </p>
                 <p className="text-[10px] text-slate-400 truncate mt-1 flex items-center gap-1.5">
@@ -352,7 +352,7 @@ const GestorPortalShell: React.FC<GestorPortalShellProps> = ({
         ref={contentScrollRef}
         aria-label="Conteúdo do portal"
         tabIndex={0}
-        className="min-h-0 min-w-0 flex-1 overflow-auto overscroll-contain scroll-pt-[148px] lg:scroll-pt-[84px] relative w-full lg:pt-0 pt-16 flex flex-col focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500"
+        className="min-h-0 min-w-0 flex-1 overflow-auto overscroll-contain scroll-pt-[132px] lg:scroll-pt-[68px] relative w-full lg:pt-0 pt-16 flex flex-col focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500"
       >
         <GestorPortalHeader
           searchQuery={searchQuery}
@@ -377,7 +377,7 @@ const GestorPortalShell: React.FC<GestorPortalShellProps> = ({
           formattedDayOfWeek={formattedDayOfWeek}
         />
 
-        <div className="min-w-0 p-8 flex-1">
+        <div className="min-w-0 p-5 lg:p-6 flex-1">
           <Suspense fallback={(
             <div className="flex min-h-[420px] items-center justify-center gap-3 text-xs font-black uppercase tracking-widest text-slate-500">
               <Clock className="animate-pulse text-blue-600" size={24} /> Preparando módulo...

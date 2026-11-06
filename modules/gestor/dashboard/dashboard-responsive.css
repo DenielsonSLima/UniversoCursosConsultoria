@@ -1,0 +1,118 @@
+@media (max-width: 1279px) {
+  .gestor-home .home-agenda-layout {
+    grid-template-columns: 1fr;
+  }
+  .gestor-home .home-agenda-aside {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr);
+    align-items: start;
+  }
+  .gestor-home .home-metric:nth-child(3)::before {
+    display: none;
+  }
+  .gestor-home .home-metric:nth-child(n+3) {
+    border-top: 1px solid var(--home-line);
+  }
+  .gestor-home .home-shortcuts {
+    gap: 18px;
+    padding: 16px;
+  }
+  .gestor-home .home-shortcuts-label {
+    flex-basis: 90px;
+  }
+}
+@media (max-width: 767px) {
+  .gestor-home .home-heading {
+    align-items: start;
+  }
+  .gestor-home .home-today {
+    font-size: 11px;
+    max-width: 130px;
+  }
+  .gestor-home .home-today > span {
+    font-size: 11px;
+  }
+  .gestor-home .home-shortcuts {
+    display: block;
+    padding: 20px;
+  }
+  .gestor-home .home-shortcuts-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+    gap: 10px;
+  }
+  .gestor-home .home-shortcuts-label > span + span {
+    font-size: 12px;
+    margin-top: 0;
+  }
+  .gestor-home .home-shortcuts-actions {
+    grid-template-columns: 1fr;
+  }
+  .gestor-home .home-shortcut {
+    min-height: 70px;
+  }
+  .gestor-home .home-metric {
+    padding: 16px;
+  }
+  .gestor-home .home-panel-heading {
+    align-items: start;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .gestor-home .home-week, .gestor-home .home-activity, .gestor-home .home-upcoming {
+    padding: 20px;
+  }
+  .gestor-home .home-agenda-aside {
+    grid-template-columns: 1fr;
+  }
+  .gestor-home .home-week-days {
+    gap: 3px;
+    margin-top: 20px;
+  }
+  .gestor-home .home-day {
+    min-height: 80px;
+    border-radius: 9px;
+  }
+  .gestor-home .home-day-number {
+    font-size: 21px;
+  }
+  .gestor-home .home-activity-item {
+    gap: 11px;
+    flex-wrap: wrap;
+  }
+  .gestor-home .home-activity-time {
+    padding-left: 45px;
+    margin-top: -8px;
+    width: 100%;
+  }
+  .gestor-home .home-finance {
+    align-items: start;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+  .gestor-home .home-finance-link {
+    padding-left: 38px;
+    width: 100%;
+  }
+}
+@media (max-width: 639px) {
+  .gestor-home .home-metric:nth-child(n+3) {
+    border-top: 1px solid var(--home-line);
+  }
+  .gestor-home .home-metric:nth-child(odd)::before {
+    display: none;
+  }
+  .gestor-home .home-metric-label {
+    min-height: 34px;
+  }
+  .gestor-home .home-metric-value {
+    font-size: 24px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .gestor-home *, .gestor-home *::before {
+    animation: none !important;
+    transition: none !important;
+  }
+}

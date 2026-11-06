@@ -63,9 +63,9 @@ const GestorPortalHeader: React.FC<GestorPortalHeaderProps> = ({
   formattedDate,
   formattedDayOfWeek,
 }) => (
-  <header className="sticky top-16 z-30 flex min-h-[84px] shrink-0 items-center justify-between border-b border-slate-200 bg-white px-4 py-3 shadow-sm sm:px-6 lg:top-0 lg:px-8">
+  <header className="sticky top-16 z-30 flex min-h-[68px] shrink-0 items-center justify-between border-b border-slate-200 bg-white px-4 py-2 sm:px-5 lg:top-0 lg:px-6">
     <div className="hidden items-center gap-4 xl:flex">
-      <h2 className="flex items-center gap-2 text-xl font-bold uppercase tracking-tight text-[#001a33]">
+      <h2 className="flex items-center gap-2 text-sm font-medium tracking-tight text-[#001a33]">
         Portal de Gestão
       </h2>
     </div>
@@ -85,9 +85,9 @@ const GestorPortalHeader: React.FC<GestorPortalHeaderProps> = ({
     />
 
     <div className="flex shrink-0 items-center gap-4 lg:gap-6">
-      <div className="relative hidden h-12 w-[19rem] lg:block xl:w-[23rem]">
+      <div className="relative hidden h-11 w-[19rem] lg:block xl:w-[23rem]">
         {isLoadingPolos || !currentPolo ? (
-          <div className="flex h-12 w-full items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 shadow-sm">
+          <div className="flex h-11 w-full items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 shadow-sm">
             <div className="h-7 w-7 shrink-0 animate-pulse rounded-lg bg-slate-100" />
             <div className="min-w-0 flex-1 space-y-1.5">
               <div className="h-2.5 w-4/5 rounded-full bg-slate-200/80" />
@@ -96,7 +96,7 @@ const GestorPortalHeader: React.FC<GestorPortalHeaderProps> = ({
           </div>
         ) : (
           <div
-            className="h-12 w-full"
+            className="h-11 w-full"
             onBlur={(event) => {
               if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
                 setIsPoloSelectorOpen(false);
@@ -109,7 +109,7 @@ const GestorPortalHeader: React.FC<GestorPortalHeaderProps> = ({
               aria-haspopup="listbox"
               aria-expanded={isPoloSelectorOpen}
               disabled={visiblePolos.length <= 1}
-              className="flex h-12 w-full min-w-0 items-center gap-3 rounded-xl border border-slate-200 bg-white px-3.5 text-left shadow-sm transition-all hover:border-slate-300 hover:bg-slate-50 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/10 disabled:cursor-default disabled:hover:border-slate-200 disabled:hover:bg-white"
+              className="flex h-11 w-full min-w-0 items-center gap-3 rounded-xl border border-slate-200 bg-white px-3.5 text-left shadow-sm transition-all hover:border-slate-300 hover:bg-slate-50 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/10 disabled:cursor-default disabled:hover:border-slate-200 disabled:hover:bg-white"
             >
               <Building size={16} className="shrink-0 text-blue-600" aria-hidden="true" />
               <span className="min-w-0 flex-1">
@@ -117,7 +117,7 @@ const GestorPortalHeader: React.FC<GestorPortalHeaderProps> = ({
                   <span className="truncate text-xs font-bold tracking-tight text-slate-800">{currentPolo.nome}</span>
                   <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[8px] font-bold uppercase tracking-wider ${
                     currentPolo.is_matriz
-                      ? 'border-blue-200/50 bg-blue-50 text-blue-600'
+                      ? 'border-slate-200 bg-slate-50 text-slate-600'
                       : 'border-slate-200 bg-slate-100 text-slate-600'
                   }`}>
                     {currentPolo.is_matriz ? 'Matriz' : 'Polo'}
