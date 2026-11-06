@@ -1,3 +1,4 @@
+import './financeiro-summary.css';
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { AlertTriangle } from 'lucide-react';
@@ -18,24 +19,24 @@ const TreasuryLoading = () => (
   <section
     role="status"
     aria-busy="true"
-    className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-sm"
+    className="overflow-hidden rounded-xl border border-slate-200 bg-white"
   >
     <span className="sr-only">Preparando a visão de tesouraria.</span>
-    <div className="h-20 animate-pulse border-b border-slate-100 bg-slate-50" />
-    <div className="grid gap-3 p-5 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="h-14 animate-pulse border-b border-slate-100 bg-slate-50" />
+    <div className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4">
       {Array.from({ length: 4 }, (_, index) => (
-        <div key={index} className="h-28 animate-pulse rounded-2xl bg-slate-100" />
+        <div key={index} className="h-24 animate-pulse rounded-lg bg-slate-100" />
       ))}
     </div>
   </section>
 );
 
 const TreasuryUnavailable = ({ message }: { message: string }) => (
-  <section role="alert" className="flex items-start gap-3 rounded-[28px] border border-amber-200 bg-amber-50 p-5 text-amber-950">
+  <section role="alert" className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-950">
     <AlertTriangle aria-hidden="true" className="mt-0.5 shrink-0 text-amber-600" size={18} />
     <div>
-      <h2 className="text-sm font-extrabold">Visão de tesouraria indisponível</h2>
-      <p className="mt-1 text-xs font-semibold leading-5 text-amber-800">{message}</p>
+      <h2 className="text-sm font-medium">Visão de tesouraria indisponível</h2>
+      <p className="mt-1 text-xs font-normal leading-5 text-amber-800">{message}</p>
     </div>
   </section>
 );
@@ -54,9 +55,10 @@ const FinanceiroResumoTab: React.FC<FinanceiroResumoTabProps> = ({
   });
 
   return (
-    <div className="space-y-6 animate-fadeIn">
+    <div className="financeiro-overview space-y-5">
       {canViewPayables ? (
-        !selectedPoloId ? (
+        <div className="financeiro-treasury">
+        {!selectedPoloId ? (
           <TreasuryUnavailable message="Selecione um polo para consultar compromissos e vencimentos." />
         ) : scopeQuery.isPending ? (
           <TreasuryLoading />
@@ -70,7 +72,8 @@ const FinanceiroResumoTab: React.FC<FinanceiroResumoTabProps> = ({
             scopeLabel={poloName || 'Polo selecionado'}
             companyPoloIds={scopeQuery.data.poloIds}
           />
-        )
+        )}
+        </div>
       ) : null}
 
       <ResumoTab

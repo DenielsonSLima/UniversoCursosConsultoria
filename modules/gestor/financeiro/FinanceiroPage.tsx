@@ -16,6 +16,7 @@ import { FinanceiroTabId } from '../access-control';
 import FinancialUnderlineTabs from './components/FinancialUnderlineTabs';
 import { canOpenFinancialSection } from './financeiro-sections';
 import { useFinancialSection } from './hooks/useFinancialSection';
+import './financeiro-workspace.css';
 
 const FinanceiroResumoTab = lazy(() => import('./resumo/FinanceiroResumoTab'));
 const ReceberTab = lazy(() => import('./receber/ReceberTab'));
@@ -107,13 +108,13 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ poloId, poloName, isMat
 
   if (visibleTabs.length === 0) {
     return (
-      <div className="max-w-7xl mx-auto animate-fadeIn pb-12">
-        <div className="rounded-[2rem] border border-rose-100 bg-white p-10 text-center shadow-sm">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-rose-50 text-rose-600">
-            <Lock size={26} />
+      <div className="financeiro-workspace pb-6">
+        <div className="financeiro-access-state rounded-xl border border-rose-100 bg-white p-6 text-center">
+          <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-rose-50 text-rose-600">
+            <Lock size={20} />
           </div>
-          <h2 className="text-xl font-black uppercase tracking-tight text-[#001a33]">Acesso negado</h2>
-          <p className="mx-auto mt-2 max-w-xl text-sm font-medium text-slate-500">
+          <h2 className="text-lg font-medium tracking-tight text-[#001a33]">Acesso negado</h2>
+          <p className="mx-auto mt-2 max-w-xl text-xs text-slate-500">
             Seu usuário não possui permissão para nenhuma aba financeira.
           </p>
         </div>
@@ -122,9 +123,9 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ poloId, poloName, isMat
   }
 
   return (
-    <div className="max-w-7xl mx-auto animate-fadeIn pb-12">
+    <div className="financeiro-workspace pb-6">
       {/* ABA DE NAVEGAÇÃO PRINCIPAL */}
-      <div className="mb-4 md:mb-6">
+      <div className="financeiro-primary-navigation">
         <FinancialUnderlineTabs
           items={visibleTabs}
           value={effectiveActiveTab}
@@ -133,6 +134,7 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ poloId, poloName, isMat
           idPrefix="financeiro"
           mobileMode="scroll"
           showHorizontalScrollbar
+          compact
         />
       </div>
 
@@ -142,7 +144,8 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ poloId, poloName, isMat
         role="tabpanel"
         aria-labelledby={`financeiro-${effectiveActiveTab}-tab`}
         tabIndex={0}
-        className="min-h-[450px] rounded-3xl border border-slate-100 bg-slate-50/40 p-4 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 md:p-6"
+        data-financial-section={effectiveActiveTab}
+        className="financeiro-tab-panel min-w-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
       >
         <Suspense fallback={<p role="status" className="p-6 text-sm text-slate-500">Carregando seção financeira…</p>}>
           {renderActiveTab()}

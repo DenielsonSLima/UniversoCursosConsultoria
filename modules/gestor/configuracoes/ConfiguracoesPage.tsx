@@ -25,8 +25,10 @@ import {
   PackageOpen,
   Smartphone,
   BellRing,
-  Printer
+  Printer,
+  ChevronRight
 } from 'lucide-react';
+import './configuracoes-workspace.css';
 
 // Cada submódulo é carregado somente ao abrir sua seção.
 const EmpresasConfig = React.lazy(() => import('./empresas/EmpresasConfig'));
@@ -155,18 +157,17 @@ const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({
 
   if (activeSection) {
     return (
-      <div ref={sectionTopRef}>
+      <div ref={sectionTopRef} className="configuracoes-workspace config-section-shell">
         <button 
+          type="button"
           onClick={() => setActiveSection(null)} 
-          className="mb-6 flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-blue-600 transition-colors uppercase tracking-widest group"
+          className="config-back-button"
         >
-          <div className="p-1 rounded-full border border-slate-200 group-hover:border-blue-500 transition-colors">
-            <ArrowLeft size={16} />
-          </div>
+          <span className="config-back-icon" aria-hidden="true"><ArrowLeft size={16} /></span>
           <span>Voltar para Configurações</span>
         </button>
-        <div className="min-h-[600px] rounded-[2rem] border border-slate-100 bg-white p-4 shadow-sm sm:p-8">
-          <React.Suspense fallback={<p role="status" className="text-sm text-slate-500">Carregando configuração…</p>}>
+        <div className="config-section-content">
+          <React.Suspense fallback={<p role="status" className="text-xs text-slate-500">Carregando configuração…</p>}>
             {renderSection()}
           </React.Suspense>
         </div>
@@ -175,28 +176,28 @@ const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({
   }
 
   return (
-    <div className="animate-fadeIn">
-      <div className="mb-8">
-        <h2 className="text-3xl font-black text-[#001a33] uppercase tracking-tight">Configurações</h2>
-        <p className="text-slate-500">Gerencie todos os parâmetros do sistema Universo.</p>
-      </div>
+    <div className="configuracoes-workspace">
+      <header className="config-page-heading">
+        <h2>Configurações</h2>
+        <p>Gerencie todos os parâmetros do sistema Universo.</p>
+      </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="config-catalog">
         {menuItems.map((item) => (
           <button
             key={item.id}
+            type="button"
             onClick={() => setActiveSection(item.id)}
-            className="flex flex-col items-start p-6 bg-white rounded-3xl border border-slate-100 shadow-sm hover:shadow-xl hover:shadow-blue-900/10 hover:-translate-y-1 transition-all duration-300 group text-left h-full"
+            className="config-catalog-item"
           >
-            <div className={`p-4 rounded-2xl ${item.color} text-white mb-4 shadow-md group-hover:scale-110 transition-transform`}>
+            <span className={`config-item-icon ${item.color}`} aria-hidden="true">
               {item.icon}
+            </span>
+            <div className="config-item-copy">
+              <h3>{item.title}</h3>
+              <p>{item.desc}</p>
             </div>
-            <h3 className="text-lg font-bold text-[#001a33] mb-1 group-hover:text-blue-600 transition-colors">
-              {item.title}
-            </h3>
-            <p className="text-xs text-slate-500 leading-relaxed font-medium">
-              {item.desc}
-            </p>
+            <ChevronRight className="config-item-chevron" size={14} aria-hidden="true" />
           </button>
         ))}
       </div>

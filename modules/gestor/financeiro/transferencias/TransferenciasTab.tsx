@@ -285,12 +285,12 @@ const TransferenciasTab: React.FC<TransferenciasTabProps> = ({ poloId }) => {
   };
 
   return (
-    <div className="animate-fadeIn space-y-6">
+    <div className="financial-section-workspace animate-fadeIn space-y-6">
       <ToastNotification toasts={toasts} onRemove={removeToast} />
 
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <p className="mb-2 flex items-center gap-2 text-xs font-black uppercase tracking-[0.2em] text-slate-500">
+      <div className="financial-section-heading flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div className="financial-section-identity">
+          <p className="financial-section-eyebrow mb-2 flex items-center gap-2 text-xs font-black uppercase tracking-[0.2em] text-slate-500">
             <ArrowRightLeft size={16} /> Movimentação interna
           </p>
           <h3 className="text-2xl font-black uppercase tracking-tight text-[#001a33]">Transferências</h3>

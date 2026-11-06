@@ -47,9 +47,10 @@ const ReceberTab: React.FC<ReceberTabProps> = ({ poloId, isMatriz }) => {
   };
 
   return (
-    <div className="space-y-6 animate-fadeIn">
-      <div className="mb-4">
+    <div className="financial-section-workspace space-y-6 animate-fadeIn">
+      <div className="financial-sub-navigation mb-4">
         <FinancialUnderlineTabs
+          compact
           items={subtabs}
           value={activeCourseTab}
           onChange={setActiveCourseTab}

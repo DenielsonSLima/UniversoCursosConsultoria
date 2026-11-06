@@ -40,12 +40,12 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId }) => {
   const selectedPageCount = eligiblePageItems.filter(item => cancellation.selectedIds.has(item.id!)).length;
 
   return (
-    <div className="animate-fadeIn space-y-6">
+    <div className="financial-section-workspace animate-fadeIn space-y-6">
       <ToastNotification toasts={toasts} onRemove={removeToast} />
 
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <p className="mb-2 flex items-center gap-2 text-xs font-black uppercase tracking-[0.2em] text-emerald-600">
+      <div className="financial-section-heading flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div className="financial-section-identity">
+          <p className="financial-section-eyebrow mb-2 flex items-center gap-2 text-xs font-black uppercase tracking-[0.2em] text-emerald-600">
             <Banknote size={16} /> Entradas avulsas
           </p>
           <h3 className="text-2xl font-black uppercase tracking-tight text-[#001a33]">Outros Créditos</h3>
@@ -53,7 +53,7 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId }) => {
             Entradas avulsas, juros, rendimentos e carnês para serviços ou aulas de prática.
           </p>
         </div>
-        <div className="flex flex-wrap gap-3"><button
+        <div className="financial-section-actions flex flex-wrap gap-3"><button
           onClick={openCreateModal}
           className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 py-3 text-xs font-black uppercase tracking-wider text-slate-600 hover:bg-slate-50"
         >

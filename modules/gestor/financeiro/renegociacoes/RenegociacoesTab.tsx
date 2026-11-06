@@ -215,11 +215,11 @@ const RenegociacoesTab: React.FC<RenegociacoesTabProps> = ({ poloId, isMatriz, o
   }
 
   return (
-    <div className="space-y-5 animate-fadeIn">
+    <div className="financial-section-workspace space-y-5 animate-fadeIn">
       <ToastNotification toasts={toasts} onRemove={removeToast} />
-      <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <p className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.2em] text-blue-700">
+      <header className="financial-section-heading flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div className="financial-section-identity">
+          <p className="financial-section-eyebrow flex items-center gap-2 text-xs font-black uppercase tracking-[0.2em] text-blue-700">
             <HandCoins size={17} /> Gestão de acordos
           </p>
           <h2

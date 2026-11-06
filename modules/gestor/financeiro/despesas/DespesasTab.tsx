@@ -32,13 +32,14 @@ const DespesasTab: React.FC<DespesasTabProps> = ({ poloId }) => {
   };
 
   return (
-    <div className="space-y-6 animate-fadeIn">
-      <div>
+    <div className="financial-section-workspace space-y-6 animate-fadeIn">
+      <div className="financial-section-heading">
         <h3 className="text-xl font-black text-rose-600 uppercase tracking-tight mb-2">Contas a Pagar</h3>
         <p className="text-slate-500 text-xs font-bold uppercase">Lançamentos abertos, pagamentos e custos fixos ou variáveis.</p>
       </div>
 
       <FinancialUnderlineTabs
+        compact
         items={subtabs}
         value={activeExpenseTab}
         onChange={setActiveExpenseTab}

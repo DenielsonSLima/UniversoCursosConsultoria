@@ -10,6 +10,15 @@ Histórico arquivado: [30/09/2026 — versões 4.8.138 a 4.8.144](./changelog/20
 
 Histórico arquivado: [01/10/2026 a 04/10/2026 — versões 4.8.145 a 4.8.168](./changelog/2026-10-01-a-04-versoes-4-8-145-a-168.md).
 
+Histórico arquivado: [05/10/2026 — versões 4.8.169 a 4.8.170](./changelog/2026-10-05-versoes-4-8-169-a-170.md).
+
+## [4.8.249] - 2026-11-06
+
+### Alterado
+- Financeiro com resumo, tesouraria, abas e cabeçalhos mais compactos.
+- Caixa com indicadores, trilhas e análises leves; valores extensos sem truncamento e navegação de capítulos ajustada ao cabeçalho móvel.
+- Configurações com catálogo compacto, ícones centralizados e retorno das seções refinado. Dados, regras financeiras, permissões, consultas e operações preservados.
+
 ## [4.8.248] - 2026-11-05
 
 ### Alterado
@@ -482,16 +491,4 @@ Histórico arquivado: [01/10/2026 a 04/10/2026 — versões 4.8.145 a 4.8.168](.
 - Abas dos polos do Caixa com nomes em 16px, peso médio e maior contraste; selo Matriz ampliado de 9px para 12px.
 - Renderização de fontes automática localizada nas abas; animação do Caixa termina sem manter texto em camada transformada.
 - Validação técnica sem navegador, conforme orientação mantida do responsável; conferência visual permanece pendente.
-
-## [4.8.170] - 2026-10-05
-
-- Campos do aluno em celulares usam no mínimo 16px para evitar ampliação automática ao digitar.
-- Login e portal usam renderização tipográfica da plataforma, sem suavização forçada ou animações que conservem camadas transformadas.
-- Zoom manual continua acessível e não é confundido com o teclado na altura das telas do aplicativo.
-- Revisão e reunião com três agentes; validação técnica sem navegador por solicitação expressa do responsável. Conferência visual permanece pendente.
-
-## [4.8.169] - 2026-10-05
-
-- Consultas de pagamentos tardios têm espaço garantido mesmo com uma fila contínua de cancelamentos em análise.
-- Gestores financeiros podem consultar as revisões dos seus polos autorizados, preservando as permissões e a restrição de acesso aos demais polos.
 

@@ -66,9 +66,9 @@ export const ModalidadeReceberToolbar: React.FC<ModalidadeReceberToolbarProps> =
   onClearFilters,
 }) => (
   <>
-    <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-      <div>
-        <div className="mb-2 flex items-center gap-2 text-emerald-600">
+    <div className="financial-section-heading flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+      <div className="financial-section-identity">
+        <div className="financial-section-eyebrow mb-2 flex items-center gap-2 text-emerald-600">
           {icon}
           <span className="text-xs font-black uppercase tracking-[0.18em]">{accentLabel}</span>
         </div>
@@ -163,6 +163,7 @@ export const ModalidadeReceberToolbar: React.FC<ModalidadeReceberToolbarProps> =
     />
 
     <FinancialUnderlineTabs
+      compact
       items={[
         { id: 'pending' as const, label: 'Pendentes', badge: summary.loading || summary.error || periodError ? undefined : statusCounts.pending },
         { id: 'upcoming' as const, label: 'A vencer', badge: upcoming.loading || upcoming.error || periodError ? undefined : upcoming.data?.pendingCount },

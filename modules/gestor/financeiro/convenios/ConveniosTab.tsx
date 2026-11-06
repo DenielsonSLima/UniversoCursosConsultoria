@@ -188,13 +188,13 @@ const ConveniosPoloTab: React.FC<ConveniosTabProps> = ({ poloId: scopedPoloId })
   }
 
   return (
-    <div className="space-y-5 animate-fadeIn">
+    <div className="financial-section-workspace space-y-5 animate-fadeIn">
       <ToastNotification toasts={toasts} onRemove={removeToast} />
       {deleteModal}
 
-      <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <p className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.2em] text-cyan-700"><Handshake size={16} /> Recursos vinculados</p>
+      <header className="financial-section-heading flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div className="financial-section-identity">
+          <p className="financial-section-eyebrow flex items-center gap-2 text-xs font-black uppercase tracking-[0.2em] text-cyan-700"><Handshake size={16} /> Recursos vinculados</p>
           <h3 className="mt-1 text-2xl font-black uppercase tracking-tight text-[#001a33]">Convênios</h3>
           <p className="mt-1 max-w-2xl text-sm font-medium text-slate-500">Controle mensal separado por convênio, com créditos reais, despesas vinculadas e fechamento manual.</p>
         </div>
