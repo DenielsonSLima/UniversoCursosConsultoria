@@ -185,7 +185,7 @@ const ParceiroAlunoDados: React.FC<ParceiroAlunoDadosProps> = ({
   };
 
   return (
-    <div className="aluno-cadastro relative space-y-6">
+    <div className="aluno-cadastro partner-registration relative space-y-4" data-editing={isEditing}>
       {pendingPhotoFile && (
         <ProfilePhotoAdjustModal
           file={pendingPhotoFile}
@@ -195,7 +195,7 @@ const ParceiroAlunoDados: React.FC<ParceiroAlunoDadosProps> = ({
         />
       )}
 
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
+      <div className="partner-registration-heading flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
         <div>
           <h3 className="text-base font-semibold text-[#001a33]">Cadastro do aluno</h3>
           <p className="mt-1 text-sm text-slate-500">Dados pessoais, documentação e contato.</p>
@@ -205,7 +205,7 @@ const ParceiroAlunoDados: React.FC<ParceiroAlunoDadosProps> = ({
           <Edit2 size={16} /> Editar cadastro
         </button>}
       </div>
-      <nav aria-label="Seções do cadastro" className="flex flex-wrap gap-1">
+      <nav aria-label="Seções do cadastro" className="partner-registration-links flex flex-wrap gap-1">
         {[['pessoais', 'Dados pessoais'], ['filiacao', 'Filiação'], ['responsavel', 'Responsável'], ['documentacao', 'Documentação'], ['escolaridade', 'Escolaridade'], ['contato', 'Contato e endereço']].map(([id, label]) => (
           <a key={id} href={`#aluno-${id}`} className="inline-flex min-h-11 items-center rounded-lg px-3 text-xs font-medium text-slate-600 hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-blue-500">{label}</a>
         ))}

@@ -210,18 +210,18 @@ const ParceiroAlunoDetalhes: React.FC<ParceiroAlunoDetalhesProps> = ({ alunoInic
   const navigationDisabled = isSaving || updateMutation.isPending;
 
   return (
-    <div className="mx-auto max-w-7xl pb-8">
-      <div className="rounded-xl border border-slate-200 bg-white">
-        <header className="border-b border-slate-200 px-4 pt-5 sm:px-6">
-          <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-            <div className="flex min-w-0 items-start gap-3">
+    <div className="partner-profile pb-5">
+      <div className="partner-profile-surface rounded-xl border border-slate-200 bg-white">
+        <header className="partner-profile-header border-b border-slate-200 px-4 pt-4 sm:px-5">
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex min-w-0 items-center gap-3">
               <button type="button" aria-label="Voltar para parceiros" disabled={navigationDisabled}
                 onClick={() => requestNavigation('back')}
                 className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-slate-600 outline-none hover:bg-slate-50 hover:text-blue-600 focus-visible:ring-2 focus-visible:ring-blue-500 disabled:opacity-50">
                 <ArrowLeft size={18} aria-hidden="true" />
               </button>
               <div className="min-w-0">
-                <h1 className="break-words text-[22px] font-semibold leading-7 tracking-tight text-[#001a33]">{alunoData.nome}</h1>
+                <h1 className="break-words text-[20px] font-medium leading-7 tracking-[-0.03em] text-[#001a33]">{alunoData.nome}</h1>
                 <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs leading-5 text-slate-600">
                   {isLoadingEnrollment ? <span>Carregando matrícula...</span> : enrollmentError ? <span>Matrícula indisponível</span> : currentEnrollment ? <>
                     <span>Matrícula {currentEnrollment.numero}</span>
@@ -240,7 +240,7 @@ const ParceiroAlunoDetalhes: React.FC<ParceiroAlunoDetalhesProps> = ({ alunoInic
           <ParceiroAlunoNavigation activeTab={activeTab} disabled={navigationDisabled} onSelect={requestNavigation} />
         </header>
         <section id={`aluno-panel-${activeTab}`} role="tabpanel" aria-label={currentAreaLabel}
-          tabIndex={0} className="p-4 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500 sm:p-6">
+          tabIndex={0} className="partner-profile-panel p-4 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500 sm:p-5">
         {activeTab === 'dados' && !cadastroReady && (alunoQuery.isError ? (
           <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
             <p>Não foi possível carregar o cadastro completo do aluno.</p>
@@ -272,7 +272,7 @@ const ParceiroAlunoDetalhes: React.FC<ParceiroAlunoDetalhesProps> = ({ alunoInic
         )}
         {activeTab === 'vacinas' && <ParceiroAlunoVacinas alunoId={alunoData.id} />}
         {activeTab === 'financeiro' && <ParceiroAlunoFinanceiro alunoId={alunoData.id} />}
-        {activeTab === 'secretaria' && <ParceiroAlunoSecretaria alunoId={alunoData.id} />}
+        {activeTab === 'secretaria' && <div className="partner-secretaria"><ParceiroAlunoSecretaria alunoId={alunoData.id} /></div>}
         {activeTab === 'acesso' && (
           <ParceiroAcesso
             parceiroId={alunoData.id}

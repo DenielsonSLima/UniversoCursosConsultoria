@@ -7,16 +7,14 @@ const cardSource = await readFile(
   'utf8',
 );
 
-test('nome do aluno usa tipografia compacta sem perder peso ou truncamento', () => {
+test('nome do aluno preserva identidade e permite quebra sem ocultar conteúdo', () => {
   const headingStart = cardSource.indexOf('<h3 className=');
   const headingEnd = cardSource.indexOf('</h3>', headingStart);
   const heading = cardSource.slice(headingStart, headingEnd);
 
   assert.ok(headingStart >= 0, 'título do aluno ausente no card');
-  assert.match(heading, /line-clamp-1/);
-  assert.match(heading, /text-\[11px\]/);
-  assert.match(heading, /font-extrabold/);
-  assert.match(heading, /text-slate-950/);
-  assert.match(heading, /antialiased/);
-  assert.doesNotMatch(heading, /text-\[13px\]/);
+  assert.match(heading, /\{displayName\}/);
+  assert.match(heading, /title=\{displayName\}/);
+  assert.match(heading, /break-words/);
+  assert.doesNotMatch(heading, /line-clamp|truncate/);
 });

@@ -352,7 +352,7 @@ const GestorPortalShell: React.FC<GestorPortalShellProps> = ({
         ref={contentScrollRef}
         aria-label="Conteúdo do portal"
         tabIndex={0}
-        className="min-h-0 min-w-0 flex-1 overflow-auto overscroll-contain scroll-pt-[132px] lg:scroll-pt-[68px] relative w-full lg:pt-0 pt-16 flex flex-col focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500"
+        className="min-h-0 min-w-0 flex-1 overflow-auto overscroll-contain scroll-pt-[68px] relative w-full mt-[60px] lg:mt-0 flex flex-col focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500"
       >
         <GestorPortalHeader
           searchQuery={searchQuery}

@@ -10,6 +10,13 @@ Histórico arquivado: [30/09/2026 — versões 4.8.138 a 4.8.144](./changelog/20
 
 Histórico arquivado: [01/10/2026 a 04/10/2026 — versões 4.8.145 a 4.8.168](./changelog/2026-10-01-a-04-versoes-4-8-145-a-168.md).
 
+## [4.8.248] - 2026-11-05
+
+### Alterado
+- Secretaria com operações agrupadas, fontes menores e ícones centralizados nas linhas.
+- Parceiros com quatro cartões por linha no desktop amplo e ficha interna do aluno mais compacta.
+- Gestão com entrada, filtros, cartões e cabeçalho/resumo das turmas refinados nas quatro modalidades. Dados, permissões, consultas e operações preservados.
+
 ## [4.8.247] - 2026-11-05
 
 ### Alterado

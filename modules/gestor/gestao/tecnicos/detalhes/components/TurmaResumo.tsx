@@ -147,50 +147,47 @@ const TurmaResumo: React.FC<TurmaResumoProps> = ({
   ];
 
   return (
-    <div className="space-y-6 ">
-      <div className={`grid grid-cols-1 gap-4 ${canViewFinanceiro ? 'md:grid-cols-4' : 'md:grid-cols-3'}`}>
+    <div className="space-y-4">
+      <div className={`turma-summary-metrics grid grid-cols-1 ${canViewFinanceiro ? 'md:grid-cols-4' : 'md:grid-cols-3'}`}>
         {cards.map((card) => {
           const Icon = card.icon;
           return (
             <div
               key={card.label}
-              className={`bg-white p-6 rounded-2xl border shadow-sm ${card.accentClass}`}
+              className="turma-summary-metric"
             >
-              <div className={`inline-flex p-2 rounded-lg mb-3 ${card.iconClass}`}>
-                <Icon size={20} />
-              </div>
-              <p className={`font-black text-[#001a33] ${card.empty ? 'text-lg' : 'text-2xl'}`}>{card.value}</p>
-              <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mt-1">{card.label}</p>
-              <p className="mt-2 text-xs font-medium text-slate-400">{card.detail}</p>
+              <p className="turma-summary-metric-label"><Icon size={15} strokeWidth={1.65} aria-hidden="true" />{card.label}</p>
+              <p className={`turma-summary-metric-value ${card.empty ? 'is-empty' : ''}`}>{card.value}</p>
+              <p className="turma-summary-metric-detail">{card.detail}</p>
             </div>
           );
         })}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {canViewAulas && (
-        <div className="lg:col-span-2 bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
-          <h3 className="text-lg font-bold text-[#001a33] mb-4">Aulas recentes</h3>
+        <div className="lg:col-span-2 bg-white p-5 rounded-xl border border-slate-200">
+          <h3 className="text-[15px] font-medium text-[#122b42] mb-4">Aulas recentes</h3>
           {recentClasses.length === 0 ? (
-            <div className="py-12 text-center text-slate-400 border border-dashed border-slate-200 rounded-2xl bg-slate-50/50 flex flex-col items-center">
-              <Calendar size={36} className="mb-2 opacity-50 text-slate-300" />
-              <p className="font-bold text-sm">Nenhuma aula registrada.</p>
+            <div className="py-8 text-center text-slate-400 border border-dashed border-slate-200 rounded-lg bg-slate-50/50 flex flex-col items-center">
+              <Calendar size={26} className="mb-2 opacity-50 text-slate-300" />
+              <p className="font-normal text-xs">Nenhuma aula registrada.</p>
             </div>
           ) : (
             <div className="space-y-3">
               {recentClasses.map((lesson: any) => (
-                <div key={lesson.id} className="flex items-center gap-4 p-4 rounded-xl bg-slate-50 border border-slate-100">
-                  <div className="flex items-center justify-center bg-white w-12 h-12 rounded-lg shadow-sm text-blue-600 border border-slate-100 shrink-0">
-                    <BookOpen size={18} />
+                <div key={lesson.id} className="flex flex-wrap sm:flex-nowrap items-center gap-3 py-3 border-b border-slate-100 last:border-b-0">
+                  <div className="flex items-center justify-center bg-slate-50 w-8 h-8 rounded-lg text-slate-500 shrink-0">
+                    <BookOpen size={15} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h4 className="font-bold text-[#001a33] text-sm truncate">{lesson.titulo}</h4>
-                    <p className="text-xs text-slate-500 mt-1 truncate">
+                    <h4 className="font-medium text-[#122b42] text-xs break-words">{lesson.titulo}</h4>
+                    <p className="text-[11px] text-slate-500 mt-1">
                       {lesson.disciplinas?.nome || 'Disciplina'} · {lesson.carga_horaria}h
                       {formatAcademicSessions(lesson.sessoes) ? ` · ${formatAcademicSessions(lesson.sessoes)}` : ''}
                     </p>
                   </div>
-                  <span className="text-[10px] font-bold text-slate-400">
+                  <span className="text-[11px] font-normal text-slate-400">
                     {lesson.data_aula
                       ? new Date(`${lesson.data_aula}T12:00:00`).toLocaleDateString('pt-BR')
                       : 'Data não informada'}
@@ -202,19 +199,19 @@ const TurmaResumo: React.FC<TurmaResumoProps> = ({
         </div>
         )}
 
-        <div className={`bg-slate-50 p-6 rounded-3xl border border-slate-200 ${canViewAulas ? '' : 'lg:col-span-3'}`}>
-          <h3 className="text-lg font-bold text-[#001a33] mb-4">Visão da turma</h3>
+        <div className={`bg-white p-5 rounded-xl border border-slate-200 ${canViewAulas ? '' : 'lg:col-span-3'}`}>
+          <h3 className="text-[15px] font-medium text-[#122b42] mb-4">Visão da turma</h3>
           <div className="space-y-3">
-            <div className="bg-white p-4 rounded-xl border-l-4 border-blue-500 shadow-sm">
-              <p className="text-xs font-bold text-slate-400 uppercase mb-1">Matrículas</p>
-              <p className="text-sm text-slate-700 font-medium">
+            <div className="bg-slate-50/70 p-3 rounded-lg border-l-2 border-blue-400">
+              <p className="text-[11px] font-normal text-slate-500 mb-1">Matrículas</p>
+              <p className="text-xs text-slate-700 font-normal leading-relaxed">
                 {resumo?.totalAlunos ?? 0} alunos vinculados; {resumo?.alunosAtivos ?? 0} ativos.
               </p>
             </div>
             {canViewFinanceiro && (
-              <div className={`bg-white p-4 rounded-xl border-l-4 shadow-sm ${financialStatus.sidebarClass}`}>
-                <p className="text-xs font-bold text-slate-400 uppercase mb-1">Financeiro</p>
-                <p className="text-sm text-slate-700 font-medium">
+              <div className={`bg-slate-50/70 p-3 rounded-lg border-l-2 ${financialStatus.sidebarClass}`}>
+                <p className="text-[11px] font-normal text-slate-500 mb-1">Financeiro</p>
+                <p className="text-xs text-slate-700 font-normal leading-relaxed">
                   {financialStatus.label}
                   {resumo?.saudeFinanceiraPercentual === null
                     || resumo?.saudeFinanceiraPercentual === undefined

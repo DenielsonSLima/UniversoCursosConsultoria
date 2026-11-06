@@ -1,9 +1,10 @@
 
 // File: modules/gestor/gestao/tecnicos/detalhes/TurmaTecnicoDetalhes.tsx
 
+import TurmaDetailsHeader from '../../components/TurmaDetailsHeader';
 import React, { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, PieChart, Users, BookOpen, Book, Settings, Activity, GraduationCap, DollarSign, Syringe, ClipboardCheck, LockKeyhole, Loader2 } from 'lucide-react';
+import { PieChart, Users, BookOpen, Book, Settings, Activity, GraduationCap, DollarSign, Syringe, ClipboardCheck, LockKeyhole, Loader2 } from 'lucide-react';
 import { Turma } from '../../gestao.types';
 import TurmaResumo from './components/TurmaResumo';
 import TurmaAlunos from './components/TurmaAlunos';
@@ -163,97 +164,68 @@ const TurmaTecnicoDetalhes: React.FC<TurmaTecnicoDetalhesProps> = ({
   };
 
   return (
-    <div className=" min-h-screen pb-20">
-      
-      {/* Header Normal (Rolagem com a página) */}
-      <div className="bg-white border-b border-slate-200 px-6 py-4 shadow-sm -mx-8 -mt-8 mb-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-            <div className="flex items-center gap-4">
-              <button 
-                onClick={onBack}
-                className="p-2 rounded-xl border border-slate-200 text-slate-400 hover:text-emerald-600 hover:border-emerald-200 transition-colors bg-slate-50"
-              >
-                <ArrowLeft size={20} />
-              </button>
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest border border-emerald-200">
-                    {turma.codigo}
-                  </span>
-                  <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest border ${
-                    turma.status === 'EM_ANDAMENTO' 
-                      ? 'bg-blue-50 text-blue-600 border-blue-100' 
-                      : 'bg-slate-100 text-slate-500 border-slate-200'
-                  }`}>
-                    {turma.status.replace('_', ' ')}
-                  </span>
-                </div>
-                <h2 className="text-xl font-black text-[#001a33] uppercase tracking-tight leading-none">
-                  {turma.nome}
-                </h2>
-                <p className="text-xs text-slate-500 font-bold mt-1">
-                  {turma.cursoNome} • {turma.poloNome} • {turma.turno}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Navegação de Abas */}
-          <nav
-            aria-label="Seções da turma"
-            className="-mx-1 flex max-w-full flex-nowrap items-center gap-5 overflow-x-auto px-1 pb-2 [scrollbar-color:#94a3b8_#e2e8f0] [scrollbar-width:thin] [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-slate-400 [&::-webkit-scrollbar-thumb:hover]:bg-slate-500 [&::-webkit-scrollbar-track]:rounded-full [&::-webkit-scrollbar-track]:bg-slate-200"
-          >
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => {
-                  setFinancialTarget(null);
-                  setActiveTab(tab.locked ? 'grade' : tab.id);
-                }}
-                disabled={tab.pending}
-                onMouseEnter={() => prefetchTab(tab.id)}
-                onFocus={() => prefetchTab(tab.id)}
-                onTouchStart={() => prefetchTab(tab.id)}
-                aria-current={activeTab === tab.id ? 'page' : undefined}
-                aria-label={tab.pending
-                  ? 'Verificando atividades da turma.'
+    <div className="gestao-turma-details pb-6">
+      <TurmaDetailsHeader
+        code={turma.codigo}
+        status={turma.status.replace('_', ' ')}
+        active={turma.status === 'EM_ANDAMENTO'}
+        title={turma.nome}
+        description={<>{turma.cursoNome} • {turma.poloNome} • {turma.turno}</>}
+        onBack={onBack}
+      >
+        <nav
+          aria-label="Seções da turma"
+          className="gestao-turma-tabs"
+        >
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => {
+                setFinancialTarget(null);
+                setActiveTab(tab.locked ? 'grade' : tab.id);
+              }}
+              disabled={tab.pending}
+              onMouseEnter={() => prefetchTab(tab.id)}
+              onFocus={() => prefetchTab(tab.id)}
+              onTouchStart={() => prefetchTab(tab.id)}
+              aria-current={activeTab === tab.id ? 'page' : undefined}
+              aria-label={tab.pending
+                ? 'Verificando atividades da turma.'
+                : tab.locked
+                  ? 'Configurar atividades em Grade e Professores.'
+                : tab.label}
+              title={tab.pending
+                ? 'Verificando atividades da turma...'
+                : tab.locked
+                  ? 'Marque uma aula como atividade em Grade & Profs para liberar esta área.'
+                  : activityAvailabilityQuery.isError && tab.id === 'atividades'
+                    ? 'A verificação rápida falhou. Abra para tentar carregar as atividades.'
+                    : undefined}
+              className={`gestao-turma-tab ${
+                activeTab === tab.id
+                  ? 'is-active'
                   : tab.locked
-                    ? 'Configurar atividades em Grade e Professores.'
-                  : tab.label}
-                title={tab.pending
-                  ? 'Verificando atividades da turma...'
-                  : tab.locked
-                    ? 'Marque uma aula como atividade em Grade & Profs para liberar esta área.'
-                    : activityAvailabilityQuery.isError && tab.id === 'atividades'
-                      ? 'A verificação rápida falhou. Abra para tentar carregar as atividades.'
-                      : undefined}
-                className={`relative flex h-11 shrink-0 items-center justify-center gap-2 px-0.5 text-xs font-bold uppercase tracking-wide whitespace-nowrap transition-colors after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:origin-center after:rounded-full after:bg-blue-600 after:transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${
-                  activeTab === tab.id
-                    ? 'text-[#001a33] after:scale-x-100'
-                    : tab.locked
-                      ? 'cursor-help text-slate-300 after:scale-x-0'
-                      : tab.pending
-                        ? 'cursor-wait text-slate-300 after:scale-x-0'
-                      : 'text-slate-400 after:scale-x-0 hover:text-blue-700 hover:after:scale-x-50'
-                }`}
-              >
-                <span className={activeTab === tab.id ? 'text-blue-600' : undefined}>
-                  {tab.icon}
-                </span>
-                {tab.label}
-              </button>
-            ))}
-          </nav>
-        </div>
-      </div>
+                    ? 'is-locked'
+                    : tab.pending
+                      ? 'is-pending'
+                    : ''
+              }`}
+            >
+              <span className={activeTab === tab.id ? 'text-blue-600' : undefined}>
+                {tab.icon}
+              </span>
+              {tab.label}
+            </button>
+          ))}
+        </nav>
+      </TurmaDetailsHeader>
 
-      <div className="max-w-7xl mx-auto px-4 md:px-0">
+      <div className="gestao-turma-content">
         {tabs.length === 0 ? (
-          <div className="rounded-3xl border border-amber-100 bg-amber-50 p-8 text-center">
+          <div className="rounded-xl border border-amber-100 bg-amber-50 p-5 text-center">
             <LockKeyhole className="mx-auto text-amber-600" size={28} />
-            <h3 className="mt-3 text-sm font-black uppercase tracking-wider text-amber-900">Nenhuma área da turma liberada</h3>
+            <h3 className="mt-3 text-sm font-medium text-amber-900">Nenhuma área da turma liberada</h3>
             <p className="mt-1 text-sm font-medium text-amber-700">Solicite ao administrador uma permissão de aba para o módulo Gestão.</p>
           </div>
         ) : renderContent()}

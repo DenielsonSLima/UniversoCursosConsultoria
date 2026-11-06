@@ -1,6 +1,7 @@
 // File: modules/gestor/gestao/GestaoPage.tsx
 
 import React, { Suspense, useEffect, useState } from 'react';
+import './gestao-entry-workspace.css';
 import { BarChart3, Briefcase, Award, MonitorPlay, Zap } from 'lucide-react';
 import GestaoResumo from './resumo/GestaoResumo';
 import { useGestaoRealtime } from './hooks/useGestaoRealtime';
@@ -60,23 +61,31 @@ const GestaoPage: React.FC<GestaoPageProps> = ({ poloId, activePoloId, isMatriz,
   ];
 
   return (
-    <div className="max-w-7xl mx-auto">
+    <div className="gestao-entry-workspace max-w-7xl mx-auto">
+      {!isDetailView && activeTab === 'resumo' && (
+        <header className="gestao-entry-heading">
+          <p>Painel operacional</p>
+          <h1>Gestão acadêmica</h1>
+        </header>
+      )}
       {/* Navegação Geral do Módulo - Oculta apenas se estiver em Detalhes */}
       {!isDetailView && (
-        <div className="border-b border-slate-200 mb-6">
-          <div className="flex gap-6 overflow-x-auto pb-px">
+        <div className="gestao-entry-navigation border-b border-slate-200 mb-5">
+          <nav aria-label="Modalidades da Gestão" className="flex gap-5 overflow-x-auto pb-px">
             {tabs.map((tab) => {
               const isActive = activeTab === tab.id;
               return (
                 <button
                   key={tab.id}
+                  type="button"
+                  aria-pressed={isActive}
                   onMouseEnter={() => preloadTab(tab.id)}
                   onFocus={() => preloadTab(tab.id)}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-2 pb-3 text-xs font-bold uppercase tracking-wider transition-all relative shrink-0 ${
+                  className={`flex min-h-11 items-center gap-2 px-1 pb-3 text-xs font-medium transition-colors relative shrink-0 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600 ${
                     isActive
-                      ? 'text-[#001a33] font-extrabold'
-                      : 'text-slate-400 hover:text-slate-700'
+                      ? 'text-[#122b42]'
+                      : 'text-slate-500 hover:text-slate-700'
                   }`}
                 >
                   <span className={isActive ? 'text-[#4169E1]' : 'text-slate-400'}>
@@ -89,13 +98,13 @@ const GestaoPage: React.FC<GestaoPageProps> = ({ poloId, activePoloId, isMatriz,
                 </button>
               );
             })}
-          </div>
+          </nav>
         </div>
       )}
 
       {/* Conteúdo Dinâmico */}
       <div className="min-h-[500px]">
-        <Suspense fallback={<div className="py-16 text-center text-sm font-bold text-slate-400">Carregando área de gestão...</div>}>
+        <Suspense fallback={<div role="status" className="py-12 text-center text-xs font-normal text-slate-500">Carregando área de gestão...</div>}>
           {activeTab === 'resumo' && <GestaoResumo poloId={poloId} />}
           {activeTab === 'tecnicos' && <GestaoTecnicos onToggleDetails={setIsDetailView} poloId={poloId} creationPoloId={activePoloId || poloId} permissions={permissions} gestorContextId={gestorContextId} />}
           {activeTab === 'livres' && <GestaoLivres onToggleDetails={setIsDetailView} poloId={poloId} creationPoloId={activePoloId || poloId} permissions={permissions} gestorContextId={gestorContextId} />}

@@ -1,0 +1,209 @@
+@media screen {
+  .gestao-turma-details {
+    color: #122b42;
+  }
+  .gestao-turma-details .gestao-turma-heading {
+    margin-bottom: 18px;
+    border: 1px solid #e3e9ee;
+    border-radius: 12px;
+    background: linear-gradient(115deg, #f9fbfd, white 65%);
+  }
+  .gestao-turma-identity {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 18px 20px 16px;
+  }
+  .gestao-turma-back {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    flex-shrink: 0;
+    border: 1px solid #e3e9ee;
+    border-radius: 9px;
+    color: #607286;
+    background: white;
+  }
+  .gestao-turma-back:hover {
+    color: #2563eb;
+    border-color: #b8cce3;
+  }
+  .gestao-turma-title {
+    min-width: 0;
+  }
+  .gestao-turma-meta {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    font-size: 10px;
+    line-height: 1.5;
+  }
+  .gestao-turma-code {
+    font-weight: 500;
+    color: #376292;
+    letter-spacing: .04em;
+  }
+  .gestao-turma-status {
+    padding: 2px 7px;
+    border: 1px solid #e3e9ee;
+    border-radius: 5px;
+    color: #607286;
+    background: #f5f7fa;
+  }
+  .gestao-turma-status.is-active {
+    color: #168061;
+    border-color: #d9efe6;
+    background: #f0faf5;
+  }
+  .gestao-turma-title h2 {
+    margin-top: 5px;
+    font-size: 21px;
+    line-height: 1.3;
+    font-weight: 500;
+    letter-spacing: -.03em;
+    overflow-wrap: anywhere;
+  }
+  .gestao-turma-title p {
+    margin-top: 4px;
+    font-size: 12px;
+    line-height: 1.6;
+    color: #607286;
+  }
+  .gestao-turma-tabs {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    max-width: 100%;
+    overflow-x: auto;
+    padding: 0 12px;
+    border-top: 1px solid #edf1f5;
+    scrollbar-width: thin;
+    scrollbar-color: #bac9d7 #f3f6f9;
+  }
+  .gestao-turma-tab {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    gap: 7px;
+    min-height: 42px;
+    padding: 0 10px;
+    border-bottom: 2px solid transparent;
+    color: #607286;
+    font-size: 12px;
+    line-height: 1.5;
+    font-weight: 500;
+    white-space: nowrap;
+    transition: background .18s, color .18s;
+  }
+  .gestao-turma-tab svg {
+    width: 16px;
+    height: 16px;
+  }
+  .gestao-turma-tab:hover {
+    color: #2563eb;
+    background: #f6f9fd;
+  }
+  .gestao-turma-tab.is-active {
+    color: #122b42;
+    border-bottom-color: #2563eb;
+    background: #eef4fc;
+  }
+  .gestao-turma-tab.is-locked,
+  .gestao-turma-tab.is-pending {
+    color: #98a5b4;
+  }
+  .gestao-turma-tab.is-locked {
+    cursor: help;
+  }
+  .gestao-turma-tab.is-pending {
+    cursor: wait;
+  }
+  .gestao-turma-back:focus-visible,
+  .gestao-turma-tab:focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: -3px;
+  }
+  .gestao-turma-details .turma-summary-metrics {
+    gap: 0;
+    overflow: hidden;
+    border: 1px solid #e3e9ee;
+    border-radius: 12px;
+    background: white;
+  }
+  .turma-summary-metric {
+    padding: 17px 20px;
+    min-width: 0;
+  }
+  .turma-summary-metric + .turma-summary-metric {
+    border-left: 1px solid #e3e9ee;
+  }
+  .turma-summary-metric-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    color: #607286;
+    line-height: 1.5;
+  }
+  .turma-summary-metric-label > svg {
+    flex-shrink: 0;
+    width: 15px;
+    height: 15px;
+  }
+  .turma-summary-metric-value {
+    margin-top: 9px;
+    color: #122b42;
+    font-size: 25px;
+    line-height: 1.25;
+    font-weight: 500;
+    letter-spacing: -.04em;
+    font-variant-numeric: tabular-nums;
+  }
+  .turma-summary-metric-value.is-empty {
+    font-size: 18px;
+    letter-spacing: -.02em;
+  }
+  .turma-summary-metric-detail {
+    margin-top: 5px;
+    font-size: 11px;
+    line-height: 1.5;
+    color: #8291a3;
+  }
+  @media (max-width: 767px) {
+    .gestao-turma-identity {
+      padding: 16px;
+      align-items: flex-start;
+      gap: 12px;
+    }
+    .gestao-turma-title h2 {
+      font-size: 19px;
+    }
+    .gestao-turma-back {
+      width: 44px;
+      height: 44px;
+    }
+    .gestao-turma-tabs {
+      padding: 0 6px;
+    }
+    .gestao-turma-tab {
+      min-height: 44px;
+      padding: 0 10px;
+    }
+    .turma-summary-metric {
+      padding: 14px 16px;
+    }
+    .turma-summary-metric + .turma-summary-metric {
+      border-left: 0;
+      border-top: 1px solid #e3e9ee;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .gestao-turma-tab {
+      transition: none;
+    }
+  }
+}

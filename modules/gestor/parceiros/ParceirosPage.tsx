@@ -1,3 +1,5 @@
+import './parceiros-workspace.css';
+import './components/viewparceiros/aluno/parceiro-profile.css';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   BookOpenCheck,
@@ -280,20 +282,20 @@ const ParceirosPage: React.FC<ParceirosPageProps> = ({
   }
 
   return (
-    <div className="pb-12">
+    <div className="partners-workspace pb-6">
       {toastNotification}
 
-      <div className="flex flex-col md:flex-row justify-between items-center mb-5 gap-6">
+      <div className="partner-page-heading flex flex-col md:flex-row justify-between items-center mb-5 gap-4">
         <div>
-          <h2 className="text-3xl font-bold text-[#001a33]">
-            Parceiros & <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#4169E1] to-[#003366]">Convênios</span>
+          <h2 className="text-[25px] font-medium tracking-[-0.04em] text-[#122b42]">
+            Parceiros & <span className="text-[#607286]">Convênios</span>
           </h2>
         </div>
 
         {!isDedicatedGovernanceTab ? <div className="flex gap-3 w-full md:w-auto">
           <button
             onClick={() => setShowExportModal(true)}
-            className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-white text-slate-700 px-6 py-3 rounded-2xl font-semibold text-xs hover:bg-slate-50 hover:text-blue-600 transition-all border border-slate-200 shadow-sm"
+            className="flex-1 md:flex-none flex min-h-10 items-center justify-center gap-2 bg-white text-slate-600 px-4 py-2 rounded-lg font-medium text-xs hover:bg-slate-50 hover:text-blue-600 transition-colors border border-slate-200"
           >
             <Download size={16} />
             Exportar
@@ -302,11 +304,11 @@ const ParceirosPage: React.FC<ParceirosPageProps> = ({
           <button
             onClick={() => setShowForm('selection')}
             data-parceiro-selection-trigger
-            className="group relative flex-1 md:flex-none px-6 md:px-8 py-3 bg-[#001a33] text-white rounded-2xl font-semibold text-xs overflow-hidden shadow-xl hover:shadow-2xl hover:shadow-blue-900/20 transition-all hover:-translate-y-1"
+            className="group relative flex-1 md:flex-none min-h-10 px-4 py-2 bg-[#0c2942] text-white rounded-lg font-medium text-xs overflow-hidden hover:bg-[#143851] transition-colors"
           >
             <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-blue-600 to-[#001a33] opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
             <div className="relative flex items-center justify-center gap-3">
-              <div className="bg-white/20 p-1.5 rounded-lg">
+              <div className="flex items-center">
                 <Plus size={16} />
               </div>
               <span>Novo Registro</span>
@@ -318,7 +320,7 @@ const ParceirosPage: React.FC<ParceirosPageProps> = ({
       {!isDedicatedGovernanceTab && loadingStatusKpis ? (
         <div className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-3" aria-label="Carregando indicadores">
           {[0, 1, 2].map((item) => (
-            <div key={item} className="h-36 animate-pulse rounded-3xl border border-slate-100 bg-white" />
+            <div key={item} className="h-24 animate-pulse rounded-xl border border-slate-100 bg-white" />
           ))}
         </div>
       ) : null}
@@ -343,16 +345,16 @@ const ParceirosPage: React.FC<ParceirosPageProps> = ({
       ) : null}
 
       <div className="border-b border-slate-200 mb-5 mt-2">
-        <div className="flex gap-6 overflow-x-auto pb-px">
+        <div className="flex gap-5 overflow-x-auto pb-px">
           {tabs.map(({ id, label, icon: Icon }) => {
             const isActive = activeTab === id;
             return (
               <button
                 key={id}
                 onClick={() => setActiveTab(id)}
-                className={`flex items-center gap-2 pb-3 text-xs font-bold uppercase tracking-wider transition-all relative shrink-0 ${
+                className={`flex min-h-11 items-center gap-2 pb-3 text-xs font-medium transition-colors relative shrink-0 ${
                   isActive
-                    ? 'text-[#001a33] font-extrabold'
+                    ? 'text-[#122b42]'
                     : 'text-slate-400 hover:text-slate-700'
                 }`}
               >

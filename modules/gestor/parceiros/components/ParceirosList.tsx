@@ -66,7 +66,7 @@ const ParceirosList: React.FC<ParceirosListProps> = ({
           <p className="text-slate-500 font-medium">Buscando registros do banco de dados...</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-12  w-full">
+        <div className="partner-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 mb-5 w-full">
           {currPageItems.length > 0 ? (
             currPageItems.map((item) => renderCard(item))
           ) : (
@@ -79,9 +79,9 @@ const ParceirosList: React.FC<ParceirosListProps> = ({
 
       {/* Paginação */}
       {items.length > 0 && (
-      <div className="flex flex-col md:flex-row justify-between items-center bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
+      <div className="flex flex-col md:flex-row justify-between items-center bg-white p-3 rounded-xl border border-slate-200">
         <div className="mb-4 md:mb-0">
-          <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
+          <p className="text-[11px] font-normal text-slate-500">
             Exibindo <span className="text-[#001a33]">{(page - 1) * itemsPerPage + 1}-{Math.min(page * itemsPerPage, items.length)}</span> de <span className="text-[#001a33]">{items.length}</span> resultados
           </p>
         </div>
@@ -104,7 +104,7 @@ const ParceirosList: React.FC<ParceirosListProps> = ({
                 onClick={() => setPage(p)}
                 className={`w-10 h-10 flex items-center justify-center rounded-xl text-xs font-bold transition-all shrink-0 ${
                   page === p 
-                    ? 'bg-[#4169E1] text-white shadow-lg shadow-blue-500/30' 
+                    ? 'bg-[#0c2942] text-white' 
                     : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
                 }`}
               >
