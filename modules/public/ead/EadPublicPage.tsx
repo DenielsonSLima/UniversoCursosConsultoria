@@ -7,6 +7,7 @@ import Footer from '../components/Footer';
 import { supabase } from '../../../lib/supabase';
 import { textMatchesSearch } from '../../../lib/search';
 import { buildEadCoursePath } from './eadCourseLinks';
+import EadCatalogFilter from './EadCatalogFilter';
 
 const PUBLIC_EAD_COURSE_COLUMNS = 'id, nome, modalidade, carga_horaria, status, area, descricao, parceiro_instituicao, parceiro_logo_url, imagem_url, duracao_meses, publicar_site, imagem_detalhe_1, imagem_detalhe_2, valor, asaas_payment_link_url';
 
@@ -224,48 +225,35 @@ const EadPublicPage: React.FC = () => {
               </div>
 
               {/* Filtros e ordenação */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2 border-t border-slate-100">
-                <label className="space-y-1">
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
-                    <Filter size={14} /> Categoria
-                  </span>
-                  <select
-                    value={selectedArea}
-                    onChange={(e) => setSelectedArea(e.target.value)}
-                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs font-black text-slate-700 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100"
-                  >
-                    {areasExistentes.map((area) => (
-                      <option key={area} value={area}>{area}</option>
-                    ))}
-                  </select>
-                </label>
-
-                <label className="space-y-1">
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Agrupamento</span>
-                  <select
-                    value={groupMode}
-                    onChange={(e) => setGroupMode(e.target.value as 'area' | 'none')}
-                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs font-black text-slate-700 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100"
-                  >
-                    <option value="area">Agrupar por categoria</option>
-                    <option value="none">Sem agrupamento</option>
-                  </select>
-                </label>
-
-                <label className="space-y-1">
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Ordenação</span>
-                  <select
-                    value={sortMode}
-                    onChange={(e) => setSortMode(e.target.value as typeof sortMode)}
-                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs font-black text-slate-700 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100"
-                  >
-                    <option value="nome-asc">Ordem alfabética A-Z</option>
-                    <option value="nome-desc">Ordem alfabética Z-A</option>
-                    <option value="valor-asc">Menor valor</option>
-                    <option value="valor-desc">Maior valor</option>
-                    <option value="carga-desc">Maior carga horária</option>
-                  </select>
-                </label>
+              <div className="grid grid-cols-1 items-start gap-4 border-t border-slate-100 pt-4 md:grid-cols-3">
+                <EadCatalogFilter
+                  label="Categoria"
+                  icon={<Filter aria-hidden="true" size={14} />}
+                  value={selectedArea}
+                  onChange={setSelectedArea}
+                  options={areasExistentes.map((area) => ({ value: area, label: area }))}
+                />
+                <EadCatalogFilter<typeof groupMode>
+                  label="Agrupamento"
+                  value={groupMode}
+                  onChange={setGroupMode}
+                  options={[
+                    { value: 'area', label: 'Agrupar por categoria' },
+                    { value: 'none', label: 'Sem agrupamento' },
+                  ]}
+                />
+                <EadCatalogFilter<typeof sortMode>
+                  label="Ordenação"
+                  value={sortMode}
+                  onChange={setSortMode}
+                  options={[
+                    { value: 'nome-asc', label: 'Ordem alfabética A-Z' },
+                    { value: 'nome-desc', label: 'Ordem alfabética Z-A' },
+                    { value: 'valor-asc', label: 'Menor valor' },
+                    { value: 'valor-desc', label: 'Maior valor' },
+                    { value: 'carga-desc', label: 'Maior carga horária' },
+                  ]}
+                />
               </div>
 
               {/* Status de Filtros Ativos */}

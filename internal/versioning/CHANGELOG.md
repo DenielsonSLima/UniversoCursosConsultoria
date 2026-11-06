@@ -10,6 +10,12 @@ Histórico arquivado: [30/09/2026 — versões 4.8.138 a 4.8.144](./changelog/20
 
 Histórico arquivado: [01/10/2026 a 04/10/2026 — versões 4.8.145 a 4.8.168](./changelog/2026-10-01-a-04-versoes-4-8-145-a-168.md).
 
+## [4.8.246] - 2026-11-05
+
+### Corrigido
+- Categoria, Agrupamento e Ordenação do catálogo público EAD usam rótulos e campos com altura e alinhamento uniformes.
+- Seletores pesquisáveis preservam opções e valores, com navegação por teclado e fechamento por Escape, Tab e clique externo.
+
 ## [4.8.245] - 2026-11-05
 
 ### Corrigido
