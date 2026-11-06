@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import '../formacoes-recursos.css';
 import {
   Download,
   FileSignature,
@@ -89,21 +90,21 @@ const FichaMatriculaPage: React.FC = () => {
   }
 
   return (
-    <div className="mx-auto max-w-7xl animate-fadeIn">
-      <div className="mb-10">
+    <div className="formacao-recursos mx-auto max-w-7xl animate-fadeIn">
+      <div className="formacao-recursos-header mb-10">
         <div className="mb-2 flex items-center gap-2 text-blue-600">
           <IdCard size={20} />
           <span className="text-xs font-bold uppercase tracking-[0.2em]">Cadastros acadêmicos</span>
         </div>
-        <h2 className="text-3xl font-black uppercase tracking-tight text-[#001a33]">
+        <h2 className="formacao-recursos-title text-3xl font-black uppercase tracking-tight text-[#001a33]">
           Ficha Cadastral
         </h2>
-        <p className="mt-1 font-medium text-slate-500">
+        <p className="formacao-recursos-subtitle mt-1 font-medium text-slate-500">
           Configure os modelos cadastrais utilizados no cadastro e na matrícula do aluno.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <div className="formacao-recursos-doc-grid grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
         {models.map((model) => {
           const Icon = model.icon;
           return (
@@ -111,20 +112,20 @@ const FichaMatriculaPage: React.FC = () => {
               key={model.id}
               type="button"
               onClick={() => setActiveModel(model.id)}
-              className="group relative flex h-full min-h-72 flex-col items-start overflow-hidden rounded-3xl border border-slate-100 bg-white p-6 text-left shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-blue-900/10"
+              className="formacao-recursos-doc-card group relative flex h-full min-h-72 flex-col items-start overflow-hidden rounded-3xl border border-slate-100 bg-white p-6 text-left shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-blue-900/10"
             >
-              <div className={`mb-6 flex h-14 w-14 items-center justify-center rounded-2xl text-white shadow-lg ${model.iconClass}`}>
+              <div className={`formacao-recursos-doc-icon mb-6 flex h-14 w-14 items-center justify-center rounded-2xl text-white shadow-lg ${model.iconClass}`}>
                 <Icon size={25} />
               </div>
 
-              <h3 className={`mb-2 text-lg font-black text-[#001a33] transition-colors ${model.hoverClass}`}>
+              <h3 className={`formacao-recursos-doc-title mb-2 text-lg font-black text-[#001a33] transition-colors ${model.hoverClass}`}>
                 {model.title}
               </h3>
-              <p className="mb-6 text-sm font-medium leading-relaxed text-slate-500">
+              <p className="formacao-recursos-doc-desc mb-6 text-sm font-medium leading-relaxed text-slate-500">
                 {model.description}
               </p>
 
-              <div className="mt-auto flex w-full items-center justify-between border-t border-slate-100 pt-4">
+              <div className="formacao-recursos-doc-action mt-auto flex w-full items-center justify-between border-t border-slate-100 pt-4">
                 <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 transition-colors group-hover:text-blue-600">
                   Configurar
                 </span>

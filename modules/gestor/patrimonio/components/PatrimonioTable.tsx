@@ -1,3 +1,4 @@
+import '../patrimonio-items.css';
 import { Package, PackageMinus, Pencil, Trash2 } from 'lucide-react';
 import { formatPatrimonioCurrency, formatPatrimonioDate, formatPatrimonioQuantity } from '../patrimonio.formatters';
 import type {
@@ -25,10 +26,10 @@ export function PatrimonioTable({
   onRemove,
 }: PatrimonioTableProps) {
   return (
-    <div className="overflow-x-auto rounded-2xl border border-slate-100 bg-white shadow-sm" tabIndex={0} aria-label="Tabela de patrimônios; deslize horizontalmente para ver todas as colunas">
+    <div className="patrimonio-items-table overflow-x-auto rounded-2xl border border-slate-100 bg-white shadow-sm" tabIndex={0} aria-label="Tabela de patrimônios; deslize horizontalmente para ver todas as colunas">
       <table className="w-full min-w-[1160px] border-collapse text-left">
         <thead>
-          <tr className="border-b border-slate-100 bg-slate-50/90 text-[10px] font-black uppercase tracking-wider text-slate-400">
+          <tr className="patrimonio-table-heading border-b border-slate-100 bg-slate-50/90 text-[10px] font-black uppercase tracking-wider text-slate-400">
             <th className="px-5 py-4">Patrimônio</th>
             <th className="px-4 py-4">Situação</th>
             <th className="px-4 py-4">Aquisição</th>
@@ -49,15 +50,15 @@ export function PatrimonioTable({
               <tr key={item.id} className="group transition-colors hover:bg-blue-50/40">
                 <td className="px-5 py-4">
                   <div className="flex min-w-[240px] items-center gap-3">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-700"><Package size={17} /></div>
+                    <div className="patrimonio-table-icon flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-700"><Package size={17} /></div>
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-black text-[#001a33]" title={item.descricao}>{item.descricao}</p>
-                      <p className="mt-0.5 text-[10px] font-bold uppercase tracking-wide text-blue-600">{item.tipoProduto || 'Sem tipo'}</p>
+                      <p className="patrimonio-table-title truncate text-sm font-black text-[#001a33]" title={item.descricao}>{item.descricao}</p>
+                      <p className="patrimonio-table-type mt-0.5 text-[10px] font-bold uppercase tracking-wide text-blue-600">{item.tipoProduto || 'Sem tipo'}</p>
                       {item.observacao ? <p className="mt-1 max-w-[320px] truncate text-[11px] text-slate-500" title={item.observacao}>{item.observacao}</p> : null}
                     </div>
                   </div>
                 </td>
-                <td className="px-4 py-4"><PatrimonioStatusBadge item={item} /></td>
+                <td className="patrimonio-table-status px-4 py-4"><PatrimonioStatusBadge item={item} /></td>
                 <td className="whitespace-nowrap px-4 py-4 text-xs font-bold text-slate-600">{formatPatrimonioDate(item.dataAquisicao)}</td>
                 <td className="whitespace-nowrap px-4 py-4 text-right">
                   <p className="text-sm font-black text-slate-700">{formatPatrimonioQuantity(availableQuantity)}</p>
@@ -67,7 +68,7 @@ export function PatrimonioTable({
                 <td className={`whitespace-nowrap px-4 py-4 text-right text-sm font-black ${availableQuantity > 0 ? 'text-emerald-700' : 'text-slate-500'}`}>{formatPatrimonioCurrency(item.valorDisponivel)}</td>
                 <td className="max-w-[160px] truncate px-4 py-4 text-xs font-semibold text-slate-600" title={item.numeroSerie}>{item.numeroSerie || '—'}</td>
                 <td className="sticky right-0 border-l border-slate-100 bg-white px-4 py-3 group-hover:bg-[#f5f9ff]">
-                  <div className="flex items-center justify-end gap-1.5" aria-label={`Ações de ${item.descricao}`}>
+                  <div className="patrimonio-table-actions flex items-center justify-end gap-1.5" aria-label={`Ações de ${item.descricao}`}>
                     <button type="button" onClick={() => onEdit(item)} disabled={!actions.edit.enabled || isBusy} title={actions.edit.reason || 'Editar patrimônio'} aria-label={`Editar patrimônio ${item.descricao}${actions.edit.reason ? `. ${actions.edit.reason}` : ''}`} className="inline-flex min-h-10 min-w-10 items-center justify-center rounded-xl border border-blue-100 text-blue-700 transition-colors hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-40">
                       <Pencil size={14} aria-hidden="true" />
                     </button>

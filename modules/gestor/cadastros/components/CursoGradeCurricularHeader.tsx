@@ -43,19 +43,19 @@ const CursoGradeCurricularHeader: React.FC<CursoGradeCurricularHeaderProps> = ({
   onSaveVacinas
 }) => (
   <>
-    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 border-b border-slate-100 pb-6">
+    <div className="formacoes-cursos-details-heading flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 border-b border-slate-100 pb-6">
       <div className="flex items-center gap-4">
         <button onClick={onBack} className={`p-2 rounded-xl border border-slate-200 text-slate-400 hover:text-${config.themeColor}-600 hover:border-${config.themeColor}-200 transition-colors`}>
           <ArrowLeft size={20} />
         </button>
         <div>
-          <h3 className="text-2xl font-black text-[#001a33]">
+          <h3 className="formacoes-cursos-details-title text-2xl font-black text-[#001a33]">
             {curso.nome}{' '}
             <span className="text-sm bg-slate-100 text-slate-500 px-2.5 py-1 rounded-full font-bold ml-2">
               v{curso.versao}
             </span>
           </h3>
-          <p className="text-xs text-slate-400 mt-1 font-medium max-w-xl truncate">
+          <p className="formacoes-cursos-details-description text-xs text-slate-400 mt-1 font-medium max-w-xl truncate">
             {curso.descricao || 'Formação profissionalizante regulamentada.'}
           </p>
         </div>
@@ -84,13 +84,13 @@ const CursoGradeCurricularHeader: React.FC<CursoGradeCurricularHeaderProps> = ({
     </div>
 
     {loadingKpis ? (
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <div className="formacoes-cursos-kpis grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         {[1, 2, 3].map(i => (
           <div key={i} className="bg-slate-50 border border-slate-200 rounded-2xl h-24 animate-pulse" />
         ))}
       </div>
     ) : kpis ? (
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <div className="formacoes-cursos-kpis grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm flex flex-col justify-between">
           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Carga Total do Curso</span>
           <div className="flex items-baseline gap-1 mt-2">
@@ -122,7 +122,7 @@ const CursoGradeCurricularHeader: React.FC<CursoGradeCurricularHeaderProps> = ({
       </div>
     ) : null}
 
-    <div className={`grid grid-cols-2 ${curso.modalidade === 'TECNICO' || curso.modalidade === 'LIVRE' ? 'lg:grid-cols-5' : 'lg:grid-cols-4'} gap-2 mb-8 bg-slate-100 p-1 rounded-2xl max-w-4xl border border-slate-200`}>
+    <div className={`formacoes-cursos-details-tabs grid grid-cols-2 ${curso.modalidade === 'TECNICO' || curso.modalidade === 'LIVRE' ? 'lg:grid-cols-5' : 'lg:grid-cols-4'} gap-2 mb-8 bg-slate-100 p-1 rounded-2xl max-w-4xl border border-slate-200`}>
       {([
         ['grade', 'Grade Curricular'],
         ['turmas', `Turmas (${turmasCount})`],

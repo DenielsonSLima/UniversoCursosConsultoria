@@ -23,9 +23,9 @@ const CursoEspecializacaoCard: React.FC<CursoEspecializacaoCardProps> = ({ curso
 
   return (
     <div 
-      className="group bg-white rounded-[2rem] border border-slate-100 p-6 hover:shadow-xl hover:shadow-rose-900/10 hover:border-rose-200 transition-all duration-300 flex flex-col h-full relative overflow-hidden"
+      className="formacoes-cursos-card group bg-white rounded-[2rem] border border-slate-100 p-6 hover:shadow-xl hover:shadow-rose-900/10 hover:border-rose-200 transition-all duration-300 flex flex-col h-full relative overflow-hidden"
     >
-      <div className="aspect-video w-full rounded-2xl overflow-hidden border border-slate-100 bg-slate-50 mb-4 relative z-10">
+      <div className="formacoes-cursos-cover aspect-video w-full rounded-2xl overflow-hidden border border-slate-100 bg-slate-50 mb-4 relative z-10">
         {curso.imagem_url ? (
           <img
             src={curso.imagem_url}
@@ -40,7 +40,7 @@ const CursoEspecializacaoCard: React.FC<CursoEspecializacaoCardProps> = ({ curso
         )}
       </div>
 
-      <div className="flex items-center justify-end gap-1.5 mb-5 relative z-10">
+      <div className="formacoes-cursos-badges flex items-center justify-end gap-1.5 mb-5 relative z-10">
         <span className="bg-slate-50 text-slate-500 text-[10px] font-bold uppercase px-3 py-1 rounded-full border border-slate-100">
           {area}
         </span>
@@ -49,22 +49,22 @@ const CursoEspecializacaoCard: React.FC<CursoEspecializacaoCardProps> = ({ curso
         </span>
       </div>
 
-      <h3 className="text-lg font-black text-[#001a33] mb-2 group-hover:text-rose-600 transition-colors relative z-10">
+      <h3 className="formacoes-cursos-card-title text-lg font-black text-[#001a33] mb-2 group-hover:text-rose-600 transition-colors relative z-10">
         {curso.nome}
       </h3>
       
-      <div className="flex items-center gap-2 mb-4 text-xs text-slate-400 font-medium">
+      <div className="formacoes-cursos-requirement flex items-center gap-2 mb-4 text-xs text-slate-400 font-medium">
          <GraduationCap size={14} />
          <span>Req: {requisito}</span>
       </div>
 
-      <p className="text-xs text-slate-500 font-medium mb-6 line-clamp-2 relative z-10">
+      <p className="formacoes-cursos-description text-xs text-slate-500 font-medium mb-6 line-clamp-2 relative z-10">
         {descricao}
       </p>
 
-      <div className="mt-auto space-y-3 relative z-10">
+      <div className="formacoes-cursos-card-footer mt-auto space-y-3 relative z-10">
         {hasGradeConfigured ? (
-          <div className="flex items-center gap-3 text-xs text-slate-600 bg-slate-50 p-3 rounded-xl">
+          <div className="formacoes-cursos-metadata flex items-center gap-3 text-xs text-slate-600 bg-slate-50 p-3 rounded-xl">
             <Clock size={16} className="text-rose-500" />
             <span className="font-bold">{curso.carga_horaria}h</span>
             <span className="text-slate-400">|</span>
@@ -72,7 +72,7 @@ const CursoEspecializacaoCard: React.FC<CursoEspecializacaoCardProps> = ({ curso
             <span className="font-bold">{duracaoMeses} Meses</span>
           </div>
         ) : (
-          <div className="text-xs text-slate-400 font-bold bg-slate-50 p-3 rounded-xl text-center uppercase tracking-wider">
+          <div className="formacoes-cursos-metadata text-xs text-slate-400 font-bold bg-slate-50 p-3 rounded-xl text-center uppercase tracking-wider">
             Grade não configurada
           </div>
         )}
@@ -81,7 +81,7 @@ const CursoEspecializacaoCard: React.FC<CursoEspecializacaoCardProps> = ({ curso
         <div className="flex flex-col gap-2 relative z-20">
           <button 
             onClick={onClick}
-            className="w-full flex items-center justify-between p-3 rounded-xl bg-[#001a33] text-white text-[10px] font-bold uppercase tracking-widest hover:bg-rose-600 transition-colors"
+            className="formacoes-cursos-card-primary w-full flex items-center justify-between p-3 rounded-xl bg-[#001a33] text-white text-[10px] font-bold uppercase tracking-widest hover:bg-rose-600 transition-colors"
           >
             <span>Ver Grade</span>
             <ChevronRight size={14} />
@@ -131,8 +131,6 @@ const CursoEspecializacaoCard: React.FC<CursoEspecializacaoCardProps> = ({ curso
         )}
       </div>
 
-      {/* Decorative */}
-      <div className="absolute -bottom-8 -right-8 w-32 h-32 bg-rose-50 rounded-full opacity-0 group-hover:opacity-20 transition-opacity blur-2xl"></div>
     </div>
   );
 };

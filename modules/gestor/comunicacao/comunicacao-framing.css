@@ -1,0 +1,329 @@
+@media screen {
+  .comunicacao-workspace.comunicacao-workspace {
+    min-width: 0;
+    border-radius: 12px;
+    border-color: #e2e8f0;
+    box-shadow: none;
+    animation: none;
+    transform: none;
+    backface-visibility: visible;
+    will-change: auto;
+  }
+
+  .comunicacao-unified.comunicacao-unified {
+    min-height: 520px;
+  }
+
+  .comunicacao-unified .comunicacao-unified-header {
+    padding: 16px;
+    border-color: #e2e8f0;
+    color: #001a33;
+    background: white;
+  }
+
+  .comunicacao-unified .comunicacao-unified-ornament {
+    display: none;
+  }
+
+  .comunicacao-unified .comunicacao-unified-identity {
+    min-width: 0;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .comunicacao-unified .comunicacao-unified-icon,
+  .comunicacao-internal-heading .comunicacao-internal-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 9px;
+    background: #eff6ff;
+    color: #2563eb;
+    box-shadow: none;
+    flex-shrink: 0;
+  }
+
+  .comunicacao-unified .comunicacao-unified-icon > svg,
+  .comunicacao-internal-heading .comunicacao-internal-icon > svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .comunicacao-unified .comunicacao-unified-title {
+    font-size: 23px;
+    line-height: 1.4;
+    font-weight: 500;
+    letter-spacing: -0.025em;
+  }
+
+  .comunicacao-unified .comunicacao-unified-live {
+    padding: 3px 7px;
+    font-size: 10px;
+    line-height: 1.6;
+    font-weight: 500;
+    text-transform: none;
+    letter-spacing: normal;
+    background: #ecfdf5;
+    color: #047857;
+  }
+
+  .comunicacao-unified .comunicacao-unified-description {
+    font-size: 12px;
+    line-height: 1.6;
+    font-weight: 400;
+    color: #64748b;
+  }
+
+  .comunicacao-unified .comunicacao-unified-queue {
+    padding: 8px 10px;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    background: #f8fafc;
+    box-shadow: none;
+  }
+
+  .comunicacao-unified-queue.comunicacao-unified-queue > span:last-child > span:first-child {
+    font-size: 12px;
+    font-weight: 500;
+    color: #001a33;
+  }
+
+  .comunicacao-unified-queue.comunicacao-unified-queue > span:last-child > span:last-child {
+    font-size: 11px;
+    font-weight: 400;
+    color: #64748b;
+  }
+
+  .comunicacao-unified-queue.comunicacao-unified-queue > span:first-child > span {
+    border-color: white;
+  }
+
+  .comunicacao-unified-body.comunicacao-unified-body > aside {
+    min-width: 0;
+    width: 300px;
+  }
+
+  .comunicacao-unified-body.comunicacao-unified-body > aside > div:first-child {
+    padding: 12px;
+  }
+
+  .comunicacao-unified-body.comunicacao-unified-body > aside > div:first-child > button,
+  .comunicacao-unified-body.comunicacao-unified-body > aside > div:first-child > div > button {
+    min-height: 40px;
+    border-radius: 9px;
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: none;
+    letter-spacing: normal;
+    box-shadow: none;
+  }
+
+  .comunicacao-unified-body.comunicacao-unified-body > aside > div:first-child > label > input {
+    height: 40px;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 400;
+  }
+
+  .comunicacao-unified .comunicacao-unified-empty-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 9px;
+  }
+
+  .comunicacao-unified .comunicacao-unified-empty-icon > svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .comunicacao-unified-empty.comunicacao-unified-empty p:first-of-type {
+    font-size: 14px;
+    font-weight: 500;
+  }
+
+  .comunicacao-unified-empty.comunicacao-unified-empty p:last-of-type {
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 1.6;
+  }
+
+  .comunicacao-unified .comunicacao-start-surface {
+    border-radius: 12px;
+  }
+
+  .comunicacao-unified .comunicacao-start-heading {
+    padding: 14px 16px;
+  }
+
+  .comunicacao-start-heading.comunicacao-start-heading h2 {
+    font-size: 17px;
+    line-height: 1.5;
+    font-weight: 500;
+  }
+
+  .comunicacao-start-heading.comunicacao-start-heading p {
+    font-size: 12px;
+    line-height: 1.6;
+    font-weight: 400;
+  }
+
+  .comunicacao-unified .comunicacao-start-options {
+    padding: 14px;
+    gap: 10px;
+  }
+
+  .comunicacao-start-options.comunicacao-start-options > button {
+    padding: 12px;
+    border-radius: 10px;
+    box-shadow: none;
+    transform: none;
+  }
+
+  .comunicacao-start-options.comunicacao-start-options > button > span:first-child {
+    width: 32px;
+    height: 32px;
+    border-radius: 9px;
+  }
+
+  .comunicacao-start-options.comunicacao-start-options > button > span:nth-child(2) {
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+  .comunicacao-start-options.comunicacao-start-options > button > span:last-child {
+    font-size: 12px;
+    line-height: 1.6;
+    font-weight: 400;
+  }
+
+  .comunicacao-internal-shell .comunicacao-internal-heading {
+    padding: 14px 16px;
+  }
+
+  .comunicacao-internal-heading .comunicacao-internal-title {
+    font-size: 21px;
+    line-height: 1.4;
+    font-weight: 500;
+  }
+
+  .comunicacao-internal-heading.comunicacao-internal-heading p {
+    font-size: 12px;
+    line-height: 1.6;
+    font-weight: 400;
+  }
+
+  /* Only the WhatsApp line/header/navigation frame is selected; chat bodies and flow canvas stay isolated. */
+  .comunicacao-channel-surface.comunicacao-channel-surface > div > div:has(> div > [role="tablist"][aria-label="Alternar número do WhatsApp"]) {
+    min-height: 56px;
+    padding: 10px 14px;
+    gap: 10px;
+  }
+
+  .comunicacao-channel-surface.comunicacao-channel-surface > div > div:has(> div > [role="tablist"][aria-label="Alternar número do WhatsApp"]) > div:last-child > button,
+  .comunicacao-channel-surface.comunicacao-channel-surface > div > div:has(> div > [role="tablist"][aria-label="Alternar número do WhatsApp"]) > div:last-child > span {
+    min-height: 38px;
+    border-radius: 9px;
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: none;
+    letter-spacing: normal;
+    box-shadow: none;
+  }
+
+  .comunicacao-channel-surface.comunicacao-channel-surface > div > div > div:has(> [role="tablist"][aria-label="Alternar número do WhatsApp"]) {
+    gap: 10px;
+  }
+
+  .comunicacao-channel-surface.comunicacao-channel-surface > div > div > div:has(> [role="tablist"][aria-label="Alternar número do WhatsApp"]) > div:first-child {
+    width: 32px;
+    height: 32px;
+    border-radius: 9px;
+  }
+
+  .comunicacao-channel-surface.comunicacao-channel-surface [role="tablist"][aria-label="Alternar número do WhatsApp"] > button {
+    min-width: 0;
+    min-height: 38px;
+    padding: 7px 10px;
+    border-radius: 9px;
+    box-shadow: none;
+  }
+
+  .comunicacao-channel-surface.comunicacao-channel-surface [role="tablist"][aria-label="Alternar número do WhatsApp"] > button > span > span:nth-child(2) > span:first-child {
+    font-size: 12px;
+    line-height: 1.5;
+    font-weight: 500;
+    text-transform: none;
+    letter-spacing: normal;
+  }
+
+  .comunicacao-channel-surface.comunicacao-channel-surface [aria-label="Navegação da central de comunicação"] {
+    gap: 16px;
+  }
+
+  .comunicacao-channel-surface.comunicacao-channel-surface [aria-label="Navegação da central de comunicação"] > button {
+    min-height: 40px;
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: none;
+    letter-spacing: normal;
+  }
+
+  .comunicacao-channel-surface.comunicacao-channel-surface[data-comunicacao-view="fluxos"] > div > div > section > header {
+    padding: 14px;
+  }
+
+  .comunicacao-channel-surface.comunicacao-channel-surface[data-comunicacao-view="fluxos"] > div > div > section > header h3 {
+    font-size: 14px;
+    font-weight: 500;
+  }
+
+  .comunicacao-channel-surface.comunicacao-channel-surface[data-comunicacao-view="fluxos"] > div > div > section > header p {
+    font-size: 12px;
+    line-height: 1.6;
+    font-weight: 400;
+  }
+
+  .comunicacao-channel-surface.comunicacao-channel-surface[data-comunicacao-view="fluxos"] > div > div > section > header > div > div:first-child > span:first-child {
+    width: 32px;
+    height: 32px;
+    border-radius: 9px;
+  }
+
+  .comunicacao-channel-surface.comunicacao-channel-surface[data-comunicacao-view="fluxos"] > div > div > section > header button {
+    min-height: 40px;
+    font-size: 12px;
+    font-weight: 500;
+  }
+
+  .comunicacao-channel-surface.comunicacao-channel-surface[data-comunicacao-view="perfil"] > div > div > div > section:first-child {
+    padding: 14px;
+    border-radius: 12px;
+    box-shadow: none;
+  }
+
+  .comunicacao-channel-surface.comunicacao-channel-surface[data-comunicacao-view="perfil"] > div > div > div > section:first-child > div:first-child > div:first-child {
+    width: 32px;
+    height: 32px;
+    border-radius: 9px;
+  }
+
+  .comunicacao-channel-surface.comunicacao-channel-surface[data-comunicacao-view="perfil"] > div > div > div > section:first-child h3 {
+    font-size: 14px;
+    line-height: 1.5;
+    font-weight: 500;
+  }
+
+  .comunicacao-channel-surface.comunicacao-channel-surface[data-comunicacao-view="perfil"] > div > div > div > section:first-child p {
+    font-size: 12px;
+    line-height: 1.6;
+    font-weight: 400;
+  }
+
+  .comunicacao-channel-surface.comunicacao-channel-surface[data-comunicacao-view="perfil"] > div > div > div > section:first-child button {
+    min-height: 40px;
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: none;
+    letter-spacing: normal;
+  }
+}
+

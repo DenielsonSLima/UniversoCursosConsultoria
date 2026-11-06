@@ -28,9 +28,9 @@ const CursoTecnicoCard: React.FC<CursoTecnicoCardProps> = ({ curso, onClick, onD
 
   return (
     <div 
-      className="group bg-white rounded-[2rem] border border-slate-100 p-6 hover:shadow-xl hover:shadow-blue-900/10 hover:border-blue-200 transition-all duration-300 flex flex-col h-full relative overflow-hidden"
+      className="formacoes-cursos-card group bg-white rounded-[2rem] border border-slate-100 p-6 hover:shadow-xl hover:shadow-blue-900/10 hover:border-blue-200 transition-all duration-300 flex flex-col h-full relative overflow-hidden"
     >
-      <div className="aspect-video w-full rounded-2xl overflow-hidden border border-slate-100 bg-slate-50 mb-4 relative z-10">
+      <div className="formacoes-cursos-cover aspect-video w-full rounded-2xl overflow-hidden border border-slate-100 bg-slate-50 mb-4 relative z-10">
         {curso.imagem_url ? (
           <img
             src={curso.imagem_url}
@@ -45,7 +45,7 @@ const CursoTecnicoCard: React.FC<CursoTecnicoCardProps> = ({ curso, onClick, onD
         )}
       </div>
 
-      <div className="flex flex-wrap items-center justify-end gap-1.5 mb-5 relative z-10">
+      <div className="formacoes-cursos-badges flex flex-wrap items-center justify-end gap-1.5 mb-5 relative z-10">
         <span aria-label={disciplinasLabel} className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 text-[10px] font-bold uppercase px-2.5 py-1 rounded-full border border-emerald-100">
           <BookOpen size={11} />
           {disciplinasLabel}
@@ -58,16 +58,16 @@ const CursoTecnicoCard: React.FC<CursoTecnicoCardProps> = ({ curso, onClick, onD
         </span>
       </div>
 
-      <h3 className="text-lg font-black text-[#001a33] mb-2 group-hover:text-blue-600 transition-colors relative z-10">
+      <h3 className="formacoes-cursos-card-title text-lg font-black text-[#001a33] mb-2 group-hover:text-blue-600 transition-colors relative z-10">
         {curso.nome}
       </h3>
-      <p className="text-xs text-slate-500 font-medium mb-6 line-clamp-2 relative z-10">
+      <p className="formacoes-cursos-description text-xs text-slate-500 font-medium mb-6 line-clamp-2 relative z-10">
         {descricao}
       </p>
 
-      <div className="mt-auto space-y-3 relative z-10">
+      <div className="formacoes-cursos-card-footer mt-auto space-y-3 relative z-10">
         {hasGradeConfigured ? (
-          <div className="flex items-center gap-3 text-xs text-slate-600 bg-slate-50 p-3 rounded-xl">
+          <div className="formacoes-cursos-metadata flex items-center gap-3 text-xs text-slate-600 bg-slate-50 p-3 rounded-xl">
             <Clock size={16} className="text-emerald-500" />
             <span className="font-bold">{curso.carga_horaria}h</span>
             <span className="text-slate-400">|</span>
@@ -75,7 +75,7 @@ const CursoTecnicoCard: React.FC<CursoTecnicoCardProps> = ({ curso, onClick, onD
             <span className="font-bold">{duracaoMeses} Meses</span>
           </div>
         ) : (
-          <div className="text-xs text-slate-400 font-bold bg-slate-50 p-3 rounded-xl text-center uppercase tracking-wider">
+          <div className="formacoes-cursos-metadata text-xs text-slate-400 font-bold bg-slate-50 p-3 rounded-xl text-center uppercase tracking-wider">
             Grade não configurada
           </div>
         )}
@@ -83,7 +83,7 @@ const CursoTecnicoCard: React.FC<CursoTecnicoCardProps> = ({ curso, onClick, onD
         <div className="flex flex-col gap-2 relative z-20">
           <button 
             onClick={onClick}
-            className="w-full flex items-center justify-between p-3 rounded-xl bg-[#001a33] text-white text-[10px] font-bold uppercase tracking-widest hover:bg-blue-900 transition-colors"
+            className="formacoes-cursos-card-primary w-full flex items-center justify-between p-3 rounded-xl bg-[#001a33] text-white text-[10px] font-bold uppercase tracking-widest hover:bg-blue-900 transition-colors"
           >
             <span>Configurar Curso</span>
             <ChevronRight size={14} />
@@ -132,8 +132,6 @@ const CursoTecnicoCard: React.FC<CursoTecnicoCardProps> = ({ curso, onClick, onD
         </div>
       </div>
 
-      {/* Decorative */}
-      <div className="absolute -bottom-8 -right-8 w-32 h-32 bg-emerald-50 rounded-full opacity-0 group-hover:opacity-20 transition-opacity blur-2xl"></div>
     </div>
   );
 };

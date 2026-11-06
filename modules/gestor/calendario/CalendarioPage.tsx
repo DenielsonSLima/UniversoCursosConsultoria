@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import './calendario-workspace.css';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { supabase } from '../../../lib/supabase';
@@ -249,7 +250,7 @@ const CalendarioPage: React.FC<CalendarioPageProps> = ({ poloId }) => {
   };
 
   return (
-    <div className="calendario-readable">
+    <div className="gestor-calendario-workspace calendario-readable">
       <AgendaWorkspace
         poloId={poloId}
         currentYear={currentYear}

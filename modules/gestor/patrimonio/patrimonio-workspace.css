@@ -1,0 +1,276 @@
+@media screen {
+  .patrimonio-workspace.patrimonio-workspace {
+    min-width: 0;
+    padding-bottom: 24px;
+    animation: none;
+    transform: none;
+    backface-visibility: visible;
+    will-change: auto;
+  }
+
+  .patrimonio-workspace .patrimonio-workspace-heading {
+    align-items: center;
+    gap: 12px;
+    padding-bottom: 16px;
+  }
+
+  .patrimonio-workspace .patrimonio-workspace-identity {
+    min-width: 0;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .patrimonio-workspace-identity.patrimonio-workspace-identity > div:first-child {
+    width: 32px;
+    height: 32px;
+    border-radius: 9px;
+  }
+
+  .patrimonio-workspace-identity.patrimonio-workspace-identity > div:first-child > svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .patrimonio-workspace-identity.patrimonio-workspace-identity > div:last-child {
+    min-width: 0;
+  }
+
+  .patrimonio-workspace-identity.patrimonio-workspace-identity h2 {
+    font-size: 23px;
+    line-height: 1.3;
+    font-weight: 500;
+    letter-spacing: -0.025em;
+  }
+
+  .patrimonio-workspace-identity.patrimonio-workspace-identity p:first-child {
+    font-size: 10px;
+    font-weight: 500;
+    text-transform: none;
+    letter-spacing: normal;
+  }
+
+  .patrimonio-workspace-identity.patrimonio-workspace-identity p:last-child {
+    font-size: 12px;
+    line-height: 1.6;
+    font-weight: 400;
+  }
+
+  .patrimonio-workspace .patrimonio-workspace-count {
+    padding: 9px 12px;
+    border-radius: 10px;
+    flex-shrink: 0;
+    background: white;
+    border-color: #e2e8f0;
+  }
+
+  .patrimonio-workspace-count.patrimonio-workspace-count > p:first-child {
+    font-size: 11px;
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: normal;
+  }
+
+  .patrimonio-workspace-count.patrimonio-workspace-count > p:last-child {
+    font-size: 22px;
+    line-height: 1.4;
+    font-weight: 500;
+    overflow-wrap: anywhere;
+  }
+
+  .patrimonio-workspace .patrimonio-workspace-grid {
+    gap: 12px;
+  }
+
+  .patrimonio-workspace .patrimonio-workspace-state {
+    min-height: 180px;
+    padding: 32px 16px;
+    border-radius: 12px;
+  }
+
+  .patrimonio-workspace-state.patrimonio-workspace-state h3 {
+    font-size: 14px;
+    line-height: 1.5;
+    font-weight: 500;
+  }
+
+  .patrimonio-workspace-state.patrimonio-workspace-state p,
+  .patrimonio-workspace-state.patrimonio-workspace-state span {
+    font-size: 12px;
+    line-height: 1.7;
+    font-weight: 400;
+  }
+
+  .patrimonio-workspace-state.patrimonio-workspace-state button {
+    min-height: 40px;
+    padding: 9px 12px;
+    border-radius: 9px;
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: none;
+    letter-spacing: normal;
+    box-shadow: none;
+    justify-content: center;
+  }
+
+  .patrimonio-workspace .patrimonio-workspace-pagination {
+    padding-top: 12px;
+    gap: 10px;
+  }
+
+  .patrimonio-workspace-pagination.patrimonio-workspace-pagination p {
+    font-size: 11px;
+    line-height: 1.6;
+    font-weight: 400;
+  }
+
+  .patrimonio-workspace-pagination.patrimonio-workspace-pagination button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 36px;
+    padding: 8px 10px;
+    border-radius: 9px;
+    font-size: 11px;
+    font-weight: 500;
+  }
+
+  .patrimonio-workspace-toolbar.patrimonio-workspace-toolbar {
+    min-width: 0;
+  }
+
+  .patrimonio-workspace-toolbar .patrimonio-workspace-filters {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: center;
+    gap: 10px;
+  }
+
+  .patrimonio-workspace-filters.patrimonio-workspace-filters > div:first-child > input {
+    min-height: 40px;
+    padding-top: 9px;
+    padding-bottom: 9px;
+    border-radius: 10px;
+    font-size: 12px;
+    line-height: 1.5;
+    font-weight: 400;
+  }
+
+  .patrimonio-workspace-toolbar .patrimonio-workspace-type {
+    width: 100%;
+    min-width: 0;
+    min-height: 40px;
+    border-radius: 10px;
+    align-items: center;
+  }
+
+  .patrimonio-workspace-type.patrimonio-workspace-type > select {
+    min-height: 38px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+    font-size: 12px;
+    line-height: 1.5;
+    font-weight: 400;
+  }
+
+  .patrimonio-workspace-toolbar .patrimonio-workspace-controls {
+    min-width: 0;
+    gap: 8px;
+    justify-content: space-between;
+  }
+
+  .patrimonio-workspace-toolbar .patrimonio-workspace-view {
+    padding: 3px;
+    gap: 2px;
+    border-radius: 10px;
+  }
+
+  .patrimonio-workspace-view.patrimonio-workspace-view > button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    border-radius: 7px;
+    box-shadow: none;
+  }
+
+  .patrimonio-workspace-toolbar .patrimonio-workspace-actions {
+    min-width: 0;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .patrimonio-workspace-actions.patrimonio-workspace-actions > button {
+    min-height: 40px;
+    padding: 9px 12px;
+    border-radius: 10px;
+    font-size: 12px;
+    line-height: 1.5;
+    font-weight: 500;
+    text-transform: none;
+    letter-spacing: normal;
+    box-shadow: none;
+    white-space: nowrap;
+  }
+
+  .patrimonio-workspace-toolbar.patrimonio-workspace-toolbar > nav > div > button {
+    min-height: 40px;
+    padding-right: 14px;
+    padding-left: 14px;
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: none;
+    letter-spacing: normal;
+  }
+
+  @media (min-width: 1280px) {
+    .patrimonio-workspace-toolbar .patrimonio-workspace-filters {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 180px) max-content;
+    }
+
+    .patrimonio-workspace-toolbar .patrimonio-workspace-controls {
+      min-width: max-content;
+      flex-wrap: nowrap;
+      flex-shrink: 0;
+    }
+
+    .patrimonio-workspace-toolbar .patrimonio-workspace-view,
+    .patrimonio-workspace-toolbar .patrimonio-workspace-actions {
+      flex-shrink: 0;
+      flex-wrap: nowrap;
+    }
+  }
+
+  @media (max-width: 639px) {
+    .patrimonio-workspace .patrimonio-workspace-heading {
+      align-items: flex-start;
+    }
+
+    .patrimonio-workspace .patrimonio-workspace-count {
+      align-self: stretch;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .patrimonio-workspace-view.patrimonio-workspace-view > button {
+      width: 38px;
+      height: 38px;
+    }
+
+    .patrimonio-workspace-actions.patrimonio-workspace-actions > button {
+      min-height: 44px;
+      padding: 9px 10px;
+      font-size: 11px;
+      gap: 6px;
+    }
+
+    .patrimonio-workspace-state.patrimonio-workspace-state button,
+    .patrimonio-workspace-pagination.patrimonio-workspace-pagination button,
+    .patrimonio-workspace-toolbar.patrimonio-workspace-toolbar > nav > div > button {
+      min-height: 44px;
+    }
+  }
+}

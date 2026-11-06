@@ -12,6 +12,15 @@ Histórico arquivado: [01/10/2026 a 04/10/2026 — versões 4.8.145 a 4.8.168](.
 
 Histórico arquivado: [05/10/2026 — versões 4.8.169 a 4.8.170](./changelog/2026-10-05-versoes-4-8-169-a-170.md).
 
+Histórico arquivado: [05/10/2026 — versões 4.8.171 a 4.8.174](./changelog/2026-10-05-versoes-4-8-171-a-174.md).
+
+## [4.8.250] - 2026-11-06
+
+### Alterado
+- Formações com entrada e oito submódulos mais compactos, preservando cursos, grades, modelos e permissões.
+- Patrimônio e Relatórios com navegação, filtros, cartões e catálogos refinados.
+- Calendário e Comunicação com cabeçalhos e áreas de trabalho compactos, mantendo datas, exportações, atendimento e operações existentes.
+
 ## [4.8.249] - 2026-11-06
 
 ### Alterado
@@ -463,32 +472,3 @@ Histórico arquivado: [05/10/2026 — versões 4.8.169 a 4.8.170](./changelog/20
 - Filiação exige somente nome da mãe para matrícula técnica; nome do pai passa a opcional no cadastro e no perfil do aluno.
 - Ausência do pai deixa de gerar pendência ou bloquear o ingresso técnico; mãe, dados pessoais e endereço mantêm as exigências existentes.
 - Regra alinhada entre frontend e RPC canônica, com regressões sintéticas; CI, Preview e publicação acompanham o registro do lote. Smoke autenticado Safari pendente.
-
-## [4.8.174] - 2026-10-05
-
-### Calendário de aulas
-
-- Novo calendário cronológico da turma técnica com todos os módulos ou seleção de módulos em um PDF.
-- Período inclusivo opcional, independente do mês aberto na agenda, mantendo aulas passadas e futuras.
-- Módulo identificado em cada aula, ordem canônica de data/horário e encontros simultâneos preservados.
-- Modo de módulo completo mantido; compositor vetorial usa cabeçalho institucional compartilhado e marca configurada.
-
-## [4.8.173] - 2026-10-05
-
-- Confirmação auditada do primeiro ciclo importado de uma matrícula T42 com 12 mensalidades pagas; segundo ciclo elegível sem emissão de cobrança.
-- O assistente de geração posiciona o conteúdo no topo ao avançar ou voltar entre etapas.
-- Operação individual aplicada via MCP Supabase e contrato de leitura aprovado; smoke visual autenticado da interface pendente.
-
-## [4.8.172] - 2026-10-05
-
-- Início e Calendário com rótulos de pelo menos 12px, contraste reforçado e espaçamento mais legível.
-- Secretaria com títulos de navegação em 16px/peso 600, descrições em 14px e renderização automática localizada.
-- Animações das telas revisadas terminam sem camadas transformadas; campos do Calendário usam no mínimo 16px em celulares.
-- Validação técnica sem navegador por orientação expressa; conferência visual/autenticada permanece pendente.
-
-## [4.8.171] - 2026-10-05
-
-- Abas dos polos do Caixa com nomes em 16px, peso médio e maior contraste; selo Matriz ampliado de 9px para 12px.
-- Renderização de fontes automática localizada nas abas; animação do Caixa termina sem manter texto em camada transformada.
-- Validação técnica sem navegador, conforme orientação mantida do responsável; conferência visual permanece pendente.
-

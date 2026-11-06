@@ -26,7 +26,7 @@ interface UnifiedCommunicationPageProps {
 }
 
 const EmptyStateIcon = () => (
-  <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 text-blue-300">
+  <span className="comunicacao-unified-empty-icon mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 text-blue-300">
     <MessagesSquare size={26} />
   </span>
 );
@@ -177,19 +177,19 @@ const UnifiedCommunicationPage: React.FC<UnifiedCommunicationPageProps> = ({
   };
 
   return (
-    <div className="flex h-[calc(100vh-120px)] min-h-[620px] flex-col overflow-hidden rounded-3xl border border-slate-100 bg-white shadow-sm">
-      <header className="relative shrink-0 overflow-hidden border-b border-[#173756] bg-[#001a33] px-5 py-5 text-white sm:px-7">
-        <div className="pointer-events-none absolute inset-0 opacity-30 [background-image:radial-gradient(circle_at_20%_0%,rgba(47,108,255,.7),transparent_35%),linear-gradient(rgba(255,255,255,.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.05)_1px,transparent_1px)] [background-size:auto,28px_28px,28px_28px]" />
+    <div className="comunicacao-workspace comunicacao-unified flex h-[calc(100vh-120px)] min-h-[620px] flex-col overflow-hidden rounded-3xl border border-slate-100 bg-white shadow-sm">
+      <header className="comunicacao-unified-header relative shrink-0 overflow-hidden border-b border-[#173756] bg-[#001a33] px-5 py-5 text-white sm:px-7">
+        <div className="comunicacao-unified-ornament pointer-events-none absolute inset-0 opacity-30 [background-image:radial-gradient(circle_at_20%_0%,rgba(47,108,255,.7),transparent_35%),linear-gradient(rgba(255,255,255,.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.05)_1px,transparent_1px)] [background-size:auto,28px_28px,28px_28px]" />
         <div className="relative flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex items-start gap-3">
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-blue-500 text-white shadow-lg shadow-blue-950/30"><MessagesSquare size={21} /></span>
+          <div className="comunicacao-unified-identity flex items-start gap-3">
+            <span className="comunicacao-unified-icon flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-blue-500 text-white shadow-lg shadow-blue-950/30"><MessagesSquare size={21} /></span>
             <div>
-              <div className="flex flex-wrap items-center gap-2"><h1 className="text-xl font-black tracking-tight sm:text-2xl">Central de Atendimento</h1><span className="inline-flex items-center gap-1 rounded-full bg-emerald-400/15 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-emerald-200 ring-1 ring-inset ring-emerald-300/20"><Radio size={10} /> Em tempo real</span></div>
-              <p className="mt-1 text-xs font-medium text-slate-300">Todas as conversas do portal, app e WhatsApp em uma única fila.</p>
+              <div className="flex flex-wrap items-center gap-2"><h1 className="comunicacao-unified-title text-xl font-black tracking-tight sm:text-2xl">Central de Atendimento</h1><span className="comunicacao-unified-live inline-flex items-center gap-1 rounded-full bg-emerald-400/15 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-emerald-200 ring-1 ring-inset ring-emerald-300/20"><Radio size={10} /> Em tempo real</span></div>
+              <p className="comunicacao-unified-description mt-1 text-xs font-medium text-slate-300">Todas as conversas do portal, app e WhatsApp em uma única fila.</p>
             </div>
           </div>
 
-          <div className="inline-flex items-center gap-3 rounded-2xl bg-white/10 px-3.5 py-2 ring-1 ring-inset ring-white/15" aria-label={`Fila unificada de ${accessibleChannels}`}>
+          <div className="comunicacao-unified-queue inline-flex items-center gap-3 rounded-2xl bg-white/10 px-3.5 py-2 ring-1 ring-inset ring-white/15" aria-label={`Fila unificada de ${accessibleChannels}`}>
             <span className="flex -space-x-1.5" aria-hidden="true">
               {canAccessInternal && <span className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-[#16334f] bg-blue-500 text-white"><Globe2 size={13} /></span>}
               {canAccessInternal && <span className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-[#16334f] bg-blue-400 text-white"><Smartphone size={12} /></span>}
@@ -200,7 +200,7 @@ const UnifiedCommunicationPage: React.FC<UnifiedCommunicationPageProps> = ({
         </div>
       </header>
 
-      <div className="flex min-h-0 flex-1 overflow-hidden">
+      <div className="comunicacao-unified-body flex min-h-0 flex-1 overflow-hidden">
         <UnifiedSupportInbox
           filteredItems={filteredItems}
           hasLoadError={Boolean(error)}
@@ -224,7 +224,7 @@ const UnifiedCommunicationPage: React.FC<UnifiedCommunicationPageProps> = ({
         />
         <div className="unified-support-detail min-w-0 flex-1 overflow-hidden">
           {!loading && items.length > 0 && !selectedItem && !heldDetailChannel ? (
-            <div className="flex h-full items-center justify-center bg-slate-50 px-8 text-center"><div><EmptyStateIcon /><p className="mt-3 text-sm font-bold text-slate-600">Nenhuma conversa neste filtro</p><p className="mt-1 text-xs font-medium text-slate-400">Altere o filtro ou faça uma nova busca.</p></div></div>
+            <div className="comunicacao-unified-empty flex h-full items-center justify-center bg-slate-50 px-8 text-center"><div><EmptyStateIcon /><p className="mt-3 text-sm font-bold text-slate-600">Nenhuma conversa neste filtro</p><p className="mt-1 text-xs font-medium text-slate-400">Altere o filtro ou faça uma nova busca.</p></div></div>
           ) : detailChannel === 'internal' && canAccessInternal ? (
             <ComunicacaoPage gestorProfile={gestorProfile} channel="mensagem" embedded />
           ) : canAccessWhatsApp ? (
@@ -249,18 +249,18 @@ const UnifiedCommunicationPage: React.FC<UnifiedCommunicationPageProps> = ({
           role="dialog"
           aria-modal="true"
           aria-labelledby="unified-start-title"
-          className="fixed inset-0 z-[110] flex items-center justify-center bg-[#001a33]/55 p-4 backdrop-blur-sm"
+          className="comunicacao-start-chooser fixed inset-0 z-[110] flex items-center justify-center bg-[#001a33]/55 p-4 backdrop-blur-sm"
           onMouseDown={(event) => { if (event.target === event.currentTarget) setStartChooserOpen(false); }}
         >
-          <div className="w-full max-w-lg overflow-hidden rounded-3xl border border-white/80 bg-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-100 px-6 py-5">
+          <div className="comunicacao-start-surface w-full max-w-lg overflow-hidden rounded-3xl border border-white/80 bg-white shadow-2xl">
+            <div className="comunicacao-start-heading flex items-center justify-between border-b border-slate-100 px-6 py-5">
               <div>
                 <h2 id="unified-start-title" className="text-lg font-black text-[#001a33]">Iniciar conversa</h2>
                 <p className="mt-1 text-xs font-medium text-slate-500">Escolha por onde o atendimento será iniciado.</p>
               </div>
               <button type="button" onClick={() => setStartChooserOpen(false)} aria-label="Fechar" className="rounded-xl p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700"><X size={18} /></button>
             </div>
-            <div className="grid gap-3 p-5 sm:grid-cols-2">
+            <div className="comunicacao-start-options grid gap-3 p-5 sm:grid-cols-2">
               <button type="button" onClick={() => launchStart('internal')} className="group rounded-2xl border border-blue-100 bg-blue-50/70 p-4 text-left transition-all hover:-translate-y-0.5 hover:border-blue-200 hover:bg-blue-50 hover:shadow-md">
                 <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-white"><MessagesSquare size={18} /></span>
                 <span className="mt-3 block text-sm font-black text-[#001a33]">Portal e app</span>

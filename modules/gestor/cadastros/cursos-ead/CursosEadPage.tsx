@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { BarChart3, BookOpenCheck, MonitorPlay, Plus, Loader2, X, Copy, CheckCircle2, AlertTriangle, Search, Users, LayoutGrid, TableProperties } from 'lucide-react';
+import { MonitorPlay, Loader2, X, Copy, CheckCircle2, AlertTriangle, Search, LayoutGrid, TableProperties } from 'lucide-react';
+import CursosEadOverview from './components/CursosEadOverview';
+import '../formacoes-recursos.css';
 import CursoEadCard from './components/CursoEadCard';
 import CursoEadTable from './components/CursoEadTable';
 import EadCourseWizard from './components/EadCourseWizard';
@@ -12,36 +14,6 @@ import { useCursosEadMutations } from './hooks/useCursosEadMutations';
 interface CursosEadPageProps {
   readOnly?: boolean;
 }
-
-const formatMonthLabelPtBr = (item: any) => {
-  const rawLabel = String(item?.label || item?.month || '').trim();
-  const normalizedLabel = rawLabel.toUpperCase().replace('.', '');
-  const englishToPtBr: Record<string, string> = {
-    JAN: 'JAN',
-    FEB: 'FEV',
-    MAR: 'MAR',
-    APR: 'ABR',
-    MAY: 'MAI',
-    JUN: 'JUN',
-    JUL: 'JUL',
-    AUG: 'AGO',
-    SEP: 'SET',
-    OCT: 'OUT',
-    NOV: 'NOV',
-    DEC: 'DEZ'
-  };
-
-  if (englishToPtBr[normalizedLabel]) return englishToPtBr[normalizedLabel];
-
-  const rawMonth = String(item?.month || '').trim();
-  const numericMonth = rawMonth.match(/^\d{4}-(\d{1,2})/)?.[1] || rawMonth.match(/^(\d{1,2})$/)?.[1];
-  if (numericMonth) {
-    const ptBrMonths = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'];
-    return ptBrMonths[Number(numericMonth) - 1] || rawLabel.toUpperCase();
-  }
-
-  return rawLabel.toUpperCase();
-};
 
 const CursosEadPage: React.FC<CursosEadPageProps> = ({ readOnly = false }) => {
   const [viewState, setViewState] = useState<'list' | 'wizard'>('list');
@@ -207,81 +179,11 @@ const CursosEadPage: React.FC<CursosEadPageProps> = ({ readOnly = false }) => {
   }
 
   return (
-    <div className="animate-fadeIn relative">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 border-b border-slate-100 pb-6 gap-4">
-        <div>
-          <h2 className="text-3xl font-black text-[#001a33] uppercase tracking-tight">
-            Cursos EAD
-          </h2>
-          <p className="text-slate-500 font-medium mt-1">
-            Gestão de cursos na modalidade de Educação a Distância (online).
-          </p>
-        </div>
-        
-        {!readOnly && <button
-          onClick={handleCreateNew}
-          className="flex items-center gap-2 bg-[#001a33] text-white px-6 py-3 rounded-xl font-bold uppercase text-xs tracking-wider hover:bg-purple-700 hover:shadow-lg hover:shadow-purple-600/20 transition-all shadow-md"
-        >
-          <Plus size={16} /> Novo Curso EAD
-        </button>}
-      </div>
-
-      {readOnly && (
-        <div className="mb-6 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-xs font-bold text-blue-800">
-          Modo de visualização do polo: cadastros e alterações são exclusivos da Matriz.
-        </div>
-      )}
-
-      {/* KPIs e gráfico calculados pelo Supabase */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 items-start gap-4 mb-6">
-        <div className="lg:col-span-8 grid grid-cols-1 sm:grid-cols-3 items-start gap-4">
-          <div className="min-h-[132px] bg-white border border-slate-200 rounded-3xl p-4 shadow-sm">
-            <div className="w-9 h-9 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center mb-3">
-              <BookOpenCheck size={18} />
-            </div>
-            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Total de cursos EAD</p>
-            <p className="text-2xl font-black text-[#001a33] mt-1">{dashboard.totalCursos}</p>
-          </div>
-
-          <div className="min-h-[132px] bg-white border border-slate-200 rounded-3xl p-4 shadow-sm">
-            <div className="w-9 h-9 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mb-3">
-              <Users size={18} />
-            </div>
-            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Alunos em EAD</p>
-            <p className="text-2xl font-black text-[#001a33] mt-1">{dashboard.totalAlunos}</p>
-          </div>
-
-          <div className="min-h-[132px] bg-white border border-slate-200 rounded-3xl p-4 shadow-sm">
-            <div className="w-9 h-9 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mb-3">
-              <MonitorPlay size={18} />
-            </div>
-            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Cursos publicados</p>
-            <p className="text-2xl font-black text-[#001a33] mt-1">{dashboard.cursosAtivos}</p>
-          </div>
-        </div>
-
-        <div className="lg:col-span-4 min-h-[132px] bg-white border border-slate-200 rounded-3xl p-4 shadow-sm">
-          <div className="flex items-center justify-between mb-3">
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Inscrições EAD</p>
-              <h3 className="text-sm font-black text-[#001a33] uppercase tracking-tight">Últimos 3 meses</h3>
-            </div>
-            <BarChart3 size={18} className="text-purple-600" />
-          </div>
-          <div className="grid grid-cols-3 gap-2">
-            {monthlyTrend.map((item: any) => (
-              <div key={item.month} className="rounded-2xl border border-slate-100 bg-slate-50 px-3 py-2 text-center">
-                <p className="text-xl font-black text-[#001a33] leading-none">{item.total}</p>
-                <p className="mt-1 text-[9px] font-black uppercase tracking-widest text-slate-400">{formatMonthLabelPtBr(item)}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
+    <div className="formacao-recursos animate-fadeIn relative">
+      <CursosEadOverview readOnly={readOnly} handleCreateNew={handleCreateNew} dashboard={dashboard} monthlyTrend={monthlyTrend} />
 
       {/* Busca, filtros e organizacao */}
-      <div className="bg-white border border-slate-200 rounded-3xl p-4 mb-6 shadow-sm">
+      <div className="formacao-recursos-filters bg-white border border-slate-200 rounded-3xl p-4 mb-6 shadow-sm">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
           <div className="lg:col-span-6 relative">
             <span className="absolute inset-y-0 left-4 flex items-center pointer-events-none text-slate-400">
@@ -331,7 +233,7 @@ const CursosEadPage: React.FC<CursosEadPageProps> = ({ readOnly = false }) => {
       </div>
 
       {/* Tabs Filtro Status */}
-      <div className="flex gap-2 mb-8 bg-slate-100 p-1 rounded-2xl max-w-xs border border-slate-200">
+      <div className="formacao-recursos-display flex gap-2 mb-8 bg-slate-100 p-1 rounded-2xl max-w-xs border border-slate-200">
         <button 
           onClick={() => setStatusFilter('ativo')}
           className={`flex-1 py-2.5 text-xs font-bold uppercase tracking-wider rounded-xl transition-all ${
@@ -368,7 +270,7 @@ const CursosEadPage: React.FC<CursosEadPageProps> = ({ readOnly = false }) => {
         </div>
       ) : (
         <div className="space-y-10">
-          <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div className="formacao-recursos-display mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <p className="text-xs font-bold text-slate-500">
               Exibindo {total === 0 ? 0 : ((currentPage - 1) * pageSize + 1)} a {Math.min(currentPage * pageSize, total)} de {total} curso(s)
             </p>
@@ -428,13 +330,13 @@ const CursosEadPage: React.FC<CursosEadPageProps> = ({ readOnly = false }) => {
           {groupedData.groups.map((group: any) => (
             <div key={group.area} className="animate-fadeIn">
               {groupMode === 'area' && (
-                <h3 className="text-base font-black text-[#001a33] uppercase tracking-widest border-l-4 border-purple-600 pl-3 mb-6 flex items-center gap-2">
+                <h3 className="formacao-recursos-group text-base font-black text-[#001a33] uppercase tracking-widest border-l-4 border-purple-600 pl-3 mb-6 flex items-center gap-2">
                   <span>{group.area}</span>
                   <span className="text-xs bg-purple-50 text-purple-600 px-2 py-0.5 rounded-full border border-purple-100 font-bold">{group.total}</span>
                 </h3>
               )}
               {displayMode === 'cards' ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                <div className="formacao-recursos-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                   {(group.cursos || []).map((curso: Curso) => (
                     <CursoEadCard
                       key={curso.id}

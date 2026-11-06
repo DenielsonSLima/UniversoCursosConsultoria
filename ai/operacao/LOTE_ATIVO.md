@@ -1,7 +1,7 @@
 # Lote ativo
 
-## Lote: 2026-11-06-publicacao-financeiro-caixa-configuracoes-4-8-249
+## Lote: 2026-11-06-entrega-visual-cinco-modulos-4-8-250
 
-Publicação autorizada em andamento da versão4.8.249/revisão258. Financeiro, Caixa e entrada de Configurações compactos; dados, regras, consultas, permissões, operações e documentos preservados. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-06-publicacao-financeiro-caixa-configuracoes-4-8-249.md`.
+Entrega 4.8.250: Formações, Patrimônio, Relatórios, Calendário e Comunicação, na direção compacta aprovada. Implementação em cinco etapas sequenciais com três agentes, revisão independente e smoke Safari de cada módulo. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-06-entrega-visual-cinco-modulos-4-8-250.md`.
 
-Base main4a36d600bfcbc01640dd4c13125ddd1f538e1312. Safari desktop/móvel, build, TypeScript, lint focado, contratos e limite de linhas aprovados. GitHub via MCP, prévia Vercel e confirmação pós-deploy no domínio oficial; resultado efetivo na PR. A primeira checagem remota exigiu reduzir o registro corrente para manter o índice RAG dentro80trechos; nenhuma guarda foi alterada.
+Preservar dados, consultas, permissões, regras, envios e geradores; somente apresentação e extrações equivalentes para o teto de 500 linhas. GitHub autorizado ao final: commit atômico, PR e Preview após checks. Produção não solicitada para este lote. Base publicada 4.8.249 validada pelo usuário.

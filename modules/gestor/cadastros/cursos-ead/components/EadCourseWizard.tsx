@@ -9,6 +9,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import type { FC } from 'react';
+import '../../formacoes-recursos.css';
 import { EadCourseWizardProvider } from './EadCourseWizardContext';
 import type { EadCourseWizardProps } from './eadCourseWizard.types';
 import EadCourseWizardStep1 from './steps/EadCourseWizardStep1';
@@ -56,27 +57,27 @@ const EadCourseWizardSession: FC<EadCourseWizardProps> = ({ curso, onBack, onSav
 
   return (
     <EadCourseWizardProvider value={controller}>
-      <div className="flex h-full min-h-screen min-w-0 flex-col overflow-x-hidden bg-slate-50 animate-fadeIn">
-        <header className="flex flex-col items-start justify-between gap-4 border-b border-slate-200 bg-white px-4 py-5 sm:px-6 xl:flex-row xl:items-center">
+      <div className="ead-course-workspace flex h-full min-h-screen min-w-0 flex-col overflow-x-hidden bg-slate-50 animate-fadeIn">
+        <header className="ead-course-header flex flex-col items-start justify-between gap-4 border-b border-slate-200 bg-white px-4 py-5 sm:px-6 xl:flex-row xl:items-center">
           <div className="flex min-w-0 items-center gap-4">
             <button
               onClick={onBack}
-              className="flex-shrink-0 rounded-xl border border-slate-200 bg-white p-2 text-slate-400 shadow-sm transition-colors hover:border-purple-200 hover:text-purple-600"
+              className="ead-course-back flex-shrink-0 rounded-xl border border-slate-200 bg-white p-2 text-slate-400 shadow-sm transition-colors hover:border-purple-200 hover:text-purple-600"
               aria-label="Voltar para cursos EAD"
             >
               <ArrowLeft size={20} />
             </button>
             <div className="min-w-0">
-              <span className="rounded-md bg-purple-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-purple-600">
+              <span className="ead-course-eyebrow rounded-md bg-purple-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-purple-600">
                 Ensino a Distância
               </span>
-              <h3 className="mt-1.5 truncate text-lg font-black uppercase tracking-tight text-[#001a33] sm:text-xl">
+              <h3 className="ead-course-title mt-1.5 truncate text-lg font-black uppercase tracking-tight text-[#001a33] sm:text-xl">
                 {curso ? `Editando: ${nome}` : 'Novo Curso EAD'}
               </h3>
             </div>
           </div>
 
-          <div className="flex w-full flex-wrap gap-2 sm:w-auto xl:flex-shrink-0">
+          <div className="ead-course-actions flex w-full flex-wrap gap-2 sm:w-auto xl:flex-shrink-0">
             <button
               onClick={() => handleFinalSave()}
               disabled={isSaving}
@@ -96,13 +97,13 @@ const EadCourseWizardSession: FC<EadCourseWizardProps> = ({ curso, onBack, onSav
           </div>
         </header>
 
-        <nav className="border-b border-slate-200 bg-white px-3 py-3 sm:px-6 sm:py-4" aria-label="Etapas do curso EAD">
-          <div className="mx-auto grid w-full max-w-6xl grid-cols-6">
+        <nav className="ead-course-nav border-b border-slate-200 bg-white px-3 py-3 sm:px-6 sm:py-4" aria-label="Etapas do curso EAD">
+          <div className="ead-course-steps mx-auto grid w-full max-w-6xl grid-cols-6">
             {steps.map((step, index) => (
               <button
                 key={step.num}
                 onClick={() => setCurrentStep(step.num)}
-                className="group relative flex min-w-0 flex-col items-center gap-1.5 px-1 focus:outline-none sm:gap-2"
+                className="ead-course-step group relative flex min-w-0 flex-col items-center gap-1.5 px-1 focus:outline-none sm:gap-2"
                 aria-current={currentStep === step.num ? 'step' : undefined}
                 title={step.name}
               >
@@ -118,7 +119,7 @@ const EadCourseWizardSession: FC<EadCourseWizardProps> = ({ curso, onBack, onSav
                     className={`absolute left-1/2 right-0 top-4 h-0.5 ${currentStep > step.num ? 'bg-purple-400' : 'bg-slate-200'}`}
                   />
                 )}
-                <span className={`relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border text-sm font-bold transition-all ${
+                <span className={`ead-course-step-number relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border text-sm font-bold transition-all ${
                   currentStep === step.num
                     ? 'border-purple-600 bg-purple-600 text-white shadow-md shadow-purple-600/20'
                     : currentStep > step.num
@@ -127,7 +128,7 @@ const EadCourseWizardSession: FC<EadCourseWizardProps> = ({ curso, onBack, onSav
                 }`}>
                   {step.num}
                 </span>
-                <span className={`block w-full truncate text-center text-[8px] font-bold uppercase tracking-tight sm:text-[10px] lg:text-xs lg:tracking-wide ${
+                <span className={`ead-course-step-label block w-full truncate text-center text-[8px] font-bold uppercase tracking-tight sm:text-[10px] lg:text-xs lg:tracking-wide ${
                   currentStep === step.num ? 'font-black text-purple-650' : 'text-slate-500 group-hover:text-slate-700'
                 }`}>
                   {step.name}
@@ -137,12 +138,12 @@ const EadCourseWizardSession: FC<EadCourseWizardProps> = ({ curso, onBack, onSav
           </div>
         </nav>
 
-        <main className="mx-auto w-full max-w-4xl min-w-0 flex-1 p-4 sm:p-6 md:p-8">
-          <div className="rounded-[2.5rem] border border-slate-200/60 bg-white p-6 shadow-sm md:p-8">
+        <main className="ead-course-main mx-auto w-full max-w-4xl min-w-0 flex-1 p-4 sm:p-6 md:p-8">
+          <div className="ead-course-surface rounded-[2.5rem] border border-slate-200/60 bg-white p-6 shadow-sm md:p-8">
             <CurrentStepComponent />
           </div>
 
-          <div className="mt-6 flex items-center justify-between">
+          <div className="ead-course-footer mt-6 flex items-center justify-between">
             <button
               onClick={() => setCurrentStep((previous) => Math.max(1, previous - 1))}
               disabled={currentStep === 1}

@@ -1,3 +1,4 @@
+import '../patrimonio-items.css';
 import {
   Barcode,
   CalendarDays,
@@ -37,22 +38,22 @@ export function PatrimonioCard({
   const availableQuantity = item.status === 'excluido' ? 0 : item.quantidadeDisponivel;
 
   return (
-    <article className="group flex h-full flex-col overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-xl hover:shadow-blue-950/10">
-      <div className="relative flex items-start justify-between gap-3 bg-gradient-to-br from-[#001a33] to-[#073b73] px-4 py-4 text-white">
+    <article className="patrimonio-item-card group flex h-full flex-col overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-xl hover:shadow-blue-950/10">
+      <div className="patrimonio-card-heading relative flex items-start justify-between gap-3 bg-gradient-to-br from-[#001a33] to-[#073b73] px-4 py-4 text-white">
         <div className="min-w-0">
-          <p className="mb-1 text-[9px] font-black uppercase tracking-[0.16em] text-blue-200">{item.tipoProduto || 'Sem tipo'}</p>
-          <h3 className="line-clamp-2 text-base font-black leading-tight">{item.descricao || 'Patrimônio sem descrição'}</h3>
+          <p className="patrimonio-card-type mb-1 text-[9px] font-black uppercase tracking-[0.16em] text-blue-200">{item.tipoProduto || 'Sem tipo'}</p>
+          <h3 className="patrimonio-card-title line-clamp-2 text-base font-black leading-tight">{item.descricao || 'Patrimônio sem descrição'}</h3>
         </div>
-        <div className="flex shrink-0 flex-col items-end gap-2">
+        <div className="patrimonio-card-status flex shrink-0 flex-col items-end gap-2">
           <PatrimonioStatusBadge item={item} />
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 ring-1 ring-white/15">
+          <div className="patrimonio-card-icon flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 ring-1 ring-white/15">
             <Package size={17} aria-hidden="true" />
           </div>
         </div>
       </div>
 
-      <div className="flex flex-1 flex-col gap-4 p-4">
-        <div className="grid grid-cols-2 gap-2">
+      <div className="patrimonio-card-body flex flex-1 flex-col gap-4 p-4">
+        <div className="patrimonio-card-facts grid grid-cols-2 gap-2">
           <div className="rounded-xl border border-slate-100 bg-slate-50 p-3">
             <p className="mb-1 flex items-center gap-1.5 text-[9px] font-black uppercase tracking-wider text-slate-400"><Layers3 size={12} />Disponível</p>
             <p className="text-sm font-black text-[#001a33]">
@@ -73,7 +74,7 @@ export function PatrimonioCard({
           </div>
         ) : null}
 
-        <dl className="space-y-2 text-xs">
+        <dl className="patrimonio-card-details space-y-2 text-xs">
           <div className="flex items-center justify-between gap-3 text-slate-500">
             <dt className="flex items-center gap-1.5 font-medium"><CalendarDays size={13} className="text-slate-400" />Aquisição</dt>
             <dd className="font-bold text-slate-700">{formatPatrimonioDate(item.dataAquisicao)}</dd>
@@ -92,7 +93,7 @@ export function PatrimonioCard({
 
         {item.observacao ? <p className="line-clamp-2 border-t border-slate-100 pt-3 text-xs text-slate-500" title={item.observacao}>{item.observacao}</p> : null}
 
-        <div className="mt-auto flex items-center gap-2 border-t border-slate-100 pt-3" aria-label={`Ações de ${item.descricao}`}>
+        <div className="patrimonio-card-actions mt-auto flex items-center gap-2 border-t border-slate-100 pt-3" aria-label={`Ações de ${item.descricao}`}>
           <button
             type="button"
             onClick={() => onEdit(item)}

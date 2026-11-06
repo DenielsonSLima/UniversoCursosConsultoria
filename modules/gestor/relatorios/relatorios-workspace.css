@@ -1,0 +1,249 @@
+@media screen {
+  .relatorios-workspace.relatorios-workspace {
+    min-width: 0;
+    border-radius: 12px;
+    border-color: #e2e8f0;
+    box-shadow: none;
+    animation: none;
+    transform: none;
+    backface-visibility: visible;
+    will-change: auto;
+  }
+
+  .relatorios-workspace .relatorios-workspace-heading {
+    min-width: 0;
+    padding: 16px;
+    gap: 12px;
+  }
+
+  .relatorios-workspace-heading.relatorios-workspace-heading > div {
+    min-width: 0;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .relatorios-workspace-heading.relatorios-workspace-heading > div > div:last-child {
+    min-width: 0;
+  }
+
+  .relatorios-workspace-heading .relatorios-workspace-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 9px;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .relatorios-workspace-heading .relatorios-workspace-icon > svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .relatorios-workspace-heading .relatorios-workspace-back {
+    min-height: 38px;
+    padding: 9px 10px;
+    border-radius: 9px;
+    gap: 6px;
+    box-shadow: none;
+  }
+
+  .relatorios-workspace-back.relatorios-workspace-back > span {
+    padding-right: 0;
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: none;
+    letter-spacing: normal;
+  }
+
+  .relatorios-workspace-heading .relatorios-workspace-title {
+    font-size: 23px;
+    line-height: 1.4;
+    font-weight: 500;
+    text-transform: none;
+    letter-spacing: -0.025em;
+    overflow-wrap: anywhere;
+  }
+
+  .relatorios-workspace-heading .relatorios-workspace-description {
+    max-width: 90ch;
+    margin-top: 3px;
+    font-size: 12px;
+    line-height: 1.6;
+    font-weight: 400;
+    color: #64748b;
+    overflow-wrap: anywhere;
+  }
+
+  .relatorios-workspace .relatorios-workspace-content,
+  .relatorios-workspace .relatorios-report-frame {
+    min-width: 0;
+  }
+
+  .relatorios-workspace .relatorios-report-frame {
+    padding: 16px;
+  }
+
+  .relatorios-workspace .relatorios-identity-error {
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: none;
+  }
+
+  .relatorios-identity-error.relatorios-identity-error > h3 {
+    font-size: 14px;
+    line-height: 1.5;
+    font-weight: 500;
+    text-transform: none;
+    letter-spacing: normal;
+  }
+
+  .relatorios-identity-error.relatorios-identity-error > p {
+    font-size: 12px;
+    line-height: 1.7;
+    font-weight: 400;
+  }
+
+  .relatorios-identity-error.relatorios-identity-error > button {
+    min-height: 40px;
+    padding: 9px 12px;
+    border-radius: 9px;
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: none;
+    letter-spacing: normal;
+  }
+
+  .relatorios-workspace .relatorios-catalog {
+    padding: 16px;
+  }
+
+  .relatorios-catalog.relatorios-catalog > * + * {
+    margin-top: 24px;
+  }
+
+  .relatorios-catalog .relatorios-catalog-group-title {
+    padding-bottom: 10px;
+    gap: 8px;
+  }
+
+  .relatorios-catalog-group-title.relatorios-catalog-group-title > h3 {
+    font-size: 14px;
+    line-height: 1.5;
+    font-weight: 500;
+    text-transform: none;
+    letter-spacing: normal;
+  }
+
+  .relatorios-catalog .relatorios-catalog-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  .relatorios-catalog .relatorios-catalog-card {
+    display: grid;
+    grid-template-columns: 32px minmax(0, 1fr);
+    grid-template-rows: auto auto auto;
+    column-gap: 10px;
+    align-content: center;
+    min-width: 0;
+    height: auto;
+    min-height: 140px;
+    padding: 14px;
+    border-radius: 12px;
+    border-color: #e2e8f0;
+    box-shadow: none;
+  }
+
+  .relatorios-catalog .relatorios-catalog-card:hover {
+    box-shadow: none;
+  }
+
+  .relatorios-catalog-card.relatorios-catalog-card > div:first-child {
+    display: contents;
+  }
+
+  .relatorios-catalog-card .relatorios-catalog-icon {
+    grid-column: 1;
+    grid-row: 1 / span 3;
+    align-self: center;
+    width: 32px;
+    height: 32px;
+    margin: 0;
+    border-radius: 9px;
+    box-shadow: none;
+  }
+
+  .relatorios-catalog-card .relatorios-catalog-icon > svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .relatorios-catalog-card.relatorios-catalog-card h4 {
+    grid-column: 2;
+    grid-row: 1;
+    min-width: 0;
+    font-size: 13px;
+    line-height: 1.5;
+    font-weight: 500;
+    text-transform: none;
+    letter-spacing: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .relatorios-catalog-card.relatorios-catalog-card p {
+    display: block;
+    grid-column: 2;
+    grid-row: 2;
+    overflow: visible;
+    -webkit-line-clamp: unset;
+    margin-top: 4px;
+    font-size: 11px;
+    line-height: 1.7;
+    font-weight: 400;
+    color: #64748b;
+    overflow-wrap: anywhere;
+  }
+
+  .relatorios-catalog-card.relatorios-catalog-card > div:last-child {
+    grid-column: 2;
+    grid-row: 3;
+    margin-top: 10px;
+    font-size: 11px;
+    line-height: 1.5;
+    font-weight: 500;
+    text-transform: none;
+    letter-spacing: normal;
+  }
+
+  @media (min-width: 700px) {
+    .relatorios-catalog .relatorios-catalog-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (min-width: 1280px) {
+    .relatorios-catalog .relatorios-catalog-grid {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 639px) {
+    .relatorios-workspace-heading .relatorios-workspace-title {
+      font-size: 21px;
+    }
+
+    .relatorios-workspace-heading .relatorios-workspace-back {
+      min-width: 40px;
+      min-height: 44px;
+    }
+
+    .relatorios-workspace .relatorios-report-frame {
+      padding: 12px;
+    }
+
+    .relatorios-identity-error.relatorios-identity-error > button {
+      min-height: 44px;
+    }
+  }
+}

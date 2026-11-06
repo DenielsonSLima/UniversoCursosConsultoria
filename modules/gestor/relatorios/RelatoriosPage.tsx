@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
+import RelatoriosCatalog, { type ReportMenuItem, type ReportType } from './components/RelatoriosCatalog';
+import './relatorios-workspace.css';
 import { useQuery } from '@tanstack/react-query';
-import { Users, Building, BookOpen, DollarSign, BarChart3, FileText, ArrowLeft, ChevronRight, AlertTriangle, Award, GraduationCap, ClipboardList, CheckCircle2, Landmark, ShieldCheck } from 'lucide-react';
+import { Users, Building, BookOpen, DollarSign, BarChart3, FileText, ArrowLeft, AlertTriangle, Award, GraduationCap, ClipboardList, CheckCircle2, Landmark, ShieldCheck } from 'lucide-react';
 import { empresasService } from '../configuracoes/empresas/empresas.service';
 import { polosService } from '../configuracoes/polos/polos.service';
 
@@ -23,16 +25,6 @@ import RelatorioLucroTurma from './components/RelatorioLucroTurma';
 import RelatorioMatriculas from './matriculas/RelatorioMatriculas';
 import DiagnosticoMatriculaInicial from './censo-escolar/matricula-inicial/DiagnosticoMatriculaInicial';
 import { useRelatoriosRealtime } from './hooks/useRelatoriosRealtime';
-
-type ReportType = 'turmas' | 'polos' | 'cursos' | 'extrato-financeiro-conta' | 'financeiro-entradas' | 'financeiro-saidas' | 'financeiro-receitas' | 'financeiro-despesas' | 'financeiro-resumo-categorias' | 'financeiro-resumo-entradas' | 'financeiro-fluxo-caixa' | 'dre' | 'inadimplencia' | 'estagios' | 'financeiro-turma-mensal' | 'financeiro-pre-estagio' | 'alunos-cursando' | 'alunos-finalizados' | 'matriculas' | 'matricula-inicial' | 'situacao-aluno' | 'lucro-turma';
-
-interface ReportMenuItem {
-  id: ReportType;
-  label: string;
-  description: string;
-  icon: React.ReactNode;
-  category: 'operacional' | 'financeiro' | 'academico' | 'oficial';
-}
 
 interface RelatoriosPageProps {
   poloId?: string | null;
@@ -293,30 +285,30 @@ const RelatoriosPage: React.FC<RelatoriosPageProps> = ({ poloId }) => {
   const oficiais = menuItems.filter(item => item.category === 'oficial');
 
   return (
-    <div className="flex flex-col h-[calc(100vh-120px)] bg-slate-50 rounded-3xl border border-slate-100 overflow-hidden shadow-sm animate-fadeIn">
+    <div className="relatorios-workspace flex flex-col h-[calc(100vh-120px)] bg-slate-50 rounded-3xl border border-slate-100 overflow-hidden shadow-sm animate-fadeIn">
       
       {/* Top Header */}
-      <div className="bg-white px-6 py-4 border-b border-slate-150 flex justify-between items-center shrink-0">
+      <div className="relatorios-workspace-heading bg-white px-6 py-4 border-b border-slate-150 flex justify-between items-center shrink-0">
         <div className="flex items-center gap-3">
           {activeReport ? (
             <button
               onClick={() => setActiveReport(null)}
-              className="p-2.5 bg-slate-50 hover:bg-slate-100 text-slate-500 hover:text-[#001a33] rounded-xl transition-all border border-slate-200 shadow-sm flex items-center justify-center gap-1 shrink-0"
+              className="relatorios-workspace-back p-2.5 bg-slate-50 hover:bg-slate-100 text-slate-500 hover:text-[#001a33] rounded-xl transition-all border border-slate-200 shadow-sm flex items-center justify-center gap-1 shrink-0"
               title="Voltar para a seleção de relatórios"
             >
               <ArrowLeft size={16} />
               <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline-block pr-1">Voltar</span>
             </button>
           ) : (
-            <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center">
+            <div className="relatorios-workspace-icon w-10 h-10 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center">
               <FileText size={20} />
             </div>
           )}
           <div>
-            <h1 className="text-xl font-black text-[#001a33] uppercase tracking-tight flex items-center gap-2">
+            <h1 className="relatorios-workspace-title text-xl font-black text-[#001a33] uppercase tracking-tight flex items-center gap-2">
               {activeReport ? activeInfo?.label : 'Central de Relatórios'}
             </h1>
-            <p className="text-xs text-slate-400 font-medium">
+            <p className="relatorios-workspace-description text-xs text-slate-400 font-medium">
               {activeReport ? activeInfo?.description : 'Geração e pré-visualização de documentos gerenciais oficiais'}
             </p>
           </div>
@@ -324,161 +316,27 @@ const RelatoriosPage: React.FC<RelatoriosPageProps> = ({ poloId }) => {
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 overflow-hidden min-h-0 bg-slate-50/50">
+      <div className="relatorios-workspace-content flex-1 overflow-hidden min-h-0 bg-slate-50/50">
         
         {/* If no report is selected: Show grouped cards catalog */}
         {!activeReport ? (
-          <div className="h-full overflow-y-auto custom-scrollbar p-6 space-y-8 select-none">
-            
-            {/* Category: Administrativo & Operacional */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 border-b border-slate-200 pb-2">
-                <Users size={16} className="text-blue-600" />
-                <h3 className="text-xs font-black text-[#001a33] uppercase tracking-widest">
-                  Relatórios Administrativos e Operacionais
-                </h3>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                {operacionais.map((item) => (
-                  <button
-                    key={item.id}
-                    onClick={() => setActiveReport(item.id)}
-                    className="group bg-white rounded-3xl p-5 border border-slate-100 shadow-sm hover:shadow-lg hover:border-blue-200 transition-all text-left flex flex-col justify-between h-52 relative overflow-hidden"
-                  >
-                    <div>
-                      <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mb-4 transition-colors group-hover:bg-blue-600 group-hover:text-white shadow-sm">
-                        {item.icon}
-                      </div>
-                      <h4 className="text-sm font-black text-[#001a33] group-hover:text-blue-900 transition-colors uppercase tracking-tight">
-                        {item.label}
-                      </h4>
-                      <p className="text-xs text-slate-450 font-medium leading-relaxed mt-2 line-clamp-3">
-                        {item.description}
-                      </p>
-                    </div>
-
-                    <div className="flex items-center gap-1 text-[10px] font-black text-blue-600 uppercase tracking-widest mt-4">
-                      Gerar Relatório <ChevronRight size={12} className="transition-transform group-hover:translate-x-1" />
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Category: Academico */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 border-b border-slate-200 pb-2">
-                <GraduationCap size={16} className="text-cyan-700" />
-                <h3 className="text-xs font-black text-[#001a33] uppercase tracking-widest">
-                  Relatórios Acadêmicos
-                </h3>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                {academicos.map((item) => (
-                  <button
-                    key={item.id}
-                    onClick={() => setActiveReport(item.id)}
-                    className="group bg-white rounded-3xl p-5 border border-slate-100 shadow-sm hover:shadow-lg hover:border-cyan-200 transition-all text-left flex flex-col justify-between h-52 relative overflow-hidden"
-                  >
-                    <div>
-                      <div className="w-12 h-12 bg-cyan-50 text-cyan-700 rounded-2xl flex items-center justify-center mb-4 transition-colors group-hover:bg-cyan-700 group-hover:text-white shadow-sm">
-                        {item.icon}
-                      </div>
-                      <h4 className="text-sm font-black text-[#001a33] group-hover:text-cyan-800 transition-colors uppercase tracking-tight">
-                        {item.label}
-                      </h4>
-                      <p className="text-xs text-slate-450 font-medium leading-relaxed mt-2 line-clamp-3">
-                        {item.description}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-1 text-[10px] font-black text-cyan-700 uppercase tracking-widest mt-4">
-                      Gerar Relatório <ChevronRight size={12} className="transition-transform group-hover:translate-x-1" />
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Category: Oficial */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 border-b border-slate-200 pb-2">
-                <Landmark size={16} className="text-orange-700" />
-                <h3 className="text-xs font-black text-[#001a33] uppercase tracking-widest">
-                  Relatórios Oficiais / Censo Escolar
-                </h3>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                {oficiais.map((item) => (
-                  <button
-                    key={item.id}
-                    onClick={() => setActiveReport(item.id)}
-                    className="group bg-white rounded-3xl p-5 border border-slate-100 shadow-sm hover:shadow-lg hover:border-orange-200 transition-all text-left flex flex-col justify-between h-52 relative overflow-hidden"
-                  >
-                    <div>
-                      <div className="w-12 h-12 bg-orange-50 text-orange-700 rounded-2xl flex items-center justify-center mb-4 transition-colors group-hover:bg-orange-700 group-hover:text-white shadow-sm">
-                        {item.icon}
-                      </div>
-                      <h4 className="text-sm font-black text-[#001a33] group-hover:text-orange-800 transition-colors uppercase tracking-tight">
-                        {item.label}
-                      </h4>
-                      <p className="text-xs text-slate-450 font-medium leading-relaxed mt-2 line-clamp-3">
-                        {item.description}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-1 text-[10px] font-black text-orange-700 uppercase tracking-widest mt-4">
-                      Gerar Relatório <ChevronRight size={12} className="transition-transform group-hover:translate-x-1" />
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Category: Financeiro */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 border-b border-slate-200 pb-2">
-                <DollarSign size={16} className="text-emerald-600" />
-                <h3 className="text-xs font-black text-[#001a33] uppercase tracking-widest">
-                  Relatórios Financeiros e Fiscais
-                </h3>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                {financeiros.map((item) => (
-                  <button
-                    key={item.id}
-                    onClick={() => setActiveReport(item.id)}
-                    className="group bg-white rounded-3xl p-5 border border-slate-100 shadow-sm hover:shadow-lg hover:border-emerald-250 transition-all text-left flex flex-col justify-between h-52 relative overflow-hidden"
-                  >
-                    <div>
-                      <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center mb-4 transition-colors group-hover:bg-emerald-600 group-hover:text-white shadow-sm">
-                        {item.icon}
-                      </div>
-                      <h4 className="text-sm font-black text-[#001a33] group-hover:text-emerald-700 transition-colors uppercase tracking-tight">
-                        {item.label}
-                      </h4>
-                      <p className="text-xs text-slate-450 font-medium leading-relaxed mt-2 line-clamp-3">
-                        {item.description}
-                      </p>
-                    </div>
-
-                    <div className="flex items-center gap-1 text-[10px] font-black text-emerald-600 uppercase tracking-widest mt-4">
-                      Gerar Relatório <ChevronRight size={12} className="transition-transform group-hover:translate-x-1" />
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-          </div>
+          <RelatoriosCatalog
+            operacionais={operacionais}
+            academicos={academicos}
+            oficiais={oficiais}
+            financeiros={financeiros}
+            onSelectReport={setActiveReport}
+          />
         ) : (
           /* If a report is selected: Show it full-width */
-          <div className="h-full overflow-hidden p-6">
+          <div className="relatorios-report-frame h-full overflow-hidden p-6">
             {(loadingCompany || loadingPolo) ? (
               <div className="flex h-full w-full items-center justify-center" role="status" aria-label="Carregando identificação institucional">
                 <div className="h-8 w-8 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
               </div>
             ) : (companyError || poloError || !company || (poloId && !polo)) ? (
               <div className="flex h-full w-full items-center justify-center">
-                <div className="max-w-lg rounded-3xl border border-red-200 bg-white p-8 text-center shadow-sm" role="alert">
+                <div className="relatorios-identity-error max-w-lg rounded-3xl border border-red-200 bg-white p-8 text-center shadow-sm" role="alert">
                   <AlertTriangle className="mx-auto text-red-600" size={28} />
                   <h3 className="mt-3 text-sm font-black uppercase tracking-tight text-[#001a33]">
                     Identificação institucional indisponível
