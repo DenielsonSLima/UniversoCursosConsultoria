@@ -1,8 +1,8 @@
 {
-  "version": "4.8.245",
+  "version": "4.8.246",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 254,
+  "revision": 255,
   "releasedAt": "2026-11-05",
-  "summary": "Matrícula EAD com duas opções restritas ao Financeiro, estorno auditado e seleção de créditos avulsos"
+  "summary": "Filtros do catálogo público EAD alinhados e pesquisáveis no Safari"
 }
