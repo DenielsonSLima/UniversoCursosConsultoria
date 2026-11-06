@@ -144,16 +144,16 @@ const ConciliacaoBancariaTab: React.FC<ConciliacaoBancariaTabProps> = ({ poloId 
   };
 
   return (
-    <div className="space-y-6 animate-fadeIn">
+    <div className="financial-section-workspace space-y-6 animate-fadeIn">
       {/* Top Banner & Navigation Sub-Tabs */}
-      <div className="rounded-[2.5rem] border border-slate-100 bg-white p-6 shadow-sm">
-        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-6">
+      <div className="financial-reconciliation-heading rounded-[2.5rem] border border-slate-100 bg-white p-6 shadow-sm">
+        <div className="financial-section-heading flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-6">
           <div>
             <div className="flex items-center gap-2">
               <span className="rounded-xl bg-blue-50 p-2 text-blue-600">
                 <FileSpreadsheet size={20} />
               </span>
-              <div>
+              <div className="financial-section-identity">
                 <h2 className="text-xl font-black tracking-tight text-slate-800">
                   Conciliação · Banese e Proesc
                 </h2>
@@ -167,8 +167,9 @@ const ConciliacaoBancariaTab: React.FC<ConciliacaoBancariaTabProps> = ({ poloId 
 
         </div>
 
-        <div className="mt-6">
+        <div className="financial-sub-navigation mt-6">
           <FinancialUnderlineTabs
+            compact
             items={[
               {
                 id: 'conciliacao' as const,

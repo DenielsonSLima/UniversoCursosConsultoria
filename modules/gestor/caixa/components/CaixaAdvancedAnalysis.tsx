@@ -1,5 +1,6 @@
 import React from 'react';
 import { Building2, LineChart, Scale, Sparkles } from 'lucide-react';
+import './caixa-analysis.css';
 
 interface CaixaAdvancedAnalysisProps {
   position: React.ReactNode;
@@ -26,20 +27,17 @@ export const CaixaAdvancedAnalysis: React.FC<CaixaAdvancedAnalysisProps> = ({
   lineCut,
   lineCutAttention = false,
 }) => (
-  <section aria-labelledby="caixa-advanced-analysis-title" className="relative overflow-hidden rounded-[32px] border border-slate-200 bg-[#f5f8fc] px-4 py-6 sm:px-6 sm:py-8">
-    <div className="pointer-events-none absolute bottom-10 left-[35px] top-44 hidden w-px bg-gradient-to-b from-blue-300 via-violet-200 to-transparent lg:block" />
-
-    <header className="relative overflow-hidden rounded-[26px] bg-[#061a2f] px-5 py-6 text-white shadow-xl shadow-slate-900/10 sm:px-7">
-      <div className="pointer-events-none absolute -right-20 -top-28 h-64 w-64 rounded-full border-[42px] border-blue-400/10" />
-      <div className="relative flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+  <section aria-labelledby="caixa-advanced-analysis-title" className="caixa-analysis space-y-5">
+    <header className="caixa-analysis-heading rounded-xl border border-slate-200 bg-white px-4 py-4 sm:px-5">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-cyan-300/20 bg-cyan-300/10 px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.16em] text-cyan-200">
+          <span className="inline-flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-[0.08em] text-slate-500">
             <Sparkles size={11} aria-hidden="true" /> Leitura guiada
           </span>
-          <h2 id="caixa-advanced-analysis-title" className="mt-3 text-xl font-black tracking-tight sm:text-2xl">
+          <h2 id="caixa-advanced-analysis-title" className="mt-1.5 text-[17px] font-medium tracking-tight text-[#122b42]">
             Estrutura, capital e sustentabilidade
           </h2>
-          <p className="mt-1.5 max-w-2xl text-xs leading-5 text-slate-300">
+          <p className="mt-1 max-w-2xl text-xs leading-5 text-slate-500">
             Uma leitura contínua do que a operação possui, do que está vinculado e do que precisa cobrir.
           </p>
         </div>
@@ -52,7 +50,7 @@ export const CaixaAdvancedAnalysis: React.FC<CaixaAdvancedAnalysisProps> = ({
       </div>
     </header>
 
-    <div className="mt-6 space-y-8">
+    <div className="space-y-5">
       <AnalysisChapter
         number="01"
         eyebrow="O que está registrado"
@@ -98,34 +96,34 @@ const AnalysisChapter: React.FC<AnalysisChapterProps> = ({
   attention = false,
   last = false,
 }) => (
-  <article className="relative lg:pl-14">
-    <div className="mb-4 flex items-start gap-3">
-      <span className={`relative z-10 hidden h-9 w-9 shrink-0 items-center justify-center rounded-full border-4 border-[#f5f8fc] text-[10px] font-black shadow-sm lg:flex ${
-        attention ? 'bg-amber-500 text-white' : 'bg-blue-600 text-white'
+  <article className="caixa-analysis-chapter min-w-0">
+    <div className="mb-3 flex items-center gap-3">
+      <span className={`hidden h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[11px] font-medium lg:flex ${
+        attention ? 'bg-amber-50 text-amber-700' : 'bg-blue-50 text-blue-700'
       }`}>
         {number}
       </span>
-      <span className={`rounded-xl p-2 lg:hidden ${attention ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>{icon}</span>
+      <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg lg:hidden ${attention ? 'bg-amber-50 text-amber-700' : 'bg-blue-50 text-blue-700'}`}>{icon}</span>
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
-          <p className={`text-[9px] font-bold uppercase tracking-[0.18em] ${attention ? 'text-amber-700' : 'text-blue-700'}`}>{eyebrow}</p>
-          {attention ? <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[9px] font-bold uppercase text-amber-800">Requer atenção</span> : null}
+          <p className={`text-[10px] font-medium tracking-wide ${attention ? 'text-amber-700' : 'text-slate-500'}`}>{eyebrow}</p>
+          {attention ? <span className="rounded-md bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-800">Requer atenção</span> : null}
         </div>
-        <h3 className="mt-1 text-lg font-extrabold text-[#061a2f]">{title}</h3>
+        <h3 className="mt-0.5 text-[15px] font-medium text-[#122b42]">{title}</h3>
         <p className="mt-0.5 text-xs leading-5 text-slate-500">{description}</p>
       </div>
     </div>
     {children}
-    {!last ? <div className="mx-auto mt-8 h-px w-2/3 bg-gradient-to-r from-transparent via-slate-200 to-transparent lg:hidden" /> : null}
+    {!last ? <div className="mt-5 h-px bg-slate-200 lg:hidden" /> : null}
   </article>
 );
 
 const ChapterLink: React.FC<{ href: string; number: string; label: string; attention?: boolean }> = ({ href, number, label, attention = false }) => (
-  <a href={href} className={`inline-flex min-h-10 items-center gap-2 rounded-xl border px-3 py-2 text-[10px] font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 motion-reduce:transition-none ${
+  <a href={href} className={`inline-flex min-h-10 items-center gap-2 rounded-lg border px-3 py-2 text-[11px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 motion-reduce:transition-none ${
     attention
-      ? 'border-amber-300/30 bg-amber-300/10 text-amber-100 hover:bg-amber-300/20'
-      : 'border-white/10 bg-white/5 text-slate-200 hover:bg-white/10'
+      ? 'border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100'
+      : 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-blue-50 hover:text-blue-700'
   }`}>
-    <span className="text-[9px] opacity-60">{number}</span>{label}
+    <span className="text-[10px] text-current opacity-60">{number}</span>{label}
   </a>
 );

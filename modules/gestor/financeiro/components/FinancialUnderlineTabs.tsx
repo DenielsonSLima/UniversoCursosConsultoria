@@ -29,6 +29,7 @@ interface FinancialUnderlineTabsProps<T extends string> {
   idPrefix?: string;
   mobileMode?: 'scroll' | 'select';
   showHorizontalScrollbar?: boolean;
+  compact?: boolean;
 }
 
 const FinancialUnderlineTabs = <T extends string,>({
@@ -42,6 +43,7 @@ const FinancialUnderlineTabs = <T extends string,>({
   idPrefix,
   mobileMode = 'scroll',
   showHorizontalScrollbar = false,
+  compact = false,
 }: FinancialUnderlineTabsProps<T>) => {
   const activeTabRef = useRef<FinancialTabElement | null>(null);
 
@@ -88,6 +90,7 @@ const FinancialUnderlineTabs = <T extends string,>({
       ) : null}
 
       <div
+        data-financial-density={compact ? 'compact' : undefined}
         className={`max-w-full scroll-smooth border-b border-slate-200 ${
           showHorizontalScrollbar
             ? 'overflow-x-scroll pb-1 [scrollbar-color:#94a3b8_#e2e8f0] [scrollbar-width:thin] [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-slate-400 [&::-webkit-scrollbar-thumb:hover]:bg-slate-500 [&::-webkit-scrollbar-track]:rounded-full [&::-webkit-scrollbar-track]:bg-slate-200'
@@ -97,7 +100,7 @@ const FinancialUnderlineTabs = <T extends string,>({
         <div
           role="tablist"
           aria-label={ariaLabel}
-          className={`flex gap-4 pb-px ${equalWidth ? 'min-w-full' : 'min-w-max'}`}
+          className={`flex ${compact ? 'gap-1' : 'gap-4'} pb-px ${equalWidth ? 'min-w-full' : 'min-w-max'}`}
         >
           {items.map((item, index) => {
             const isActive = value === item.id;
@@ -114,11 +117,11 @@ const FinancialUnderlineTabs = <T extends string,>({
                 tabIndex={isActive ? 0 : -1}
                 onClick={() => onChange(item.id)}
                 onKeyDown={(event) => handleKeyDown(event, index)}
-                className={`group relative flex min-h-11 items-center justify-center gap-2 pb-3 pt-2 text-xs font-bold uppercase tracking-wide transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${
+                className={`group relative flex min-h-11 items-center justify-center gap-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${compact ? 'px-3 py-3 text-[13px] font-medium tracking-normal' : 'pb-3 pt-2 text-xs font-bold uppercase tracking-wide'} ${
                   equalWidth ? 'min-w-48 flex-1' : 'shrink-0'
                 } ${
                   isActive
-                    ? 'font-extrabold text-[#001a33]'
+                    ? `${compact ? 'font-medium' : 'font-extrabold'} text-[#001a33]`
                     : 'text-slate-500 hover:text-slate-800'
                 }`}
               >

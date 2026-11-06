@@ -1,0 +1,45 @@
+@media screen {
+  .caixa-analysis {
+    min-width: 0;
+    color: #122b42;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .caixa-analysis .caixa-analysis-chapter {
+    min-width: 0;
+  }
+
+  .caixa-analysis #caixa-position-chapter,
+  .caixa-analysis #caixa-capital-chapter,
+  .caixa-analysis #caixa-line-cut-chapter {
+    scroll-margin-top: 84px;
+  }
+
+  .caixa-analysis .caixa-structural-overview,
+  .caixa-analysis .caixa-linked-capital-overview,
+  .caixa-analysis .caixa-line-cut-overview {
+    min-width: 0;
+  }
+
+  .caixa-analysis .caixa-analysis-heading nav a {
+    white-space: nowrap;
+  }
+
+  .caixa-analysis .caixa-structural-heading > div:last-child > .grid > div {
+    min-width: 0;
+  }
+
+  @media (max-width: 1023px) {
+    .caixa-analysis #caixa-position-chapter,
+    .caixa-analysis #caixa-capital-chapter,
+    .caixa-analysis #caixa-line-cut-chapter {
+      scroll-margin-top: 144px;
+    }
+  }
+
+  @media (max-width: 767px) {
+    .caixa-analysis .caixa-analysis-heading nav a {
+      min-height: 44px;
+    }
+  }
+}

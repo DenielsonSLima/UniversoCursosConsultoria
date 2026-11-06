@@ -1,0 +1,182 @@
+@media screen {
+  .configuracoes-workspace {
+    min-width: 0;
+    padding-bottom: 20px;
+    color: #122b42;
+  }
+
+  .configuracoes-workspace .config-page-heading {
+    margin-bottom: 20px;
+  }
+
+  .configuracoes-workspace .config-page-heading > h2 {
+    font-size: 23px;
+    line-height: 1.3;
+    font-weight: 500;
+    letter-spacing: -.035em;
+  }
+
+  .configuracoes-workspace .config-page-heading > p {
+    margin-top: 6px;
+    color: #607286;
+    font-size: 12px;
+    line-height: 1.6;
+  }
+
+  .configuracoes-workspace .config-catalog {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  .configuracoes-workspace .config-catalog-item {
+    display: flex;
+    width: 100%;
+    min-width: 0;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 14px;
+    border: 1px solid #e3e9ee;
+    border-radius: 12px;
+    background: white;
+    text-align: left;
+    transition: border-color .18s, background-color .18s;
+  }
+
+  .configuracoes-workspace .config-item-icon {
+    display: flex;
+    width: 32px;
+    height: 32px;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    border-radius: 8px;
+    background: #f3f6f9;
+    color: #607286;
+  }
+
+  .configuracoes-workspace .config-item-icon > svg {
+    width: 17px;
+    height: 17px;
+    stroke-width: 1.7;
+  }
+
+  .configuracoes-workspace .config-item-copy {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .configuracoes-workspace .config-item-copy > h3 {
+    color: #122b42;
+    font-size: 13px;
+    line-height: 1.5;
+    font-weight: 500;
+    letter-spacing: -.01em;
+    overflow-wrap: anywhere;
+  }
+
+  .configuracoes-workspace .config-item-copy > p {
+    margin-top: 4px;
+    color: #607286;
+    font-size: 11px;
+    line-height: 1.6;
+    font-weight: 400;
+  }
+
+  .configuracoes-workspace .config-item-chevron {
+    flex-shrink: 0;
+    color: #bdc9d6;
+  }
+
+  .configuracoes-workspace .config-catalog-item:hover {
+    border-color: #b8cce3;
+    background: #f8faff;
+  }
+
+  .configuracoes-workspace .config-catalog-item:hover .config-item-icon {
+    color: #2563eb;
+    background: #eef4fc;
+  }
+
+  .configuracoes-workspace .config-catalog-item:hover .config-item-chevron {
+    color: #2563eb;
+  }
+
+  .configuracoes-workspace .config-back-button {
+    display: inline-flex;
+    min-height: 40px;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+    border-radius: 8px;
+    color: #607286;
+    font-size: 12px;
+    line-height: 1.5;
+    font-weight: 500;
+    text-align: left;
+    transition: color .18s;
+  }
+
+  .configuracoes-workspace .config-back-icon {
+    display: inline-flex;
+    width: 32px;
+    height: 32px;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    border: 1px solid #e3e9ee;
+    border-radius: 8px;
+    background: white;
+  }
+
+  .configuracoes-workspace .config-back-button:hover {
+    color: #2563eb;
+  }
+
+  .configuracoes-workspace .config-section-content {
+    min-width: 0;
+    padding: 16px;
+    border: 1px solid #e3e9ee;
+    border-radius: 12px;
+    background: white;
+  }
+
+  .configuracoes-workspace .config-section-content > .animate-fadeIn {
+    animation: none;
+    backface-visibility: visible;
+    transform: none;
+    will-change: auto;
+  }
+
+  .configuracoes-workspace .config-catalog-item:focus-visible,
+  .configuracoes-workspace .config-back-button:focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: 3px;
+  }
+
+  @media (min-width: 640px) {
+    .configuracoes-workspace .config-catalog {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (min-width: 1280px) {
+    .configuracoes-workspace .config-catalog {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 639px) {
+    .configuracoes-workspace .config-catalog-item,
+    .configuracoes-workspace .config-back-button {
+      min-height: 44px;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .configuracoes-workspace .config-catalog-item,
+    .configuracoes-workspace .config-back-button {
+      transition: none;
+    }
+  }
+}

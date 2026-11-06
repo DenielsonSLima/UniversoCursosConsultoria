@@ -275,7 +275,7 @@ const EmprestimosTab: React.FC<EmprestimosTabProps> = ({ poloId: scopedPoloId, i
 
   if (selectedEmprestimo) {
     return (
-      <div className="space-y-5 animate-fadeIn">
+      <div className="financial-section-workspace space-y-5 animate-fadeIn">
         <ToastNotification toasts={toasts} onRemove={removeToast} />
         <EmprestimoDetailsPage
           emprestimo={selectedEmprestimo}
@@ -291,12 +291,12 @@ const EmprestimosTab: React.FC<EmprestimosTabProps> = ({ poloId: scopedPoloId, i
   }
 
   return (
-    <div className="space-y-5 animate-fadeIn">
+    <div className="financial-section-workspace space-y-5 animate-fadeIn">
       <ToastNotification toasts={toasts} onRemove={removeToast} />
 
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <p className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.2em] text-indigo-600"><Landmark size={16} /> {isMatriz ? 'Gestão centralizada' : 'Gestão por polo'}</p>
+      <div className="financial-section-heading flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div className="financial-section-identity">
+          <p className="financial-section-eyebrow flex items-center gap-2 text-xs font-black uppercase tracking-[0.2em] text-indigo-600"><Landmark size={16} /> {isMatriz ? 'Gestão centralizada' : 'Gestão por polo'}</p>
           <h3 className="mt-1 text-2xl font-black uppercase tracking-tight text-[#001a33]">Empréstimos</h3>
           <p className="mt-1 max-w-2xl text-sm font-medium text-slate-500">
             {isMatriz
@@ -304,7 +304,7 @@ const EmprestimosTab: React.FC<EmprestimosTabProps> = ({ poloId: scopedPoloId, i
               : 'Crédito, conta de destino, parcelas e Contas a Pagar pertencem exclusivamente a este polo.'}
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="financial-section-actions flex flex-wrap gap-2">
           <button type="button" onClick={() => setShowExport(true)} disabled={!poloResponsavelId} className="inline-flex items-center justify-center gap-2 rounded-2xl border border-indigo-200 bg-white px-4 py-3 text-xs font-black uppercase tracking-wider text-indigo-700 transition-colors hover:bg-indigo-50 disabled:cursor-not-allowed disabled:opacity-50"><FileOutput size={16} /> Exportar PDF</button>
           <button type="button" onClick={() => setShowForm(true)} disabled={!poloResponsavelId || polosQuery.isPending} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-5 py-3 text-xs font-black uppercase tracking-wider text-white shadow-lg shadow-indigo-900/15 transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"><Plus size={16} /> Novo empréstimo</button>
         </div>

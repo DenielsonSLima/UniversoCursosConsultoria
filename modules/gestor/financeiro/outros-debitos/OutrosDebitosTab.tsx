@@ -170,11 +170,11 @@ const OutrosDebitosTab: React.FC<{ poloId?: string | null }> = ({ poloId: scoped
   ];
 
   return (
-    <div className="space-y-5 animate-fadeIn">
+    <div className="financial-section-workspace space-y-5 animate-fadeIn">
       <ToastNotification toasts={toasts} onRemove={removeToast} />
 
-      <div className="flex items-center justify-between gap-4">
-        <div>
+      <div className="financial-section-heading flex items-center justify-between gap-4">
+        <div className="financial-section-identity">
           <h4 className="text-base font-black text-[#001a33] uppercase tracking-tight flex items-center gap-2">
             <TrendingDown size={16} className="text-indigo-500" />
             Outros Débitos

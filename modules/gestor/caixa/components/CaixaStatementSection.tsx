@@ -52,9 +52,9 @@ export const CaixaStatementSection: React.FC<CaixaStatementSectionProps> = ({
 }) => {
   if (isLoading) {
     return (
-      <section role="status" aria-busy="true" className="rounded-2xl border border-slate-200 bg-white py-12 text-center">
-        <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent motion-reduce:animate-none" />
-        <p className="mt-4 text-sm font-medium text-slate-500">
+      <section role="status" aria-busy="true" className="rounded-xl border border-slate-200 bg-white px-4 py-8 text-center">
+        <div className="mx-auto h-6 w-6 animate-spin rounded-full border-4 border-blue-600 border-t-transparent motion-reduce:animate-none" />
+        <p className="mt-3 text-xs font-normal text-slate-500">
           Carregando prestação de contas do período e polo selecionados...
         </p>
       </section>
@@ -63,13 +63,13 @@ export const CaixaStatementSection: React.FC<CaixaStatementSectionProps> = ({
 
   if (hasError || !statement) {
     return (
-      <section role="alert" className="rounded-2xl border border-rose-200 bg-rose-50 p-8 text-center text-rose-800">
-        <AlertTriangle className="mx-auto text-rose-500" size={30} />
-        <h2 className="mt-3 text-base font-bold">Prestação mensal indisponível</h2>
-        <p className="mt-1 text-sm">
+      <section role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-5 text-center text-rose-800">
+        <AlertTriangle className="mx-auto text-rose-500" size={22} />
+        <h2 className="mt-3 text-[15px] font-medium">Prestação mensal indisponível</h2>
+        <p className="mt-1 text-xs leading-relaxed">
           Não foi possível carregar os valores deste período e polo. Os demais resumos são apresentados separadamente.
         </p>
-        <button type="button" onClick={onRetry} className="mt-4 min-h-11 rounded-lg border border-rose-300 bg-white px-4 py-2 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-600 focus-visible:ring-offset-2">
+        <button type="button" onClick={onRetry} className="mt-4 min-h-11 rounded-lg border border-rose-300 bg-white px-4 py-2 text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-600 focus-visible:ring-offset-2">
           Tentar novamente
         </button>
       </section>
@@ -77,11 +77,11 @@ export const CaixaStatementSection: React.FC<CaixaStatementSectionProps> = ({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {statement.classificacao.quantidadeSemPolo > 0 ? (
         <div className="flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-amber-900">
           <AlertTriangle size={17} className="shrink-0 text-amber-600" />
-          <p className="text-sm">
+          <p className="text-xs leading-relaxed">
             <strong>{formatCaixaCurrency(statement.classificacao.valorSemPolo)}</strong> em{' '}
             {statement.classificacao.quantidadeSemPolo}{' '}
             {statement.classificacao.quantidadeSemPolo === 1 ? 'movimento aguarda' : 'movimentos aguardam'} identificação do polo.
@@ -109,10 +109,10 @@ export const CaixaStatementSection: React.FC<CaixaStatementSectionProps> = ({
 
       <section aria-labelledby="caixa-composition-section-title">
         <div className="mb-4 px-1">
-          <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-blue-600">
+          <p className="text-[11px] font-medium tracking-[0.08em] text-blue-600">
             Composição dos valores realizados
           </p>
-          <h2 id="caixa-composition-section-title" className="mt-1 text-lg font-extrabold text-[#001a33]">
+          <h2 id="caixa-composition-section-title" className="mt-1 text-[15px] font-medium text-[#001a33]">
             Como recebimentos e despesas formaram os totais do mês
           </h2>
           <p className="mt-1 text-xs text-slate-500">

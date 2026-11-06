@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "retrieval": "lexical-bm25-with-source-citations",
-  "builtAt": "2026-10-28T19:03:26.242Z",
+  "builtAt": "2026-11-06T09:09:20.243Z",
   "manifestVersion": 2,
-  "sourceSignature": "fa4b7525932d464674b6a0412e5166550d78ce450fc7b65c898ec8f1e7ca9366",
+  "sourceSignature": "700fdf2fd15513da89fb4d67b09a1f54de3f7afd035439a7502a055d888b482d",
   "sources": [
     {
       "path": "AGENTS.md",
@@ -11,7 +11,7 @@
     },
     {
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "hash": "fb27470afc3b12bce9b405c0bdbb6b5842f5d6573673153a8e7c162a0dd32223"
+      "hash": "a3b5013bd905da9eab66e094b2202f597b4c3a0afc1e7b00f28a512a5eae3dd0"
     },
     {
       "path": "ai/operacao/MEMORIA_CANONICA.md",
@@ -208,23 +208,23 @@
       "part": 1
     },
     {
-      "id": "0edfd93c719f6c44083c",
-      "hash": "0edfd93c719f6c44083c6674d05bb88ab538924fb2fbdd388c98f3640bc2670b",
+      "id": "47aea3455bcacb66f249",
+      "hash": "47aea3455bcacb66f24981d3c130478873f100855b60961f2ecbb66da38198b5",
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Lote ativo",
-      "text": "Lote 2026-10-28-certificado-ead-aluno-modelo: entrega 4.8.243. Corrige leitura do modelo EAD do próprio certificado finalizado pelo aluno, sem ampliar a RLS genérica nem alterar registros acadêmicos. Erros e repetição deixam de ser confundidos com geração de PDF.",
-      "normalizedText": "lote 2026 10 28 certificado ead aluno modelo entrega 4 8 243 corrige leitura do modelo ead do proprio certificado finalizado pelo aluno sem ampliar a rls generica nem alterar registros academicos erros e repeticao deixam de ser confundidos com geracao de pdf",
-      "tokenCount": 39,
+      "section": "Lote: 2026-11-06-publicacao-financeiro-caixa-configuracoes-4-8-249",
+      "text": "Publicação autorizada em andamento da versão4.8.249/revisão258. Financeiro, Caixa e entrada de Configurações compactos; dados, regras, consultas, permissões, operações e documentos preservados. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-06-publicacao-financeiro-caixa-configuracoes-4-8-249.md`.",
+      "normalizedText": "publicacao autorizada em andamento da versao4 8 249 revisao258 financeiro caixa e entrada de configuracoes compactos dados regras consultas permissoes operacoes e documentos preservados manifesto explicito ai operacao registros alteracoes 2026 11 06 publicacao financeiro caixa configuracoes 4 8 249 md",
+      "tokenCount": 36,
       "part": 1
     },
     {
-      "id": "46b0e7471e53e31c8132",
-      "hash": "46b0e7471e53e31c8132e6809e44e8890b712514928b6c4e6404e81dd05c9f46",
+      "id": "ee335649672bd684b0d8",
+      "hash": "ee335649672bd684b0d8f7433fb27a58a8ca0e553dc76c60fd49b7465c5597bf",
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Lote ativo",
-      "text": "Manifesto explícito: `ai/operacao/registros/alteracoes/2026-10-28-certificado-ead-aluno-modelo.md`. Migration MCP 20261028185541 aplicada e conferida. Testes de autorização e JSDOM passaram com revisão independente; TypeScript e lint focado passaram. Publicação inclui CI e Preview do commit exato. Smoke autenticado Safari e inspeção visual do PDF do aluno não foram realizados por indisponibilidade de sessão, sem contorno do ambiente.",
-      "normalizedText": "manifesto explicito ai operacao registros alteracoes 2026 10 28 certificado ead aluno modelo md migration mcp 20261028185541 aplicada e conferida testes de autorizacao e jsdom passaram com revisao independente typescript e lint focado passaram publicacao inclui ci e preview do commit exato smoke autenticado safari e inspecao visual do pdf do aluno nao foram realizados por indisponibilidade de sessao sem contorno do ambiente",
-      "tokenCount": 58,
+      "section": "Lote: 2026-11-06-publicacao-financeiro-caixa-configuracoes-4-8-249",
+      "text": "Base main4a36d600bfcbc01640dd4c13125ddd1f538e1312. Safari desktop/móvel, build, TypeScript, lint focado, contratos e limite de linhas aprovados. GitHub via MCP, prévia Vercel e confirmação pós-deploy no domínio oficial; resultado efetivo na PR. A primeira checagem remota exigiu reduzir o registro corrente para manter o índice RAG dentro80trechos; nenhuma guarda foi alterada.",
+      "normalizedText": "base main4a36d600bfcbc01640dd4c13125ddd1f538e1312 safari desktop movel build typescript lint focado contratos e limite de linhas aprovados github via mcp previa vercel e confirmacao pos deploy no dominio oficial resultado efetivo na pr a primeira checagem remota exigiu reduzir o registro corrente para manter o indice rag dentro80trechos nenhuma guarda foi alterada",
+      "tokenCount": 45,
       "part": 1
     },
     {

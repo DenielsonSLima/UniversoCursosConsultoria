@@ -182,31 +182,31 @@ const CaixaScopePage: React.FC<CaixaScopePageProps> = ({
   const isConsolidated = selectedPolo === 'todos';
 
   return (
-    <div className="caixa-page mx-auto max-w-[1680px] animate-fadeIn space-y-5 pb-12">
+    <div className="caixa-page mx-auto max-w-[1680px] space-y-5 pb-6">
       <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-extrabold tracking-tight text-[#001a33]">Caixa</h1>
-            <span className="rounded-full border border-blue-100 bg-blue-50 px-2.5 py-1 text-[10px] font-semibold text-blue-700">
+            <h1 className="text-[25px] font-medium tracking-[-0.04em] text-[#122b42]">Caixa</h1>
+            <span className="rounded-md border border-slate-200 bg-white px-2 py-0.5 text-[11px] font-medium text-[#607286]">
               Prestação mensal
             </span>
           </div>
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="mt-1.5 text-xs leading-relaxed text-[#607286]">
             Saúde financeira e posição contábil de {formatCaixaCompetencia(competencia)}.
           </p>
         </div>
 
-        <div className="flex w-fit items-center gap-2">
-          <div className="inline-flex items-center rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
+        <div className="flex w-full flex-wrap items-center gap-2 sm:w-fit">
+          <div className="inline-flex items-center rounded-lg border border-slate-200 bg-white p-1">
             <button
               type="button"
               onClick={() => setCompetencia((value) => shiftCaixaCompetencia(value, -1))}
-              className="rounded-lg p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 max-sm:h-11 max-sm:w-11"
               aria-label="Mês anterior"
             >
               <ChevronLeft size={17} />
             </button>
-            <div className="flex min-w-[154px] items-center justify-center gap-2 px-3 text-sm font-semibold text-slate-800">
+            <div className="flex min-w-0 flex-1 items-center justify-center gap-2 px-3 text-xs font-medium text-slate-700 sm:min-w-[154px]">
               <CalendarDays size={15} className="text-blue-600" />
               {formatCaixaCompetencia(competencia)}
             </div>
@@ -214,7 +214,7 @@ const CaixaScopePage: React.FC<CaixaScopePageProps> = ({
               type="button"
               onClick={() => setCompetencia((value) => shiftCaixaCompetencia(value, 1))}
               disabled={isCurrentCompetencia}
-              className="rounded-lg p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-30"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 max-sm:h-11 max-sm:w-11 disabled:cursor-not-allowed disabled:opacity-30"
               aria-label="Próximo mês"
             >
               <ChevronRight size={17} />
@@ -236,7 +236,7 @@ const CaixaScopePage: React.FC<CaixaScopePageProps> = ({
             <button
               type="button"
               onClick={() => setSelectedPolo('todos')}
-              className={`relative flex items-center gap-2 px-3 pb-3 pt-2 text-base font-medium leading-6 tracking-normal transition-colors ${
+              className={`relative flex min-h-11 items-center gap-2 px-3 py-2 text-[13px] font-medium leading-5 tracking-normal transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500 ${
                 isConsolidated ? 'text-blue-700' : 'text-slate-600 hover:text-slate-800'
               }`}
             >
@@ -253,14 +253,14 @@ const CaixaScopePage: React.FC<CaixaScopePageProps> = ({
                 type="button"
                 onClick={() => setSelectedPolo(polo.id)}
                 disabled={!canViewConsolidated}
-                className={`relative flex items-center gap-2 px-3 pb-3 pt-2 text-base font-medium leading-6 tracking-normal transition-colors ${
+                className={`relative flex min-h-11 items-center gap-2 px-3 py-2 text-[13px] font-medium leading-5 tracking-normal transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500 ${
                   active ? 'text-blue-700' : 'text-slate-600 hover:text-slate-800'
                 }`}
               >
                 <Landmark size={15} />
                 {formatPoloName(polo)}
                 {polo.is_matriz && (
-                  <span className="rounded bg-blue-50 px-1.5 py-0.5 text-xs font-medium leading-4 text-blue-700">
+                  <span className="rounded bg-blue-50 px-1.5 py-0.5 text-[10px] font-medium leading-4 text-blue-700">
                     Matriz
                   </span>
                 )}
@@ -339,7 +339,7 @@ const CaixaScopePage: React.FC<CaixaScopePageProps> = ({
           || linhaCorteResumo?.inadimplencia.impacto === 'CRITICO'}
       />
 
-      <footer className="flex items-start gap-2 px-1 text-[10px] leading-4 text-slate-400">
+      <footer className="flex items-start gap-2 px-1 text-[11px] leading-5 text-[#607286]">
         <ReceiptText size={13} className="mt-0.5 shrink-0" />
         <span>
           Esta tela apresenta posição contábil do sistema. Valores bancários reais devem ser conferidos

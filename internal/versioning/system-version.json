@@ -1,8 +1,8 @@
 {
-  "version": "4.8.248",
+  "version": "4.8.249",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 257,
-  "releasedAt": "2026-11-05",
-  "summary": "Secretaria, Parceiros e Gestão com visual compacto e navegação refinada"
+  "revision": 258,
+  "releasedAt": "2026-11-06",
+  "summary": "Financeiro, Caixa e Configurações com navegação e visual compactos"
 }
