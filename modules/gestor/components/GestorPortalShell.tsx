@@ -377,7 +377,7 @@ const GestorPortalShell: React.FC<GestorPortalShellProps> = ({
           formattedDayOfWeek={formattedDayOfWeek}
         />
 
-        <div className="min-w-0 p-5 lg:p-6 flex-1">
+        <div data-gestor-module-content className="min-w-0 p-5 lg:p-6 flex-1">
           <Suspense fallback={(
             <div className="flex min-h-[420px] items-center justify-center gap-3 text-xs font-black uppercase tracking-widest text-slate-500">
               <Clock className="animate-pulse text-blue-600" size={24} /> Preparando módulo...

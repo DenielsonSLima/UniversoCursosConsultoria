@@ -7,7 +7,7 @@ const root = source.match(/return \(\s*<div className="([^"]+)"/)[1].split(/\s+/
 const mainTag = source.match(/<main\b[\s\S]*?>/)[0];
 const main = mainTag.match(/className="([^"]+)"/)[1].split(/\s+/);
 const mainBody = source.slice(source.indexOf(mainTag), source.indexOf('</main>'));
-const contentTag = mainBody.match(/<div\b[^>]*className="[^"]*\bp-8\b[^"]*"[^>]*>/)[0];
+const contentTag = mainBody.match(/<div\b[^>]*data-gestor-module-content[^>]*>/)[0];
 const content = contentTag.match(/className="([^"]+)"/)[1].split(/\s+/);
 
 // Source contracts only: authenticated wheel, focus and modal smoke is still required.
@@ -52,11 +52,13 @@ test('header popovers retain their scrollable ancestor and logout stays outside 
 test('sticky header and focus targets clear the fixed mobile bar', () => {
   const headerSource = readFileSync(new URL('./GestorPortalHeader.tsx', import.meta.url), 'utf8');
   const header = headerSource.match(/<header className="([^"]+)"/)[1].split(/\s+/);
-  for (const token of ['sticky', 'top-16', 'lg:top-0', 'min-h-[84px]', 'shrink-0']) {
+  for (const token of ['sticky', 'top-16', 'lg:top-0', 'shrink-0']) {
     assert.ok(header.includes(token), `header must include ${token}`);
   }
+  const headerHeight = Number(headerSource.match(/min-h-\[(\d+)px\]/)[1]);
+  assert.ok(headerHeight >= 64, 'header retains room for accessible controls');
   assert.ok(main.includes('pt-16'));
   assert.ok(main.includes('lg:pt-0'));
-  assert.ok(main.includes('scroll-pt-[148px]'));
-  assert.ok(main.includes('lg:scroll-pt-[84px]'));
+  assert.ok(main.includes(`scroll-pt-[${64 + headerHeight}px]`));
+  assert.ok(main.includes(`lg:scroll-pt-[${headerHeight}px]`));
 });
