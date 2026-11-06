@@ -36,7 +36,7 @@ export default function ParceiroAlunoNavigation({ activeTab, disabled, onSelect 
         <ChevronDown size={16} aria-hidden="true" className="pointer-events-none absolute right-3 top-3.5 text-slate-500" />
         </div>
       </div>
-      <div role="tablist" aria-label="Áreas do aluno" className="hidden items-center gap-1 xl:flex">
+      <div role="tablist" aria-label="Áreas do aluno" className="partner-profile-tabs hidden items-center gap-1 xl:flex">
         {alunoTabs.map((tab, index) => {
           const Icon = tab.icon;
           return (
@@ -54,8 +54,8 @@ export default function ParceiroAlunoNavigation({ activeTab, disabled, onSelect 
                 event.preventDefault();
                 tabRefs.current[next]?.focus();
               }}
-              className={`flex min-h-11 items-center gap-2 border-b-2 px-3 text-sm font-semibold transition-colors outline-none focus-visible:rounded-t-md focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500 disabled:opacity-60 ${activeTab === tab.id
-                ? 'border-blue-600 font-bold text-[#001a33]'
+              className={`flex min-h-11 items-center gap-2 border-b-2 px-3 text-xs font-medium transition-colors outline-none focus-visible:rounded-t-md focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500 disabled:opacity-60 ${activeTab === tab.id
+                ? 'border-blue-600 text-[#122b42]'
                 : 'border-transparent text-slate-600 hover:border-slate-300 hover:text-[#001a33]'}`}>
               <Icon size={16} aria-hidden="true" />{tab.label}
             </button>

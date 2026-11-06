@@ -52,13 +52,13 @@ test('header popovers retain their scrollable ancestor and logout stays outside 
 test('sticky header and focus targets clear the fixed mobile bar', () => {
   const headerSource = readFileSync(new URL('./GestorPortalHeader.tsx', import.meta.url), 'utf8');
   const header = headerSource.match(/<header className="([^"]+)"/)[1].split(/\s+/);
-  for (const token of ['sticky', 'top-16', 'lg:top-0', 'shrink-0']) {
+  for (const token of ['sticky', 'top-0', 'shrink-0']) {
     assert.ok(header.includes(token), `header must include ${token}`);
   }
   const headerHeight = Number(headerSource.match(/min-h-\[(\d+)px\]/)[1]);
   assert.ok(headerHeight >= 64, 'header retains room for accessible controls');
-  assert.ok(main.includes('pt-16'));
-  assert.ok(main.includes('lg:pt-0'));
-  assert.ok(main.includes(`scroll-pt-[${64 + headerHeight}px]`));
-  assert.ok(main.includes(`lg:scroll-pt-[${headerHeight}px]`));
+  assert.ok(main.includes('mt-[60px]'), 'mobile bar stays outside the content scroller');
+  assert.ok(main.includes('lg:mt-0'));
+  assert.ok(!main.includes('pt-16'), 'mobile bar spacing must not be counted twice by sticky positioning');
+  assert.ok(main.includes(`scroll-pt-[${headerHeight}px]`));
 });

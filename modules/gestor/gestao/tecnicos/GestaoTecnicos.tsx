@@ -1,6 +1,7 @@
 
 // File: modules/gestor/gestao/tecnicos/GestaoTecnicos.tsx
 
+import '../components/gestao-catalog-workspace.css';
 import React, { useState, useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Plus, Briefcase, Archive, Activity, Megaphone } from 'lucide-react';
@@ -115,12 +116,12 @@ const GestaoTecnicos: React.FC<GestaoTecnicosProps> = ({ onToggleDetails, poloId
   }
 
   return (
-    <div className="">
+    <div className="gestao-catalog-workspace">
       {/* Sub-Header Específico */}
-      <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4 bg-emerald-50/50 p-6 rounded-[2.5rem] border border-emerald-100">
+      <div className="gestao-catalog-heading flex flex-col md:flex-row justify-between items-center mb-8 gap-4 bg-emerald-50/50 p-6 rounded-[2.5rem] border border-emerald-100">
         <div className="flex items-center gap-4">
-          <div className="p-3 bg-emerald-100 text-emerald-600 rounded-2xl shadow-sm">
-            <Briefcase size={24} />
+          <div className="gestao-catalog-icon p-3 bg-emerald-100 text-emerald-600 rounded-2xl shadow-sm">
+            <Briefcase size={19} />
           </div>
           <div>
             <h3 className="text-xl font-black text-[#001a33] uppercase tracking-tight">Turmas Técnicas</h3>
@@ -139,7 +140,7 @@ const GestaoTecnicos: React.FC<GestaoTecnicosProps> = ({ onToggleDetails, poloId
       </div>
 
       {/* Abas Internas */}
-      <div className="flex gap-4 mb-6 border-b border-slate-100 pb-1 overflow-x-auto">
+      <div className="gestao-catalog-statuses flex gap-4 mb-6 border-b border-slate-100 pb-1 overflow-x-auto">
         <button
           onClick={() => list.changeStatus('EM_ANDAMENTO')}
           className={`pb-3 px-4 text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 ${
@@ -177,7 +178,7 @@ const GestaoTecnicos: React.FC<GestaoTecnicosProps> = ({ onToggleDetails, poloId
         onApply={list.applyFilters} onPageChange={list.setPage} />
 
       {/* Lista */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-3">
         {list.loading ? (
           <div className="col-span-full py-12 text-center text-slate-400">Carregando turmas...</div>
         ) : list.error ? (
@@ -194,11 +195,12 @@ const GestaoTecnicos: React.FC<GestaoTecnicosProps> = ({ onToggleDetails, poloId
             </div>
         ) : (
             list.turmas.map(turma => (
-                <div key={turma.id} onClick={() => handleSelectTurma(turma)} className="cursor-pointer">
+                <div key={turma.id}>
                   <TurmaCard
                     turma={turma}
                     colorTheme="emerald"
                     showDisciplineProgress
+                    onClick={() => handleSelectTurma(turma)}
                     onDelete={setDeleteTarget}
                   />
                 </div>

@@ -284,11 +284,13 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({
 
 
   return (
-    <div ref={pageRef} className="secretaria-readable animate-fadeIn min-h-screen pb-10">
+    <div ref={pageRef} className={`secretaria-readable ${isDashboard ? 'pb-5' : 'animate-fadeIn min-h-screen pb-10'}`}>
       {/* Header Geral da Secretaria */}
-      <div className="mb-8 flex items-center gap-4">
+      <div className={`${isDashboard ? 'mb-5' : 'mb-8'} flex items-center gap-4`}>
         {!isDashboard && (
           <button 
+            type="button"
+            aria-label="Voltar para Secretaria Digital"
             onClick={() => setActiveModule('dashboard')}
             className="p-2 rounded-xl border border-slate-200 text-slate-400 hover:text-blue-600 hover:border-blue-200 transition-colors bg-white shadow-sm"
           >
@@ -297,20 +299,20 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({
         )}
         
         <div>
-          <div className="flex items-center gap-2 text-blue-600 mb-1">
-            <FileText size={20} />
-            <span className="text-xs font-semibold uppercase tracking-wide">
+          <div className={`mb-1 flex items-center gap-2 ${isDashboard ? 'text-[#607286]' : 'text-blue-600'}`}>
+            <FileText size={isDashboard ? 14 : 20} aria-hidden="true" />
+            <span className={isDashboard ? 'text-[11px] font-semibold uppercase tracking-[0.12em]' : 'text-xs font-semibold uppercase tracking-wide'}>
               {isDashboard ? 'Módulo Administrativo' : 'Secretaria Digital'}
             </span>
           </div>
-          <h2 className="text-3xl font-bold text-[#001a33] uppercase tracking-tight">
+          <h2 className={isDashboard ? 'mt-1.5 text-[25px] font-medium leading-tight tracking-[-0.04em] text-[#122b42]' : 'text-3xl font-bold text-[#001a33] uppercase tracking-tight'}>
             {currentHeader.title}
           </h2>
-          <p className="text-slate-500 font-medium">{currentHeader.description}</p>
+          <p className={isDashboard ? 'mt-1.5 text-[12px] font-normal leading-relaxed text-[#607286]' : 'text-slate-500 font-medium'}>{currentHeader.description}</p>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto">
+      <div className={isDashboard ? '' : 'max-w-7xl mx-auto'}>
         <Suspense fallback={(
           <div className="flex min-h-[320px] items-center justify-center gap-3 text-xs font-black uppercase tracking-widest text-slate-500">
             <Loader2 className="animate-spin text-blue-600" size={26} /> Preparando módulo da secretaria...

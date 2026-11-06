@@ -1,4 +1,5 @@
 
+import '../components/gestao-catalog-workspace.css';
 import React, { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Plus, MonitorPlay, Archive, Activity } from 'lucide-react';
@@ -53,11 +54,11 @@ const GestaoEad: React.FC<GestaoEadProps> = ({ onToggleDetails, permissions }) =
   }
 
   return (
-    <div className="">
-      <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4 bg-purple-50/50 p-6 rounded-[2.5rem] border border-purple-100">
+    <div className="gestao-catalog-workspace">
+      <div className="gestao-catalog-heading flex flex-col md:flex-row justify-between items-center mb-8 gap-4 bg-purple-50/50 p-6 rounded-[2.5rem] border border-purple-100">
         <div className="flex items-center gap-4">
-          <div className="p-3 bg-purple-100 text-purple-600 rounded-2xl shadow-sm">
-            <MonitorPlay size={24} />
+          <div className="gestao-catalog-icon p-3 bg-purple-100 text-purple-600 rounded-2xl shadow-sm">
+            <MonitorPlay size={19} />
           </div>
           <div>
             <h3 className="text-xl font-black text-[#001a33] uppercase tracking-tight">Turmas EAD</h3>
@@ -75,7 +76,7 @@ const GestaoEad: React.FC<GestaoEadProps> = ({ onToggleDetails, permissions }) =
         </button>
       </div>
 
-      <div className="flex gap-4 mb-6 border-b border-slate-100 pb-1">
+      <div className="gestao-catalog-statuses flex gap-4 mb-6 border-b border-slate-100 pb-1">
         <button 
           onClick={() => list.changeStatus('EM_ANDAMENTO')}
           className={`pb-3 px-4 text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 ${
@@ -103,7 +104,7 @@ const GestaoEad: React.FC<GestaoEadProps> = ({ onToggleDetails, permissions }) =
         onApply={list.applyFilters} onPageChange={list.setPage} />
       {canAccessGestorModule(permissions, 'financeiro') && canAccessGestaoTurmaTab(permissions, 'financeiro') && <EadPaymentReviewPanel />}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-3">
         {list.loading ? (
           <div className="col-span-full py-12 text-center text-slate-400">Carregando turmas...</div>
         ) : list.error ? (

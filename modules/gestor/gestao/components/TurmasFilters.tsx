@@ -31,15 +31,15 @@ const TurmasFilters: React.FC<TurmasFiltersProps> = ({
   ];
 
   return (
-    <div className="mb-6 space-y-3">
-      <div className="grid grid-cols-1 gap-3 rounded-2xl border border-slate-200 bg-white p-4 xl:grid-cols-[1fr_auto_auto_auto_auto]">
-        <div className="relative">
+    <div className="mb-5 space-y-3">
+      <div className="grid grid-cols-1 items-stretch gap-2 rounded-xl border border-slate-200 bg-white p-3 xl:grid-cols-[minmax(180px,1fr)_auto_auto_auto_auto]">
+        <div className="relative min-w-0">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <input aria-label="Buscar turma ou código" value={search} onChange={e => onSearchChange(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && onApply()} placeholder="Buscar turma ou código..."
-            className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-3 text-sm font-semibold outline-none focus:border-blue-500" />
+            className="h-11 w-full rounded-lg border border-slate-200 bg-slate-50 pl-10 pr-3 text-base font-normal outline-none focus-visible:border-blue-500 focus-visible:ring-2 focus-visible:ring-blue-100 sm:h-10 sm:text-xs" />
         </div>
-        <div className="flex rounded-xl border border-slate-200 bg-slate-50 p-1">
+        <div role="group" aria-label="Ordenação das turmas" className="flex min-h-11 items-center rounded-lg border border-slate-200 bg-slate-50 p-1 sm:min-h-10">
           {sortOptions.map(option => {
             const Icon = option.icon;
             const active = sortBy === option.value;
@@ -49,33 +49,34 @@ const TurmasFilters: React.FC<TurmasFiltersProps> = ({
                 type="button"
                 onClick={() => onSortByChange(option.value)}
                 title={`Ordenar por ${option.label}`}
-                className={`flex min-w-20 items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-[10px] font-black uppercase tracking-wider transition-colors ${
+                aria-pressed={active}
+                className={`flex min-h-9 min-w-16 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-md px-2.5 text-[11px] font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 sm:min-h-8 ${
                   active
                     ? 'bg-white text-[#001a33] shadow-sm'
                     : 'text-slate-400 hover:text-slate-600'
                 }`}
               >
-                <Icon size={14} />
+                  <Icon size={14} aria-hidden="true" className="shrink-0" />
                 {option.label}
               </button>
             );
           })}
         </div>
-        <label className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5">
-          <span className="block text-[8px] font-black uppercase tracking-wider text-slate-400">Início de</span>
+        <label className="flex min-h-11 min-w-0 flex-col justify-center rounded-lg border border-slate-200 bg-slate-50 px-3 py-1 sm:min-h-10">
+          <span className="block text-[10px] font-normal leading-3 text-slate-500">Início de</span>
           <input type="date" value={dataInicial} onChange={e => onDataInicialChange(e.target.value)}
-            className="bg-transparent text-xs font-bold text-slate-600 outline-none" />
+            className="min-w-0 bg-transparent text-base font-normal leading-5 text-slate-600 outline-none focus-visible:ring-2 focus-visible:ring-blue-500 sm:text-xs" />
         </label>
-        <label className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5">
-          <span className="block text-[8px] font-black uppercase tracking-wider text-slate-400">Início até</span>
+        <label className="flex min-h-11 min-w-0 flex-col justify-center rounded-lg border border-slate-200 bg-slate-50 px-3 py-1 sm:min-h-10">
+          <span className="block text-[10px] font-normal leading-3 text-slate-500">Início até</span>
           <input type="date" value={dataFinal} onChange={e => onDataFinalChange(e.target.value)}
-            className="bg-transparent text-xs font-bold text-slate-600 outline-none" />
+            className="min-w-0 bg-transparent text-base font-normal leading-5 text-slate-600 outline-none focus-visible:ring-2 focus-visible:ring-blue-500 sm:text-xs" />
         </label>
-        <button onClick={onApply} className="flex items-center justify-center gap-2 rounded-xl bg-[#001a33] px-5 py-3 text-xs font-black uppercase text-white">
+        <button type="button" onClick={onApply} className="flex min-h-11 items-center justify-center gap-2 rounded-lg bg-[#0c2942] px-4 text-xs font-medium text-white outline-none hover:bg-[#143851] focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 sm:min-h-10">
           <Filter size={14} /> Filtrar
         </button>
       </div>
-      <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-slate-400">
+      <div className="flex flex-wrap items-center justify-between gap-3 text-[11px] font-normal text-slate-500">
         <span role="status" aria-live="polite">{loading ? 'Buscando turmas...' : `${total} turma(s) encontrada(s)`}</span>
         <div className="flex items-center gap-2">
           <button title="Página anterior" onClick={() => onPageChange(page - 1)} disabled={loading || page <= 1} className="rounded-lg border bg-white p-2 disabled:opacity-30"><ChevronLeft size={14}/></button>

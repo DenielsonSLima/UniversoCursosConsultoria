@@ -1,4 +1,5 @@
 
+import '../components/gestao-catalog-workspace.css';
 import React, { useState, useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Plus, Zap, Archive, Activity } from 'lucide-react';
@@ -90,11 +91,11 @@ const GestaoLivres: React.FC<GestaoLivresProps> = ({ onToggleDetails, poloId, cr
   }
 
   return (
-    <div className="">
-      <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4 bg-amber-50/50 p-6 rounded-[2.5rem] border border-amber-100">
+    <div className="gestao-catalog-workspace">
+      <div className="gestao-catalog-heading flex flex-col md:flex-row justify-between items-center mb-8 gap-4 bg-amber-50/50 p-6 rounded-[2.5rem] border border-amber-100">
         <div className="flex items-center gap-4">
-          <div className="p-3 bg-amber-100 text-amber-600 rounded-2xl shadow-sm">
-            <Zap size={24} />
+          <div className="gestao-catalog-icon p-3 bg-amber-100 text-amber-600 rounded-2xl shadow-sm">
+            <Zap size={19} />
           </div>
           <div>
             <h3 className="text-xl font-black text-[#001a33] uppercase tracking-tight">Turmas Cursos Livres</h3>
@@ -112,7 +113,7 @@ const GestaoLivres: React.FC<GestaoLivresProps> = ({ onToggleDetails, poloId, cr
         </button>
       </div>
 
-      <div className="flex gap-4 mb-6 border-b border-slate-100 pb-1">
+      <div className="gestao-catalog-statuses flex gap-4 mb-6 border-b border-slate-100 pb-1">
         <button 
           onClick={() => list.changeStatus('EM_ANDAMENTO')}
           className={`pb-3 px-4 text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 ${
@@ -139,7 +140,7 @@ const GestaoLivres: React.FC<GestaoLivresProps> = ({ onToggleDetails, poloId, cr
         onDataFinalChange={list.setDataFinal} onSortByChange={list.changeSortBy}
         onApply={list.applyFilters} onPageChange={list.setPage} />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-3">
         {list.loading ? (
           <div className="col-span-full py-12 text-center text-slate-400">Carregando turmas...</div>
         ) : list.error ? (
@@ -157,8 +158,8 @@ const GestaoLivres: React.FC<GestaoLivresProps> = ({ onToggleDetails, poloId, cr
             </div>
         ) : (
             list.turmas.map(turma => (
-                <div key={turma.id} onClick={() => handleSelectTurma(turma)} className="cursor-pointer">
-                  <TurmaCard turma={turma} colorTheme="amber" onDelete={setDeleteTarget} />
+                <div key={turma.id}>
+                  <TurmaCard turma={turma} colorTheme="amber" onClick={() => handleSelectTurma(turma)} onDelete={setDeleteTarget} />
                 </div>
             ))
         )}

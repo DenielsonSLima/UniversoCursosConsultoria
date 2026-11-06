@@ -55,22 +55,32 @@ const cards = [
   { id: 'assinatura-eletronica', title: 'Assinaturas', desc: 'Acompanhe pendências e consulte o acervo de documentos assinados.', icon: FileSignature, color: 'blue' },
 ] as const;
 
-
-const colorClasses: Record<string, { soft: string; text: string; hover: string; accent: string }> = {
-  blue: { soft: 'bg-blue-50', text: 'text-blue-600', hover: 'hover:border-blue-300', accent: 'bg-blue-600' },
-  emerald: { soft: 'bg-emerald-50', text: 'text-emerald-600', hover: 'hover:border-emerald-300', accent: 'bg-emerald-600' },
-  sky: { soft: 'bg-sky-50', text: 'text-sky-600', hover: 'hover:border-sky-300', accent: 'bg-sky-600' },
-  indigo: { soft: 'bg-indigo-50', text: 'text-indigo-600', hover: 'hover:border-indigo-300', accent: 'bg-indigo-600' },
-  amber: { soft: 'bg-amber-50', text: 'text-amber-600', hover: 'hover:border-amber-300', accent: 'bg-amber-500' },
-  slate: { soft: 'bg-slate-100', text: 'text-slate-700', hover: 'hover:border-slate-400', accent: 'bg-slate-700' },
-  purple: { soft: 'bg-purple-50', text: 'text-purple-600', hover: 'hover:border-purple-300', accent: 'bg-purple-600' },
-  violet: { soft: 'bg-violet-50', text: 'text-violet-700', hover: 'hover:border-violet-300', accent: 'bg-violet-700' },
-  rose: { soft: 'bg-rose-50', text: 'text-rose-600', hover: 'hover:border-rose-300', accent: 'bg-rose-600' },
-  teal: { soft: 'bg-teal-50', text: 'text-teal-600', hover: 'hover:border-teal-300', accent: 'bg-teal-600' },
-  orange: { soft: 'bg-orange-50', text: 'text-orange-600', hover: 'hover:border-orange-300', accent: 'bg-orange-500' },
-  red: { soft: 'bg-red-50', text: 'text-red-600', hover: 'hover:border-red-300', accent: 'bg-red-500' },
-  cyan: { soft: 'bg-cyan-50', text: 'text-cyan-700', hover: 'hover:border-cyan-300', accent: 'bg-cyan-600' },
-};
+const sections = [
+  {
+    id: 'atendimento',
+    title: 'Atendimento e financeiro',
+    description: 'Consultas, solicitações e recebimentos',
+    accent: 'bg-blue-600',
+    badge: 'bg-blue-50 text-blue-700',
+    operations: ['alunos', 'solicitacoes', 'transferencia', 'dependencias-academicas', 'consulta-financeira', 'carnes-alunos', 'declaracao-irpf'],
+  },
+  {
+    id: 'documentos',
+    title: 'Documentos acadêmicos',
+    description: 'Declarações e registros da vida escolar',
+    accent: 'bg-emerald-600',
+    badge: 'bg-emerald-50 text-emerald-700',
+    operations: ['declaracao-matricula', 'declaracao-frequencia', 'ficha-matricula', 'boletim', 'historico-escolar', 'atestado-conclusao', 'contrato-aluno', 'certificados'],
+  },
+  {
+    id: 'identificacao',
+    title: 'Identificação e acervo',
+    description: 'Credenciais, estágio e documentos emitidos',
+    accent: 'bg-cyan-700',
+    badge: 'bg-cyan-50 text-cyan-800',
+    operations: ['carteirinha', 'pasta-identificacao', 'carteirinha-preceptor', 'cracha-estagio', 'cracha-periodo-eleitoral', 'termo-estagio', 'historico-emissoes', 'assinatura-eletronica'],
+  },
+];
 
 const SecretariaDashboard: React.FC<SecretariaDashboardProps> = ({ onNavigate, onPreload, allowedTabs }) => {
   const visibleCards = React.useMemo(() => {
@@ -79,32 +89,57 @@ const SecretariaDashboard: React.FC<SecretariaDashboardProps> = ({ onNavigate, o
   }, [allowedTabs]);
 
   return (
-    <div className="secretaria-navigation grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 animate-fadeIn">
-      {visibleCards.map((card) => {
-        const Icon = card.icon;
-        const palette = colorClasses[card.color];
+    <nav aria-label="Operações da Secretaria" className="secretaria-navigation grid grid-cols-1 items-start gap-4 xl:grid-cols-3">
+      {sections.map(section => {
+        const sectionCards = section.operations.flatMap(id => visibleCards.filter(card => card.id === id));
+        if (!sectionCards.length) return null;
+
         return (
-          <button
-            key={card.id}
-            onClick={() => onNavigate(card.id)}
-            onMouseEnter={() => onPreload?.(card.id)}
-            onFocus={() => onPreload?.(card.id)}
-            onTouchStart={() => onPreload?.(card.id)}
-            className={`group relative flex items-start gap-4 p-5 bg-white rounded-2xl border border-slate-200 shadow-sm text-left transition-[border-color,box-shadow] duration-200 hover:shadow-lg ${palette.hover}`}
+          <section
+            key={section.id}
+            aria-labelledby={`secretaria-section-${section.id}`}
+            className="min-w-0 overflow-hidden rounded-xl border border-[#e3e9ee] bg-white"
           >
-            <div className={`shrink-0 w-12 h-12 rounded-xl flex items-center justify-center ${palette.soft} ${palette.text} group-hover:scale-105 transition-transform`}>
-              <Icon size={22} />
+            <div className="flex items-start gap-3 border-b border-[#e3e9ee] bg-[#f9fbfc] px-4 py-4">
+              <span aria-hidden="true" className={`mt-1 h-7 w-0.5 shrink-0 rounded-full ${section.accent}`} />
+              <div className="min-w-0 flex-1">
+                <h3 id={`secretaria-section-${section.id}`} className="text-[13px] font-semibold leading-5 text-[#122b42]">{section.title}</h3>
+                <p className="mt-0.5 text-[11px] leading-relaxed text-[#607286]">{section.description}</p>
+              </div>
+              <span aria-label={`${sectionCards.length} operações`} className={`rounded-md px-2 py-0.5 text-[11px] font-medium tabular-nums ${section.badge}`}>
+                {String(sectionCards.length).padStart(2, '0')}
+              </span>
             </div>
-            <div className="flex-1 min-w-0 pt-0.5">
-              <h4 className="font-semibold text-[#001a33] text-base leading-6 uppercase tracking-normal">{card.title}</h4>
-              <p className="text-slate-600 text-sm leading-relaxed font-normal mt-1">{card.desc}</p>
+            <div className="divide-y divide-[#edf1f5]">
+              {sectionCards.map(card => {
+                const Icon = card.icon;
+                const featured = card.id === 'alunos';
+                return (
+                  <button
+                    key={card.id}
+                    type="button"
+                    onClick={() => onNavigate(card.id)}
+                    onMouseEnter={() => onPreload?.(card.id)}
+                    onFocus={() => onPreload?.(card.id)}
+                    onTouchStart={() => onPreload?.(card.id)}
+                    className={`group relative flex w-full min-w-0 items-center gap-3 px-4 py-3.5 text-left transition-colors focus-visible:z-10 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600 motion-reduce:transition-none ${featured ? 'bg-[#0c2942] hover:bg-[#143851]' : 'bg-white hover:bg-[#f5f8fc]'}`}
+                  >
+                    <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${featured ? 'bg-white/10 text-blue-200' : 'bg-[#f3f6f9] text-[#607286] group-hover:bg-blue-50 group-hover:text-blue-600'}`}>
+                      <Icon size={17} strokeWidth={1.65} aria-hidden="true" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <h4 className={`text-[13px] font-medium leading-[1.5] tracking-[-0.01em] ${featured ? 'text-white' : 'text-[#122b42]'}`}>{card.title}</h4>
+                      <p className={`mt-1 text-[11px] font-normal leading-[1.6] ${featured ? 'text-[#b7c9da]' : 'text-[#607286]'}`}>{card.desc}</p>
+                    </div>
+                    <ChevronRight size={14} aria-hidden="true" className={`shrink-0 ${featured ? 'text-blue-200' : 'text-slate-300 group-hover:text-blue-600 group-focus-visible:text-blue-600'}`} />
+                  </button>
+                );
+              })}
             </div>
-            <ChevronRight size={16} className={`self-center opacity-0 group-hover:opacity-100 ${palette.text} transition-opacity`} />
-            <div className={`absolute left-0 top-4 bottom-4 w-1 rounded-r-full ${palette.accent} opacity-0 group-hover:opacity-100 transition-opacity`} />
-          </button>
+          </section>
         );
       })}
-    </div>
+    </nav>
   );
 };
 

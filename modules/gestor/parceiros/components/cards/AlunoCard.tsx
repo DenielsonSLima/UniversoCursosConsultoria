@@ -54,14 +54,13 @@ const AlunoCard: React.FC<AlunoCardProps> = ({ data, onClick, onDelete }) => {
   return (
     <div
       onClick={onClick}
-      className="bg-white rounded-[24px] border border-slate-200/60 p-6 hover:shadow-[0_8px_30px_rgb(0,0,0,0.06)] hover:border-blue-300/50 transition-all duration-300 group relative cursor-pointer flex flex-col h-full overflow-hidden"
+      className="partner-card bg-white rounded-[24px] border border-slate-200/60 p-6 hover:shadow-[0_8px_30px_rgb(0,0,0,0.06)] hover:border-blue-300/50 transition-all duration-300 group relative cursor-pointer flex flex-col h-full overflow-hidden"
     >
-      <div className="absolute -right-6 -top-6 w-24 h-24 bg-blue-50 rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
 
       {/* Header */}
-      <div className="flex justify-between items-start mb-4 relative z-20">
+      <div className="partner-card-heading flex justify-between items-center gap-2 mb-3 relative z-20">
         <div className="flex min-w-0 flex-1 items-center gap-3">
-          <div className="h-[52px] w-[52px] shrink-0 overflow-hidden rounded-2xl border border-blue-100 bg-blue-50 text-blue-600 shadow-sm">
+          <div className="partner-card-avatar h-[52px] w-[52px] shrink-0 overflow-hidden rounded-2xl border border-blue-100 bg-blue-50 text-blue-600 shadow-sm">
             <img
               src={data.foto || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=E0F2FE&color=2563EB&bold=true`}
               alt={displayName}
@@ -69,7 +68,7 @@ const AlunoCard: React.FC<AlunoCardProps> = ({ data, onClick, onDelete }) => {
             />
           </div>
           <div className="flex flex-col min-w-0">
-            <h3 className="line-clamp-1 text-[11px] font-extrabold leading-[1.35] tracking-normal text-slate-950 antialiased transition-colors group-hover:text-blue-700" title={displayName}>
+            <h3 className="text-[13px] font-medium leading-[1.5] tracking-[-0.01em] text-[#122b42] antialiased break-words transition-colors group-hover:text-blue-700" title={displayName}>
               {displayName}
             </h3>
             <div className="flex flex-wrap items-center gap-1.5 text-[11px] font-medium">
@@ -87,6 +86,9 @@ const AlunoCard: React.FC<AlunoCardProps> = ({ data, onClick, onDelete }) => {
 
         <div ref={menuRef} className="relative" onClick={e => e.stopPropagation()}>
           <button
+            type="button"
+            aria-label={`Opções de ${data.nome}`}
+            aria-expanded={menuOpen}
             onClick={() => setMenuOpen(v => !v)}
             className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
           >
@@ -132,7 +134,7 @@ const AlunoCard: React.FC<AlunoCardProps> = ({ data, onClick, onDelete }) => {
       </div>
 
       {/* Infos */}
-      <div className="flex-1 space-y-2 relative z-10">
+      <div className="partner-card-info flex-1 space-y-1.5 relative z-10">
         {telefone && (
           <div className="flex items-center gap-2 text-xs text-slate-600">
             <Phone size={13} className="text-slate-400 shrink-0" />
@@ -140,8 +142,8 @@ const AlunoCard: React.FC<AlunoCardProps> = ({ data, onClick, onDelete }) => {
           </div>
         )}
         {data.email && (
-          <div className="flex items-start gap-2 text-xs text-slate-600">
-            <Mail size={13} className="mt-0.5 text-slate-400 shrink-0" />
+          <div className="flex items-center gap-2 text-xs text-slate-600">
+            <Mail size={13} className="text-slate-400 shrink-0" />
             <div className="flex min-w-0 flex-1 items-center gap-1.5">
               <span className="truncate font-medium" title={data.email}>{data.email}</span>
               <EmailConfirmationStatus
@@ -158,7 +160,7 @@ const AlunoCard: React.FC<AlunoCardProps> = ({ data, onClick, onDelete }) => {
           </div>
         )}
         {(data.dataNascimento || data.nomeMae || data.nomePai) && (
-          <div className="mt-2 space-y-2 rounded-xl border border-slate-100 bg-slate-50/70 p-3">
+          <div className="partner-card-family mt-2 space-y-1.5 rounded-lg border border-slate-100 bg-slate-50/70 p-2.5">
             {data.dataNascimento && (
               <div className="flex items-center gap-2 text-xs text-slate-800">
                 <CalendarDays size={13} className="shrink-0 text-blue-500" />
