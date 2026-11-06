@@ -1,0 +1,103 @@
+@media screen {
+  .comunicacao-operations.comunicacao-operations {
+    min-width: 0;
+    border-radius: 12px;
+    box-shadow: none;
+    animation: none;
+    transform: none;
+    backface-visibility: visible;
+    will-change: auto;
+  }
+
+  .comunicacao-operations .comm-ops-header {
+    padding: 18px 20px;
+    border-color: #e2e8f0;
+    background: #fff;
+    color: #001a33;
+    border-radius: 12px 12px 0 0;
+    box-shadow: none;
+  }
+
+  .comunicacao-operations .comm-ops-header > div.absolute { display: none; }
+  .comunicacao-operations .comm-ops-identity { align-items: center; gap: 12px; min-width: 0; }
+  .comunicacao-operations .comm-ops-heading-icon { width: 32px; height: 32px; border-radius: 9px; background: #eff6ff; color: #2563eb; box-shadow: none; }
+  .comunicacao-operations .comm-ops-heading-icon > svg { width: 18px; height: 18px; }
+  .comunicacao-operations .comm-ops-eyebrow { color: #64748b; font-size: 11px; font-weight: 400; letter-spacing: normal; text-transform: none; }
+  .comunicacao-operations .comm-ops-title { margin-top: 4px; font-size: 23px; line-height: 1.4; font-weight: 500; letter-spacing: -0.025em; overflow-wrap: anywhere; }
+  .comunicacao-operations .comm-ops-description { margin-top: 5px; color: #64748b; font-size: 12px; line-height: 1.7; font-weight: 400; }
+  .comunicacao-operations .comm-ops-header-status { padding: 7px 10px; border-radius: 8px; background: #f1f5f9; color: #475569; font-size: 11px; font-weight: 500; box-shadow: none; }
+  .comunicacao-operations .comm-ops-header-status[class*="text-emerald"] { color: #047857; background: #ecfdf5; }
+  .comunicacao-operations .comm-ops-header-status[class*="text-amber"] { color: #92400e; background: #fffbeb; }
+  .comunicacao-operations .comm-ops-header-badges { margin-bottom: 12px; }
+  .comunicacao-operations .comm-ops-header-badges > span { padding: 4px 7px; border-radius: 7px; color: #475569; background: #f1f5f9; font-size: 11px; font-weight: 400; letter-spacing: normal; text-transform: none; box-shadow: none; }
+  .comunicacao-operations .comm-ops-stats { gap: 10px; }
+  .comunicacao-operations .comm-ops-stats > div { padding: 12px; border: 1px solid #e2e8f0; border-radius: 10px; background: #f8fafc; box-shadow: none; backdrop-filter: none; }
+  .comunicacao-operations .comm-ops-stats > div > p:first-child { color: #001a33; font-size: 23px; line-height: 1.2; font-weight: 500; }
+  .comunicacao-operations .comm-ops-stats > div > p:last-child { color: #64748b; font-size: 11px; font-weight: 400; }
+
+  .comunicacao-operations .comm-ops-body { padding: 16px; }
+  .comunicacao-operations .comm-ops-panel { min-width: 0; padding: 16px; border-radius: 12px; box-shadow: none; }
+  .comunicacao-operations .comm-ops-delivery { min-width: 0; max-width: 360px; border-radius: 9px; }
+  .comunicacao-operations .comm-ops-delivery > button { border-radius: 7px; min-height: 36px; font-size: 12px; font-weight: 500; }
+  .comunicacao-operations .comm-ops-channel { min-width: 0; padding: 14px; border-radius: 12px; }
+  .comunicacao-operations .comm-ops-channel > div { align-items: center; gap: 10px; }
+  .comunicacao-operations .comm-ops-channel h3 { font-size: 13px; font-weight: 500; }
+  .comunicacao-operations .comm-ops-channel p { font-size: 12px; font-weight: 400; line-height: 1.6; }
+  .comunicacao-operations .comm-ops-channel-icon { width: 32px; height: 32px; border-radius: 9px; box-shadow: none; }
+  .comunicacao-operations .comm-ops-channel-icon svg { width: 18px; height: 18px; }
+  .comm-ops-multichannel .comm-ops-panel h2,
+  .comm-ops-multichannel .comm-ops-panel h3 { font-size: 14px; line-height: 1.5; font-weight: 500; }
+  .comm-ops-multichannel .comm-ops-panel p { font-size: 12px; line-height: 1.7; font-weight: 400; }
+  .comm-ops-multichannel .comm-ops-panel > div { align-items: center; }
+  .comunicacao-operations .comm-ops-empty-icon { width: 32px; height: 32px; border-radius: 9px; }
+  .comunicacao-operations .comm-ops-empty-icon svg { width: 18px; height: 18px; }
+  .comm-ops-multichannel .comm-ops-empty > div { padding-top: 20px; padding-bottom: 20px; }
+
+  .comunicacao-operations .comm-ops-compose-surface,
+  .comunicacao-operations .comm-ops-push-history { min-width: 0; border-radius: 12px; box-shadow: none; }
+  .comunicacao-operations .comm-ops-push-compose { gap: 16px; }
+  .comunicacao-operations .comm-ops-section-heading,
+  .comunicacao-operations .comm-ops-history-heading { min-width: 0; padding: 16px; }
+  .comunicacao-operations .comm-ops-section-heading h2,
+  .comunicacao-operations .comm-ops-history-heading h2 { font-size: 14px; font-weight: 500; line-height: 1.5; }
+  .comunicacao-operations .comm-ops-section-heading > div { align-items: center; }
+  .comunicacao-operations .comm-ops-section-heading > div > span,
+  .comunicacao-operations .comm-ops-history-heading > div:first-child > span { width: 32px; height: 32px; border-radius: 9px; }
+  .comunicacao-operations .comm-ops-history-heading > div:first-child { align-items: center; }
+
+  .comunicacao-operations .comm-ops-support-layout { min-height: 0; }
+  .comunicacao-operations .comm-ops-support-content { padding: 16px; }
+  .comunicacao-operations .comm-ops-polo-sidebar { padding: 12px; }
+  .comunicacao-operations .comm-ops-polo-sidebar > p { font-size: 11px; font-weight: 500; letter-spacing: normal; text-transform: none; }
+  .comunicacao-operations .comm-ops-polo-item { min-width: 0; padding: 10px; border-radius: 9px; box-shadow: none; }
+  .comunicacao-operations .comm-ops-polo-item > div { align-items: center; }
+  .comunicacao-operations .comm-ops-polo-item > div > span { width: 32px; height: 32px; border-radius: 9px; }
+  .comunicacao-operations .comm-ops-polo-item p:first-child { font-size: 13px; font-weight: 500; }
+  .comunicacao-operations .comm-ops-polo-item p:last-of-type { font-size: 12px; font-weight: 400; }
+  .comunicacao-operations .comm-ops-panel > div:first-child h2,
+  .comunicacao-operations .comm-ops-panel > div:first-child h3 { font-size: 14px; font-weight: 500; }
+  .comunicacao-operations .comm-ops-savebar { border-radius: 10px; box-shadow: 0 3px 12px #001a3308; }
+  .comunicacao-operations .comm-ops-savebar > button { font-size: 12px; font-weight: 500; letter-spacing: normal; text-transform: none; box-shadow: none; }
+
+  .comm-ops-automations.comm-ops-automations { min-height: 0; }
+  .comunicacao-operations .comm-ops-automation-body { padding: 16px; }
+  .comunicacao-operations .comm-ops-automation-toolbar { margin-bottom: 16px; padding: 12px; border-radius: 12px; box-shadow: none; }
+  .comunicacao-operations .comm-ops-automation-toolbar > div:first-child { align-items: center; }
+  .comunicacao-operations .comm-ops-automation-toolbar > div:first-child > span { width: 32px; height: 32px; border-radius: 9px; }
+  .comunicacao-operations .comm-ops-automation-toolbar > div:first-child p:first-child { font-size: 13px; font-weight: 500; }
+  .comunicacao-operations .comm-ops-automation-toolbar button { font-size: 12px; font-weight: 500; }
+  .comunicacao-operations .comm-ops-automation-card { min-width: 0; border-radius: 12px; box-shadow: none; }
+  .comunicacao-operations .comm-ops-automation-trigger { padding: 16px; }
+  .comunicacao-operations .comm-ops-automation-trigger > div:first-child { align-items: center; gap: 12px; }
+  .comunicacao-operations .comm-ops-automation-trigger > div:first-child > div:first-child > span:first-child { width: 32px; height: 32px; border-radius: 9px; }
+  .comunicacao-operations .comm-ops-automation-trigger > div:first-child > div:first-child > span:first-child > svg { width: 18px; height: 18px; }
+  .comunicacao-operations .comm-ops-automation-title { margin-top: 6px; font-size: 15px; line-height: 1.5; font-weight: 500; letter-spacing: normal; }
+  .comunicacao-operations .comm-ops-automation-trigger p { font-size: 12px; line-height: 1.6; font-weight: 400; }
+
+  @media (max-width: 767px) {
+    .comunicacao-operations .comm-ops-header { padding: 16px; }
+    .comunicacao-operations .comm-ops-title { font-size: 21px; }
+    .comunicacao-operations .comm-ops-delivery { width: 100%; max-width: none; }
+    .comunicacao-operations .comm-ops-delivery > button { min-height: 44px; }
+  }
+}

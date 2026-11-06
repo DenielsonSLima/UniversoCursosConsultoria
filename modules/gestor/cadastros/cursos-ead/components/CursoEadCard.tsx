@@ -22,10 +22,10 @@ const CursoEadCard: React.FC<CursoEadCardProps> = ({ curso, onClick, onDuplicate
 
   return (
     <div 
-      className="group bg-white rounded-[2rem] border border-slate-200 p-6 hover:shadow-xl hover:shadow-purple-900/10 hover:border-purple-300 transition-all duration-300 flex flex-col h-full relative overflow-hidden"
+      className="formacao-recursos-ead-card group bg-white rounded-[2rem] border border-slate-200 p-6 hover:shadow-xl hover:shadow-purple-900/10 hover:border-purple-300 transition-all duration-300 flex flex-col h-full relative overflow-hidden"
     >
       {/* Imagem de Capa */}
-      <div className="aspect-video w-full rounded-2xl overflow-hidden border border-slate-100 bg-slate-50 mb-4 relative z-10">
+      <div className="formacao-recursos-cover aspect-video w-full rounded-2xl overflow-hidden border border-slate-100 bg-slate-50 mb-4 relative z-10">
         {curso.imagem_url ? (
           <img
             src={curso.imagem_url}
@@ -51,16 +51,16 @@ const CursoEadCard: React.FC<CursoEadCardProps> = ({ curso, onClick, onDuplicate
       </div>
 
       {/* Título e Descrição */}
-      <h3 className="text-base font-black text-[#001a33] mb-2 group-hover:text-purple-600 transition-colors relative z-10 line-clamp-2">
+      <h3 className="formacao-recursos-course-title text-base font-black text-[#001a33] mb-2 group-hover:text-purple-600 transition-colors relative z-10 line-clamp-2">
         {curso.nome}
       </h3>
-      <p className="text-xs text-slate-500 font-medium mb-4 line-clamp-2 relative z-10 leading-relaxed">
+      <p className="formacao-recursos-course-desc text-xs text-slate-500 font-medium mb-4 line-clamp-2 relative z-10 leading-relaxed">
         {descricao}
       </p>
 
       {/* Carga Horária e Preço */}
       <div className="mt-auto space-y-3 relative z-10">
-        <div className="flex justify-between items-center text-xs text-slate-600 bg-slate-50 p-3 rounded-xl border border-slate-100">
+        <div className="formacao-recursos-course-facts flex justify-between items-center text-xs text-slate-600 bg-slate-50 p-3 rounded-xl border border-slate-100">
           <div className="flex items-center gap-1.5">
             <Clock size={15} className="text-purple-500" />
             <span className="font-bold">{curso.carga_horaria || 0}h EAD</span>
@@ -93,7 +93,7 @@ const CursoEadCard: React.FC<CursoEadCardProps> = ({ curso, onClick, onDuplicate
         <div className="flex flex-col gap-2 relative z-20 pt-2">
           <button 
             onClick={onClick}
-            className="w-full flex items-center justify-between p-3 rounded-xl bg-purple-600 text-white text-[10px] font-bold uppercase tracking-widest hover:bg-purple-700 transition-all shadow-md shadow-purple-600/15"
+            className="formacao-recursos-configure w-full flex items-center justify-between p-3 rounded-xl bg-purple-600 text-white text-[10px] font-bold uppercase tracking-widest hover:bg-purple-700 transition-all shadow-md shadow-purple-600/15"
           >
             <span className="flex items-center gap-1.5">
               <Edit3 size={12} />
@@ -147,7 +147,7 @@ const CursoEadCard: React.FC<CursoEadCardProps> = ({ curso, onClick, onDuplicate
       </div>
 
       {/* Decorative Gradient Glow */}
-      <div className="absolute -bottom-8 -right-8 w-32 h-32 bg-purple-50 rounded-full opacity-0 group-hover:opacity-20 transition-opacity blur-2xl"></div>
+      <div className="formacao-recursos-decoration absolute -bottom-8 -right-8 w-32 h-32 bg-purple-50 rounded-full opacity-0 group-hover:opacity-20 transition-opacity blur-2xl"></div>
     </div>
   );
 };

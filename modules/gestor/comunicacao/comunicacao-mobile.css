@@ -1,0 +1,188 @@
+@media screen and (max-width: 767px) {
+    .comunicacao-unified.comunicacao-unified {
+      height: auto;
+      min-height: 0;
+      overflow: visible;
+    }
+
+    .comunicacao-unified .comunicacao-unified-header {
+      border-radius: 12px 12px 0 0;
+    }
+
+    .comunicacao-unified .comunicacao-unified-title {
+      font-size: 21px;
+    }
+
+    .comunicacao-unified .comunicacao-unified-body {
+      flex: 0 0 auto;
+      flex-direction: column;
+      overflow: visible;
+    }
+
+    .comunicacao-unified-body.comunicacao-unified-body > aside {
+      width: 100%;
+      flex: 0 0 auto;
+      max-height: none;
+      border-right: 0;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    .comunicacao-unified-body.comunicacao-unified-body > aside > div:first-child {
+      flex-shrink: 0;
+    }
+
+    .comunicacao-unified-body.comunicacao-unified-body > aside > div:last-child {
+      flex: 0 0 140px;
+      min-height: 120px;
+      max-height: 180px;
+      overflow-y: auto;
+    }
+
+    .comunicacao-unified .unified-support-detail {
+      flex: 0 0 auto;
+      height: min(560px, calc(100dvh - 120px));
+      min-height: 380px;
+    }
+
+    .comunicacao-unified-body.comunicacao-unified-body > aside > div:first-child > label > input {
+      height: 44px;
+      font-size: 16px;
+    }
+
+    .comunicacao-channel-surface.comunicacao-channel-surface > div > div:has(> div > [role="tablist"][aria-label="Alternar número do WhatsApp"]) {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      align-items: center;
+    }
+
+    .comunicacao-channel-surface.comunicacao-channel-surface > div > div:has(> div > [role="tablist"][aria-label="Alternar número do WhatsApp"]) > div {
+      width: 100%;
+      max-width: 100%;
+      min-width: 0;
+    }
+
+    .comunicacao-channel-surface.comunicacao-channel-surface > div > div:has(> div > [role="tablist"][aria-label="Alternar número do WhatsApp"]) > div:last-child {
+      flex-wrap: wrap;
+      flex-shrink: 1;
+      justify-content: flex-start;
+    }
+
+    .comunicacao-channel-surface.comunicacao-channel-surface [role="tablist"][aria-label="Alternar número do WhatsApp"] {
+      flex: 1 1 auto;
+      max-width: 100%;
+      min-width: 0;
+    }
+
+    .comunicacao-channel-surface.comunicacao-channel-surface [role="tablist"][aria-label="Alternar número do WhatsApp"] > button {
+      max-width: 100%;
+      min-width: 0;
+    }
+
+    .comunicacao-channel-surface.comunicacao-channel-surface [role="tablist"][aria-label="Alternar número do WhatsApp"] > button[aria-selected="true"] {
+      width: 100%;
+    }
+
+    .comunicacao-channel-surface.comunicacao-channel-surface [role="tablist"][aria-label="Alternar número do WhatsApp"] > button > span {
+      width: 100%;
+      min-width: 0;
+    }
+
+    .comunicacao-channel-surface.comunicacao-channel-surface [role="tablist"][aria-label="Alternar número do WhatsApp"] > button > span > span:nth-child(2) {
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+    }
+}
+
+@media screen and (max-width: 767px) {
+  .comunicacao-unified .unified-support-detail,
+  .comunicacao-unified .comunicacao-internal-shell,
+  .comunicacao-unified .comunicacao-internal-body {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .comunicacao-internal-body.comunicacao-internal-body > div:has(> div:first-child button[title="Excluir atendimento e arquivos"]) {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .comunicacao-internal-body.comunicacao-internal-body > div:has(> div:first-child button[title="Excluir atendimento e arquivos"]) > div:first-child {
+    min-width: 0;
+    min-height: 0;
+    flex-wrap: wrap;
+    padding: 12px;
+    gap: 10px;
+  }
+
+  .comunicacao-internal-body.comunicacao-internal-body > div:has(> div:first-child button[title="Excluir atendimento e arquivos"]) > div:first-child > div:first-child {
+    flex: 1 1 100%;
+    max-width: 100%;
+    min-width: 0;
+    gap: 8px;
+  }
+
+  .comunicacao-internal-body.comunicacao-internal-body > div:has(> div:first-child button[title="Excluir atendimento e arquivos"]) > div:first-child > div:first-child > div:first-child {
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    flex-shrink: 0;
+  }
+
+  .comunicacao-internal-body.comunicacao-internal-body > div:has(> div:first-child button[title="Excluir atendimento e arquivos"]) > div:first-child > div:first-child > div:last-child {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .comunicacao-internal-body.comunicacao-internal-body > div:has(> div:first-child button[title="Excluir atendimento e arquivos"]) > div:first-child h3 {
+    flex-wrap: wrap;
+    font-size: 13px;
+    line-height: 1.5;
+    font-weight: 500;
+    overflow-wrap: anywhere;
+  }
+
+  .comunicacao-internal-body.comunicacao-internal-body > div:has(> div:first-child button[title="Excluir atendimento e arquivos"]) > div:first-child > div:last-child {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+
+  .comunicacao-internal-body.comunicacao-internal-body > div:has(> div:first-child button[title="Excluir atendimento e arquivos"]) > div:first-child > div:last-child > label,
+  .comunicacao-internal-body.comunicacao-internal-body > div:has(> div:first-child button[title="Excluir atendimento e arquivos"]) > div:first-child select {
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .comunicacao-internal-body.comunicacao-internal-body > div:has(> div:first-child button[title="Excluir atendimento e arquivos"]) > div:nth-child(2) {
+    max-width: 100%;
+    min-width: 0;
+    padding: 12px;
+  }
+
+  .comunicacao-internal-body.comunicacao-internal-body > div:has(> div:first-child button[title="Excluir atendimento e arquivos"]) > div:nth-child(2) > div {
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .comunicacao-internal-body.comunicacao-internal-body > div:has(> div:first-child button[title="Excluir atendimento e arquivos"]) > div:nth-child(2) > div > div {
+    max-width: calc(100% - 36px);
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .comunicacao-internal-body.comunicacao-internal-body > div:has(> div:first-child button[title="Excluir atendimento e arquivos"]) > div:nth-child(2) p {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .comunicacao-internal-body.comunicacao-internal-body > div:has(> div:first-child button[title="Excluir atendimento e arquivos"]) > div:last-child > div > div:last-child > div,
+  .comunicacao-internal-body.comunicacao-internal-body > div:has(> div:first-child button[title="Excluir atendimento e arquivos"]) > div:last-child input:not([type="file"]) {
+    max-width: 100%;
+    min-width: 0;
+  }
+}

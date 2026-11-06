@@ -1,10 +1,12 @@
 // File: modules/gestor/cadastros/checklist-estagio/ChecklistEstagioPage.tsx
 
 import React, { useState, useEffect } from 'react';
-import { Save, FileText, ChevronRight, Layers, FileCheck, Plus, ClipboardCheck, Loader2, Trash2, X } from 'lucide-react';
+import { Save, FileText, Layers, FileCheck, Plus, ClipboardCheck, Loader2, Trash2, X } from 'lucide-react';
 import { cadastrosService } from '../cadastros.service';
 import { checklistEstagioService } from './checklist-estagio.service';
 import { Curso } from '../cadastros.types';
+import ChecklistCourseMenu from './ChecklistCourseMenu';
+import '../formacoes-recursos.css';
 
 // Valores Padrão para inicializar se não houver dados no Supabase
 const DEFAULT_INSTRUMENTOS = [
@@ -244,21 +246,21 @@ const ChecklistEstagioPage: React.FC = () => {
   const selectedUc = checklistUcs[selectedUcIndex];
 
   return (
-    <div className="bg-white p-6 md:p-8 rounded-[2rem] shadow-sm border border-slate-100 animate-fadeIn">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 border-b border-slate-100 pb-6">
+    <div className="formacao-recursos formacao-recursos-checklist bg-white p-6 md:p-8 rounded-[2rem] shadow-sm border border-slate-100 animate-fadeIn">
+      <div className="formacao-recursos-header flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 border-b border-slate-100 pb-6">
         <div className="flex items-center gap-4">
-          <div className="p-3 bg-teal-50 text-teal-600 rounded-2xl">
+          <div className="formacao-recursos-heading-icon p-3 bg-teal-50 text-teal-600 rounded-2xl">
             <ClipboardCheck size={32} />
           </div>
           <div>
-            <h3 className="text-2xl font-black text-[#001a33] uppercase tracking-tight">Check List de Estágio</h3>
-            <p className="text-slate-500 font-medium">Configure instrumentos de avaliação e checklist por curso.</p>
+            <h3 className="formacao-recursos-title text-2xl font-black text-[#001a33] uppercase tracking-tight">Check List de Estágio</h3>
+            <p className="formacao-recursos-subtitle text-slate-500 font-medium">Configure instrumentos de avaliação e checklist por curso.</p>
           </div>
         </div>
         <button 
           onClick={handleSave}
           disabled={isSaving || loadingConfig || !selectedCursoId}
-          className="px-6 py-3 bg-[#001a33] text-white rounded-xl font-bold uppercase text-xs tracking-wider flex items-center justify-center gap-2 hover:bg-blue-900 transition-colors disabled:opacity-75"
+          className="formacao-recursos-primary px-6 py-3 bg-[#001a33] text-white rounded-xl font-bold uppercase text-xs tracking-wider flex items-center justify-center gap-2 hover:bg-blue-900 transition-colors disabled:opacity-75"
         >
           <Save size={16} /> {isSaving ? 'Salvando...' : 'Salvar Configurações'}
         </button>
@@ -275,27 +277,8 @@ const ChecklistEstagioPage: React.FC = () => {
            <p className="text-sm text-slate-400 max-w-sm mx-auto mt-2">Cadastre primeiro um curso técnico no painel de cadastros para configurar seu checklist de estágio.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          {/* Menu Lateral de Cursos */}
-          <div className="col-span-1 border-r border-slate-100 pr-4">
-            <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">Cursos Técnicos</h4>
-            <div className="space-y-2 mb-6">
-              {cursos.map(curso => (
-                <button 
-                  key={curso.id}
-                  onClick={() => setSelectedCursoId(curso.id)}
-                  className={`w-full text-left px-4 py-3 rounded-xl flex items-center justify-between transition-colors ${
-                    selectedCursoId === curso.id 
-                      ? 'bg-teal-50 border border-teal-100 text-teal-700 font-bold' 
-                      : 'bg-white border border-transparent text-slate-600 hover:bg-slate-50 hover:border-slate-100 font-medium'
-                  }`}
-                >
-                  <span className="text-sm">{curso.nome}</span>
-                  {selectedCursoId === curso.id && <ChevronRight size={16} className="text-teal-400" />}
-                </button>
-              ))}
-            </div>
-          </div>
+        <div className="formacao-recursos-checklist-layout grid grid-cols-1 lg:grid-cols-4 gap-8">
+          <ChecklistCourseMenu cursos={cursos} selectedCursoId={selectedCursoId} setSelectedCursoId={setSelectedCursoId} />
 
           {/* Configuração do Curso */}
           <div className="col-span-1 lg:col-span-3">

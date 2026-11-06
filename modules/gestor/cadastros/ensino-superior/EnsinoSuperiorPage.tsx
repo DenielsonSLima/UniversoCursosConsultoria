@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Building, Plus, Loader2, X, Trash2, Edit2, Power, Check, AlertCircle, Search, LayoutGrid, TableProperties } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { cadastrosService } from '../cadastros.service';
 import { Curso } from '../cadastros.types';
 import { supabase } from '../../../../lib/supabase';
 import { parceirosService } from '../../parceiros/parceiros.service';
-import CursoSuperiorTable from './CursoSuperiorTable';
+import EnsinoSuperiorCatalog from './EnsinoSuperiorCatalog';
+import EnsinoSuperiorCourseForm from './EnsinoSuperiorCourseForm';
+import '../formacoes-recursos.css';
 
 interface EnsinoSuperiorPageProps {
   readOnly?: boolean;
@@ -367,518 +368,60 @@ const EnsinoSuperiorPage: React.FC<EnsinoSuperiorPageProps> = ({ readOnly = fals
   });
 
   return (
-    <div className="animate-fadeIn relative">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-end mb-8 border-b border-slate-100 pb-6 gap-4">
-        <div>
-          <h2 className="text-3xl font-black text-[#001a33] uppercase tracking-tight">
-            Ensino Superior
-          </h2>
-          <p className="text-slate-500 font-medium mt-1">
-            Vitrine de Graduações e Pós-Graduações oferecidas em parceria com outras instituições.
-          </p>
-        </div>
-        
-        {!readOnly && <button
-          onClick={handleOpenCreate}
-          className="flex items-center gap-2 bg-[#001a33] text-white px-6 py-3 rounded-xl font-bold uppercase text-xs tracking-wider hover:bg-blue-900 transition-colors shadow-lg shadow-blue-900/20"
-        >
-          <Plus size={16} /> Novo Curso Superior
-        </button>}
-      </div>
+    <div className="formacao-recursos animate-fadeIn relative">
+      <EnsinoSuperiorCatalog
+        readOnly={readOnly}
+        handleOpenCreate={handleOpenCreate}
+        searchTerm={searchTerm}
+        setSearchTerm={setSearchTerm}
+        areaFilter={areaFilter}
+        setAreaFilter={setAreaFilter}
+        areaOptions={areaOptions}
+        partnerFilter={partnerFilter}
+        setPartnerFilter={setPartnerFilter}
+        partnerOptions={partnerOptions}
+        statusFilter={statusFilter}
+        setStatusFilter={setStatusFilter}
+        cursos={cursos}
+        displayMode={displayMode}
+        setDisplayMode={setDisplayMode}
+        loading={loading}
+        filteredCursos={filteredCursos}
+        handleOpenEdit={handleOpenEdit}
+        handleToggleStatus={handleToggleStatus}
+        handleDeleteCurso={handleDeleteCurso}
+        groupedCursos={groupedCursos}
+      />
 
-      {readOnly && (
-        <div className="mb-6 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-xs font-bold text-blue-800">
-          Modo de visualização do polo: cadastros e alterações são exclusivos da Matriz.
-        </div>
-      )}
-
-      {/* Info Box sobre o funcionamento das Parcerias */}
-      <div className="bg-blue-50/70 border border-blue-100 p-5 rounded-3xl mb-8 flex items-start gap-4 shadow-sm">
-        <div className="p-3 bg-blue-100 text-blue-800 rounded-2xl shrink-0">
-          <Building size={24} />
-        </div>
-        <div>
-          <h4 className="text-sm font-black text-blue-900 uppercase tracking-tight mb-1">Modelo de Afiliados / Parcerias</h4>
-          <p className="text-xs text-blue-800 leading-relaxed font-medium">
-            Estes cursos não possuem gestão de grade curricular (módulos/aulas) local, pois a parte acadêmica é controlada diretamente pelas faculdades parceiras. O cadastro aqui serve exclusivamente como uma <strong>vitrine no site público</strong> para captação de alunos e redirecionamento.
-          </p>
-        </div>
-      </div>
-
-      {/* Busca e filtros da vitrine */}
-      <div className="mb-6 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
-        <div className="grid grid-cols-1 gap-3 lg:grid-cols-12">
-          <div className="relative lg:col-span-6">
-            <span className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-slate-400">
-              <Search size={17} />
-            </span>
-            <input
-              type="search"
-              value={searchTerm}
-              onChange={(event) => setSearchTerm(event.target.value)}
-              placeholder="Buscar curso por nome, descrição ou parceiro..."
-              aria-label="Buscar cursos superiores"
-              className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 pl-11 pr-4 text-xs font-bold text-slate-700 outline-none transition-all placeholder:font-medium placeholder:text-slate-400 focus:border-blue-400 focus:bg-white focus:ring-2 focus:ring-blue-100"
-            />
-          </div>
-
-          <div className="lg:col-span-3">
-            <select
-              value={areaFilter}
-              onChange={(event) => setAreaFilter(event.target.value)}
-              aria-label="Filtrar cursos superiores por categoria"
-              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold tracking-normal text-slate-700 outline-none transition-all focus:border-blue-400 focus:bg-white focus:ring-2 focus:ring-blue-100"
-            >
-              <option value="Todas" className="font-medium">Todas as categorias</option>
-              {areaOptions.map((area) => (
-                <option key={area} value={area} className="font-medium">{area}</option>
-              ))}
-            </select>
-          </div>
-
-          <div className="lg:col-span-3">
-            <select
-              value={partnerFilter}
-              onChange={(event) => setPartnerFilter(event.target.value)}
-              aria-label="Filtrar cursos superiores por parceiro"
-              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold tracking-normal text-slate-700 outline-none transition-all focus:border-blue-400 focus:bg-white focus:ring-2 focus:ring-blue-100"
-            >
-              <option value="Todos" className="font-medium">Todos os parceiros</option>
-              {partnerOptions.map((partner) => (
-                <option key={partner} value={partner} className="font-medium">{partner}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-      </div>
-
-      {/* Status e modo de visualização */}
-      <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex w-full max-w-xs gap-2 rounded-2xl border border-slate-200 bg-slate-100 p-1">
-          <button
-            onClick={() => setStatusFilter('ativo')}
-            className={`flex-1 py-2.5 text-xs font-bold uppercase tracking-wider rounded-xl transition-all ${
-              statusFilter === 'ativo'
-                ? 'bg-white text-emerald-600 shadow-sm'
-                : 'text-slate-500 hover:text-slate-700'
-            }`}
-          >
-            Ativos ({cursos.filter(c => c.status === 'ativo').length})
-          </button>
-          <button
-            onClick={() => setStatusFilter('inativo')}
-            className={`flex-1 py-2.5 text-xs font-bold uppercase tracking-wider rounded-xl transition-all ${
-              statusFilter === 'inativo'
-                ? 'bg-white text-red-500 shadow-sm'
-                : 'text-slate-500 hover:text-slate-700'
-            }`}
-          >
-            Inativos ({cursos.filter(c => c.status === 'inativo').length})
-          </button>
-        </div>
-
-        <div
-          className="flex w-fit items-center rounded-xl border border-slate-200 bg-slate-100 p-1"
-          aria-label="Modo de visualização"
-        >
-          <button
-            type="button"
-            onClick={() => setDisplayMode('cards')}
-            aria-pressed={displayMode === 'cards'}
-            className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-[10px] font-black uppercase tracking-wide transition-all ${
-              displayMode === 'cards'
-                ? 'bg-white text-blue-600 shadow-sm'
-                : 'text-slate-500 hover:text-slate-700'
-            }`}
-          >
-            <LayoutGrid size={13} />
-            Cards
-          </button>
-          <button
-            type="button"
-            onClick={() => setDisplayMode('table')}
-            aria-pressed={displayMode === 'table'}
-            className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-[10px] font-black uppercase tracking-wide transition-all ${
-              displayMode === 'table'
-                ? 'bg-white text-blue-600 shadow-sm'
-                : 'text-slate-500 hover:text-slate-700'
-            }`}
-          >
-            <TableProperties size={13} />
-            Tabela
-          </button>
-        </div>
-      </div>
-
-      {/* Listagem */}
-      {loading ? (
-        <div className="flex justify-center items-center py-20">
-          <Loader2 className="animate-spin text-blue-600" size={32} />
-        </div>
-      ) : filteredCursos.length === 0 ? (
-        <div className="text-center py-20 bg-slate-50 rounded-[2.5rem] border border-dashed border-slate-300">
-           <Building className="text-slate-300 mx-auto mb-4 animate-pulse" size={48} />
-           <p className="text-slate-500 font-bold">Nenhum curso superior encontrado.</p>
-           <p className="mt-1 text-xs text-slate-400">Ajuste a busca ou os filtros de categoria e parceiro.</p>
-        </div>
-      ) : (
-        displayMode === 'table' ? (
-          <div className="animate-fadeIn">
-            <CursoSuperiorTable
-              cursos={filteredCursos}
-              readOnly={readOnly}
-              onEdit={handleOpenEdit}
-              onToggleStatus={handleToggleStatus}
-              onDelete={handleDeleteCurso}
-            />
-          </div>
-        ) : (
-          <div className="space-y-10">
-            {Object.entries(groupedCursos).map(([area, list]) => (
-              <div key={area} className="animate-fadeIn">
-                <h3 className="text-sm font-black text-[#001a33] uppercase tracking-widest border-l-4 border-blue-600 pl-3 mb-6 flex items-center gap-2">
-                  <span>{area}</span>
-                  <span className="text-xs bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full font-bold">{list.length}</span>
-                </h3>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                  {list.map((curso) => (
-                  <div 
-                    key={curso.id} 
-                    className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 hover:shadow-xl hover:shadow-blue-900/5 transition-all duration-300 flex flex-col justify-between min-h-[340px] relative overflow-hidden group"
-                  >
-                    <div>
-                      {/* Imagem do Card */}
-                      {curso.imagem_url && (
-                        <div className="h-24 w-full bg-slate-50 border border-slate-100 rounded-xl overflow-hidden mb-3">
-                          <img src={curso.imagem_url} alt={curso.nome} className="w-full h-full object-cover" />
-                        </div>
-                      )}
-
-                      {/* Logo do Parceiro e Categoria */}
-                      <div className="flex justify-between items-start gap-4 mb-4">
-                        <div className="h-12 w-28 bg-slate-50 border border-slate-100 rounded-xl p-2 flex items-center justify-center overflow-hidden">
-                          {curso.parceiro_logo_url ? (
-                            <img 
-                              src={curso.parceiro_logo_url} 
-                              alt={curso.parceiro_instituicao} 
-                              className="h-full w-full object-contain"
-                            />
-                          ) : (
-                            <Building className="text-slate-300" size={20} />
-                          )}
-                        </div>
-                        <span className="text-[10px] font-bold text-slate-400 uppercase bg-slate-100 px-2 py-1 rounded-md">
-                          {curso.area}
-                        </span>
-                      </div>
-
-                      {/* Nome do Curso */}
-                      <h4 className="text-base font-bold text-[#001a33] leading-tight mb-2 group-hover:text-blue-600 transition-colors">
-                        {curso.nome}
-                      </h4>
-                      
-                      {/* Nome do Parceiro */}
-                      <p className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-2">
-                        {curso.parceiro_instituicao}
-                      </p>
-
-                      {/* Descrição */}
-                      <p className="text-xs text-slate-500 line-clamp-3 leading-relaxed">
-                        {curso.descricao || 'Sem descrição cadastrada.'}
-                      </p>
-                    </div>
-
-                    {/* Rodapé do Card: Ações */}
-                    <div className="mt-auto pt-4 border-t border-slate-50 flex items-center justify-between">
-                      <span className="text-[10px] text-slate-400 font-bold uppercase">
-                        Versão {curso.versao || '1.0'}
-                      </span>
-                      
-                      {!readOnly && <div className="flex items-center gap-1">
-                        {/* Toggle Status */}
-                        <button
-                          onClick={(e) => handleToggleStatus(curso, e)}
-                          title={curso.status === 'ativo' ? 'Inativar curso' : 'Ativar curso'}
-                          className={`p-2 rounded-lg transition-colors ${
-                            curso.status === 'ativo' 
-                              ? 'text-emerald-500 hover:bg-emerald-50' 
-                              : 'text-slate-400 hover:bg-slate-100'
-                          }`}
-                        >
-                          {curso.status === 'ativo' ? <Check size={16} /> : <Power size={16} />}
-                        </button>
-
-                        {/* Editar */}
-                        <button
-                          onClick={(e) => handleOpenEdit(curso, e)}
-                          title="Editar curso"
-                          className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
-                        >
-                          <Edit2 size={16} />
-                        </button>
-
-                        {/* Excluir */}
-                        <button
-                          onClick={(e) => handleDeleteCurso(curso.id, e)}
-                          title="Excluir curso"
-                          className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>}
-                    </div>
-                  </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        )
-      )}
-
-      {/* Modal de Formulário (Criar/Editar) */}
-      {!readOnly && showFormModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 animate-fadeIn">
-          <div className="bg-white rounded-[2.5rem] p-8 max-w-lg w-full shadow-2xl border border-slate-100 relative max-h-[90vh] overflow-y-auto">
-            <button 
-              onClick={() => setShowFormModal(false)}
-              className="absolute top-6 right-6 p-2 text-slate-400 hover:text-red-500 rounded-xl hover:bg-slate-50 transition-all"
-            >
-              <X size={20} />
-            </button>
-            
-            <h3 className="text-xl font-black text-[#001a33] uppercase tracking-tight mb-6">
-              {editingCurso ? 'Editar Curso Superior' : 'Novo Curso Superior'}
-            </h3>
-            
-            <form onSubmit={handleSaveCurso} className="space-y-4">
-              {/* Nome do Curso */}
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Nome da Graduação / Pós-Graduação</label>
-                <input 
-                  required
-                  type="text" 
-                  value={nome}
-                  onChange={(e) => setNome(e.target.value)}
-                  placeholder="Ex: Bacharelado em Administração"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 outline-none focus:border-blue-500 focus:bg-white transition-all"
-                />
-              </div>
-
-              {/* Categoria/Grau e Tipo/Modalidade/Versão */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Grau / Categoria</label>
-                  <select 
-                    value={grau}
-                    onChange={(e) => setGrau(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 outline-none focus:border-blue-500 focus:bg-white transition-all cursor-pointer"
-                  >
-                    <option value="Bacharelado">Bacharelado</option>
-                    <option value="Licenciatura">Licenciatura</option>
-                    <option value="Tecnologia">Tecnologia (Cursos Superiores de)</option>
-                    <option value="Outro">Outra Categoria</option>
-                  </select>
-                </div>
-
-                {(grau === 'Bacharelado' || grau === 'Licenciatura') ? (
-                  <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Tipo / Modalidade</label>
-                    <select 
-                      value={tipoEnsino}
-                      onChange={(e) => setTipoEnsino(e.target.value)}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 outline-none focus:border-blue-500 focus:bg-white transition-all cursor-pointer"
-                    >
-                      <option value="SEMIPRESENCIAL">Semipresencial</option>
-                      <option value="100% ONLINE">100% Online</option>
-                      <option value="PRESENCIAL">Presencial</option>
-                    </select>
-                  </div>
-                ) : (
-                  <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Versão</label>
-                    <input 
-                      required
-                      type="text" 
-                      value={versao}
-                      onChange={(e) => setVersao(e.target.value)}
-                      placeholder="Ex: 1.0"
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 outline-none focus:border-blue-500 focus:bg-white transition-all"
-                    />
-                  </div>
-                )}
-              </div>
-
-              {/* Se for Outro, exibe campo personalizado */}
-              {grau === 'Outro' && (
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Nome da Categoria Personalizada</label>
-                  <input 
-                    required
-                    type="text" 
-                    value={customArea}
-                    onChange={(e) => setCustomArea(e.target.value)}
-                    placeholder="Ex: PÓS-GRADUAÇÃO - 100% ONLINE"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 outline-none focus:border-blue-500 focus:bg-white transition-all"
-                  />
-                </div>
-              )}
-
-              {/* Se for Bacharelado ou Licenciatura, a Versão é exibida abaixo */}
-              {(grau === 'Bacharelado' || grau === 'Licenciatura') && (
-                <div className="grid grid-cols-2 gap-4">
-                  <div></div>
-                  <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Versão</label>
-                    <input 
-                      required
-                      type="text" 
-                      value={versao}
-                      onChange={(e) => setVersao(e.target.value)}
-                      placeholder="Ex: 1.0"
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 outline-none focus:border-blue-500 focus:bg-white transition-all"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* Escolha do Parceiro */}
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Instituição Parceira</label>
-                {(!parceirosPj || parceirosPj.length === 0) ? (
-                  <div className="flex items-center gap-2 bg-amber-50 border border-amber-100 rounded-xl px-4 py-3">
-                    <AlertCircle size={16} className="text-amber-500 shrink-0" />
-                    <p className="text-xs text-amber-700 font-medium">
-                      Nenhum parceiro PJ cadastrado ainda. <span className="font-black">Cadastre uma empresa em Parceiros → Pessoa Jurídica</span> antes de criar um curso superior.
-                    </p>
-                  </div>
-                ) : (
-                  <>
-                    <select
-                      value={parceiroTipo}
-                      onChange={(e) => handlePartnerSelectChange(e.target.value)}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 outline-none focus:border-blue-500 focus:bg-white transition-all cursor-pointer"
-                    >
-                      <option value="">Selecione o parceiro...</option>
-                      {parceirosPj.map(p => (
-                        <option key={p.id} value={p.id}>{p.nome}</option>
-                      ))}
-                      <option value="Outro">Outra Instituição (não cadastrada)</option>
-                    </select>
-
-                    {/* Preview da logo que virá do parceiro */}
-                    {parceiroTipo && parceiroTipo !== 'Outro' && (() => {
-                      const dbPartner = parceirosPj.find(p => p.id === parceiroTipo);
-                      return dbPartner ? (
-                        <div className="flex items-center gap-3 mt-3 p-3 bg-slate-50 rounded-xl border border-slate-200">
-                          <div className="w-12 h-12 bg-white rounded-xl border border-slate-100 flex items-center justify-center overflow-hidden shrink-0">
-                            {dbPartner.foto ? (
-                              <img src={dbPartner.foto} alt={dbPartner.nome} className="w-full h-full object-contain" />
-                            ) : (
-                              <Building size={20} className="text-slate-300" />
-                            )}
-                          </div>
-                          <div>
-                            <p className="text-xs font-black text-slate-700">{dbPartner.nome}</p>
-                            {dbPartner.foto ? (
-                              <p className="text-[10px] text-emerald-600 font-bold mt-0.5">✓ Logo cadastrada no perfil do parceiro</p>
-                            ) : (
-                              <p className="text-[10px] text-amber-600 font-bold mt-0.5">⚠ Sem logo — cadastre no perfil do parceiro</p>
-                            )}
-                          </div>
-                        </div>
-                      ) : null;
-                    })()}
-                  </>
-                )}
-
-                {parceiroTipo === 'Outro' && (
-                  <div className="mt-3">
-                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Nome da Instituição</label>
-                    <input
-                      required
-                      type="text"
-                      value={parceiroNomeCustom}
-                      onChange={(e) => setParceiroNomeCustom(e.target.value)}
-                      placeholder="Ex: Faculdade São Luís"
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 outline-none focus:border-blue-500 focus:bg-white transition-all"
-                    />
-                    <p className="text-[10px] text-amber-600 font-medium mt-1.5">⚠ Sem logo — cadastre este parceiro em Parceiros → PJ para adicionar logo.</p>
-                  </div>
-                )}
-              </div>
-
-              {/* Imagem do Card (Upload) */}
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Imagem de Capa (Card)</label>
-                <div className="flex items-center gap-4">
-                  {imagemUrl ? (
-                    <div className="relative w-24 h-16 bg-slate-50 border border-slate-200 rounded-xl overflow-hidden shrink-0">
-                      <img src={imagemUrl} alt="Capa" className="w-full h-full object-cover" />
-                      <button
-                        type="button"
-                        onClick={() => setImagemUrl('')}
-                        className="absolute top-1 right-1 bg-red-500 hover:bg-red-600 text-white p-1 rounded-full transition-colors"
-                        title="Remover Imagem"
-                      >
-                        <X size={12} />
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="w-24 h-16 bg-slate-50 border border-dashed border-slate-300 rounded-xl flex items-center justify-center text-slate-400 shrink-0">
-                      Sem Capa
-                    </div>
-                  )}
-                  <div className="flex-grow">
-                    <label className="inline-block px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold uppercase tracking-wider rounded-xl cursor-pointer transition-all">
-                      {isUploading ? 'Fazendo Upload...' : imagemUrl ? 'Alterar Imagem' : 'Upload de Imagem'}
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleUploadImagem}
-                        disabled={isUploading}
-                        className="hidden"
-                      />
-                    </label>
-                    <p className="text-[10px] text-slate-400 mt-1">Imagens recomendadas no formato 16:9.</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Descrição do Curso */}
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Descrição / História do Curso</label>
-                <textarea 
-                  value={descricao}
-                  onChange={(e) => setDescricao(e.target.value)}
-                  placeholder="Resumo da formação acadêmica, campos de atuação e objetivos da parceria..."
-                  className="w-full h-32 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium text-slate-800 outline-none focus:border-blue-500 focus:bg-white transition-all resize-none"
-                />
-              </div>
-
-              {/* Ações */}
-              <div className="pt-4 flex gap-3">
-                <button 
-                  type="submit" 
-                  disabled={isSaving}
-                  className="flex-1 py-3 bg-[#001a33] text-white rounded-xl font-bold uppercase text-xs tracking-wider hover:bg-blue-900 transition-colors shadow-lg disabled:opacity-75"
-                >
-                  {isSaving ? 'Salvando...' : 'Salvar Curso'}
-                </button>
-                <button 
-                  type="button" 
-                  onClick={() => setShowFormModal(false)}
-                  className="px-6 py-3 bg-slate-100 text-slate-500 rounded-xl font-bold uppercase text-xs tracking-wider hover:bg-slate-200 transition-colors"
-                >
-                  Cancelar
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <EnsinoSuperiorCourseForm
+        readOnly={readOnly}
+        showFormModal={showFormModal}
+        setShowFormModal={setShowFormModal}
+        editingCurso={editingCurso}
+        handleSaveCurso={handleSaveCurso}
+        nome={nome}
+        setNome={setNome}
+        grau={grau}
+        setGrau={setGrau}
+        tipoEnsino={tipoEnsino}
+        setTipoEnsino={setTipoEnsino}
+        versao={versao}
+        setVersao={setVersao}
+        customArea={customArea}
+        setCustomArea={setCustomArea}
+        parceirosPj={parceirosPj}
+        parceiroTipo={parceiroTipo}
+        handlePartnerSelectChange={handlePartnerSelectChange}
+        parceiroNomeCustom={parceiroNomeCustom}
+        setParceiroNomeCustom={setParceiroNomeCustom}
+        imagemUrl={imagemUrl}
+        setImagemUrl={setImagemUrl}
+        isUploading={isUploading}
+        handleUploadImagem={handleUploadImagem}
+        descricao={descricao}
+        setDescricao={setDescricao}
+        isSaving={isSaving}
+      />
     </div>
   );
 };

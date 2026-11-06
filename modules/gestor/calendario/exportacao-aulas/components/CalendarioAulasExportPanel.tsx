@@ -124,14 +124,14 @@ const CalendarioAulasExportPanel: React.FC<CalendarioAulasExportPanelProps> = ({
   };
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-blue-200 bg-white shadow-sm">
-      <div className="border-b border-blue-100 bg-gradient-to-r from-blue-50 to-white px-4 py-4 sm:px-5">
+    <section className="calendario-export-panel overflow-hidden rounded-2xl border border-blue-200 bg-white shadow-sm">
+      <div className="calendario-export-heading border-b border-blue-100 bg-gradient-to-r from-blue-50 to-white px-4 py-4 sm:px-5">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex min-w-0 items-start gap-3">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#001a33] text-white shadow-sm"><CalendarRange size={19} /></span>
+          <div className="calendario-export-identity flex min-w-0 items-start gap-3">
+            <span className="calendario-export-icon flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#001a33] text-white shadow-sm"><CalendarRange size={19} /></span>
             <div>
               <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-blue-700">Documento acadêmico</p>
-              <h2 className="mt-0.5 text-base font-bold text-[#001a33]">Exportar calendário de aulas</h2>
+              <h2 className="calendario-export-title mt-0.5 text-base font-bold text-[#001a33]">Exportar calendário de aulas</h2>
               <p className="mt-1 max-w-3xl text-xs leading-relaxed text-slate-500">
                 {needModulo ? selection.modoExportacao === 'MODULO_COMPLETO'
                   ? 'O módulo completo inclui todas as suas aulas, independentemente do mês da agenda.'
@@ -140,13 +140,13 @@ const CalendarioAulasExportPanel: React.FC<CalendarioAulasExportPanelProps> = ({
               </p>
             </div>
           </div>
-          <span className="max-w-xl rounded-full border border-blue-100 bg-white px-3 py-1.5 text-[10px] font-semibold text-blue-700">
+          <span className="calendario-export-scope max-w-xl rounded-full border border-blue-100 bg-white px-3 py-1.5 text-[10px] font-semibold text-blue-700">
             {scope} · A4 retrato
           </span>
         </div>
       </div>
 
-      <div className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)_auto] lg:items-end sm:p-5">
+      <div className="calendario-export-body grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)_auto] lg:items-end sm:p-5">
         <CalendarioAulasPicker
           label="Tipo de curso"
           value={modalidade}
@@ -172,7 +172,7 @@ const CalendarioAulasExportPanel: React.FC<CalendarioAulasExportPanelProps> = ({
           type="button"
           onClick={handleExport}
           disabled={!canExport}
-          className="flex h-10 items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 text-[11px] font-semibold uppercase text-white shadow-lg shadow-blue-600/15 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+          className="calendario-export-submit flex h-10 items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 text-[11px] font-semibold uppercase text-white shadow-lg shadow-blue-600/15 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {isPreparing ? <LoaderCircle size={14} className="animate-spin" /> : <FileDown size={14} />}
           {isPreparing ? 'Preparando...' : 'Exportar calendário'}
@@ -192,13 +192,13 @@ const CalendarioAulasExportPanel: React.FC<CalendarioAulasExportPanelProps> = ({
       ) : null}
 
       {!poloId ? (
-        <div className="mx-4 mb-4 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs text-amber-800 sm:mx-5 sm:mb-5">
+        <div className="calendario-export-feedback mx-4 mb-4 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs text-amber-800 sm:mx-5 sm:mb-5">
           <AlertCircle size={15} className="mt-0.5 shrink-0" />
           Selecione um polo ativo para consultar as turmas autorizadas.
         </div>
       ) : null}
       {turmasQuery.isError || modulosQuery.isError ? (
-        <div role="alert" className="mx-4 mb-4 flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2.5 text-xs text-rose-700 sm:mx-5 sm:mb-5">
+        <div role="alert" className="calendario-export-feedback mx-4 mb-4 flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2.5 text-xs text-rose-700 sm:mx-5 sm:mb-5">
           <AlertCircle size={15} className="mt-0.5 shrink-0" />
           <span className="min-w-0 flex-1">{getErrorMessage(turmasQuery.error || modulosQuery.error, 'Não foi possível consultar as opções desta turma.')}</span>
           <button
@@ -209,22 +209,22 @@ const CalendarioAulasExportPanel: React.FC<CalendarioAulasExportPanelProps> = ({
         </div>
       ) : null}
       {noTurmasForSelection ? (
-        <p className="mx-4 mb-4 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs text-slate-600 sm:mx-5 sm:mb-5">
+        <p className="calendario-export-feedback mx-4 mb-4 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs text-slate-600 sm:mx-5 sm:mb-5">
           Nenhuma turma elegível foi retornada para esta modalidade e este polo.
         </p>
       ) : null}
       {needModulo && turmaId && !modulosQuery.isLoading && !modulosQuery.isError && !modulos.length ? (
-        <p className="mx-4 mb-4 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs text-slate-600 sm:mx-5 sm:mb-5">
+        <p className="calendario-export-feedback mx-4 mb-4 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs text-slate-600 sm:mx-5 sm:mb-5">
           Esta turma técnica ainda não possui módulos disponíveis para seleção.
         </p>
       ) : null}
       {showSelectionError ? (
-        <p role="status" className="mx-4 mb-4 text-xs font-medium text-amber-700 sm:mx-5">{selectionError}</p>
+        <p role="status" className="calendario-export-feedback mx-4 mb-4 text-xs font-medium text-amber-700 sm:mx-5">{selectionError}</p>
       ) : null}
       {feedback ? (
         <div
           role={feedback.tone === 'error' ? 'alert' : 'status'}
-          className={'mx-4 mb-4 flex items-start gap-2 rounded-xl border px-3 py-2.5 text-xs sm:mx-5 sm:mb-5 '
+          className={'calendario-export-feedback mx-4 mb-4 flex items-start gap-2 rounded-xl border px-3 py-2.5 text-xs sm:mx-5 sm:mb-5 '
             + (feedback.tone === 'error' ? 'border-rose-200 bg-rose-50 text-rose-700' : 'border-blue-200 bg-blue-50 text-blue-800')}
         >
           <AlertCircle size={15} className="mt-0.5 shrink-0" />{feedback.message}

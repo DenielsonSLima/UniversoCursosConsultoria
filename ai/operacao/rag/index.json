@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "retrieval": "lexical-bm25-with-source-citations",
-  "builtAt": "2026-11-06T09:09:20.243Z",
+  "builtAt": "2026-11-06T10:34:18.111Z",
   "manifestVersion": 2,
-  "sourceSignature": "700fdf2fd15513da89fb4d67b09a1f54de3f7afd035439a7502a055d888b482d",
+  "sourceSignature": "50b7c63fa1f1af658af61126bd7b341eaaddca4af58ce3c07f6245c5f21e8e12",
   "sources": [
     {
       "path": "AGENTS.md",
@@ -11,7 +11,7 @@
     },
     {
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "hash": "a3b5013bd905da9eab66e094b2202f597b4c3a0afc1e7b00f28a512a5eae3dd0"
+      "hash": "4d520e9aedbe83188be63ad668174adaf13512df2f888ff818b323cb826ddcfa"
     },
     {
       "path": "ai/operacao/MEMORIA_CANONICA.md",
@@ -208,23 +208,23 @@
       "part": 1
     },
     {
-      "id": "47aea3455bcacb66f249",
-      "hash": "47aea3455bcacb66f24981d3c130478873f100855b60961f2ecbb66da38198b5",
+      "id": "c8903834d771e4148aa1",
+      "hash": "c8903834d771e4148aa1d42207a33a130b4f7901ddf46d2df31142318f76ea80",
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Lote: 2026-11-06-publicacao-financeiro-caixa-configuracoes-4-8-249",
-      "text": "Publicação autorizada em andamento da versão4.8.249/revisão258. Financeiro, Caixa e entrada de Configurações compactos; dados, regras, consultas, permissões, operações e documentos preservados. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-06-publicacao-financeiro-caixa-configuracoes-4-8-249.md`.",
-      "normalizedText": "publicacao autorizada em andamento da versao4 8 249 revisao258 financeiro caixa e entrada de configuracoes compactos dados regras consultas permissoes operacoes e documentos preservados manifesto explicito ai operacao registros alteracoes 2026 11 06 publicacao financeiro caixa configuracoes 4 8 249 md",
-      "tokenCount": 36,
+      "section": "Lote: 2026-11-06-entrega-visual-cinco-modulos-4-8-250",
+      "text": "Entrega 4.8.250: Formações, Patrimônio, Relatórios, Calendário e Comunicação, na direção compacta aprovada. Implementação em cinco etapas sequenciais com três agentes, revisão independente e smoke Safari de cada módulo. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-06-entrega-visual-cinco-modulos-4-8-250.md`.",
+      "normalizedText": "entrega 4 8 250 formacoes patrimonio relatorios calendario e comunicacao na direcao compacta aprovada implementacao em cinco etapas sequenciais com tres agentes revisao independente e smoke safari de cada modulo manifesto explicito ai operacao registros alteracoes 2026 11 06 entrega visual cinco modulos 4 8 250 md",
+      "tokenCount": 41,
       "part": 1
     },
     {
-      "id": "ee335649672bd684b0d8",
-      "hash": "ee335649672bd684b0d8f7433fb27a58a8ca0e553dc76c60fd49b7465c5597bf",
+      "id": "4a26f1892d8eb27093ab",
+      "hash": "4a26f1892d8eb27093ab4bfc89e389123694b83d81dc9b3f7bfdf8f66f0d69d7",
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Lote: 2026-11-06-publicacao-financeiro-caixa-configuracoes-4-8-249",
-      "text": "Base main4a36d600bfcbc01640dd4c13125ddd1f538e1312. Safari desktop/móvel, build, TypeScript, lint focado, contratos e limite de linhas aprovados. GitHub via MCP, prévia Vercel e confirmação pós-deploy no domínio oficial; resultado efetivo na PR. A primeira checagem remota exigiu reduzir o registro corrente para manter o índice RAG dentro80trechos; nenhuma guarda foi alterada.",
-      "normalizedText": "base main4a36d600bfcbc01640dd4c13125ddd1f538e1312 safari desktop movel build typescript lint focado contratos e limite de linhas aprovados github via mcp previa vercel e confirmacao pos deploy no dominio oficial resultado efetivo na pr a primeira checagem remota exigiu reduzir o registro corrente para manter o indice rag dentro80trechos nenhuma guarda foi alterada",
-      "tokenCount": 45,
+      "section": "Lote: 2026-11-06-entrega-visual-cinco-modulos-4-8-250",
+      "text": "Preservar dados, consultas, permissões, regras, envios e geradores; somente apresentação e extrações equivalentes para o teto de 500 linhas. GitHub autorizado ao final: commit atômico, PR e Preview após checks. Produção não solicitada para este lote. Base publicada 4.8.249 validada pelo usuário.",
+      "normalizedText": "preservar dados consultas permissoes regras envios e geradores somente apresentacao e extracoes equivalentes para o teto de 500 linhas github autorizado ao final commit atomico pr e preview apos checks producao nao solicitada para este lote base publicada 4 8 249 validada pelo usuario",
+      "tokenCount": 38,
       "part": 1
     },
     {

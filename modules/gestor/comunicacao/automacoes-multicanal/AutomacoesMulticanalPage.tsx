@@ -1,3 +1,4 @@
+import '../comunicacao-operations.css';
 import React, { useState } from 'react';
 import MultichannelAutomationsPanel from './MultichannelAutomationsPanel';
 import LegacyWhatsAppAutomationsPanel from './LegacyWhatsAppAutomationsPanel';
@@ -11,7 +12,7 @@ const AutomacoesMulticanalPage: React.FC<AutomacoesMulticanalPageProps> = ({ can
   const [view, setView] = useState<'central' | 'legacy-whatsapp'>('central');
 
   return (
-    <div className="flex h-[calc(100vh-120px)] min-h-[620px] flex-col overflow-hidden rounded-3xl border border-slate-100 bg-white shadow-sm animate-fadeIn">
+    <div className="comunicacao-operations comm-ops-automations flex h-[calc(100vh-120px)] min-h-[620px] flex-col overflow-hidden rounded-3xl border border-slate-100 bg-white shadow-sm animate-fadeIn">
       {view === 'central' ? (
         <MultichannelAutomationsPanel onOpenLegacyWhatsApp={canAccessLegacyWhatsApp ? () => setView('legacy-whatsapp') : undefined} onDirtyChange={onDirtyChange} />
       ) : (

@@ -1,0 +1,441 @@
+/* Semantic class specificity keeps this screen-only layer stable when Tailwind loads later. */
+@media screen {
+  .formacoes-cursos-overview.formacoes-cursos-overview.animate-fadeIn,
+  .formacoes-cursos-details.formacoes-cursos-details.animate-fadeIn,
+  .formacoes-cursos-create.formacoes-cursos-create.animate-fadeIn,
+  .formacoes-cursos-groups.formacoes-cursos-groups > .animate-fadeIn,
+  .formacoes-cursos-details > .animate-fadeIn,
+  .formacoes-cursos-details > div > .animate-fadeIn {
+    animation: none;
+    backface-visibility: visible;
+    transform: none;
+    will-change: auto;
+  }
+
+  .formacoes-cursos-overview.formacoes-cursos-overview,
+  .formacoes-cursos-details.formacoes-cursos-details,
+  .formacoes-cursos-create.formacoes-cursos-create {
+    min-width: 0;
+  }
+
+  .formacoes-cursos-heading.formacoes-cursos-heading {
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 18px;
+    padding-bottom: 16px;
+  }
+
+  .formacoes-cursos-title.formacoes-cursos-title {
+    font-size: 23px;
+    line-height: 1.3;
+    font-weight: 500;
+    text-transform: none;
+    letter-spacing: -0.025em;
+  }
+
+  .formacoes-cursos-intro.formacoes-cursos-intro {
+    font-size: 12px;
+    line-height: 1.6;
+    font-weight: 400;
+  }
+
+  .formacoes-cursos-new.formacoes-cursos-new,
+  .formacoes-cursos-create-submit.formacoes-cursos-create-submit,
+  .formacoes-cursos-details-heading.formacoes-cursos-details-heading > button {
+    min-height: 40px;
+    padding: 9px 14px;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: none;
+    letter-spacing: normal;
+    box-shadow: none;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .formacoes-cursos-status.formacoes-cursos-status {
+    gap: 4px;
+    padding: 3px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+  }
+
+  .formacoes-cursos-status.formacoes-cursos-status > button {
+    min-height: 38px;
+    padding: 8px 14px;
+    border-radius: 7px;
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: none;
+    letter-spacing: normal;
+    box-shadow: none;
+  }
+
+  .formacoes-cursos-readonly.formacoes-cursos-readonly {
+    padding: 10px 12px;
+    border-radius: 10px;
+    font-size: 12px;
+    line-height: 1.6;
+    font-weight: 400;
+    margin-bottom: 16px;
+  }
+
+  .formacoes-cursos-groups.formacoes-cursos-groups > * + * {
+    margin-top: 24px;
+  }
+
+  .formacoes-cursos-group-title.formacoes-cursos-group-title {
+    border-left-width: 2px;
+    margin-bottom: 12px;
+    padding-left: 10px;
+    font-size: 14px;
+    font-weight: 500;
+    text-transform: none;
+    letter-spacing: normal;
+  }
+
+  .formacoes-cursos-group-title.formacoes-cursos-group-title > span:last-child {
+    font-size: 11px;
+    font-weight: 400;
+  }
+
+  .formacoes-cursos-grid.formacoes-cursos-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  .formacoes-cursos-card.formacoes-cursos-card {
+    padding: 14px;
+    border-color: #e2e8f0;
+    border-radius: 12px;
+    min-width: 0;
+    box-shadow: none;
+  }
+
+  .formacoes-cursos-card.formacoes-cursos-card:hover {
+    border-color: #bfccd9;
+    box-shadow: none;
+  }
+
+  .formacoes-cursos-cover.formacoes-cursos-cover {
+    aspect-ratio: 16 / 7;
+    margin-bottom: 12px;
+    border-radius: 8px;
+  }
+
+  .formacoes-cursos-cover.formacoes-cursos-cover svg {
+    width: 32px;
+    height: 32px;
+  }
+
+  .formacoes-cursos-badges.formacoes-cursos-badges {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    gap: 5px;
+    margin-bottom: 10px;
+  }
+
+  .formacoes-cursos-badges.formacoes-cursos-badges > span {
+    padding: 3px 7px;
+    font-size: 10px;
+    line-height: 1.5;
+    font-weight: 500;
+    text-transform: none;
+    letter-spacing: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .formacoes-cursos-card-title.formacoes-cursos-card-title {
+    margin-bottom: 6px;
+    font-size: 14px;
+    line-height: 1.5;
+    font-weight: 500;
+    overflow-wrap: anywhere;
+  }
+
+  .formacoes-cursos-description.formacoes-cursos-description {
+    display: block;
+    overflow: visible;
+    -webkit-line-clamp: unset;
+    margin-bottom: 14px;
+    font-size: 11px;
+    line-height: 1.7;
+    font-weight: 400;
+    overflow-wrap: anywhere;
+  }
+
+  .formacoes-cursos-requirement.formacoes-cursos-requirement {
+    margin-bottom: 10px;
+    font-size: 11px;
+    line-height: 1.6;
+    font-weight: 400;
+    align-items: center;
+  }
+
+  .formacoes-cursos-card.formacoes-cursos-card svg {
+    flex-shrink: 0;
+  }
+
+  .formacoes-cursos-metadata.formacoes-cursos-metadata {
+    min-height: 36px;
+    padding: 8px;
+    gap: 7px;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: normal;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .formacoes-cursos-metadata.formacoes-cursos-metadata > span {
+    font-weight: 500;
+  }
+
+  .formacoes-cursos-card-footer.formacoes-cursos-card-footer > * + * {
+    margin-top: 10px;
+  }
+
+  .formacoes-cursos-card.formacoes-cursos-card button {
+    min-height: 36px;
+    padding: 8px;
+    border-radius: 8px;
+    font-size: 11px;
+    line-height: 1.4;
+    font-weight: 500;
+    letter-spacing: normal;
+    text-transform: none;
+    box-shadow: none;
+    align-items: center;
+  }
+
+  .formacoes-cursos-card.formacoes-cursos-card button span {
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: normal;
+    text-transform: none;
+  }
+
+  .formacoes-cursos-empty.formacoes-cursos-empty {
+    padding: 40px 16px;
+    border-radius: 12px;
+    font-size: 12px;
+    line-height: 1.6;
+  }
+
+  .formacoes-cursos-empty.formacoes-cursos-empty > svg {
+    width: 32px;
+    height: 32px;
+  }
+
+  .formacoes-cursos-details-heading.formacoes-cursos-details-heading {
+    margin-bottom: 16px;
+    padding-bottom: 16px;
+    gap: 12px;
+  }
+
+  .formacoes-cursos-details-heading.formacoes-cursos-details-heading > div {
+    min-width: 0;
+    gap: 12px;
+  }
+
+  .formacoes-cursos-details-heading.formacoes-cursos-details-heading > div > button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+    border-radius: 10px;
+  }
+
+  .formacoes-cursos-details-heading.formacoes-cursos-details-heading > div > div {
+    min-width: 0;
+  }
+
+  .formacoes-cursos-details-title.formacoes-cursos-details-title {
+    font-size: 21px;
+    line-height: 1.4;
+    font-weight: 500;
+    overflow-wrap: anywhere;
+  }
+
+  .formacoes-cursos-details-title.formacoes-cursos-details-title > span {
+    padding: 3px 7px;
+    font-size: 11px;
+    font-weight: 400;
+    white-space: nowrap;
+  }
+
+  .formacoes-cursos-details-description.formacoes-cursos-details-description {
+    white-space: normal;
+    overflow: visible;
+    max-width: 72ch;
+    line-height: 1.7;
+    font-size: 11px;
+    font-weight: 400;
+    overflow-wrap: anywhere;
+  }
+
+  .formacoes-cursos-kpis.formacoes-cursos-kpis {
+    gap: 12px;
+    margin-bottom: 18px;
+  }
+
+  .formacoes-cursos-kpis.formacoes-cursos-kpis > div {
+    min-width: 0;
+    padding: 14px;
+    border-radius: 12px;
+    box-shadow: none;
+  }
+
+  .formacoes-cursos-kpis.formacoes-cursos-kpis > div > span {
+    font-size: 11px;
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: normal;
+  }
+
+  .formacoes-cursos-kpis.formacoes-cursos-kpis > div > div > span:first-child {
+    font-size: 23px;
+    font-weight: 500;
+    overflow-wrap: anywhere;
+  }
+
+  .formacoes-cursos-kpis.formacoes-cursos-kpis > div > div > span:last-child {
+    font-size: 11px;
+    font-weight: 400;
+  }
+
+  .formacoes-cursos-kpis.formacoes-cursos-kpis > div > p {
+    font-size: 11px;
+    font-weight: 400;
+    line-height: 1.6;
+  }
+
+  .formacoes-cursos-details-tabs.formacoes-cursos-details-tabs {
+    display: flex;
+    overflow-x: auto;
+    max-width: 100%;
+    min-width: 0;
+    gap: 3px;
+    margin-bottom: 18px;
+    padding: 3px;
+    border-radius: 10px;
+  }
+
+  .formacoes-cursos-details-tabs.formacoes-cursos-details-tabs > button {
+    min-height: 38px;
+    padding: 9px 12px;
+    flex: 0 0 auto;
+    border-radius: 7px;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: normal;
+    text-transform: none;
+    white-space: nowrap;
+    box-shadow: none;
+  }
+
+  .formacoes-cursos-create.formacoes-cursos-create {
+    min-height: 0;
+  }
+
+  .formacoes-cursos-create-heading.formacoes-cursos-create-heading {
+    padding: 14px 16px;
+    gap: 12px;
+  }
+
+  .formacoes-cursos-create-title.formacoes-cursos-create-title {
+    overflow: visible;
+    white-space: normal;
+    font-size: 21px;
+    line-height: 1.4;
+    font-weight: 500;
+    text-transform: none;
+    letter-spacing: normal;
+  }
+
+  .formacoes-cursos-create-heading.formacoes-cursos-create-heading > div > div > span {
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: none;
+    letter-spacing: normal;
+  }
+
+  .formacoes-cursos-create-steps.formacoes-cursos-create-steps {
+    padding: 10px 16px;
+  }
+
+  .formacoes-cursos-create-steps.formacoes-cursos-create-steps > div > div {
+    flex-direction: row;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .formacoes-cursos-create-steps.formacoes-cursos-create-steps > div > div > span:last-child {
+    width: auto;
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: none;
+    letter-spacing: normal;
+  }
+
+  .formacoes-cursos-create-body.formacoes-cursos-create-body {
+    padding: 16px;
+  }
+
+  .formacoes-cursos-create-form.formacoes-cursos-create-form {
+    padding: 16px;
+    border-radius: 12px;
+    box-shadow: none;
+  }
+
+  .formacoes-cursos-create-form.formacoes-cursos-create-form > div:first-child > span {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    flex-shrink: 0;
+  }
+
+  .formacoes-cursos-create-section-title.formacoes-cursos-create-section-title {
+    font-size: 15px;
+    line-height: 1.5;
+    font-weight: 500;
+    text-transform: none;
+    letter-spacing: normal;
+  }
+
+  @media (min-width: 700px) {
+    .formacoes-cursos-grid.formacoes-cursos-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (min-width: 1280px) {
+    .formacoes-cursos-grid.formacoes-cursos-grid {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 639px) {
+    .formacoes-cursos-heading.formacoes-cursos-heading {
+      align-items: flex-start;
+    }
+
+    .formacoes-cursos-new.formacoes-cursos-new {
+      width: 100%;
+    }
+
+    .formacoes-cursos-card.formacoes-cursos-card button,
+    .formacoes-cursos-status.formacoes-cursos-status > button,
+    .formacoes-cursos-details-tabs.formacoes-cursos-details-tabs > button {
+      min-height: 44px;
+    }
+  }
+}

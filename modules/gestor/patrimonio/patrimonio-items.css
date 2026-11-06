@@ -1,0 +1,45 @@
+@media screen {
+  .patrimonio-item-card.patrimonio-item-card {
+    min-width: 0;
+    border-radius: 12px;
+    border-color: #e2e8f0;
+    box-shadow: none;
+    transform: none;
+  }
+
+  .patrimonio-item-card.patrimonio-item-card:hover { border-color: #bfcedd; box-shadow: 0 3px 12px #001a3306; transform: none; }
+  .patrimonio-item-card .patrimonio-card-heading { align-items: center; gap: 12px; padding: 14px 16px; color: #001a33; background: #fff; border-bottom: 1px solid #f1f5f9; }
+  .patrimonio-item-card .patrimonio-card-type { color: #64748b; font-size: 11px; font-weight: 400; letter-spacing: normal; text-transform: none; }
+  .patrimonio-item-card .patrimonio-card-title { font-size: 13px; line-height: 1.5; font-weight: 500; }
+  .patrimonio-item-card .patrimonio-card-status { gap: 8px; }
+  .patrimonio-item-card .patrimonio-card-status > span { padding: 3px 7px; font-size: 10px; font-weight: 500; letter-spacing: normal; text-transform: none; }
+  .patrimonio-item-card .patrimonio-card-icon { width: 32px; height: 32px; border-radius: 9px; color: #64748b; background: #f1f5f9; box-shadow: none; }
+  .patrimonio-item-card .patrimonio-card-body { gap: 12px; padding: 14px 16px; }
+  .patrimonio-item-card .patrimonio-card-facts { gap: 8px; }
+  .patrimonio-item-card .patrimonio-card-facts > div { min-width: 0; border-radius: 9px; padding: 10px; }
+  .patrimonio-item-card .patrimonio-card-facts > div > p:first-child { font-size: 11px; line-height: 1.5; font-weight: 400; letter-spacing: normal; text-transform: none; }
+  .patrimonio-item-card .patrimonio-card-facts > div > p:last-child { font-size: 14px; font-weight: 500; overflow-wrap: anywhere; }
+  .patrimonio-item-card .patrimonio-card-details { font-size: 12px; }
+  .patrimonio-item-card .patrimonio-card-details > div { align-items: center; }
+  .patrimonio-item-card .patrimonio-card-details dd { min-width: 0; font-weight: 500; text-align: right; overflow-wrap: anywhere; }
+  .patrimonio-item-card .patrimonio-card-actions { gap: 6px; flex-wrap: wrap; }
+  .patrimonio-item-card .patrimonio-card-actions > button { min-height: 36px; border-radius: 8px; padding: 8px; font-size: 11px; font-weight: 500; letter-spacing: normal; text-transform: none; }
+
+  .patrimonio-items-table.patrimonio-items-table { min-width: 0; border-radius: 12px; border-color: #e2e8f0; box-shadow: none; scrollbar-width: thin; scrollbar-color: #cbd5e1 transparent; }
+  .patrimonio-items-table > table { font-size: 12px; }
+  .patrimonio-items-table .patrimonio-table-heading { font-size: 11px; font-weight: 500; letter-spacing: normal; text-transform: none; color: #64748b; }
+  .patrimonio-items-table .patrimonio-table-heading > th { padding: 12px 14px; font-weight: 500; }
+  .patrimonio-items-table > table > tbody > tr > td { padding: 12px 14px; font-size: 12px; font-weight: 400; }
+  .patrimonio-items-table > table > tbody > tr > td > p { font-size: 12px; font-weight: 500; }
+  .patrimonio-items-table .patrimonio-table-icon { width: 32px; height: 32px; border-radius: 9px; }
+  .patrimonio-items-table .patrimonio-table-title { font-size: 13px; font-weight: 500; line-height: 1.5; }
+  .patrimonio-items-table .patrimonio-table-type { font-size: 11px; font-weight: 400; letter-spacing: normal; text-transform: none; }
+  .patrimonio-items-table .patrimonio-table-status > span { font-size: 10px; font-weight: 500; letter-spacing: normal; text-transform: none; }
+  .patrimonio-items-table .patrimonio-table-actions { gap: 6px; }
+  .patrimonio-items-table .patrimonio-table-actions > button { min-height: 34px; min-width: 34px; border-radius: 8px; }
+
+  @media (max-width: 767px) {
+    .patrimonio-item-card .patrimonio-card-actions > button,
+    .patrimonio-items-table .patrimonio-table-actions > button { min-height: 44px; min-width: 44px; }
+  }
+}

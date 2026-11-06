@@ -1,0 +1,476 @@
+/* This layer opts in only the Gestor screen; shared professor/student views and PDFs keep their styles. */
+@media screen {
+  #root .gestor-calendario-workspace .calendario-day-dialog > .animate-fadeIn,
+  #root .gestor-calendario-workspace .calendario-day-dialog form.animate-fadeIn {
+    animation: none;
+    transform: none;
+    backface-visibility: visible;
+    will-change: auto;
+  }
+
+  #root .gestor-calendario-workspace.gestor-calendario-workspace .calendario-agenda.animate-fadeIn {
+    min-width: 0;
+    padding-bottom: 24px;
+    animation: none;
+    transform: none;
+    backface-visibility: visible;
+    will-change: auto;
+  }
+
+  #root .gestor-calendario-workspace.gestor-calendario-workspace .calendario-agenda > * + * {
+    margin-top: 16px;
+  }
+
+  #root .gestor-calendario-workspace.gestor-calendario-workspace .calendario-agenda-heading {
+    padding: 16px;
+    border-radius: 12px;
+    box-shadow: none;
+  }
+
+  #root .gestor-calendario-workspace.gestor-calendario-workspace .calendario-agenda-heading-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: center;
+    gap: 14px;
+  }
+
+  #root .gestor-calendario-workspace.gestor-calendario-workspace .calendario-agenda-identity {
+    min-width: 0;
+  }
+
+  #root .gestor-calendario-workspace.gestor-calendario-workspace .calendario-agenda-identity > p:first-child {
+    font-size: 11px;
+    line-height: 1.5;
+    font-weight: 500;
+    text-transform: none;
+    letter-spacing: normal;
+  }
+
+  #root .gestor-calendario-workspace.gestor-calendario-workspace .calendario-agenda-identity > h1 {
+    font-size: 23px;
+    line-height: 1.4;
+    font-weight: 500;
+    letter-spacing: -0.025em;
+  }
+
+  #root .gestor-calendario-workspace.gestor-calendario-workspace .calendario-agenda-identity > p:last-child {
+    font-size: 12px;
+    line-height: 1.7;
+    font-weight: 400;
+  }
+
+  #root .gestor-calendario-workspace.gestor-calendario-workspace .calendario-agenda-filters {
+    min-width: 0;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+  }
+
+  #root .gestor-calendario-workspace.gestor-calendario-workspace .calendario-agenda-filters > label {
+    min-width: 0;
+  }
+
+  #root .gestor-calendario-workspace.gestor-calendario-workspace .calendario-agenda-filters > label > span {
+    font-size: 11px;
+    line-height: 1.5;
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: normal;
+  }
+
+  #root .gestor-calendario-workspace.gestor-calendario-workspace .calendario-agenda-filters > label > select {
+    min-width: 0;
+    min-height: 40px;
+    padding-top: 9px;
+    padding-bottom: 9px;
+    border-radius: 10px;
+    font-size: 12px;
+    line-height: 1.5;
+    font-weight: 400;
+    text-transform: none;
+  }
+
+  #root .gestor-calendario-workspace.gestor-calendario-workspace .calendario-agenda-actions {
+    min-width: 0;
+    gap: 8px;
+  }
+
+  #root .gestor-calendario-workspace.gestor-calendario-workspace .calendario-agenda-actions > button {
+    min-height: 40px;
+    padding: 8px 12px;
+    border-radius: 10px;
+    gap: 6px;
+    font-size: 12px;
+    line-height: 1.5;
+    font-weight: 500;
+    text-transform: none;
+    letter-spacing: normal;
+    box-shadow: none;
+    justify-content: center;
+  }
+
+  #root .gestor-calendario-workspace.gestor-calendario-workspace .calendario-month-section {
+    min-width: 0;
+    border-radius: 12px;
+    box-shadow: none;
+  }
+
+  #root .gestor-calendario-workspace.gestor-calendario-workspace .calendario-month-heading {
+    padding: 14px 16px;
+    gap: 12px;
+  }
+
+  #root .gestor-calendario-workspace.gestor-calendario-workspace .calendario-month-heading > button {
+    min-height: 38px;
+    padding: 8px 12px;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: none;
+  }
+
+  #root .gestor-calendario-workspace.gestor-calendario-workspace .calendario-month-heading > div > p {
+    font-size: 11px;
+    line-height: 1.5;
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: normal;
+  }
+
+  #root .gestor-calendario-workspace.gestor-calendario-workspace .calendario-month-heading > div > h2 {
+    margin-top: 2px;
+    font-size: 17px;
+    line-height: 1.5;
+    font-weight: 500;
+  }
+
+  #root .gestor-calendario-workspace.gestor-calendario-workspace .calendario-month-heading > div > h2 > span {
+    font-weight: 400;
+  }
+
+  #root .gestor-calendario-workspace.gestor-calendario-workspace .calendario-month-grid {
+    min-width: 0;
+    padding: 14px;
+    gap: 12px;
+  }
+
+  #root .gestor-calendario-workspace.gestor-calendario-workspace .calendario-mini {
+    min-width: 0;
+    padding: 12px;
+    border-radius: 12px;
+    box-shadow: none;
+  }
+
+  #root .gestor-calendario-workspace.gestor-calendario-workspace .calendario-mini-title {
+    margin-bottom: 10px;
+    font-size: 14px;
+    font-weight: 500;
+  }
+
+  #root .gestor-calendario-workspace.gestor-calendario-workspace .calendario-mini-title > span {
+    font-weight: 400;
+  }
+
+  #root .gestor-calendario-workspace.gestor-calendario-workspace .calendario-mini-grid {
+    gap: 2px;
+  }
+
+  #root .gestor-calendario-workspace.gestor-calendario-workspace .calendario-mini-grid > div {
+    font-size: 11px;
+    line-height: 1.5;
+    font-weight: 400;
+  }
+
+  #root .gestor-calendario-workspace.gestor-calendario-workspace .calendario-mini-day {
+    min-width: 0;
+    min-height: 38px;
+    padding-top: 4px;
+    border-radius: 8px;
+    font-size: 12px;
+    line-height: 1.5;
+    font-weight: 400;
+  }
+
+  #root .gestor-calendario-workspace.gestor-calendario-workspace .calendario-mini-day > span:first-child {
+    min-width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    box-shadow: none;
+  }
+
+  #root .gestor-calendario-workspace.gestor-calendario-workspace .calendario-month-agenda {
+    min-width: 0;
+    min-height: 330px;
+    max-height: 380px;
+    border-radius: 12px;
+  }
+
+  #root .gestor-calendario-workspace.gestor-calendario-workspace .calendario-month-agenda > div:first-child {
+    padding: 12px;
+  }
+
+  #root .gestor-calendario-workspace.gestor-calendario-workspace .calendario-month-agenda > div:first-child > p {
+    font-size: 11px;
+    line-height: 1.6;
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: normal;
+  }
+
+  #root .gestor-calendario-workspace.gestor-calendario-workspace .calendario-month-agenda > div:first-child > h3 {
+    font-size: 14px;
+    line-height: 1.5;
+    font-weight: 500;
+  }
+
+  #root .gestor-calendario-workspace.gestor-calendario-workspace .calendario-month-events {
+    min-height: 0;
+    padding: 10px;
+  }
+
+  #root .gestor-calendario-workspace.gestor-calendario-workspace .calendario-month-events > div {
+    min-height: 140px;
+  }
+
+  #root .gestor-calendario-workspace.gestor-calendario-workspace .calendario-month-event {
+    padding: 9px;
+    gap: 8px;
+    border-radius: 9px;
+    align-items: center;
+    transform: none;
+    box-shadow: none;
+  }
+
+  #root .gestor-calendario-workspace.gestor-calendario-workspace .calendario-month-event > span:first-child {
+    height: 32px;
+    min-width: 32px;
+    font-size: 12px;
+    font-weight: 500;
+  }
+
+  #root .gestor-calendario-workspace.gestor-calendario-workspace .calendario-month-event > span:last-child > span:first-child {
+    white-space: normal;
+    overflow: visible;
+    font-size: 12px;
+    line-height: 1.6;
+    font-weight: 500;
+    overflow-wrap: anywhere;
+  }
+
+  #root .gestor-calendario-workspace.gestor-calendario-workspace .calendario-month-event > span:last-child > span:last-child {
+    font-size: 11px;
+    line-height: 1.5;
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: normal;
+  }
+
+  #root .gestor-calendario-workspace.gestor-calendario-workspace .calendario-month-legend {
+    padding: 12px 14px;
+    gap: 10px;
+    font-size: 11px;
+    line-height: 1.7;
+    font-weight: 400;
+  }
+
+  #root .gestor-calendario-workspace.gestor-calendario-workspace .calendario-agenda-columns {
+    gap: 12px;
+  }
+
+  #root .gestor-calendario-workspace.gestor-calendario-workspace .calendario-agenda-columns > div.animate-pulse {
+    height: 340px;
+    border-radius: 12px;
+    box-shadow: none;
+  }
+
+  #root .gestor-calendario-workspace.gestor-calendario-workspace .calendario-agenda-column {
+    min-width: 0;
+    min-height: 340px;
+    padding: 14px;
+    border-radius: 12px;
+    box-shadow: none;
+  }
+
+  #root .gestor-calendario-workspace.gestor-calendario-workspace .calendario-agenda-column > div:first-child > p {
+    align-items: center;
+    font-size: 11px;
+    line-height: 1.6;
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: normal;
+  }
+
+  #root .gestor-calendario-workspace.gestor-calendario-workspace .calendario-agenda-column > div:first-child > h3 {
+    margin-top: 8px;
+    font-size: 14px;
+    line-height: 1.5;
+    font-weight: 500;
+  }
+
+  #root .gestor-calendario-workspace.gestor-calendario-workspace .calendario-agenda-column > div:nth-child(2) {
+    padding-top: 12px;
+    padding-bottom: 12px;
+  }
+
+  #root .gestor-calendario-workspace.gestor-calendario-workspace .calendario-agenda-column > div:nth-child(2) > p,
+  #root .gestor-calendario-workspace.gestor-calendario-workspace .calendario-agenda-column > div:last-child > p {
+    font-size: 11px;
+    line-height: 1.5;
+    font-weight: 500;
+    text-transform: none;
+  }
+
+  #root .gestor-calendario-workspace.gestor-calendario-workspace .calendario-agenda-event {
+    min-width: 0;
+    padding: 10px 10px 10px 18px;
+    border-radius: 9px;
+    box-shadow: none;
+  }
+
+  #root .gestor-calendario-workspace.gestor-calendario-workspace .calendario-agenda-event > p {
+    display: block;
+    -webkit-line-clamp: unset;
+    overflow: visible;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    font-size: 11px;
+    line-height: 1.7;
+    font-weight: 400;
+  }
+
+  #root .gestor-calendario-workspace.gestor-calendario-workspace .calendario-agenda-event > p[title] {
+    font-size: 13px;
+    line-height: 1.5;
+    font-weight: 500;
+  }
+
+  #root .gestor-calendario-workspace.gestor-calendario-workspace .calendario-agenda-footer {
+    padding: 12px 14px;
+    border-radius: 12px;
+    font-size: 11px;
+    line-height: 1.7;
+    font-weight: 400;
+    box-shadow: none;
+  }
+
+  #root .gestor-calendario-workspace.gestor-calendario-workspace .calendario-agenda-footer > button {
+    min-height: 36px;
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: none;
+    letter-spacing: normal;
+  }
+
+  @media (min-width: 640px) {
+    #root .gestor-calendario-workspace.gestor-calendario-workspace .calendario-agenda-filters {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (min-width: 1024px) {
+    #root .gestor-calendario-workspace.gestor-calendario-workspace .calendario-agenda-heading-row {
+      grid-template-columns: minmax(0, 1fr) auto;
+    }
+
+    #root .gestor-calendario-workspace.gestor-calendario-workspace .calendario-agenda-identity {
+      grid-column: 1;
+      grid-row: 1;
+    }
+
+    #root .gestor-calendario-workspace.gestor-calendario-workspace .calendario-agenda-actions {
+      grid-column: 2;
+      grid-row: 1;
+      justify-content: flex-end;
+    }
+
+    #root .gestor-calendario-workspace.gestor-calendario-workspace .calendario-agenda-filters {
+      grid-column: 1 / -1;
+      grid-row: 2;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 767px), (pointer: coarse) {
+    #root .gestor-calendario-workspace.gestor-calendario-workspace .calendario-agenda-filters > label > select {
+      min-height: 44px;
+      font-size: 16px;
+    }
+
+    #root .gestor-calendario-workspace.gestor-calendario-workspace .calendario-mini-day,
+    #root .gestor-calendario-workspace.gestor-calendario-workspace .calendario-agenda-actions > button,
+    #root .gestor-calendario-workspace.gestor-calendario-workspace .calendario-month-heading > button,
+    #root .gestor-calendario-workspace.gestor-calendario-workspace .calendario-agenda-footer > button {
+      min-height: 44px;
+    }
+  }
+  #root .gestor-calendario-workspace.gestor-calendario-workspace .calendario-export-panel {
+    border-color: #e2e8f0;
+    border-radius: 12px;
+    box-shadow: none;
+  }
+
+  #root .gestor-calendario-workspace.gestor-calendario-workspace .calendario-export-heading {
+    padding: 12px 14px;
+    background-color: #f8fafc;
+    background-image: none;
+    border-color: #e2e8f0;
+  }
+
+  #root .gestor-calendario-workspace.gestor-calendario-workspace .calendario-export-identity {
+    align-items: center;
+    gap: 10px;
+  }
+
+  #root .gestor-calendario-workspace.gestor-calendario-workspace .calendario-export-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 9px;
+    color: #475569;
+    background-color: #eaf0f6;
+    box-shadow: none;
+  }
+
+  #root .gestor-calendario-workspace.gestor-calendario-workspace .calendario-export-title {
+    font-size: 13px;
+    line-height: 1.5;
+    font-weight: 500;
+  }
+
+  #root .gestor-calendario-workspace.gestor-calendario-workspace .calendario-export-identity > div > p {
+    font-size: 12px;
+    line-height: 1.7;
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: normal;
+  }
+
+  #root .gestor-calendario-workspace.gestor-calendario-workspace .calendario-export-scope {
+    border-color: #e2e8f0;
+    border-radius: 8px;
+    font-size: 11px;
+    line-height: 1.6;
+    font-weight: 400;
+  }
+
+  #root .gestor-calendario-workspace.gestor-calendario-workspace .calendario-export-body {
+    padding: 12px 14px;
+    gap: 10px;
+  }
+
+  #root .gestor-calendario-workspace.gestor-calendario-workspace .calendario-export-submit {
+    min-height: 40px;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: none;
+    box-shadow: none;
+  }
+
+  #root .gestor-calendario-workspace.gestor-calendario-workspace .calendario-export-feedback {
+    margin-right: 14px;
+    margin-bottom: 12px;
+    margin-left: 14px;
+    border-radius: 10px;
+    font-size: 12px;
+    line-height: 1.7;
+  }
+}

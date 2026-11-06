@@ -175,13 +175,13 @@ const AutomationCard: React.FC<{ automation: MultichannelAutomationViewModel; ex
   const status = statusPresentation(automation);
 
   return (
-    <article className={`overflow-hidden rounded-[26px] border bg-white transition-[border-color,box-shadow] ${expanded ? 'border-blue-200 shadow-[0_18px_50px_rgba(15,98,254,0.10)]' : 'border-slate-200 shadow-[0_8px_24px_rgba(15,23,42,0.035)] hover:border-slate-300'}`}>
-      <button type="button" onClick={onToggle} aria-expanded={expanded} aria-controls={panelId} aria-labelledby={triggerId} className="w-full p-5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500 sm:p-6">
+    <article className={`comm-ops-automation-card overflow-hidden rounded-[26px] border bg-white transition-[border-color,box-shadow] ${expanded ? 'border-blue-200 shadow-[0_18px_50px_rgba(15,98,254,0.10)]' : 'border-slate-200 shadow-[0_8px_24px_rgba(15,23,42,0.035)] hover:border-slate-300'}`}>
+      <button type="button" onClick={onToggle} aria-expanded={expanded} aria-controls={panelId} aria-labelledby={triggerId} className="comm-ops-automation-trigger w-full p-5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500 sm:p-6">
         <div className="flex items-start gap-4">
           <div className="relative shrink-0"><span className={`flex h-12 w-12 items-center justify-center rounded-2xl ring-1 ${ui.accent}`}><Icon size={21} /></span><span aria-hidden="true" className="absolute -right-2 -top-2 rounded-full bg-[#001a33] px-1.5 py-0.5 text-xs font-black text-white">{ui.number}</span></div>
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2"><span className="text-xs font-black uppercase tracking-[0.12em] text-blue-700">{ui.eyebrow}</span><span className={`rounded-full px-2 py-1 text-xs font-black ring-1 ${status.style}`}>{status.label}</span></div>
-            <h3 id={triggerId} className="mt-2 text-xl font-black tracking-[-0.025em] text-[#001a33]">{automation.name}</h3>
+            <h3 id={triggerId} className="comm-ops-automation-title mt-2 text-xl font-black tracking-[-0.025em] text-[#001a33]">{automation.name}</h3>
             {automation.description && <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">{automation.description}</p>}
           </div>
           <span className={`mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-50 text-slate-500 ring-1 ring-slate-200 transition-transform ${expanded ? 'rotate-180' : ''}`}><ChevronDown size={17} /></span>
@@ -244,18 +244,18 @@ const MultichannelAutomationsPanel: React.FC<MultichannelAutomationsPanelProps> 
   };
 
   return (
-    <section className="min-h-0 flex-1 overflow-y-auto bg-[#f3f7fb]" aria-busy={isLoading || isFetching}>
-      <div className="relative overflow-hidden border-b border-[#0f2d4c] bg-[#001a33] px-5 py-7 text-white sm:px-7 lg:px-9">
+    <section className="comm-ops-automation-catalog min-h-0 flex-1 overflow-y-auto bg-[#f3f7fb]" aria-busy={isLoading || isFetching}>
+      <div className="comm-ops-header relative overflow-hidden border-b border-[#0f2d4c] bg-[#001a33] px-5 py-7 text-white sm:px-7 lg:px-9">
         <div className="pointer-events-none absolute inset-0 opacity-40 [background-image:linear-gradient(rgba(255,255,255,.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.05)_1px,transparent_1px)] [background-size:32px_32px]" />
         <div className="pointer-events-none absolute -right-20 -top-28 h-80 w-80 rounded-full bg-blue-500/20 blur-3xl" />
         <div className="relative mx-auto max-w-[1380px]">
           <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
             <div className="max-w-3xl">
-              <div className="mb-4 flex flex-wrap items-center gap-2"><span className="inline-flex items-center gap-2 rounded-full bg-blue-500/15 px-3 py-1.5 text-xs font-black text-blue-200 ring-1 ring-inset ring-blue-300/20"><Radio size={13} /> Central de automações</span><span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-xs font-black text-slate-200 ring-1 ring-inset ring-white/15"><Layers3 size={13} /> Configuração global · todos os polos</span><span className="inline-flex items-center gap-1.5 rounded-full bg-amber-400/10 px-3 py-1.5 text-xs font-black text-amber-200 ring-1 ring-inset ring-amber-300/20"><ShieldCheck size={13} /> {draftCount} rascunho{draftCount === 1 ? '' : 's'}</span><span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-400/10 px-3 py-1.5 text-xs font-black text-emerald-200 ring-1 ring-inset ring-emerald-300/20"><Radio size={13} /> {activeCount} executando</span>{isFetching && !isLoading && <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-200" role="status"><RefreshCw size={13} className="animate-spin motion-reduce:animate-none" /> Atualizando</span>}</div>
-              <h2 className="text-3xl font-black tracking-[-0.045em] sm:text-4xl">Uma regra. Vários canais.</h2>
-              <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300 sm:text-[15px]">Organize mensagens do app, notificações no celular e WhatsApp por evento e modalidade — com uma única visão operacional.</p>
+              <div className="comm-ops-header-badges mb-4 flex flex-wrap items-center gap-2"><span className="inline-flex items-center gap-2 rounded-full bg-blue-500/15 px-3 py-1.5 text-xs font-black text-blue-200 ring-1 ring-inset ring-blue-300/20"><Radio size={13} /> Central de automações</span><span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-xs font-black text-slate-200 ring-1 ring-inset ring-white/15"><Layers3 size={13} /> Configuração global · todos os polos</span><span className="inline-flex items-center gap-1.5 rounded-full bg-amber-400/10 px-3 py-1.5 text-xs font-black text-amber-200 ring-1 ring-inset ring-amber-300/20"><ShieldCheck size={13} /> {draftCount} rascunho{draftCount === 1 ? '' : 's'}</span><span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-400/10 px-3 py-1.5 text-xs font-black text-emerald-200 ring-1 ring-inset ring-emerald-300/20"><Radio size={13} /> {activeCount} executando</span>{isFetching && !isLoading && <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-200" role="status"><RefreshCw size={13} className="animate-spin motion-reduce:animate-none" /> Atualizando</span>}</div>
+              <h2 className="comm-ops-title text-3xl font-black tracking-[-0.045em] sm:text-4xl">Uma regra. Vários canais.</h2>
+              <p className="comm-ops-description mt-3 max-w-2xl text-sm leading-6 text-slate-300 sm:text-[15px]">Organize mensagens do app, notificações no celular e WhatsApp por evento e modalidade — com uma única visão operacional.</p>
             </div>
-            <div className="grid grid-cols-1 gap-2 min-[360px]:grid-cols-3 sm:gap-3">
+            <div className="comm-ops-stats grid grid-cols-1 gap-2 min-[360px]:grid-cols-3 sm:gap-3">
               <div className="rounded-2xl bg-white/[0.07] p-3 ring-1 ring-inset ring-white/10 backdrop-blur-sm"><p className="text-2xl font-black">{isLoading ? '—' : automations.length}</p><p className="mt-1 text-xs font-bold text-slate-300">Regras</p></div>
               <div className="rounded-2xl bg-white/[0.07] p-3 ring-1 ring-inset ring-white/10 backdrop-blur-sm"><p className="text-2xl font-black">{isLoading ? '—' : enabledRoutes}</p><p className="mt-1 text-xs font-bold text-slate-300">Combinações</p></div>
               <div className="rounded-2xl bg-white/[0.07] p-3 ring-1 ring-inset ring-white/10 backdrop-blur-sm"><p className="text-2xl font-black">{isLoading ? '—' : enabledChannelCount}<span className="text-sm text-slate-400">/3</span></p><p className="mt-1 text-xs font-bold text-slate-300">Canais selecionados</p></div>
@@ -263,8 +263,8 @@ const MultichannelAutomationsPanel: React.FC<MultichannelAutomationsPanelProps> 
           </div>
         </div>
       </div>
-      <div className="mx-auto max-w-[1380px] px-4 py-5 sm:px-6 lg:px-8 lg:py-7">
-        <div className="mb-5 flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+      <div className="comm-ops-automation-body mx-auto max-w-[1380px] px-4 py-5 sm:px-6 lg:px-8 lg:py-7">
+        <div className="comm-ops-automation-toolbar mb-5 flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3 px-1"><span className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-700 ring-1 ring-blue-100"><Layers3 size={18} /></span><div><p className="text-sm font-black text-[#001a33]">Jornada de comunicação</p><p className="text-xs text-slate-500">Revise ou edite os rascunhos com execução desligada.</p></div></div>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             {onOpenLegacyWhatsApp && <button type="button" onClick={() => { if (confirmEditorExit()) { setEditingId(null); onOpenLegacyWhatsApp(); } }} className="inline-flex min-h-[42px] items-center justify-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 text-xs font-black text-amber-900 transition-colors hover:bg-amber-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2">

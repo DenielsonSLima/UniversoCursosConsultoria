@@ -1,4 +1,5 @@
 
+import '../formacoes-recursos.css';
 import React, { useState } from 'react';
 import { 
   CreditCard, 
@@ -130,40 +131,40 @@ const ModelosDocumentosPage: React.FC<ModelosDocumentosPageProps> = ({
   }
 
   return (
-    <div className="animate-fadeIn">
-      <div className="mb-8">
-        <h2 className="text-3xl font-black text-[#001a33] uppercase tracking-tight">
+    <div className="formacao-recursos animate-fadeIn">
+      <div className="formacao-recursos-header mb-8">
+        <h2 className="formacao-recursos-title text-3xl font-black text-[#001a33] uppercase tracking-tight">
           Modelos de Documentos
         </h2>
-        <p className="text-slate-500 font-medium">Templates oficiais para emissão e personalização.</p>
+        <p className="formacao-recursos-subtitle text-slate-500 font-medium">Templates oficiais para emissão e personalização.</p>
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+      <div className="formacao-recursos-doc-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {models.map((item) => (
           <button 
             key={item.id}
             onClick={() => setActiveModule(item.id)}
-            className="flex flex-col items-start p-6 bg-white rounded-3xl border border-slate-100 shadow-sm hover:shadow-xl hover:shadow-blue-900/10 hover:-translate-y-1 transition-all duration-300 group text-left h-full relative overflow-hidden"
+            className="formacao-recursos-doc-card flex flex-col items-start p-6 bg-white rounded-3xl border border-slate-100 shadow-sm hover:shadow-xl hover:shadow-blue-900/10 hover:-translate-y-1 transition-all duration-300 group text-left h-full relative overflow-hidden"
           >
-             <div className={`p-4 rounded-2xl ${item.color} text-white mb-4 shadow-md group-hover:scale-110 transition-transform relative z-10`}>
+             <div className={`formacao-recursos-doc-icon p-4 rounded-2xl ${item.color} text-white mb-4 shadow-md group-hover:scale-110 transition-transform relative z-10`}>
               {item.icon}
             </div>
             
-            <h3 className="text-lg font-bold text-[#001a33] mb-1 group-hover:text-blue-600 transition-colors relative z-10">
+            <h3 className="formacao-recursos-doc-title text-lg font-bold text-[#001a33] mb-1 group-hover:text-blue-600 transition-colors relative z-10">
               {item.title}
             </h3>
             
-            <p className="text-xs text-slate-500 leading-relaxed font-medium mb-4 relative z-10">
+            <p className="formacao-recursos-doc-desc text-xs text-slate-500 leading-relaxed font-medium mb-4 relative z-10">
               {item.desc}
             </p>
 
-            <div className="mt-auto pt-4 border-t border-slate-50 w-full flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-slate-400 group-hover:text-blue-600 transition-colors relative z-10">
+            <div className="formacao-recursos-doc-action mt-auto pt-4 border-t border-slate-50 w-full flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-slate-400 group-hover:text-blue-600 transition-colors relative z-10">
               <span>{item.action || 'Configurar'}</span>
               {item.action === 'Visualizar' ? <Eye size={14} /> : <Download size={14} />}
             </div>
 
             {/* Background Decoration */}
-            <div className={`absolute -bottom-8 -right-8 w-24 h-24 rounded-full opacity-0 group-hover:opacity-10 transition-opacity blur-xl ${item.color}`}></div>
+            <div className={`formacao-recursos-decoration absolute -bottom-8 -right-8 w-24 h-24 rounded-full opacity-0 group-hover:opacity-10 transition-opacity blur-xl ${item.color}`}></div>
           </button>
         ))}
       </div>

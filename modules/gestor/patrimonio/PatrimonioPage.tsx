@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import './patrimonio-workspace.css';
 import { AlertCircle, Archive, ChevronLeft, ChevronRight, LoaderCircle, PackageSearch, RefreshCw } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { caixaQueryKeys } from '../caixa/caixa.service';
@@ -259,11 +260,11 @@ const PatrimonioPage: React.FC<PatrimonioPageProps> = ({
   };
 
   return (
-    <div className="space-y-6 animate-fadeIn pb-12">
+    <div className="patrimonio-workspace space-y-4 animate-fadeIn pb-12">
       <ToastNotification toasts={toasts} onRemove={removeToast} />
 
-      <header className="flex flex-col gap-4 border-b border-slate-100 pb-5 sm:flex-row sm:items-end sm:justify-between">
-        <div className="flex items-start gap-3">
+      <header className="patrimonio-workspace-heading flex flex-col gap-4 border-b border-slate-100 pb-5 sm:flex-row sm:items-end sm:justify-between">
+        <div className="patrimonio-workspace-identity flex items-start gap-3">
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-blue-700"><Archive size={23} /></div>
           <div>
             <p className="text-[10px] font-black uppercase tracking-[0.18em] text-blue-600">Gestão por polo</p>
@@ -272,7 +273,7 @@ const PatrimonioPage: React.FC<PatrimonioPageProps> = ({
           </div>
         </div>
         {poloId ? (
-          <div className="rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-right">
+          <div className="patrimonio-workspace-count rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-right">
             <p className="text-[9px] font-black uppercase tracking-wider text-blue-600">Registros encontrados</p>
             <p className="text-lg font-black text-[#001a33]">{listQuery.isPending ? '—' : total}</p>
           </div>
@@ -297,24 +298,24 @@ const PatrimonioPage: React.FC<PatrimonioPageProps> = ({
       />
 
       {!poloId ? (
-        <section className="rounded-2xl border border-amber-100 bg-amber-50 px-6 py-12 text-center">
+        <section className="patrimonio-workspace-state rounded-2xl border border-amber-100 bg-amber-50 px-6 py-12 text-center">
           <PackageSearch size={30} className="mx-auto mb-3 text-amber-600" />
           <h3 className="text-sm font-black text-amber-900">Selecione um polo</h3>
           <p className="mx-auto mt-1 max-w-md text-xs font-medium leading-relaxed text-amber-700">O patrimônio é isolado por polo. Escolha um polo no seletor do Gestor para consultar ou cadastrar os bens.</p>
         </section>
       ) : isInitialLoading ? (
-        <section className="flex min-h-64 items-center justify-center rounded-2xl border border-slate-100 bg-white">
+        <section className="patrimonio-workspace-state flex min-h-64 items-center justify-center rounded-2xl border border-slate-100 bg-white">
           <div className="flex flex-col items-center gap-3 text-slate-500"><LoaderCircle size={28} className="animate-spin text-blue-600" /><span className="text-xs font-bold">Carregando patrimônio...</span></div>
         </section>
       ) : listQuery.isError ? (
-        <section className="rounded-2xl border border-rose-100 bg-rose-50 px-6 py-10 text-center">
+        <section className="patrimonio-workspace-state rounded-2xl border border-rose-100 bg-rose-50 px-6 py-10 text-center">
           <AlertCircle size={28} className="mx-auto mb-3 text-rose-600" />
           <h3 className="text-sm font-black text-rose-900">Não foi possível carregar o patrimônio</h3>
           <p className="mx-auto mt-1 max-w-md text-xs font-medium leading-relaxed text-rose-700">{getPatrimonioErrorMessage(listQuery.error, 'Tente novamente em instantes.')}</p>
           <button type="button" onClick={() => { void listQuery.refetch(); }} className="mt-4 inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2 text-xs font-black text-rose-700 shadow-sm ring-1 ring-rose-100 transition-colors hover:bg-rose-100"><RefreshCw size={14} />Tentar novamente</button>
         </section>
       ) : items.length === 0 ? (
-        <section className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/60 px-6 py-14 text-center">
+        <section className="patrimonio-workspace-state rounded-2xl border border-dashed border-slate-200 bg-slate-50/60 px-6 py-14 text-center">
           <Archive size={32} className="mx-auto mb-3 text-slate-400" />
           <h3 className="text-sm font-black text-[#001a33]">Nenhum patrimônio encontrado</h3>
           <p className="mx-auto mt-1 max-w-md text-xs font-medium leading-relaxed text-slate-500">{search || tipoProduto || status !== 'ativos' ? 'Ajuste os filtros ou consulte outra situação patrimonial.' : 'Comece registrando os bens, equipamentos e ativos deste polo.'}</p>
@@ -323,7 +324,7 @@ const PatrimonioPage: React.FC<PatrimonioPageProps> = ({
       ) : (
         <>
           {viewMode === 'cards' ? (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="patrimonio-workspace-grid grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
               {items.map((item) => (
                 <div key={item.id} className="h-full">
                   <PatrimonioCard
@@ -348,7 +349,7 @@ const PatrimonioPage: React.FC<PatrimonioPageProps> = ({
             />
           )}
 
-          <footer className="flex flex-col gap-3 border-t border-slate-100 pt-4 sm:flex-row sm:items-center sm:justify-between">
+          <footer className="patrimonio-workspace-pagination flex flex-col gap-3 border-t border-slate-100 pt-4 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-xs font-medium text-slate-500">{listQuery.isFetching ? 'Atualizando registros...' : `Exibindo ${rangeStart}–${rangeEnd} de ${total} registros`}</p>
             <div className="flex items-center gap-2">
               <button type="button" onClick={() => setOffset((current) => Math.max(0, current - pageLimit))} disabled={!canGoBack || listQuery.isFetching} className="inline-flex items-center gap-1 rounded-xl border border-slate-200 px-3 py-2 text-xs font-black text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-45"><ChevronLeft size={14} />Anterior</button>

@@ -329,7 +329,7 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
   };
 
   return (
-    <div className="flex flex-col h-full animate-fadeIn">
+    <div className="formacoes-cursos-details flex flex-col h-full animate-fadeIn">
       <CursoGradeCurricularHeader
         curso={curso}
         config={config}

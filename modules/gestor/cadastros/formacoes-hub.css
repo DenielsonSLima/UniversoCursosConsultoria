@@ -1,0 +1,18 @@
+@media screen {
+  .formacoes-hub { color: #16324b; }
+  .formacoes-hub__header { margin-bottom: 24px; }
+  .formacoes-hub__title { margin: 0 0 6px; font-size: 23px; line-height: 1.3; font-weight: 500; letter-spacing: -.025em; }
+  .formacoes-hub__description { margin: 0; color: #718096; font-size: 13px; line-height: 1.6; }
+  .formacoes-hub__grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+  .formacoes-hub__item { display: flex; align-items: center; gap: 12px; min-height: 94px; padding: 18px; border: 1px solid #e0e7ef; border-radius: 12px; background: #fff; text-align: left; transition: border-color .15s, background-color .15s; }
+  .formacoes-hub__item:hover { background: #f8faff; border-color: #b9cff6; }
+  .formacoes-hub__item:focus-visible { outline: 2px solid #2563eb; outline-offset: 3px; }
+  .formacoes-hub__icon { display: flex; flex: 0 0 34px; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 9px; background: #f1f5fa; color: #6f849c; }
+  .formacoes-hub__icon svg { width: 19px; height: 19px; }
+  .formacoes-hub__item:hover .formacoes-hub__icon { color: #2563eb; background: #edf4ff; }
+  .formacoes-hub__copy { min-width: 0; }
+  .formacoes-hub__item-title { margin: 0 0 4px; font-size: 13px; line-height: 1.4; font-weight: 500; }
+  .formacoes-hub__item-description { margin: 0; color: #718096; font-size: 11px; line-height: 1.5; }
+  @media (max-width: 1199px) { .formacoes-hub__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 639px) { .formacoes-hub__grid { grid-template-columns: minmax(0, 1fr); } .formacoes-hub__header { margin-bottom: 18px; } }
+}

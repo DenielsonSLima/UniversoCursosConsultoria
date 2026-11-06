@@ -10,6 +10,7 @@ import {
   FileSignature
 } from 'lucide-react';
 import { GESTOR_CADASTRO_NAVIGATION } from '../gestor-navigation.config';
+import './formacoes-hub.css';
 
 interface CadastrosPageProps {
   onNavigate?: (id: string) => void;
@@ -40,32 +41,34 @@ const CadastrosPage: React.FC<CadastrosPageProps> = ({ onNavigate, readOnly = fa
   ).filter(item => !allowedTabs || allowedTabs.includes(item.id));
 
   return (
-    <div className="animate-fadeIn">
-      <div className="mb-10">
-        <h2 className="text-3xl font-black text-[#001a33] uppercase tracking-tight">Central de Formações</h2>
-        <p className="text-slate-500 font-medium">
+    <div className="formacoes-hub">
+      <div className="formacoes-hub__header">
+        <h2 className="formacoes-hub__title">Central de Formações</h2>
+        <p className="formacoes-hub__description">
           {readOnly
             ? 'Consulte os cursos disponíveis para esta unidade. Alterações são realizadas exclusivamente pela Matriz.'
             : 'Selecione uma formação ou recurso institucional para gerenciar.'}
         </p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+      <div className="formacoes-hub__grid">
         {visibleItems.map((item) => (
           <button
             key={item.id}
             onClick={() => onNavigate && onNavigate(item.id)}
-            className="flex flex-col items-start p-6 bg-white rounded-3xl border border-slate-100 shadow-sm hover:shadow-xl hover:shadow-blue-900/10 hover:-translate-y-1 transition-all duration-300 group text-left h-full"
+            className="formacoes-hub__item"
           >
-            <div className={`p-4 rounded-2xl ${item.color} text-white mb-4 shadow-md group-hover:scale-110 transition-transform`}>
+            <div className="formacoes-hub__icon">
               {item.icon}
             </div>
-            <h3 className="text-lg font-bold text-[#001a33] mb-1 group-hover:text-blue-600 transition-colors">
+            <div className="formacoes-hub__copy">
+            <h3 className="formacoes-hub__item-title">
               {item.title}
             </h3>
-            <p className="text-xs text-slate-500 leading-relaxed font-medium">
+            <p className="formacoes-hub__item-description">
               {item.desc}
             </p>
+            </div>
           </button>
         ))}
       </div>

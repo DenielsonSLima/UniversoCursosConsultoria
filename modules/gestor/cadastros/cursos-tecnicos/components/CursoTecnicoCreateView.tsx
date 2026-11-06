@@ -87,8 +87,8 @@ const CursoTecnicoCreateView: React.FC<CursoTecnicoCreateViewProps> = ({
   setNewCursoVersao,
   setShowNewAreaInput,
 }) => (
-  <div className="flex min-w-0 flex-col h-full animate-fadeIn bg-slate-50 min-h-screen overflow-x-hidden">
-    <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 bg-white px-4 py-5 sm:px-6 border-b border-slate-200">
+  <div className="formacoes-cursos-create flex min-w-0 flex-col h-full animate-fadeIn bg-slate-50 min-h-screen overflow-x-hidden">
+    <div className="formacoes-cursos-create-heading flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 bg-white px-4 py-5 sm:px-6 border-b border-slate-200">
       <div className="flex min-w-0 items-center gap-4">
         <button
           type="button"
@@ -102,7 +102,7 @@ const CursoTecnicoCreateView: React.FC<CursoTecnicoCreateViewProps> = ({
           <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest bg-emerald-50 px-2.5 py-1 rounded-md">
             Curso Técnico
           </span>
-          <h3 className="truncate text-lg sm:text-xl font-black text-[#001a33] mt-1.5 uppercase tracking-tight">
+          <h3 className="formacoes-cursos-create-title truncate text-lg sm:text-xl font-black text-[#001a33] mt-1.5 uppercase tracking-tight">
             Novo Curso Técnico
           </h3>
         </div>
@@ -112,7 +112,7 @@ const CursoTecnicoCreateView: React.FC<CursoTecnicoCreateViewProps> = ({
         type="submit"
         form="create-curso-tecnico-form"
         disabled={isCreatingCurso || isUploading}
-        className="flex w-full sm:w-auto items-center justify-center gap-2 bg-[#001a33] hover:bg-emerald-700 text-white px-5 py-3 rounded-xl font-bold uppercase text-xs tracking-wider transition-all disabled:opacity-70 shadow-lg shadow-emerald-900/20"
+        className="formacoes-cursos-create-submit flex w-full sm:w-auto items-center justify-center gap-2 bg-[#001a33] hover:bg-emerald-700 text-white px-5 py-3 rounded-xl font-bold uppercase text-xs tracking-wider transition-all disabled:opacity-70 shadow-lg shadow-emerald-900/20"
       >
         {isCreatingCurso
           ? <Loader2 className="animate-spin" size={16} />
@@ -121,7 +121,7 @@ const CursoTecnicoCreateView: React.FC<CursoTecnicoCreateViewProps> = ({
       </button>
     </div>
 
-    <div className="bg-white border-b border-slate-200 px-3 py-3 sm:px-6 sm:py-4">
+    <div className="formacoes-cursos-create-steps bg-white border-b border-slate-200 px-3 py-3 sm:px-6 sm:py-4">
       <div className="mx-auto grid w-full max-w-5xl grid-cols-1">
         <div className="group relative flex min-w-0 flex-col items-center gap-2 px-1">
           <span className="relative z-10 w-8 h-8 rounded-xl flex items-center justify-center font-bold text-sm transition-all border bg-emerald-600 border-emerald-600 text-white shadow-md shadow-emerald-600/20">
@@ -134,17 +134,17 @@ const CursoTecnicoCreateView: React.FC<CursoTecnicoCreateViewProps> = ({
       </div>
     </div>
 
-    <div className="flex-1 min-w-0 max-w-4xl w-full mx-auto p-4 sm:p-6 md:p-8">
+    <div className="formacoes-cursos-create-body flex-1 min-w-0 max-w-4xl w-full mx-auto p-4 sm:p-6 md:p-8">
       <form
         id="create-curso-tecnico-form"
         onSubmit={onSubmit}
-        className="bg-white border border-slate-200 rounded-[2.5rem] p-6 md:p-8 shadow-sm space-y-6"
+        className="formacoes-cursos-create-form bg-white border border-slate-200 rounded-[2.5rem] p-6 md:p-8 shadow-sm space-y-6"
       >
         <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
           <span className="p-2.5 bg-emerald-50 text-emerald-600 rounded-xl">
             <Briefcase size={20} />
           </span>
-          <h4 className="font-black text-lg text-[#001a33] uppercase tracking-tight">
+          <h4 className="formacoes-cursos-create-section-title font-black text-lg text-[#001a33] uppercase tracking-tight">
             Informações Principais do Curso
           </h4>
         </div>

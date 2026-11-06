@@ -52,8 +52,8 @@ export function PatrimonioToolbar({
   ];
 
   return (
-    <div className="space-y-3">
-      <div className="flex flex-col gap-3 xl:flex-row xl:items-center">
+    <div className="patrimonio-workspace-toolbar space-y-3">
+      <div className="patrimonio-workspace-filters flex flex-col gap-3 xl:flex-row xl:items-center">
         <div className="relative min-w-0 flex-1">
           <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
@@ -67,7 +67,7 @@ export function PatrimonioToolbar({
           />
         </div>
 
-        <label className={`flex min-w-[210px] items-center rounded-xl border border-slate-200 bg-slate-50 transition-all focus-within:border-blue-400 focus-within:bg-white focus-within:ring-2 focus-within:ring-blue-100 ${
+        <label className={`patrimonio-workspace-type flex min-w-[210px] items-center rounded-xl border border-slate-200 bg-slate-50 transition-all focus-within:border-blue-400 focus-within:bg-white focus-within:ring-2 focus-within:ring-blue-100 ${
           isDisabled || areProductTypesLoading ? 'cursor-not-allowed opacity-50' : ''
         }`}>
           <Tag size={13} className="ml-3 shrink-0 text-slate-400" aria-hidden="true" />
@@ -90,8 +90,8 @@ export function PatrimonioToolbar({
           <ChevronDown size={15} className="mr-3 shrink-0 text-slate-400" aria-hidden="true" />
         </label>
 
-        <div className="flex flex-wrap items-center justify-between gap-3 sm:justify-end">
-          <div className="flex gap-1 rounded-xl bg-slate-100 p-1" role="group" aria-label="Modo de visualização">
+        <div className="patrimonio-workspace-controls flex flex-wrap items-center justify-between gap-3 sm:justify-end">
+          <div className="patrimonio-workspace-view flex gap-1 rounded-xl bg-slate-100 p-1" role="group" aria-label="Modo de visualização">
             <button
               type="button"
               onClick={() => onViewModeChange('tabela')}
@@ -114,7 +114,7 @@ export function PatrimonioToolbar({
             </button>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="patrimonio-workspace-actions flex items-center gap-2">
             <button
               type="button"
               onClick={onExport}
