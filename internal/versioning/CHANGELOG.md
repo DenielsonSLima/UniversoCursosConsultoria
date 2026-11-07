@@ -16,6 +16,12 @@ Histórico arquivado: [05/10/2026 — versões 4.8.171 a 4.8.174](./changelog/20
 
 Histórico arquivado: [06/10/2026 a 09/10/2026 — versões 4.8.175 a 4.8.195](./changelog/2026-10-06-a-09-versoes-4-8-175-a-195.md).
 
+## [4.8.255] - 2026-11-07
+
+### Corrigido
+- Carteirinhas em ordem alfabética pelo nome do aluno em lotes completos, por turma e personalizados, nos dois layouts A4.
+- Ordenação canônica na RPC preserva elegibilidade, matrícula primária, modelos e códigos de validação.
+
 ## [4.8.254] - 2026-11-07
 
 ### Alterado

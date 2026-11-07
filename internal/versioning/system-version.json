@@ -1,8 +1,8 @@
 {
-  "version": "4.8.254",
+  "version": "4.8.255",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 263,
+  "revision": 264,
   "releasedAt": "2026-11-07",
-  "summary": "Configurações com cadastros compactos e seletores pesquisáveis preservando IDs, permissões e operações"
+  "summary": "Carteirinhas em ordem alfabética na emissão em lote, por turma e personalizada"
 }
