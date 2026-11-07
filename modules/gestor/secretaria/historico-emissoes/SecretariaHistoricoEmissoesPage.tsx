@@ -7,7 +7,7 @@ import ToastNotification, { useToast } from '../../components/ToastNotification'
 import EmissionsToolbar from './components/EmissionsToolbar';
 import EmissionsTable from './components/EmissionsTable';
 import ReprintModal from './components/ReprintModal';
-import { isOfficialVectorDocument, PAGE_SIZE } from './historico-emissoes.constants';
+import { isOfficialVectorDocument } from './historico-emissoes.constants';
 import { historicoEmissoesService } from './historico-emissoes.service';
 import {
   downloadEmissionPdf,
@@ -18,7 +18,6 @@ import type {
   AcademicPreviewData,
   EmissionLog,
   PreviewResources,
-  TurmaFilter,
 } from './historico-emissoes.types';
 import type { CertificadoAcademico } from '../certificados/certificados.types';
 import { waitForDocumentAssets } from '../../../shared/qrcode/document-assets';
@@ -32,6 +31,7 @@ import { createContractHistoryPdf, type VectorPreviewPdf } from './contract-hist
 import { isEadCertificateEmission, prepareEadHistoryPdf } from './ead-history-pdf';
 import { useReissueSession } from './useReissueSession';
 import { prepareHistoryVectorPreview } from './history-vector-preview';
+import { useEmissionsListing } from './useEmissionsListing';
 
 const isContractDocument = (documento: string) => documento === 'contrato_aluno';
 const getEmissionPreviewKey = (emission: EmissionLog) => (
@@ -47,17 +47,10 @@ const SecretariaHistoricoEmissoesPage: React.FC = () => {
   const vectorPreviewPdfRef = useRef<VectorPreviewPdf | null>(null);
   const previewLoadTokenRef = useRef(0);
 
-  const [activeTab, setActiveTab] = useState('todos');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [appliedSearch, setAppliedSearch] = useState('');
-  const [selectedTurmaId, setSelectedTurmaId] = useState('todos');
-  const [turmas, setTurmas] = useState<TurmaFilter[]>([]);
-  const [systemUsers, setSystemUsers] = useState<Record<string, string>>({});
-  const [loading, setLoading] = useState(true);
-  const [page, setPage] = useState(1);
-  const [totalRecords, setTotalRecords] = useState(0);
-  const [emissions, setEmissions] = useState<EmissionLog[]>([]);
-  const [reloadVersion, setReloadVersion] = useState(0);
+  const listing = useEmissionsListing(context.poloId, (error) => {
+    toast.error('Erro ao carregar histórico', error.message);
+  });
+  const { setReloadVersion } = listing;
 
   const [selectedEmission, setSelectedEmission] = useState<EmissionLog | null>(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
@@ -90,44 +83,6 @@ const SecretariaHistoricoEmissoesPage: React.FC = () => {
       vectorPreviewPdfRef.current = null;
     }
   }, []);
-
-  useEffect(() => {
-    let active = true;
-    historicoEmissoesService.loadFilters(context.poloId)
-      .then((filters) => {
-        if (!active) return;
-        setTurmas(filters.turmas);
-        setSystemUsers(filters.systemUsers);
-      })
-      .catch((error) => {
-        console.error('Erro ao inicializar filtros do histórico:', error);
-        toast.error('Erro Supabase', error?.message || String(error));
-      });
-    return () => { active = false; };
-  }, [context.poloId]);
-
-  useEffect(() => {
-    let active = true;
-    setLoading(true);
-    historicoEmissoesService.loadEmissions({
-      poloId: context.poloId,
-      activeTab,
-      turmaId: selectedTurmaId,
-      search: appliedSearch,
-      page,
-    })
-      .then((result) => {
-        if (!active) return;
-        setEmissions(result.emissions);
-        setTotalRecords(result.total);
-      })
-      .catch((error) => {
-        console.error('Erro ao carregar histórico de emissões:', error);
-        toast.error('Erro Supabase', error?.message || String(error));
-      })
-      .finally(() => active && setLoading(false));
-    return () => { active = false; };
-  }, [activeTab, appliedSearch, context.poloId, page, reloadVersion, selectedTurmaId]);
 
   const clearPreview = () => {
     if (reissueSession.operation.current) return;
@@ -389,34 +344,12 @@ const SecretariaHistoricoEmissoesPage: React.FC = () => {
     }
   };
 
-  const handleSearch = () => {
-    setPage(1);
-    if (appliedSearch === searchQuery) setReloadVersion((version) => version + 1);
-    else setAppliedSearch(searchQuery);
-  };
-
-  const pagesCount = Math.ceil(totalRecords / PAGE_SIZE);
-
   return (
     <div className="space-y-6 text-xs font-sans animate-fadeIn">
-      <EmissionsToolbar
-        activeTab={activeTab}
-        searchQuery={searchQuery}
-        selectedTurmaId={selectedTurmaId}
-        turmas={turmas}
-        onTabChange={(tab) => { setActiveTab(tab); setPage(1); }}
-        onSearchChange={setSearchQuery}
-        onTurmaChange={(turmaId) => { setSelectedTurmaId(turmaId); setPage(1); }}
-        onSearch={handleSearch}
-      />
+      <EmissionsToolbar {...listing.toolbarProps} />
+      {listing.error && <p role="alert" className="rounded-xl bg-rose-50 p-4 text-sm text-rose-800">{listing.error}</p>}
       <EmissionsTable
-        emissions={emissions}
-        loading={loading}
-        page={page}
-        pagesCount={pagesCount}
-        totalRecords={totalRecords}
-        systemUsers={systemUsers}
-        onPageChange={setPage}
+        {...listing.tableProps}
         onOpenPreview={handleOpenPreview}
       />
       {isPreviewOpen && selectedEmission && (

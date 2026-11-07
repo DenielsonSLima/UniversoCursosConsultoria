@@ -1,0 +1,33 @@
+name: Filtros do histórico de emissões
+on:
+  pull_request:
+    paths:
+      - 'modules/gestor/secretaria/historico-emissoes/**'
+      - 'supabase/migrations/*history_emission_filters.sql'
+      - 'supabase/tests/history_emission_filters.isolated.test.mjs'
+      - 'scripts/test-history-emission-filters.mjs'
+      - '.github/workflows/history-emission-filters.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  history-filters:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '>=24.22.1 <25'
+          cache: npm
+      - run: npm ci
+      - name: Dependências isoladas de teste
+        run: npm install --prefix "$RUNNER_TEMP/history-tests" --no-save --package-lock=false --ignore-scripts jsdom@26.1.0 @electric-sql/pglite@0.3.14
+      - name: Busca automática e seletores combinados
+        env:
+          HISTORY_JSDOM_PATH: ${{ runner.temp }}/history-tests/node_modules/jsdom
+        run: node scripts/test-history-emission-filters.mjs
+      - name: RPC real em PostgreSQL isolado
+        env:
+          PGLITE_MODULE_PATH: ${{ runner.temp }}/history-tests/node_modules/@electric-sql/pglite/dist/index.js
+        run: node --test supabase/tests/history_emission_filters.isolated.test.mjs

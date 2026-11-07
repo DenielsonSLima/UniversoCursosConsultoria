@@ -111,6 +111,14 @@ export interface TurmaFilter {
   id: string;
   nome: string;
   codigo: string;
+  cursoId?: string;
+  modalidade?: string;
+}
+
+export interface CursoEmissionFilter {
+  id: string;
+  nome: string;
+  modalidade: string;
 }
 
 export interface PreviewResources {

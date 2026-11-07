@@ -1,3 +1,4 @@
+import { historicoEmissoesListService } from './historico-emissoes-list.service';
 import { supabase } from '../../../../lib/supabase';
 import type { CertificadoAcademico } from '../certificados/certificados.types';
 import { diplomaService } from '../../cadastros/modelos-documentos/diploma/diploma.service';
@@ -21,12 +22,10 @@ import { loadAcademicPreview } from './academic-preview';
 import {
   CERTIFICATE_DOCUMENT_MODALITY,
   isCertificateDocument,
-  PAGE_SIZE,
 } from './historico-emissoes.constants';
 import type {
   EmissionLog,
   PreviewResources,
-  TurmaFilter,
 } from './historico-emissoes.types';
 import {
   shouldUseSharedPreviewCache,
@@ -360,52 +359,7 @@ const loadPreviewBatch = async (
 };
 
 export const historicoEmissoesService = {
-  async loadFilters(poloId: string): Promise<{
-    turmas: TurmaFilter[];
-    systemUsers: Record<string, string>;
-  }> {
-    const [turmasResult, usersResult] = await Promise.all([
-      supabase
-        .from('turmas')
-        .select('id, nome, codigo')
-        .or(`polo_id.eq.${poloId},polo_id.is.null`)
-        .order('nome', { ascending: true }),
-      supabase.from('usuarios_sistema').select('id, nome'),
-    ]);
-    if (turmasResult.error) throw turmasResult.error;
-    if (usersResult.error) throw usersResult.error;
-
-    return {
-      turmas: (turmasResult.data || []) as TurmaFilter[],
-      systemUsers: Object.fromEntries(
-        (usersResult.data || []).map((user) => [user.id, user.nome])
-      ),
-    };
-  },
-
-  async loadEmissions(params: {
-    poloId: string;
-    activeTab: string;
-    turmaId: string;
-    search: string;
-    page: number;
-  }): Promise<{ emissions: EmissionLog[]; total: number }> {
-    const from = (params.page - 1) * PAGE_SIZE;
-    const { data, error } = await supabase.rpc('search_secretaria_emissions_secure', {
-      p_polo_id: params.poloId,
-      p_documento: params.activeTab === 'todos' ? null : params.activeTab,
-      p_turma_id: params.turmaId === 'todos' ? null : params.turmaId,
-      p_search: params.search.trim().replace(/[%_,()]/g, ' '),
-      p_offset: from,
-      p_limit: PAGE_SIZE,
-    });
-    if (error) throw error;
-    const payload = (data || {}) as { items?: EmissionLog[]; total?: number };
-    return {
-      emissions: payload.items || [],
-      total: Number(payload.total || 0),
-    };
-  },
+  ...historicoEmissoesListService,
 
   async loadEmissionByCode(code: string): Promise<EmissionLog> {
     const normalizedCode = code.trim().toUpperCase();
