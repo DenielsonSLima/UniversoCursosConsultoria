@@ -16,6 +16,12 @@ Histórico arquivado: [05/10/2026 — versões 4.8.171 a 4.8.174](./changelog/20
 
 Histórico arquivado: [06/10/2026 a 09/10/2026 — versões 4.8.175 a 4.8.195](./changelog/2026-10-06-a-09-versoes-4-8-175-a-195.md).
 
+## [4.8.259] - 2026-11-07
+
+### Corrigido
+- Histórico de Emissões aplica a busca ao digitar e permite combinar modalidade, curso, turma e tipo de documento.
+- Filtros são aplicados no servidor antes da contagem e paginação, com pesquisa de nome/CPF do snapshot ou cadastro e preservação da segunda via.
+
 ## [4.8.258] - 2026-11-07
 
 ### Corrigido

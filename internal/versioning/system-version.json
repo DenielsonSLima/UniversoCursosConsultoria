@@ -1,8 +1,8 @@
 {
-  "version": "4.8.258",
+  "version": "4.8.259",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 267,
+  "revision": 268,
   "releasedAt": "2026-11-07",
-  "summary": "Fotos de Parceiros com resolvedor privado no cadastro, avatares completos e recuperação única de URLs expiradas"
+  "summary": "Histórico de Emissões com busca automática e filtros combinados de modalidade, curso e turma"
 }
