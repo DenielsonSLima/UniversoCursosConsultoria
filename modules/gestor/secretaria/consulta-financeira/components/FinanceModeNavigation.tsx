@@ -31,11 +31,12 @@ const FinanceModeNavigation = ({
   mode,
   onChange,
 }: FinanceModeNavigationProps) => (
-  <div className="grid gap-2 border-b border-slate-100 p-4 md:grid-cols-3">
+  <div data-secretaria-modes className="grid gap-2 border-b border-slate-100 p-4 md:grid-cols-3">
     {modeItems.map(({ key, icon: Icon, title, description }) => (
       <button
         key={key}
         type="button"
+        aria-pressed={mode === key}
         onClick={() => onChange(key)}
         className={`flex items-center gap-3 rounded-2xl border p-4 text-left transition ${
           mode === key

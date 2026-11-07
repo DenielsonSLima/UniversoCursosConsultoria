@@ -1,3 +1,4 @@
+import InstitutionalSelect from '../../../shared/components/InstitutionalSelect';
 import React from 'react';
 import { CreditCard, Loader2, Printer, Search, Trash2, Users, X } from 'lucide-react';
 import SecretariaAlunoSearchCard from '../shared/SecretariaAlunoSearchCard';
@@ -43,6 +44,7 @@ const ModeButton = ({
 }) => (
   <button
     onClick={onClick}
+    aria-pressed={active}
     className={`flex items-center gap-3 rounded-2xl border p-4 text-left transition-colors ${active ? 'border-cyan-200 bg-cyan-50 text-cyan-800' : 'border-slate-100 bg-slate-50 text-slate-500 hover:border-slate-200'}`}
   >
     {icon}
@@ -95,7 +97,7 @@ const SecretariaDeclaracaoSelection = ({
     <div className="animate-fadeIn">
       <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden">
         <div className="border-b border-slate-100 p-4">
-          <div className="grid gap-2 md:grid-cols-3">
+          <div data-secretaria-modes className="grid gap-2 md:grid-cols-3">
             <ModeButton active={mode === 'individual'} description="Busque um aluno e emita o documento." icon={<Search size={20} />} label="Individual" onClick={() => setMode('individual')} />
             <ModeButton active={mode === 'lote'} description="Gere para uma turma ou todos os alunos." icon={<Users size={20} />} label="Em lote" onClick={() => setMode('lote')} />
             <ModeButton active={mode === 'custom'} description="Monte uma lista mista de alunos." icon={<CreditCard size={20} />} label="Personalizado" onClick={() => setMode('custom')} />
@@ -180,14 +182,13 @@ const SecretariaDeclaracaoSelection = ({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                 <div>
                   <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Selecione a Turma</label>
-                  <select
+                  <InstitutionalSelect
                     value={selectedTurmaId}
-                    onChange={(event) => setSelectedTurmaId(event.target.value)}
-                    className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:border-blue-500 cursor-pointer font-bold text-slate-700 text-sm"
-                  >
-                    <option value="todos">Todos os Alunos Cadastrados</option>
-                    {turmas.map((turma) => <option key={turma.id} value={turma.id}>{turma.nome} ({turma.codigo})</option>)}
-                  </select>
+                    onValueChange={(value) => setSelectedTurmaId(value)}
+                    ariaLabel="Selecione a turma"
+                    options={[{ value: 'todos', label: 'Todos os Alunos Cadastrados' }, ...turmas.map((turma) => ({ value: turma.id, label: `${turma.nome} (${turma.codigo})` }))]}
+                    className="w-full"
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Política do Validador</label>

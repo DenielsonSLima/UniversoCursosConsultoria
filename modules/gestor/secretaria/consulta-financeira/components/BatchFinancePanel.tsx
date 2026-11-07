@@ -1,3 +1,4 @@
+import InstitutionalSelect from '../../../../shared/components/InstitutionalSelect';
 import type { SecretariaFinanceiroController } from '../hooks/useSecretariaFinanceiroController';
 import DebtWorkspace from './DebtWorkspace';
 
@@ -17,18 +18,16 @@ const BatchFinancePanel = ({
       <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">
         Curso / turma
       </span>
-      <select
+      <InstitutionalSelect
+        ariaLabel="Curso ou turma dos recebimentos"
         value={controller.selectedCourseKey}
-        onChange={(event) => controller.setSelectedCourseKey(event.target.value)}
-        className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-sm font-black text-[#001a33] outline-none focus:border-cyan-400"
-      >
-        <option value="todos">Todos os cursos com valores em aberto</option>
-        {controller.courseOptions.map((course) => (
-          <option key={course.key} value={course.key}>
-            {course.cursoNome} · {course.modalidade} · {course.rows.length} cobrança(s)
-          </option>
-        ))}
-      </select>
+        onValueChange={controller.setSelectedCourseKey}
+        options={[{ value: 'todos', label: 'Todos os cursos com valores em aberto' }, ...controller.courseOptions.map((course) => ({
+          value: course.key,
+          label: `${course.cursoNome} · ${course.modalidade} · ${course.rows.length} cobrança(s)`,
+        }))]}
+        className="mt-2 w-full"
+      />
     </label>
     <DebtWorkspace
       rows={controller.batchRows}

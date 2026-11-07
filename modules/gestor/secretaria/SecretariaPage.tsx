@@ -9,6 +9,7 @@ import SecretariaDashboard from './components/SecretariaDashboard';
 import { secretariaDocumentoDefinitions } from './shared/secretaria-documentos.definitions';
 import { secretariaCarteirinhasWorkspaceQueryOptions } from './carteirinhas/secretaria-carteirinhas.service';
 import { SECRETARIA_ACCESS_OPTIONS } from './secretaria-access';
+import './secretaria-workspace.css';
 
 const moduleLoaders = {
   alunos: () => import('./alunos/SecretariaAlunosPage'),
@@ -284,38 +285,38 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({
 
 
   return (
-    <div ref={pageRef} className={`secretaria-readable ${isDashboard ? 'pb-5' : 'animate-fadeIn min-h-screen pb-10'}`}>
+    <div ref={pageRef} id={isDashboard ? undefined : 'secretaria-workspace'} className={`secretaria-readable ${isDashboard ? 'pb-5' : 'secretaria-workspace animate-fadeIn pb-6'}`}>
       {/* Header Geral da Secretaria */}
-      <div className={`${isDashboard ? 'mb-5' : 'mb-8'} flex items-center gap-4`}>
+      <div className="mb-5 flex items-center gap-3">
         {!isDashboard && (
           <button 
             type="button"
             aria-label="Voltar para Secretaria Digital"
             onClick={() => setActiveModule('dashboard')}
-            className="p-2 rounded-xl border border-slate-200 text-slate-400 hover:text-blue-600 hover:border-blue-200 transition-colors bg-white shadow-sm"
+            className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition-colors hover:border-blue-200 hover:text-blue-600"
           >
-            <ArrowLeft size={20} />
+            <ArrowLeft size={18} />
           </button>
         )}
         
-        <div>
+        <div className="min-w-0">
           <div className={`mb-1 flex items-center gap-2 ${isDashboard ? 'text-[#607286]' : 'text-blue-600'}`}>
-            <FileText size={isDashboard ? 14 : 20} aria-hidden="true" />
-            <span className={isDashboard ? 'text-[11px] font-semibold uppercase tracking-[0.12em]' : 'text-xs font-semibold uppercase tracking-wide'}>
+            <FileText size={14} aria-hidden="true" />
+            <span className={isDashboard ? 'text-[11px] font-semibold uppercase tracking-[0.12em]' : 'text-xs font-medium'}>
               {isDashboard ? 'Módulo Administrativo' : 'Secretaria Digital'}
             </span>
           </div>
-          <h2 className={isDashboard ? 'mt-1.5 text-[25px] font-medium leading-tight tracking-[-0.04em] text-[#122b42]' : 'text-3xl font-bold text-[#001a33] uppercase tracking-tight'}>
+          <h2 className="mt-1.5 text-[25px] font-medium leading-tight tracking-[-0.04em] text-[#122b42]">
             {currentHeader.title}
           </h2>
-          <p className={isDashboard ? 'mt-1.5 text-[12px] font-normal leading-relaxed text-[#607286]' : 'text-slate-500 font-medium'}>{currentHeader.description}</p>
+          <p className="mt-1.5 text-[12px] font-normal leading-relaxed text-[#607286]">{currentHeader.description}</p>
         </div>
       </div>
 
-      <div className={isDashboard ? '' : 'max-w-7xl mx-auto'}>
+      <div className={isDashboard ? '' : 'min-w-0'}>
         <Suspense fallback={(
-          <div className="flex min-h-[320px] items-center justify-center gap-3 text-xs font-black uppercase tracking-widest text-slate-500">
-            <Loader2 className="animate-spin text-blue-600" size={26} /> Preparando módulo da secretaria...
+          <div className="flex min-h-[240px] items-center justify-center gap-3 text-xs font-medium text-slate-500">
+            <Loader2 className="animate-spin text-blue-600" size={22} /> Preparando módulo da secretaria...
           </div>
         )}>
           {renderContent()}

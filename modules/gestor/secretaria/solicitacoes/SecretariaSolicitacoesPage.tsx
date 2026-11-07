@@ -1,3 +1,4 @@
+import SecretariaSolicitacoesFilters from './SecretariaSolicitacoesFilters';
 import React, { useState, useEffect, useMemo } from 'react';
 import { secretariaService, DEFAULT_PRAZOS, type PrazoConfig, type Solicitacao } from '../secretaria.service';
 import {
@@ -14,13 +15,10 @@ import {
   Clock, 
   FileText, 
   AlertCircle, 
-  Search,
-  Filter,
   Check,
   X,
   Settings,
   History,
-  ArrowUpDown
 } from 'lucide-react';
 import { getSecretariaErrorMessage } from '../shared/secretaria-error';
 import { matchesSecretariaSearch } from '../secretaria-search';
@@ -214,7 +212,7 @@ const SecretariaSolicitacoesPage: React.FC = () => {
       )}
 
       {/* ── Top Nav Tabs ── */}
-      <div className="flex gap-1 bg-white border border-slate-100 shadow-sm rounded-2xl p-1.5">
+      <div data-secretaria-modes className="flex gap-1 bg-white border border-slate-100 shadow-sm rounded-2xl p-1.5">
         {([
           { key: 'pendentes', label: 'Pendentes', icon: <Clock size={13} />, count: pendentes },
           { key: 'historico', label: 'Histórico', icon: <History size={13} />, count: deferidas + indeferidas },
@@ -222,6 +220,7 @@ const SecretariaSolicitacoesPage: React.FC = () => {
         ] as const).map(tab => (
           <button
             key={tab.key}
+            aria-pressed={activeTab === tab.key}
             onClick={() => setActiveTab(tab.key)}
             className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-black uppercase text-[10px] tracking-wider transition-all ${
               activeTab === tab.key
@@ -231,7 +230,7 @@ const SecretariaSolicitacoesPage: React.FC = () => {
           >
             {tab.icon} {tab.label}
             {tab.count !== null && (
-              <span className={`px-1.5 py-0.5 rounded-full text-[8px] font-black ${activeTab === tab.key ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'}`}>
+              <span className={`px-1.5 py-0.5 rounded-full text-[8px] font-black ${activeTab === tab.key ? 'bg-blue-50 text-blue-700' : 'bg-slate-100 text-slate-600'}`}>
                 {tab.count}
               </span>
             )}
@@ -262,37 +261,12 @@ const SecretariaSolicitacoesPage: React.FC = () => {
       {/* ══════════════ PENDENTES TAB ══════════════ */}
       {activeTab === 'pendentes' && (
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-          {/* Filter bar */}
-          <div className="p-4 border-b border-slate-100 flex flex-col sm:flex-row items-center gap-3 bg-slate-50/40">
-            <div className="relative flex-1 w-full sm:max-w-72">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
-              <input
-                type="text"
-                placeholder="Buscar por nome ou matrícula..."
-                value={searchPend}
-                onChange={e => handleSearchPend(e.target.value)}
-                className="w-full pl-8 pr-3 py-2 bg-white border border-slate-200 rounded-xl outline-none focus:border-blue-400 text-xs font-medium text-slate-700"
-              />
-            </div>
-            <div className="flex gap-2 w-full sm:w-auto">
-              <div className="flex items-center gap-1.5 bg-white px-3 py-2 border border-slate-200 rounded-xl flex-1 sm:flex-initial">
-                <Filter size={12} className="text-slate-400 shrink-0" />
-                <select value={typeFilterPend} onChange={e => { setTypeFilterPend(e.target.value); setPagePend(1); }} className="outline-none font-bold text-slate-600 bg-transparent border-none text-[11px] cursor-pointer">
-                  <option value="todos">Todos Tipos</option>
-                  <option value="Histórico Escolar">Histórico Escolar</option>
-                  <option value="Declaração IRPF">Declaração IRPF</option>
-                  <option value="Transferência">Transferência</option>
-                </select>
-              </div>
-              <button
-                onClick={() => { setSortPend(s => s === 'asc' ? 'desc' : 'asc'); setPagePend(1); }}
-                className="flex items-center gap-1.5 bg-white px-3 py-2 border border-slate-200 rounded-xl font-bold text-slate-600 text-[11px] hover:border-blue-300 transition-colors"
-              >
-                <ArrowUpDown size={12} />
-                {sortPend === 'asc' ? 'Mais antigos' : 'Mais recentes'}
-              </button>
-            </div>
-          </div>
+          <SecretariaSolicitacoesFilters
+            search={searchPend} type={typeFilterPend} sort={sortPend}
+            onSearchChange={handleSearchPend}
+            onTypeChange={(value) => { setTypeFilterPend(value); setPagePend(1); }}
+            onSort={() => { setSortPend((sort) => sort === 'asc' ? 'desc' : 'asc'); setPagePend(1); }}
+          />
 
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
@@ -317,45 +291,13 @@ const SecretariaSolicitacoesPage: React.FC = () => {
       {/* ══════════════ HISTÓRICO TAB ══════════════ */}
       {activeTab === 'historico' && (
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-          {/* Filter bar */}
-          <div className="p-4 border-b border-slate-100 flex flex-col sm:flex-row items-center gap-3 bg-slate-50/40">
-            <div className="relative flex-1 w-full sm:max-w-72">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
-              <input
-                type="text"
-                placeholder="Buscar por nome ou matrícula..."
-                value={searchHist}
-                onChange={e => handleSearchHist(e.target.value)}
-                className="w-full pl-8 pr-3 py-2 bg-white border border-slate-200 rounded-xl outline-none focus:border-blue-400 text-xs font-medium text-slate-700"
-              />
-            </div>
-            <div className="flex gap-2 w-full sm:w-auto">
-              <div className="flex items-center gap-1.5 bg-white px-3 py-2 border border-slate-200 rounded-xl flex-1 sm:flex-initial">
-                <Filter size={12} className="text-slate-400 shrink-0" />
-                <select value={statusFilterHist} onChange={e => { setStatusFilterHist(e.target.value); setPageHist(1); }} className="outline-none font-bold text-slate-600 bg-transparent border-none text-[11px] cursor-pointer">
-                  <option value="todos">Todos Status</option>
-                  <option value="Deferido">Deferido</option>
-                  <option value="Indeferido">Indeferido</option>
-                </select>
-              </div>
-              <div className="flex items-center gap-1.5 bg-white px-3 py-2 border border-slate-200 rounded-xl flex-1 sm:flex-initial">
-                <FileText size={12} className="text-slate-400 shrink-0" />
-                <select value={typeFilterHist} onChange={e => { setTypeFilterHist(e.target.value); setPageHist(1); }} className="outline-none font-bold text-slate-600 bg-transparent border-none text-[11px] cursor-pointer">
-                  <option value="todos">Todos Tipos</option>
-                  <option value="Histórico Escolar">Histórico Escolar</option>
-                  <option value="Declaração IRPF">Declaração IRPF</option>
-                  <option value="Transferência">Transferência</option>
-                </select>
-              </div>
-              <button
-                onClick={() => { setSortHist(s => s === 'asc' ? 'desc' : 'asc'); setPageHist(1); }}
-                className="flex items-center gap-1.5 bg-white px-3 py-2 border border-slate-200 rounded-xl font-bold text-slate-600 text-[11px] hover:border-blue-300 transition-colors"
-              >
-                <ArrowUpDown size={12} />
-                {sortHist === 'desc' ? 'Mais recentes' : 'Mais antigos'}
-              </button>
-            </div>
-          </div>
+          <SecretariaSolicitacoesFilters
+            search={searchHist} type={typeFilterHist} status={statusFilterHist} sort={sortHist}
+            onSearchChange={handleSearchHist}
+            onTypeChange={(value) => { setTypeFilterHist(value); setPageHist(1); }}
+            onStatusChange={(value) => { setStatusFilterHist(value); setPageHist(1); }}
+            onSort={() => { setSortHist((sort) => sort === 'asc' ? 'desc' : 'asc'); setPageHist(1); }}
+          />
 
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">

@@ -1,3 +1,4 @@
+import InstitutionalSelect from '../../../../shared/components/InstitutionalSelect';
 import { Loader2, ReceiptText, X } from 'lucide-react';
 import type { SecretariaSettlementController } from '../hooks/useSecretariaSettlement';
 import type { PaymentMethod } from '../secretaria-financeira.types';
@@ -37,36 +38,27 @@ const SettlementModal = ({
             <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">
               Conta de recebimento
             </span>
-            <select
+            <InstitutionalSelect
+              ariaLabel="Conta de recebimento"
               value={form.accountId}
-              onChange={(event) => controller.setField('accountId', event.target.value)}
-              className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm font-semibold text-slate-700 outline-none focus:border-cyan-400"
-            >
-              <option value="">Selecione a conta</option>
-              {controller.accounts.map((conta) => (
-                <option key={conta.id} value={conta.id}>
-                  {conta.banco} · Ag. {conta.agencia} · {conta.conta}
-                </option>
-              ))}
-            </select>
+              onValueChange={(value) => controller.setField('accountId', value)}
+              options={[{ value: '', label: 'Selecione a conta' }, ...controller.accounts.map((conta) => ({
+                value: conta.id, label: `${conta.banco} · Ag. ${conta.agencia} · ${conta.conta}`,
+              }))]}
+              className="mt-1.5 w-full"
+            />
           </label>
           <label>
             <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">
               Forma de pagamento
             </span>
-            <select
+            <InstitutionalSelect
+              ariaLabel="Forma de pagamento"
               value={form.paymentMethod}
-              onChange={(event) => controller.setField(
-                'paymentMethod',
-                event.target.value as PaymentMethod,
-              )}
-              className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm font-semibold text-slate-700 outline-none focus:border-cyan-400"
-            >
-              <option value="DINHEIRO">Dinheiro</option>
-              <option value="PIX">Pix</option>
-              <option value="CARTAO">Cartão</option>
-              <option value="BOLETO">Boleto</option>
-            </select>
+              onValueChange={(value) => controller.setField('paymentMethod', value as PaymentMethod)}
+              options={[{ value: 'DINHEIRO', label: 'Dinheiro' }, { value: 'PIX', label: 'Pix' }, { value: 'CARTAO', label: 'Cartão' }, { value: 'BOLETO', label: 'Boleto' }]}
+              className="mt-1.5 w-full"
+            />
           </label>
           <label>
             <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">

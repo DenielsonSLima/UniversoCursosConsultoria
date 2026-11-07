@@ -16,6 +16,13 @@ Histórico arquivado: [05/10/2026 — versões 4.8.171 a 4.8.174](./changelog/20
 
 Histórico arquivado: [06/10/2026 a 09/10/2026 — versões 4.8.175 a 4.8.195](./changelog/2026-10-06-a-09-versoes-4-8-175-a-195.md).
 
+## [4.8.257] - 2026-11-07
+
+### Corrigido
+- Submódulos internos da Secretaria seguem a interface compacta, com cabeçalhos leves, campos brancos e abas com linha inferior.
+- Seletores de turmas, modalidades, documentos, filtros e recebimentos usam listas pesquisáveis do sistema, preservando IDs e bloqueios.
+- Apresentação responsiva e estilos de tela isolados dos documentos e da impressão.
+
 ## [4.8.256] - 2026-11-07
 
 ### Adicionado

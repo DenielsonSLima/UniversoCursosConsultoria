@@ -89,13 +89,14 @@ const CarteirinhasPreceptorEmissionWorkspace = ({
           </div>
         </div>
 
-        <div className="relative mt-6 grid gap-2 sm:grid-cols-3">
+        <div data-secretaria-modes className="relative mt-6 grid gap-2 sm:grid-cols-3">
           {modeOptions.map((option) => {
             const active = mode === option.id;
             return (
               <button
                 key={option.id}
                 type="button"
+                aria-pressed={active}
                 onClick={() => onModeChange(option.id)}
                 className={`rounded-2xl border px-4 py-3 text-left transition-all ${active
                   ? 'border-violet-700 bg-violet-700 text-white shadow-md shadow-violet-700/20'

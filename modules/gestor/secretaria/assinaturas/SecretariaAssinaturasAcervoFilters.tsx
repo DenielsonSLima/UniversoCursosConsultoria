@@ -1,3 +1,4 @@
+import InstitutionalSelect from '../../../shared/components/InstitutionalSelect';
 import React from 'react';
 import { CalendarDays, FilterX, Search } from 'lucide-react';
 import type { ElectronicSignatureArchiveFilters } from '../../../shared/assinatura-eletronica/assinatura-eletronica.contract';
@@ -52,59 +53,44 @@ export const ArchiveFiltersForm: React.FC<ArchiveFiltersFormProps> = ({
             </label>
             <label>
               <span className="text-[10px] font-black uppercase tracking-wide text-slate-500">Status</span>
-              <select
+              <InstitutionalSelect
+                ariaLabel="Status das assinaturas"
                 value={draftFilters.status}
-                onChange={(event) => setDraftFilters((current) => ({
-                  ...current,
-                  status: event.target.value as ElectronicSignatureArchiveFilters['status'],
-                }))}
-                className={`mt-1 ${fieldClassName}`}
-              >
-                <option value="TODOS">Todos</option>
-                <option value="ASSINADO">Assinado</option>
-                <option value="SUBSTITUIDO">Substituído</option>
-              </select>
+                onValueChange={(value) => setDraftFilters((current) => ({ ...current, status: value as ElectronicSignatureArchiveFilters['status'] }))}
+                options={[{ value: 'TODOS', label: 'Todos' }, { value: 'ASSINADO', label: 'Assinado' }, { value: 'SUBSTITUIDO', label: 'Substituído' }]}
+                className="mt-1"
+              />
             </label>
             <label>
               <span className="text-[10px] font-black uppercase tracking-wide text-slate-500">Tipo de documento</span>
-              <select
+              <InstitutionalSelect
+                ariaLabel="Tipo de documento assinado"
                 value={draftFilters.documentType || ''}
-                onChange={(event) => setDraftFilters((current) => ({
-                  ...current,
-                  documentType: event.target.value === 'diario_classe' ? 'diario_classe' : null,
-                }))}
-                className={`mt-1 ${fieldClassName}`}
-              >
-                <option value="">Todos os tipos disponíveis</option>
-                <option value="diario_classe">Diário de classe</option>
-                <option value="contrato" disabled>Contrato — assinatura ainda não habilitada</option>
-                <option value="matricula" disabled>Matrícula — assinatura ainda não habilitada</option>
-              </select>
+                onValueChange={(value) => setDraftFilters((current) => ({ ...current, documentType: value === 'diario_classe' ? 'diario_classe' : null }))}
+                options={[
+                  { value: '', label: 'Todos os tipos disponíveis' },
+                  { value: 'diario_classe', label: 'Diário de classe' },
+                  { value: 'contrato', label: 'Contrato — assinatura ainda não habilitada', disabled: true },
+                  { value: 'matricula', label: 'Matrícula — assinatura ainda não habilitada', disabled: true },
+                ]}
+                className="mt-1"
+              />
             </label>
             <label>
               <span className="text-[10px] font-black uppercase tracking-wide text-slate-500">Turma</span>
-              <select
+              <InstitutionalSelect
+                ariaLabel="Turma do acervo"
                 value={draftFilters.turmaId || ''}
-                onChange={(event) => setDraftFilters((current) => ({
-                  ...current,
-                  turmaId: event.target.value || null,
-                }))}
+                onValueChange={(value) => setDraftFilters((current) => ({ ...current, turmaId: value || null }))}
                 disabled={!normalizedPoloId || turmasPending || turmasError}
-                className={`mt-1 ${fieldClassName}`}
-              >
-                <option value="">
-                  {!normalizedPoloId
-                    ? 'Selecione um polo na gestão'
-                    : turmasPending
-                      ? 'Carregando turmas…'
-                      : turmasError
-                        ? 'Turmas indisponíveis'
-                        : 'Todas as turmas'}
-                </option>
-                {turmas.map((turma) => (
-                  <option key={turma.id} value={turma.id}>{turma.label}</option>
-                ))}
-              </select>
+                loading={turmasPending}
+                error={turmasError ? 'Turmas indisponíveis' : undefined}
+                options={[
+                  { value: '', label: !normalizedPoloId ? 'Selecione um polo na gestão' : 'Todas as turmas' },
+                  ...turmas.map((turma) => ({ value: turma.id, label: turma.label })),
+                ]}
+                className="mt-1"
+              />
             </label>
             <label>
               <span className="text-[10px] font-black uppercase tracking-wide text-slate-500">Finalizado a partir de</span>

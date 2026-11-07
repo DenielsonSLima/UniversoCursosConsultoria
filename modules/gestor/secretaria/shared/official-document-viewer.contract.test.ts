@@ -3,8 +3,9 @@ import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
 test('boletim usa o visualizador oficial emitido com download e impressão', async () => {
-  const [emissionPage, issuedModal, viewer, constants] = await Promise.all([
+  const [emissionPage, workspace, issuedModal, viewer, constants] = await Promise.all([
     readFile(new URL('./SecretariaDocumentoEmissionPage.tsx', import.meta.url), 'utf8'),
+    readFile(new URL('./useSecretariaDocumentoWorkspace.ts', import.meta.url), 'utf8'),
     readFile(new URL('./SecretariaIssuedDocumentModal.tsx', import.meta.url), 'utf8'),
     readFile(new URL('../historico-emissoes/components/ReprintModal.tsx', import.meta.url), 'utf8'),
     readFile(new URL('../historico-emissoes/historico-emissoes.constants.ts', import.meta.url), 'utf8'),
@@ -12,8 +13,8 @@ test('boletim usa o visualizador oficial emitido com download e impressão', asy
 
   assert.doesNotMatch(emissionPage, /SecretariaAcademicDocumentPreview/);
   assert.doesNotMatch(emissionPage, /setIsAcademicPreviewOpen/);
-  assert.match(emissionPage, /setIssuedEmissions\(data\.emissions\)/);
-  assert.match(emissionPage, /setIsIssuedDocumentOpen\(true\)/);
+  assert.match(workspace, /setIssuedEmissions\(data\.emissions\)/);
+  assert.match(workspace, /setIsIssuedDocumentOpen\(true\)/);
   assert.match(emissionPage, /<SecretariaIssuedDocumentModal/);
   assert.match(issuedModal, /downloadEmissionPdf\(/);
   assert.match(issuedModal, /isOfficialVectorDocument/);

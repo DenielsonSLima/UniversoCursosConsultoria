@@ -1,8 +1,8 @@
 {
-  "version": "4.8.256",
+  "version": "4.8.257",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 265,
+  "revision": 266,
   "releasedAt": "2026-11-07",
-  "summary": "Estrutura do Emissor NFS-e com acesso individual restrito, configurações por polo e operações fiscais ainda desabilitadas"
+  "summary": "Secretaria com submódulos compactos, abas discretas e seletores pesquisáveis integrados ao sistema"
 }

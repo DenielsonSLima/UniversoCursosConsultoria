@@ -1,12 +1,12 @@
+import { modeOptions, modalityLabel, matchesSearch, groupTargetsByStudent } from './contratos-aluno-workspace.utils';
+import InstitutionalSelect from '../../../../shared/components/InstitutionalSelect';
 import { useEffect, useMemo, useState } from 'react';
 import {
-  CreditCard,
   Info,
   Loader2,
   Printer,
   Search,
   Trash2,
-  Users,
   X,
 } from 'lucide-react';
 import SecretariaAlunoSearchCard from '../../shared/SecretariaAlunoSearchCard';
@@ -36,56 +36,6 @@ interface ContratosAlunoEmissionWorkspaceProps {
   onPrepare: () => void;
   isPreparing: boolean;
 }
-
-const modeOptions: Array<{
-  id: ContratoAlunoEmissionMode;
-  label: string;
-  description: string;
-  icon: typeof Search;
-}> = [
-  {
-    id: 'INDIVIDUAL',
-    label: 'Individual',
-    description: 'Busque um aluno e visualize o contrato.',
-    icon: Search,
-  },
-  {
-    id: 'LOTE',
-    label: 'Em lote',
-    description: 'Gere para uma turma ou todos os alunos.',
-    icon: Users,
-  },
-  {
-    id: 'PERSONALIZADO',
-    label: 'Personalizado',
-    description: 'Monte uma lista mista de alunos.',
-    icon: CreditCard,
-  },
-];
-
-const modalityLabel = (modalidade: string) => {
-  if (modalidade === 'SUPERIOR') return 'Especialização';
-  if (modalidade === 'LIVRE') return 'Livre';
-  if (modalidade === 'TECNICO') return 'Técnico';
-  return modalidade || 'Não informada';
-};
-
-const matchesSearch = (target: ContratoAlunoTarget, normalizedSearch: string) => [
-  target.alunoNome,
-  target.cursoNome,
-  target.turmaNome,
-  target.turmaCodigo,
-  target.modalidade,
-].some((value) => normalizeSecretariaSearch(value).includes(normalizedSearch));
-
-const groupTargetsByStudent = (targets: ContratoAlunoTarget[]) => {
-  const grouped = new Map<string, ContratoAlunoTarget[]>();
-  targets.forEach((target) => {
-    const key = target.alunoId || target.enrollmentId;
-    grouped.set(key, [...(grouped.get(key) || []), target]);
-  });
-  return [...grouped.values()];
-};
 
 const ContratosAlunoEmissionWorkspace = ({
   workspace,
@@ -229,7 +179,7 @@ const ContratosAlunoEmissionWorkspace = ({
     <div className="animate-fadeIn">
       <div className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-sm">
         <div className="border-b border-slate-100 p-4">
-          <div className="grid gap-2 md:grid-cols-3">
+          <div data-secretaria-modes className="grid gap-2 md:grid-cols-3">
             {modeOptions.map((option) => {
               const Icon = option.icon;
               const active = mode === option.id;
@@ -300,18 +250,14 @@ const ContratosAlunoEmissionWorkspace = ({
                   />
 
                   <label htmlFor="contrato-individual-matricula" className="mt-5 block text-[10px] font-black uppercase tracking-widest text-slate-500">Matrícula / turma</label>
-                  <select
-                    id="contrato-individual-matricula"
+                  <InstitutionalSelect
                     value={selectedTarget.enrollmentId}
-                    onChange={(event) => onReplaceSelection([event.target.value])}
-                    className="mt-2 w-full rounded-2xl border border-slate-200 bg-white p-4 text-sm font-bold text-slate-700 outline-none focus:border-blue-500"
-                  >
-                    {selectedStudentTargets.map((target) => (
-                      <option key={target.enrollmentId} value={target.enrollmentId}>
-                        {target.cursoNome} — {target.turmaNome}{target.turmaCodigo ? ` (${target.turmaCodigo})` : ''}
-                      </option>
-                    ))}
-                  </select>
+                    onValueChange={(value) => onReplaceSelection([value])}
+                    ariaLabel="Matrícula / turma"
+                    options={selectedStudentTargets.map((target) => ({ value: target.enrollmentId, label: `${target.cursoNome} — ${target.turmaNome}${target.turmaCodigo ? ` (${target.turmaCodigo})` : ''}` }))}
+                    id="contrato-individual-matricula"
+                    className="mt-2 w-full"
+                  />
                 </div>
               )}
             </div>
@@ -325,35 +271,26 @@ const ContratosAlunoEmissionWorkspace = ({
               <div className="grid gap-4 md:grid-cols-2">
                 <div>
                   <label htmlFor="contrato-lote-modalidade" className="mb-2 block text-xs font-bold uppercase text-slate-500">Tipo de modalidade</label>
-                  <select
-                    id="contrato-lote-modalidade"
+                  <InstitutionalSelect
                     value={batchModality}
-                    onChange={(event) => changeBatchModality(event.target.value)}
-                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 p-4 font-bold text-slate-700 outline-none focus:border-cyan-500"
-                  >
-                    <option value="">Selecione a modalidade</option>
-                    {modalityOptions.map((modality) => (
-                      <option key={modality} value={modality}>{modalityLabel(modality)}</option>
-                    ))}
-                  </select>
+                    onValueChange={(value) => changeBatchModality(value)}
+                    ariaLabel="Tipo de modalidade"
+                    options={[{ value: '', label: 'Selecione a modalidade' }, ...modalityOptions.map((modality) => ({ value: modality, label: modalityLabel(modality) }))]}
+                    id="contrato-lote-modalidade"
+                    className="w-full"
+                  />
                 </div>
                 <div>
                   <label htmlFor="contrato-lote-turma" className="mb-2 block text-xs font-bold uppercase text-slate-500">Turma</label>
-                  <select
-                    id="contrato-lote-turma"
+                  <InstitutionalSelect
                     value={turmaId}
-                    onChange={(event) => changeBatchTurma(event.target.value)}
+                    onValueChange={(value) => changeBatchTurma(value)}
+                    ariaLabel="Turma"
+                    options={[{ value: '', label: 'Selecione a turma' }, { value: 'todos', label: 'Todos os alunos da modalidade' }, ...batchTurmas.map((turma) => ({ value: turma.id, label: `${turma.cursoNome} — ${turma.nome}${turma.codigo ? ` (${turma.codigo})` : ''}` }))]}
+                    id="contrato-lote-turma"
                     disabled={!batchModality}
-                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 p-4 font-bold text-slate-700 outline-none focus:border-cyan-500 disabled:cursor-not-allowed disabled:text-slate-400"
-                  >
-                    <option value="">Selecione a turma</option>
-                    <option value="todos">Todos os alunos da modalidade</option>
-                    {batchTurmas.map((turma) => (
-                      <option key={turma.id} value={turma.id}>
-                        {turma.cursoNome} — {turma.nome}{turma.codigo ? ` (${turma.codigo})` : ''}
-                      </option>
-                    ))}
-                  </select>
+                    className="w-full"
+                  />
                 </div>
               </div>
 
@@ -420,18 +357,14 @@ const ContratosAlunoEmissionWorkspace = ({
                     onClick={() => setCustomCandidateId('')}
                   />
                   <label htmlFor="contrato-personalizado-matricula" className="mt-4 block text-[10px] font-black uppercase tracking-widest text-slate-500">Matrícula / turma</label>
-                  <select
-                    id="contrato-personalizado-matricula"
+                  <InstitutionalSelect
                     value={customCandidate.enrollmentId}
-                    onChange={(event) => setCustomCandidateId(event.target.value)}
-                    className="mt-2 w-full rounded-2xl border border-slate-200 bg-white p-4 text-sm font-bold text-slate-700 outline-none focus:border-blue-500"
-                  >
-                    {customCandidateTargets.map((target) => (
-                      <option key={target.enrollmentId} value={target.enrollmentId}>
-                        {target.cursoNome} — {target.turmaNome}{target.turmaCodigo ? ` (${target.turmaCodigo})` : ''}
-                      </option>
-                    ))}
-                  </select>
+                    onValueChange={(value) => setCustomCandidateId(value)}
+                    ariaLabel="Matrícula / turma"
+                    options={customCandidateTargets.map((target) => ({ value: target.enrollmentId, label: `${target.cursoNome} — ${target.turmaNome}${target.turmaCodigo ? ` (${target.turmaCodigo})` : ''}` }))}
+                    id="contrato-personalizado-matricula"
+                    className="mt-2 w-full"
+                  />
                   <button
                     type="button"
                     disabled={selectedSet.has(customCandidate.enrollmentId) || selectedCount >= 100}
