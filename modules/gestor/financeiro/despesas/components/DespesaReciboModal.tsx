@@ -57,13 +57,13 @@ const ReceiptPreparationScreen: React.FC<{
 }> = ({ error, onClose, onRetry }) => {
   const modal = (
     <div
-      className="fixed inset-0 z-[2147483000] flex h-[100dvh] w-screen animate-fadeIn bg-slate-950"
+      className="financial-dialog-overlay fixed inset-0 z-[2147483000] flex h-[100dvh] w-screen animate-fadeIn bg-slate-950"
       role="dialog"
       aria-modal="true"
       aria-label="Preparação do recibo"
     >
       <div className="flex h-full w-full flex-col items-center justify-center bg-slate-900 p-6 text-center text-white">
-        <div className="rounded-3xl border border-white/10 bg-slate-800/80 p-8 shadow-2xl sm:p-10">
+        <div className="financial-dialog financial-dialog--document financial-dialog--padded rounded-3xl border border-white/10 bg-slate-800/80 p-8 shadow-2xl sm:p-10">
           {error ? <AlertTriangle className="mx-auto text-amber-300" size={40} /> : <Loader2 className="mx-auto animate-spin text-blue-300" size={40} />}
           <h2 className="mt-5 text-sm font-black uppercase tracking-widest">
             {error ? 'Prévia indisponível' : 'Preparando recibo oficial'}
@@ -71,7 +71,7 @@ const ReceiptPreparationScreen: React.FC<{
           <p className="mx-auto mt-3 max-w-md text-sm font-medium leading-relaxed text-slate-300">
             {error || 'Carregando o snapshot institucional para gerar o mesmo PDF da prévia, do download e da impressão.'}
           </p>
-          <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
+          <div className="financial-dialog-footer mt-7 flex flex-wrap items-center justify-center gap-3">
             <button
               type="button"
               onClick={onClose}

@@ -226,9 +226,9 @@ const CanonicalDocumentPreviewModal = <Item extends CanonicalDocumentPreviewItem
   if (!currentItem) return null;
 
   const modal = (
-    <div ref={dialogRef} tabIndex={-1} id="canonical-document-preview-modal" className="fixed inset-0 z-[2147483000] flex h-[100dvh] w-screen animate-fadeIn bg-slate-950 outline-none" role="dialog" aria-modal="true" aria-label={title} aria-busy={isBusy}>
+    <div ref={dialogRef} tabIndex={-1} id="canonical-document-preview-modal" className="financial-dialog financial-dialog--fullscreen financial-dialog--document fixed inset-0 z-[2147483000] flex h-[100dvh] w-screen animate-fadeIn bg-slate-950 outline-none" role="dialog" aria-modal="true" aria-label={title} aria-busy={isBusy}>
       <div className="flex h-full min-h-0 w-full flex-col overflow-hidden bg-slate-950 shadow-2xl">
-        <header className="flex shrink-0 flex-col gap-3 border-b border-white/10 bg-slate-800 px-4 py-3 text-white shadow-md sm:flex-row sm:items-center sm:justify-between sm:px-6">
+        <header className="financial-dialog-header flex shrink-0 flex-col gap-3 border-b border-white/10 bg-slate-800 px-4 py-3 text-white shadow-md sm:flex-row sm:items-center sm:justify-between sm:px-6">
           <div className="flex min-w-0 items-center gap-3">
             <button
               type="button"
@@ -285,7 +285,7 @@ const CanonicalDocumentPreviewModal = <Item extends CanonicalDocumentPreviewItem
           )}
         </main>
 
-        <footer className="shrink-0 border-t border-white/10 bg-slate-800 px-4 py-2 text-center text-[10px] font-medium text-slate-300">
+        <footer className="financial-dialog-footer shrink-0 border-t border-white/10 bg-slate-800 px-4 py-2 text-center text-[10px] font-medium text-slate-300">
           {error ? (
             <span className="inline-flex items-center gap-1.5 text-rose-300"><AlertTriangle size={13} /> {error}</span>
           ) : isBusy && progress ? (

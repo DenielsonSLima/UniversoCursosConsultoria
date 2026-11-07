@@ -39,7 +39,7 @@ const ConciliacaoReceivablesPanel: React.FC<ConciliacaoReceivablesPanelProps> = 
         value={searchTerm}
         onChange={(event) => onSearchTermChange(event.target.value)}
         placeholder="Filtrar por descrição, nosso número ou status..."
-        className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-500"
+        className="w-full rounded-xl bg-white border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-500"
       />
     </div>
 

@@ -1,10 +1,10 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import {
   AlertCircle,
   CheckCircle2,
   Eye,
   FileCheck2,
-  FileText,
   Loader2,
   RefreshCw,
   RotateCcw,
@@ -26,6 +26,7 @@ import {
 import { CnabOutcomeList, CnabSummaryGrid } from './CnabReturnResults';
 
 interface BaneseCnabReturnPanelProps {
+  actionsContainer?: HTMLDivElement | null;
   controller: BaneseCnabReturnController;
   cnabReady: boolean;
   overviewError?: string | null;
@@ -35,6 +36,7 @@ const BaneseCnabReturnPanel: React.FC<BaneseCnabReturnPanelProps> = ({
   controller,
   cnabReady,
   overviewError,
+  actionsContainer,
 }) => {
   const unavailableNotice = describeCnabAvailabilityError(overviewError);
   const {
@@ -73,27 +75,24 @@ const BaneseCnabReturnPanel: React.FC<BaneseCnabReturnPanelProps> = ({
     setProductionAcknowledged,
   } = controller;
 
+  const actions = (selectedFile || preview || confirmation) ? (
+    <div className="financial-section-actions flex flex-wrap items-center gap-2">
+      <button
+        type="button"
+        onClick={reset}
+        disabled={operationInProgress}
+        className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-1.5 text-[9px] font-black uppercase tracking-wider text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+      >
+        <RotateCcw size={12} /> Novo arquivo
+      </button>
+    </div>
+  ) : null;
+
   return (
     <section className="space-y-4 rounded-[2rem] border border-slate-100 bg-white p-6 shadow-sm">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <FileText size={16} className="text-slate-500" />
-          <div>
-            <h3 className="text-sm font-black uppercase tracking-widest text-slate-700">Retorno CNAB 240</h3>
-            <p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">Banese · contingência com prévia antes da baixa</p>
-          </div>
-        </div>
-        {(selectedFile || preview || confirmation) ? (
-          <button
-            type="button"
-            onClick={reset}
-            disabled={operationInProgress}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-1.5 text-[9px] font-black uppercase tracking-wider text-slate-600 hover:bg-slate-50 disabled:opacity-50"
-          >
-            <RotateCcw size={12} /> Novo arquivo
-          </button>
-        ) : null}
-      </div>
+      <h3 className="sr-only">Retorno CNAB 240</h3>
+      {actionsContainer ? createPortal(actions, actionsContainer) : actions}
+      <p className="text-xs font-semibold text-slate-500">Banese · contingência com prévia antes da baixa</p>
 
       {environment ? (
         <EnvironmentBanner environment={environment} title="Conciliação CNAB240" />

@@ -113,9 +113,9 @@ const InstitutionalReceiptModal: React.FC<InstitutionalReceiptModalProps> = ({ i
       role="dialog"
       aria-modal="true"
       aria-label={`Visualizador do recibo ${receiptNumber}`}
-      className="fixed inset-0 z-[2147483000] flex h-[100dvh] w-screen flex-col overflow-hidden bg-slate-950"
+      className="financial-dialog financial-dialog--fullscreen financial-dialog--document fixed inset-0 z-[2147483000] flex h-[100dvh] w-screen flex-col overflow-hidden bg-slate-950"
     >
-      <header className="receipt-viewer-toolbar z-10 flex shrink-0 flex-col gap-3 border-b border-white/10 bg-slate-800 px-4 py-3 text-white shadow-md sm:flex-row sm:items-center sm:justify-between sm:px-6">
+      <header className="financial-dialog-header receipt-viewer-toolbar z-10 flex shrink-0 flex-col gap-3 border-b border-white/10 bg-slate-800 px-4 py-3 text-white shadow-md sm:flex-row sm:items-center sm:justify-between sm:px-6">
         <div className="flex min-w-0 items-center gap-3 sm:gap-4">
           <button
             type="button"
@@ -157,7 +157,7 @@ const InstitutionalReceiptModal: React.FC<InstitutionalReceiptModalProps> = ({ i
         </div>
       </header>
 
-      <div className="flex min-h-0 flex-1 flex-col items-center overflow-auto bg-slate-900 p-3 custom-scrollbar sm:p-8">
+      <div className="financial-dialog-body flex min-h-0 flex-1 flex-col items-center overflow-auto bg-slate-900 p-3 custom-scrollbar sm:p-8">
         {isLoadingPolo ? (
           <div className="flex min-h-[297mm] w-[210mm] max-w-full shrink-0 flex-col items-center justify-center bg-white text-slate-400">
             <Loader2 className="mb-4 animate-spin text-blue-600" size={36} />

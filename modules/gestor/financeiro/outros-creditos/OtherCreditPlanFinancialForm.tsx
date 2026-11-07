@@ -38,7 +38,7 @@ function FeeFields({ label, value, onChange }: {
 export function OtherCreditPlanFinancialForm({ form, onChange, disabled, children }: {
   form: Form; onChange: (patch: Partial<Form>) => void; disabled: boolean; children?: React.ReactNode;
 }) {
-  return <fieldset disabled={disabled} className="min-w-0 space-y-5 disabled:opacity-70">
+  return <fieldset disabled={disabled} className="financial-dialog-section min-w-0 space-y-5 disabled:opacity-70">
     <div className="grid gap-4 md:grid-cols-2">
       <MoneyField label="Valor de cada parcela" value={form.value} onChange={value => onChange({ value })} />
       <label className="space-y-1"><span className={labelClass}>Quantidade de parcelas</span>

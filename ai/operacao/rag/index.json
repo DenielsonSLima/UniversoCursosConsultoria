@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "retrieval": "lexical-bm25-with-source-citations",
-  "builtAt": "2026-11-07T02:03:15.816Z",
+  "builtAt": "2026-11-07T03:18:44.433Z",
   "manifestVersion": 2,
-  "sourceSignature": "93b11b9e61ba21cf42cac7350f41b14e81569300043a40ddd6405b89a730d8c0",
+  "sourceSignature": "8a86abe4882aa11f83d124c1c7437945adc38e121a1a778df218890670b747e3",
   "sources": [
     {
       "path": "AGENTS.md",
@@ -11,7 +11,7 @@
     },
     {
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "hash": "b036274913c5226177b0ef0a00e22835dec1cba0977da5f75ce69368b2948cc5"
+      "hash": "3e7239fdfc7556df4668895a6a54969699c12af1d257939a3612ff3dfd97b5e4"
     },
     {
       "path": "ai/operacao/MEMORIA_CANONICA.md",
@@ -208,23 +208,23 @@
       "part": 1
     },
     {
-      "id": "2f0cbd18283800843c81",
-      "hash": "2f0cbd18283800843c816f0c00546fbe8c9d9d3ffd99a88e0788481fbf1c316d",
+      "id": "2fa9710669d55c7f9fbc",
+      "hash": "2fa9710669d55c7f9fbc52d3c2d80caf80fb6f4a008925d8c3657e68163b237a",
       "path": "ai/operacao/LOTE_ATIVO.md",
       "section": "Lote: 2026-11-06-financeiro-tabelas-nitidas",
-      "text": "Padronização visual das tabelas e listagens das dez abas financeiras, conforme as capturas enviadas. Preservar dados, consultas, permissões, seleção e todas as operações. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-06-financeiro-tabelas-nitidas.md`.",
-      "normalizedText": "padronizacao visual das tabelas e listagens das dez abas financeiras conforme as capturas enviadas preservar dados consultas permissoes selecao e todas as operacoes manifesto explicito ai operacao registros alteracoes 2026 11 06 financeiro tabelas nitidas md",
-      "tokenCount": 34,
+      "text": "Padronização compacta de tabelas, modais, abas, ações e seletores das dez abas financeiras. Preservar informações operacionais, consultas, permissões e cálculos. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-06-financeiro-tabelas-nitidas.md`.",
+      "normalizedText": "padronizacao compacta de tabelas modais abas acoes e seletores das dez abas financeiras preservar informacoes operacionais consultas permissoes e calculos manifesto explicito ai operacao registros alteracoes 2026 11 06 financeiro tabelas nitidas md",
+      "tokenCount": 31,
       "part": 1
     },
     {
-      "id": "94bd775b68ad70d20ba6",
-      "hash": "94bd775b68ad70d20ba65d13d3b3cc89e262d69a629d6f805d671e1f23dcdb1e",
+      "id": "886ed8c1769fe395a8d6",
+      "hash": "886ed8c1769fe395a8d6d665c603088011e922d3929754cbafe73dfe3f343222",
       "path": "ai/operacao/LOTE_ATIVO.md",
       "section": "Lote: 2026-11-06-financeiro-tabelas-nitidas",
-      "text": "Uma frente independente de inventário, marcadores e revisão; coordenador integra estilo e verifica contratos. Após orientação do usuário, conferência somente por fotos e código, sem navegador. Validação proporcional com AST, SSR, tipagem e contratos focados. Produção não solicitada. Base remota 4.8.250.",
-      "normalizedText": "uma frente independente de inventario marcadores e revisao coordenador integra estilo e verifica contratos apos orientacao do usuario conferencia somente por fotos e codigo sem navegador validacao proporcional com ast ssr tipagem e contratos focados producao nao solicitada base remota 4 8 250",
-      "tokenCount": 37,
+      "text": "Três frentes independentes, integração e revisão proporcional. Conferência local com componentes reais/dados sintéticos; usuário autorizou Chrome para liberar o Safari. Comboboxes próprios, abas com linha inferior e buscas brancas. GitHub/Preview na PR #347, versão 4.8.251 sobre 4.8.250. Produção não solicitada.",
+      "normalizedText": "tres frentes independentes integracao e revisao proporcional conferencia local com componentes reais dados sinteticos usuario autorizou chrome para liberar o safari comboboxes proprios abas com linha inferior e buscas brancas github preview na pr 347 versao 4 8 251 sobre 4 8 250 producao nao solicitada",
+      "tokenCount": 39,
       "part": 1
     },
     {

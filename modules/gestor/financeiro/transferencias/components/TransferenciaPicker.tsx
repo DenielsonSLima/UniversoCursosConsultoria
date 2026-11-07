@@ -122,7 +122,7 @@ export default function TransferenciaPicker({
   return (
     <div ref={rootRef} className="min-w-0 space-y-1">
       <label htmlFor={`${id}-input`} className="block text-[10px] font-black uppercase tracking-wider text-slate-400">{label}</label>
-      <div className="relative">
+      <div className="financial-dialog-picker-input relative">
         <Search size={15} className="pointer-events-none absolute left-3 top-4 text-slate-400" />
         <input
           ref={inputRef}

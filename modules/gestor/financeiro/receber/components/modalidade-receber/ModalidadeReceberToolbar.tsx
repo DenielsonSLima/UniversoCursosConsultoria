@@ -1,3 +1,5 @@
+import FinancialSelect from '../../../components/FinancialSelect';
+import { ReceberActions } from '../ReceberActions';
 import React, { type ReactNode } from 'react';
 import { LayoutGrid, Search, Table2 } from 'lucide-react';
 import FinancialReportExportButton from '../../../components/FinancialReportPreview';
@@ -42,9 +44,6 @@ interface ModalidadeReceberToolbarProps {
 export const ModalidadeReceberToolbar: React.FC<ModalidadeReceberToolbarProps> = ({
   modality,
   title,
-  description,
-  icon,
-  accentLabel,
   summary,
   upcoming,
   period,
@@ -66,17 +65,6 @@ export const ModalidadeReceberToolbar: React.FC<ModalidadeReceberToolbarProps> =
   onClearFilters,
 }) => (
   <>
-    <div className="financial-section-heading flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-      <div className="financial-section-identity">
-        <div className="financial-section-eyebrow mb-2 flex items-center gap-2 text-emerald-600">
-          {icon}
-          <span className="text-xs font-black uppercase tracking-[0.18em]">{accentLabel}</span>
-        </div>
-        <h4 className="text-2xl font-black uppercase tracking-tight text-[#001a33]">{title}</h4>
-        <p className="text-xs font-medium text-slate-500">{description}</p>
-      </div>
-    </div>
-
     <ReceivablesPeriodFilter period={period} error={periodError} onChange={onPeriodChange} />
 
     <div className="flex flex-wrap items-center gap-3">
@@ -87,25 +75,20 @@ export const ModalidadeReceberToolbar: React.FC<ModalidadeReceberToolbarProps> =
           placeholder="Aluno, turma, CPF ou cobrança..."
           value={search}
           onChange={(event) => onSearchChange(event.target.value)}
-          className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-9 pr-4 text-sm outline-none transition-all focus:ring-2 focus:ring-emerald-500"
+          className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-4 text-sm outline-none transition-all focus:ring-2 focus:ring-emerald-500"
         />
       </div>
 
-      <select
+      <FinancialSelect
         value={turmaId}
-        onChange={(event) => onTurmaIdChange(event.target.value)}
+        onValueChange={onTurmaIdChange}
+        options={[{ value: '', label: turmasLoading ? 'Carregando turmas...' : 'Todas as turmas' }, ...turmas.map(turma => ({ value: turma.id, label: turma.codigo ? `${turma.nome} · ${turma.codigo}` : turma.nome, keywords: `${turma.id} ${turma.codigo || ''}` }))]}
+        ariaLabel="Filtrar por turma ativa"
+        placeholder="Todas as turmas"
         disabled={turmasLoading}
-        className="w-full min-w-0 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs font-semibold outline-none transition-all focus:ring-2 focus:ring-emerald-500 sm:w-auto sm:max-w-[280px]"
-        title="Filtrar por turma ativa"
-        aria-label="Filtrar por turma ativa"
-      >
-        <option value="">{turmasLoading ? 'Carregando turmas...' : 'Todas as turmas'}</option>
-        {turmas.map((turma) => (
-          <option key={turma.id} value={turma.id}>
-            {turma.codigo ? `${turma.nome} · ${turma.codigo}` : turma.nome}
-          </option>
-        ))}
-      </select>
+        loading={turmasLoading}
+        className="w-full min-w-0 sm:w-[280px]"
+      />
 
       {search || period.preset !== 'CURRENT_MONTH' || turmaId || statusScope !== 'pending' ? (
         <button
@@ -118,21 +101,23 @@ export const ModalidadeReceberToolbar: React.FC<ModalidadeReceberToolbarProps> =
       ) : null}
 
       <div className="ml-auto flex flex-wrap items-center gap-2">
-        <FinancialReportExportButton
-          title={`Extrato de Cobranças - ${title}`}
-          subtitle="Cobranças, parcelas e recebimentos conforme os filtros selecionados."
-          rightTitle="Extrato de Cobranças"
-          rightType={title}
-          fileName={`extrato-cobrancas-${modality.toLowerCase()}-${new Date().toISOString().slice(0, 10)}`}
-          columns={report.columns}
-          rows={report.rows}
-          filters={report.filters}
-          summaryCards={report.summaryCards}
-          poloId={report.reportPoloId}
-          tone="emerald"
-          onBeforeOpen={report.loadReceivables}
-          disabled={isLoading || Boolean(periodError) || summary.loading || summary.error || !summary.data || (statusScope === 'upcoming' && (upcoming.loading || upcoming.error || !upcoming.data))}
-        />
+        <ReceberActions>
+          <FinancialReportExportButton
+            title={`Extrato de Cobranças - ${title}`}
+            subtitle="Cobranças, parcelas e recebimentos conforme os filtros selecionados."
+            rightTitle="Extrato de Cobranças"
+            rightType={title}
+            fileName={`extrato-cobrancas-${modality.toLowerCase()}-${new Date().toISOString().slice(0, 10)}`}
+            columns={report.columns}
+            rows={report.rows}
+            filters={report.filters}
+            summaryCards={report.summaryCards}
+            poloId={report.reportPoloId}
+            tone="emerald"
+            onBeforeOpen={report.loadReceivables}
+            disabled={isLoading || Boolean(periodError) || summary.loading || summary.error || !summary.data || (statusScope === 'upcoming' && (upcoming.loading || upcoming.error || !upcoming.data))}
+          />
+        </ReceberActions>
         <div className="flex gap-1 rounded-xl bg-slate-100 p-1">
           <button
             type="button"

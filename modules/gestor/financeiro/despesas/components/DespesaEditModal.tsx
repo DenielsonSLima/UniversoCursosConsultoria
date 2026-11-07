@@ -1,3 +1,4 @@
+import FinancialSelect from '../../components/FinancialSelect';
 import React, { useMemo, useRef, useState } from 'react';
 import { Pencil, RefreshCw, X } from 'lucide-react';
 import {
@@ -117,9 +118,9 @@ const DespesaEditModal: React.FC<DespesaEditModalProps> = ({
         aria-modal="true"
         aria-labelledby="editar-despesa-title"
         onSubmit={submit}
-        className="max-h-[calc(100dvh-2rem)] w-full max-w-3xl overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl animate-fadeIn"
+        className="financial-dialog financial-dialog--padded max-h-[calc(100dvh-2rem)] w-full max-w-3xl overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl animate-fadeIn"
       >
-        <header className="mb-5 flex items-start justify-between gap-4">
+        <header className="financial-dialog-header mb-5 flex items-start justify-between gap-4">
           <div>
             <h3 id="editar-despesa-title" className="text-lg font-black uppercase tracking-tight text-[#001a33]">Editar lançamento</h3>
             <p className="mt-1 text-xs font-medium text-slate-500">Altere os dados da conta antes da baixa.</p>
@@ -140,7 +141,7 @@ const DespesaEditModal: React.FC<DespesaEditModalProps> = ({
           </p>
         )}
 
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <div className="financial-dialog-section grid grid-cols-1 gap-4 md:grid-cols-2">
           <label className="md:col-span-2">
             <span className="mb-1.5 block text-[10px] font-black uppercase tracking-wider text-slate-500">Descrição *</span>
             <input
@@ -166,14 +167,9 @@ const DespesaEditModal: React.FC<DespesaEditModalProps> = ({
 
           <label>
             <span className="mb-1.5 block text-[10px] font-black uppercase tracking-wider text-slate-500">Categoria</span>
-            <select
-              value={categoriaId}
-              onChange={(event) => setCategoriaId(event.target.value)}
-              className={`w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-semibold text-slate-700 outline-none transition-colors focus:ring-2 ${accent.ring}`}
-            >
-              <option value="">Sem categoria</option>
-              {categorias.map((categoria) => <option key={categoria.id} value={categoria.id}>{categoria.nome}</option>)}
-            </select>
+            <FinancialSelect value={categoriaId} onValueChange={setCategoriaId} ariaLabel="Categoria"
+              placeholder="Sem categoria" options={[{ value: '', label: 'Sem categoria' },
+                ...categorias.map((categoria) => ({ value: categoria.id, label: categoria.nome }))]} className="w-full" />
           </label>
 
           <label>
@@ -199,26 +195,16 @@ const DespesaEditModal: React.FC<DespesaEditModalProps> = ({
 
           <label>
             <span className="mb-1.5 block text-[10px] font-black uppercase tracking-wider text-slate-500">Fornecedor</span>
-            <select
-              value={fornecedorId}
-              onChange={(event) => setFornecedorId(event.target.value)}
-              className={`w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-semibold text-slate-700 outline-none transition-colors focus:ring-2 ${accent.ring}`}
-            >
-              <option value="">Fornecedor não informado</option>
-              {parceiros.map((parceiro) => <option key={parceiro.id} value={parceiro.id}>{parceiro.nome}</option>)}
-            </select>
+            <FinancialSelect value={fornecedorId} onValueChange={setFornecedorId} ariaLabel="Fornecedor"
+              placeholder="Fornecedor não informado" options={[{ value: '', label: 'Fornecedor não informado' },
+                ...parceiros.map((parceiro) => ({ value: parceiro.id, label: parceiro.nome, keywords: [parceiro.cpf_cnpj, parceiro.cpfCnpj].filter(Boolean).join(' ') }))]} className="w-full" />
           </label>
 
           <label>
             <span className="mb-1.5 block text-[10px] font-black uppercase tracking-wider text-slate-500">Turma vinculada</span>
-            <select
-              value={turmaId}
-              onChange={(event) => setTurmaId(event.target.value)}
-              className={`w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-semibold text-slate-700 outline-none transition-colors focus:ring-2 ${accent.ring}`}
-            >
-              <option value="">Sem turma vinculada</option>
-              {turmas.map((turma) => <option key={turma.id} value={turma.id}>{turma.nome}</option>)}
-            </select>
+            <FinancialSelect value={turmaId} onValueChange={setTurmaId} ariaLabel="Turma vinculada"
+              placeholder="Sem turma vinculada" options={[{ value: '', label: 'Sem turma vinculada' },
+                ...turmas.map((turma) => ({ value: turma.id, label: turma.nome, keywords: turma.codigo }))]} className="w-full" />
           </label>
 
           {currencyFields.map((field) => (
@@ -248,7 +234,7 @@ const DespesaEditModal: React.FC<DespesaEditModalProps> = ({
           </label>
         </div>
 
-        <footer className="mt-6 flex gap-3">
+        <footer className="financial-dialog-footer mt-6 flex gap-3">
           <button
             type="button"
             onClick={onClose}

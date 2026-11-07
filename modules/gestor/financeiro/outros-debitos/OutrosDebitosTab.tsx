@@ -1,10 +1,11 @@
+import FinancialSelect from '../components/FinancialSelect';
 import { useExpensePayment } from '../despesas/hooks/useExpensePayment';
 // File: modules/gestor/financeiro/outros-debitos/OutrosDebitosTab.tsx
 
 import React, { useMemo, useState } from 'react';
 import {
-  Plus, Search, LayoutGrid, LayoutList, Tag, RefreshCw,
-  TrendingDown, Layers,
+  Plus, Search, LayoutGrid, LayoutList, RefreshCw,
+  Layers,
 } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -164,8 +165,8 @@ const OutrosDebitosTab: React.FC<{ poloId?: string | null }> = ({ poloId: scoped
   };
 
   const tabs: { id: DespesaStatusScope; label: string }[] = [
-    { id: 'mes_atual', label: 'Mês Atual' },
-    { id: 'em_aberto', label: 'Em Aberto' },
+    { id: 'mes_atual', label: 'Mês atual' },
+    { id: 'em_aberto', label: 'Em aberto' },
     { id: 'todos', label: 'Todos' },
   ];
 
@@ -173,24 +174,7 @@ const OutrosDebitosTab: React.FC<{ poloId?: string | null }> = ({ poloId: scoped
     <div className="financial-section-workspace space-y-5 animate-fadeIn">
       <ToastNotification toasts={toasts} onRemove={removeToast} />
 
-      <div className="financial-section-heading flex items-center justify-between gap-4">
-        <div className="financial-section-identity">
-          <h4 className="text-base font-black text-[#001a33] uppercase tracking-tight flex items-center gap-2">
-            <TrendingDown size={16} className="text-indigo-500" />
-            Outros Débitos
-          </h4>
-          <p className="text-xs text-slate-400 font-medium mt-0.5">
-            Taxas bancárias, impostos, juros, multas e saídas extraordinárias
-          </p>
-        </div>
-        <button
-          onClick={() => setShowForm(true)}
-          className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-black uppercase tracking-wide shadow-md shadow-indigo-900/20 transition-colors"
-        >
-          <Plus size={14} />
-          Novo Débito
-        </button>
-      </div>
+      <h4 className="sr-only">Outros Débitos</h4>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
@@ -211,40 +195,45 @@ const OutrosDebitosTab: React.FC<{ poloId?: string | null }> = ({ poloId: scoped
         </div>
       )}
 
-      <FinancialUnderlineTabs
-        items={tabs}
-        value={statusScope}
-        onChange={setStatusScope}
-        ariaLabel="Período dos outros débitos"
-        indicatorClassName="bg-indigo-600"
-        activeIconClassName="text-indigo-600"
-      />
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="min-w-0 w-full sm:w-auto sm:flex-1">
+          <FinancialUnderlineTabs
+            compact
+            items={tabs}
+            value={statusScope}
+            onChange={setStatusScope}
+            ariaLabel="Período dos outros débitos"
+            indicatorClassName="bg-indigo-600"
+            activeIconClassName="text-indigo-600"
+          />
+        </div>
+        <div className="financial-section-actions ml-auto shrink-0">
+          <button
+            onClick={() => setShowForm(true)}
+            className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-black uppercase tracking-wide shadow-md shadow-indigo-900/20 transition-colors"
+          >
+            <Plus size={14} />
+            Novo Débito
+          </button>
+        </div>
+      </div>
 
       <div className="flex flex-wrap gap-3 items-center">
         <div className="relative flex-1 min-w-[180px]">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input type="text" placeholder="Buscar débitos..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all" />
+          <input type="text" placeholder="Buscar débitos..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-full pl-9 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all" />
         </div>
         <input type="date" value={dataInicio} onChange={(e) => setDataInicio(e.target.value)} className="px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-indigo-500 outline-none transition-all" title="Data Início" />
         <input type="date" value={dataFim} onChange={(e) => setDataFim(e.target.value)} className="px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-indigo-500 outline-none transition-all" title="Data Fim" />
         <div className="relative">
-          <Tag size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-          <select value={categoriaId} onChange={(e) => setCategoriaId(e.target.value)} className="pl-8 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-indigo-500 outline-none appearance-none transition-all">
-            <option value="">Todas as categorias</option>
-            {categorias.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
-          </select>
+          <FinancialSelect value={categoriaId} onValueChange={setCategoriaId} ariaLabel="Filtrar por categoria"
+            placeholder="Todas as categorias" options={[{ value: '', label: 'Todas as categorias' },
+              ...categorias.map((categoria) => ({ value: categoria.id, label: categoria.nome }))]} className="min-w-[180px]" />
         </div>
 
-        <select
-          value={turmaId}
-          onChange={(e) => setTurmaId(e.target.value)}
-          className="px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-        >
-          <option value="">Todas as turmas</option>
-          {turmas.map((t) => (
-            <option key={t.id} value={t.id}>{t.nome}</option>
-          ))}
-        </select>
+        <FinancialSelect value={turmaId} onValueChange={setTurmaId} ariaLabel="Filtrar por turma"
+          placeholder="Todas as turmas" options={[{ value: '', label: 'Todas as turmas' },
+            ...turmas.map((turma) => ({ value: turma.id, label: turma.nome, keywords: turma.codigo }))]} className="min-w-[180px]" />
         <div className="flex gap-1 p-1 bg-slate-100 rounded-xl ml-auto">
           <button onClick={() => setViewMode('tabela')} className={`p-2 rounded-lg transition-all ${viewMode === 'tabela' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`} title="Tabela"><LayoutList size={15} /></button>
           <button onClick={() => setViewMode('cards')} className={`p-2 rounded-lg transition-all ${viewMode === 'cards' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`} title="Cards"><LayoutGrid size={15} /></button>

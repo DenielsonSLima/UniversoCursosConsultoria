@@ -117,7 +117,7 @@ export const CaixaWorkspacePayablesModal = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/60 p-0 backdrop-blur-sm sm:items-center sm:p-4"
+      className="financial-dialog-overlay fixed inset-0 z-50 flex items-end justify-center bg-slate-950/60 p-0 backdrop-blur-sm sm:items-center sm:p-4"
       onMouseDown={(event) => { if (event.target === event.currentTarget) close(); }}
     >
       <div
@@ -128,9 +128,9 @@ export const CaixaWorkspacePayablesModal = ({
         aria-labelledby="caixa-payables-modal-title"
         aria-describedby="caixa-payables-modal-description"
         onKeyDown={handleKeyDown}
-        className="flex max-h-[94dvh] w-full max-w-5xl flex-col overflow-hidden rounded-t-[28px] border border-slate-200 bg-white shadow-2xl sm:max-h-[90vh] sm:rounded-[28px]"
+        className="financial-dialog flex max-h-[94dvh] w-full max-w-5xl flex-col overflow-hidden rounded-t-[28px] border border-slate-200 bg-white shadow-2xl sm:max-h-[90vh] sm:rounded-[28px]"
       >
-        <header className="flex items-start justify-between gap-4 border-b border-slate-200 bg-[#001a33] px-4 py-4 text-white sm:px-6">
+        <header className="financial-dialog-header flex items-start justify-between gap-4 border-b border-slate-200 bg-[#001a33] px-4 py-4 text-white sm:px-6">
           <div className="flex min-w-0 items-start gap-3">
             <span className="mt-0.5 rounded-xl bg-white/10 p-2 text-blue-200">
               <ReceiptText aria-hidden="true" size={18} />
@@ -158,7 +158,7 @@ export const CaixaWorkspacePayablesModal = ({
           </button>
         </header>
 
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+        <div className="financial-dialog-body financial-dialog-body--framed min-h-0 flex-1 overflow-y-auto overscroll-contain">
           <CaixaWorkspacePayablesPanel
             payload={payablesQuery.data}
             isLoading={payablesQuery.isPending}

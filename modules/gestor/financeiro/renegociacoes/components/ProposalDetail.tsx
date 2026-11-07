@@ -67,9 +67,9 @@ const ProposalDetail: React.FC<ProposalDetailProps> = ({ agreementId, poloId, on
       aria-labelledby="renegociacao-detail-title"
       aria-busy={query.isFetching || discard.isPending}
       aria-hidden={showDiscard ? true : undefined}
-      className="fixed inset-0 z-[2147482500] flex h-[100dvh] w-screen flex-col overflow-hidden bg-slate-50 text-slate-900 outline-none"
+      className="financial-dialog financial-dialog--fullscreen fixed inset-0 z-[2147482500] flex h-[100dvh] w-screen flex-col overflow-hidden bg-slate-50 text-slate-900 outline-none"
     >
-      <header className="shrink-0 border-b border-slate-200 bg-white shadow-sm">
+      <header className="financial-dialog-header shrink-0 border-b border-slate-200 bg-white shadow-sm">
         <div className="mx-auto flex min-h-[76px] w-full max-w-7xl items-center gap-3 px-4 py-3 sm:px-6 lg:px-8">
           <button
             type="button"
@@ -90,7 +90,7 @@ const ProposalDetail: React.FC<ProposalDetailProps> = ({ agreementId, poloId, on
         </div>
       </header>
 
-      <main className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+      <main className="financial-dialog-body financial-dialog-body--framed min-h-0 flex-1 overflow-y-auto overscroll-contain">
         <div className="mx-auto w-full max-w-7xl space-y-5 px-4 py-5 sm:px-6 sm:py-6 lg:px-8">
           {query.isPending ? (
             <LoadingPanel label="Carregando proposta e histórico..." />

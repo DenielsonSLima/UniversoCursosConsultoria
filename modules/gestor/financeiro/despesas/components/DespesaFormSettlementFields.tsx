@@ -1,3 +1,4 @@
+import FinancialSelect from '../../components/FinancialSelect';
 import React from 'react';
 import { CheckCircle2, Layers } from 'lucide-react';
 import type { ContaBancaria } from '../../financeiro.service';
@@ -23,7 +24,7 @@ interface Props {
 
 const DespesaFormSettlementFields: React.FC<Props> = (props) => <>
   {props.mode === 'parcelado' && (
-    <div className="space-y-3 rounded-2xl border border-indigo-100 bg-indigo-50 p-4 md:col-span-2">
+    <div className="financial-dialog-section space-y-3 rounded-2xl border border-indigo-100 bg-indigo-50 p-4 md:col-span-2">
       <p className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-indigo-700"><Layers size={13} /> Configuração de Parcelas</p>
       <div className="grid grid-cols-2 gap-3">
         <div><label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-indigo-500">Nº de Parcelas</label>
@@ -33,10 +34,9 @@ const DespesaFormSettlementFields: React.FC<Props> = (props) => <>
         <div><label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-indigo-500">Intervalo</label>
           <div className="flex gap-1.5"><input type="number" min={1} value={props.intervaloDias} onChange={(event) => props.setIntervaloDias(Number(event.target.value))}
             className="w-16 rounded-xl border border-indigo-200 bg-white px-2 py-2.5 text-center text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500" />
-            <select value={props.intervaloUnit} onChange={(event) => props.setIntervaloUnit(event.target.value as IntervaloUnit)}
-              className="flex-1 appearance-none rounded-xl border border-indigo-200 bg-white px-2 py-2 text-xs font-bold outline-none focus:ring-2 focus:ring-indigo-500">
-              <option value="dias">Dias</option><option value="semanas">Semanas</option><option value="meses">Meses</option>
-            </select></div>
+            <FinancialSelect value={props.intervaloUnit} onValueChange={(value) => props.setIntervaloUnit(value as IntervaloUnit)}
+              ariaLabel="Unidade do intervalo das parcelas" options={[{ value: 'dias', label: 'Dias' },
+                { value: 'semanas', label: 'Semanas' }, { value: 'meses', label: 'Meses' }]} className="min-w-0 flex-1" /></div>
         </div>
       </div>
       <p className="text-[10px] font-medium text-indigo-500">
@@ -53,7 +53,7 @@ const DespesaFormSettlementFields: React.FC<Props> = (props) => <>
   )}
 
   {props.mode === 'baixa' && (
-    <div className="space-y-3 rounded-2xl border border-emerald-100 bg-emerald-50 p-4 md:col-span-2">
+    <div className="financial-dialog-section space-y-3 rounded-2xl border border-emerald-100 bg-emerald-50 p-4 md:col-span-2">
       <p className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-emerald-700"><CheckCircle2 size={13} /> Dar Baixa Imediata</p>
       <div><label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-emerald-600">Conta Bancária *</label>
         <BankAccountPicker accounts={props.activeContas} value={props.contaBancariaId} onChange={props.setContaBancariaId} placeholder="Selecionar conta..." tone="emerald" />

@@ -9,6 +9,7 @@ import {
   Search,
 } from 'lucide-react';
 import ToastNotification, { useToast } from '../../components/ToastNotification';
+import FinancialUnderlineTabs from '../components/FinancialUnderlineTabs';
 import { isContaDisponivelNoPolo } from '../financeiro.service';
 import { useFinanceiroSharedQueries } from '../hooks/useFinanceiroSharedQueries';
 import { invalidateConveniosScope } from './convenios.cache';
@@ -192,33 +193,34 @@ const ConveniosPoloTab: React.FC<ConveniosTabProps> = ({ poloId: scopedPoloId })
       <ToastNotification toasts={toasts} onRemove={removeToast} />
       {deleteModal}
 
-      <header className="financial-section-heading flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div className="financial-section-identity">
-          <p className="financial-section-eyebrow flex items-center gap-2 text-xs font-black uppercase tracking-[0.2em] text-cyan-700"><Handshake size={16} /> Recursos vinculados</p>
-          <h3 className="mt-1 text-2xl font-black uppercase tracking-tight text-[#001a33]">Convênios</h3>
-          <p className="mt-1 max-w-2xl text-sm font-medium text-slate-500">Controle mensal separado por convênio, com créditos reais, despesas vinculadas e fechamento manual.</p>
-        </div>
-        <button type="button" onClick={() => setShowCreate(true)} disabled={!poloId} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-cyan-700 px-5 py-3 text-xs font-black uppercase tracking-wider text-white shadow-lg shadow-cyan-950/15 hover:bg-cyan-800 disabled:opacity-50"><Plus size={16} /> Novo convênio</button>
-      </header>
-
       {resumo ? <ConveniosKpis resumo={resumo} /> : null}
 
-      <div className="flex flex-col gap-3 rounded-2xl border border-slate-100 bg-white p-3 shadow-sm lg:flex-row lg:items-center">
-        <div className="flex rounded-xl bg-slate-100 p-1" role="tablist" aria-label="Situação dos meses de convênio">
-          {([
-            ['ABERTOS', 'Em aberto', resumo?.mesesAbertos],
-            ['FINALIZADOS', 'Finalizados', resumo?.mesesFinalizados],
-          ] as const).map(([scope, label, count]) => (
-            <button key={scope} type="button" role="tab" aria-selected={statusScope === scope} onClick={() => setStatusScope(scope)} className={`rounded-lg px-3 py-2 text-[10px] font-black uppercase tracking-wide ${statusScope === scope ? 'bg-white text-cyan-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>{label}{count !== undefined ? <span className="ml-1 rounded-full bg-slate-100 px-1.5 py-0.5">{count}</span> : null}</button>
-          ))}
+      <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-slate-100 bg-white p-3 shadow-sm">
+        <div className="min-w-0 max-w-full shrink-0">
+          <FinancialUnderlineTabs
+            compact
+            items={[
+              { id: 'ABERTOS' as const, label: 'Em aberto', badge: resumo?.mesesAbertos },
+              { id: 'FINALIZADOS' as const, label: 'Finalizados', badge: resumo?.mesesFinalizados },
+            ]}
+            value={statusScope}
+            onChange={setStatusScope}
+            ariaLabel="Situação dos meses de convênio"
+            indicatorClassName="bg-cyan-700"
+            activeIconClassName="text-cyan-700"
+          />
         </div>
         <div className="relative min-w-[220px] flex-1">
           <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar convênio, parceiro ou competência..." className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-9 pr-4 text-sm font-medium outline-none focus:ring-2 focus:ring-cyan-500" />
+          <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar convênio, parceiro ou competência..." className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-4 text-sm font-medium outline-none focus:ring-2 focus:ring-cyan-500" />
         </div>
         <div className="inline-flex shrink-0 rounded-xl border border-slate-200 bg-white p-1" aria-label="Forma de visualização">
           <button type="button" onClick={() => setViewMode('cards')} aria-label="Visualizar como cards" aria-pressed={viewMode === 'cards'} className={`rounded-lg p-2 ${viewMode === 'cards' ? 'bg-cyan-50 text-cyan-800' : 'text-slate-400'}`}><LayoutGrid size={16} /></button>
           <button type="button" onClick={() => setViewMode('table')} aria-label="Visualizar como tabela" aria-pressed={viewMode === 'table'} className={`rounded-lg p-2 ${viewMode === 'table' ? 'bg-cyan-50 text-cyan-800' : 'text-slate-400'}`}><List size={16} /></button>
+        </div>
+        <div className="financial-section-actions ml-auto">
+          <h3 className="sr-only">Convênios</h3>
+          <button type="button" onClick={() => setShowCreate(true)} disabled={!poloId} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-cyan-700 px-5 py-3 text-xs font-black uppercase tracking-wider text-white shadow-lg shadow-cyan-950/15 hover:bg-cyan-800 disabled:opacity-50"><Plus size={16} /> Novo convênio</button>
         </div>
       </div>
 

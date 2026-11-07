@@ -12,7 +12,7 @@ export function OtherCreditPlanForm({ form, onChange, disabled, partners, catego
   form: Form; onChange: (patch: Partial<Form>) => void; disabled: boolean;
   partners: Partner[]; categories: Category[]; partnersLoading: boolean; partnersError: boolean; retryPartners: () => void;
 }) {
-  return <fieldset disabled={disabled} className="min-w-0 space-y-5 disabled:opacity-70">
+  return <fieldset disabled={disabled} className="financial-dialog-section min-w-0 space-y-5 disabled:opacity-70">
     <div className="grid gap-4 md:grid-cols-2">
       <TransferenciaPicker label="Pagador cadastrado" value={form.partnerId}
         options={partners.map(partner => ({ id: partner.id, label: partner.nome, detail: `${partner.tipo} · ${maskPdvDocument(partner.cpf_cnpj)}`, keywords: partner.cpf_cnpj }))}

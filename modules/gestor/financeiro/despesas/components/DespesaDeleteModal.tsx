@@ -25,9 +25,9 @@ const DespesaDeleteModal: React.FC<DespesaDeleteModalProps> = ({
         role="dialog"
         aria-modal="true"
         aria-labelledby="excluir-despesas-title"
-        className="w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl animate-fadeIn"
+        className="financial-dialog financial-dialog--padded w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl animate-fadeIn"
       >
-        <header className="flex items-start justify-between gap-4">
+        <header className="financial-dialog-header flex items-start justify-between gap-4">
           <div>
             <span className="mb-3 inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-rose-50 text-rose-600">
               <Trash2 size={21} />
@@ -53,14 +53,14 @@ const DespesaDeleteModal: React.FC<DespesaDeleteModalProps> = ({
           </button>
         </header>
 
-        <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+        <div className="financial-dialog-section mt-5 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
           {items.slice(0, 3).map((item) => (
             <p key={item.id} className="truncate text-xs font-bold text-slate-700">{item.descricao}</p>
           ))}
           {count > 3 && <p className="mt-1 text-[10px] font-black uppercase tracking-wide text-slate-400">+ {count - 3} outros lançamentos</p>}
         </div>
 
-        <footer className="mt-6 flex gap-3">
+        <footer className="financial-dialog-footer mt-6 flex gap-3">
           <button
             type="button"
             onClick={onClose}

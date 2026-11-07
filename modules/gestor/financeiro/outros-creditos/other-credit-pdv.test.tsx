@@ -81,3 +81,14 @@ test('hoje usa data civil local e vencimento permanece editável', () => {
   assert.match(html, /type="date"[^>]+value="2026-10-15"/);
   assert.match(html, /aria-label="Adicionar categoria"/);
 });
+
+
+test('categoria usa combobox próprio e mantém seleção canônica bloqueada durante envio', () => {
+  const category = { id: 'category-practice', nome: 'Aulas de prática' };
+  const html = render({ categoryId: category.id, categories: [category] });
+  assert.match(html, /role="combobox"[^>]*aria-label="Categoria financeira"/);
+  assert.match(html, /value="Aulas de prática"/);
+  assert.doesNotMatch(html, /<select/);
+  const busy = render({ categoryId: category.id, categories: [category], createMutation: { isPending: true } });
+  assert.match(busy, /<input[^>]*role="combobox"[^>]*disabled=""/);
+});

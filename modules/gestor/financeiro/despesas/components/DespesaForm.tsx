@@ -195,14 +195,14 @@ const DespesaForm: React.FC<DespesaFormProps> = ({
     setAnexo(file);
   };
 
-  const modal = <div className="fixed left-0 top-0 z-[200] flex h-screen h-[100dvh] w-screen items-center justify-center overflow-hidden bg-black/40 p-4 backdrop-blur-sm overscroll-contain">
-    <div className="max-h-[calc(100dvh-2rem)] w-full max-w-4xl overflow-y-auto rounded-[2rem] bg-white shadow-2xl">
-      <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-100 bg-white px-8 pb-4 pt-8">
+  const modal = <div className="financial-dialog-overlay fixed left-0 top-0 z-[200] flex h-screen h-[100dvh] w-screen items-center justify-center overflow-hidden bg-black/40 p-4 backdrop-blur-sm overscroll-contain">
+    <div className="financial-dialog max-h-[calc(100dvh-2rem)] w-full max-w-4xl overflow-y-auto rounded-[2rem] bg-white shadow-2xl">
+      <div className="financial-dialog-header sticky top-0 z-10 flex items-center justify-between border-b border-slate-100 bg-white px-8 pb-4 pt-8">
         <div><h3 className="text-lg font-black uppercase tracking-tight text-[#001a33]">Novo Lançamento</h3>
           <p className="mt-0.5 text-xs font-bold uppercase tracking-wider text-rose-500">{tipoLabel[tipo]}</p></div>
         <button type="button" onClick={onClose} className="rounded-xl p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700"><X size={20} /></button>
       </div>
-      <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-4 px-8 py-6 md:grid-cols-2">
+      <form onSubmit={handleSubmit} className="financial-dialog-body grid grid-cols-1 gap-4 px-8 py-6 md:grid-cols-2">
         <DespesaFormCoreFields {...{
           mode, setMode, dataLancamento, setDataLancamento, dataVencimento, setDataVencimento,
           categoriaId, setCategoriaId, categorias, tipo, showCategoriaModal, setShowCategoriaModal,
@@ -227,7 +227,7 @@ const DespesaForm: React.FC<DespesaFormProps> = ({
         {createMutation.isError && <div className="rounded-xl border border-red-100 bg-red-50 p-3 text-xs font-medium text-red-600 md:col-span-2">
           {(createMutation.error as any)?.message || 'Erro ao criar lançamento'}
         </div>}
-        <div className="flex gap-3 pt-2 md:col-span-2">
+        <div className="financial-dialog-footer flex gap-3 pt-2 md:col-span-2">
           <button type="button" onClick={onClose} className="flex-1 rounded-xl border border-slate-200 py-3 text-sm font-bold uppercase tracking-wide text-slate-500 hover:bg-slate-50">Cancelar</button>
           <button type="submit" disabled={createMutation.isPending || rateioSelecionadosInvalido}
             className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-rose-600 py-3 text-sm font-black uppercase tracking-wide text-white shadow-md shadow-rose-900/20 hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-60">

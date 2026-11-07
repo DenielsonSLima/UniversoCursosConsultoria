@@ -3,7 +3,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  ArrowRightLeft,
   Plus,
   Search,
 } from 'lucide-react';
@@ -22,6 +21,7 @@ import { useFinanceiroSharedQueries } from '../hooks/useFinanceiroSharedQueries'
 import { useTransferenciasQueries } from './hooks/useTransferenciasQueries';
 import { caixaQueryKeys } from '../../caixa/caixa.service';
 import FinancialUnderlineTabs from '../components/FinancialUnderlineTabs';
+import FinancialSelect from '../components/FinancialSelect';
 import TransferenciaFormModal, { type TransferFormState } from './components/TransferenciaFormModal';
 import TransferenciasList from './components/TransferenciasList';
 import { formatTransferCurrency } from './components/transferencia-options';
@@ -288,24 +288,6 @@ const TransferenciasTab: React.FC<TransferenciasTabProps> = ({ poloId }) => {
     <div className="financial-section-workspace animate-fadeIn space-y-6">
       <ToastNotification toasts={toasts} onRemove={removeToast} />
 
-      <div className="financial-section-heading flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div className="financial-section-identity">
-          <p className="financial-section-eyebrow mb-2 flex items-center gap-2 text-xs font-black uppercase tracking-[0.2em] text-slate-500">
-            <ArrowRightLeft size={16} /> Movimentação interna
-          </p>
-          <h3 className="text-2xl font-black uppercase tracking-tight text-[#001a33]">Transferências</h3>
-          <p className="mt-1 max-w-2xl text-sm font-medium text-slate-500">
-            {activePolo?.nome || 'Unidade financeira'}{activePolo?.cidade ? ` - ${activePolo.cidade}/${activePolo.estado || ''}` : ''}
-          </p>
-        </div>
-        <button
-          onClick={openCreateModal}
-          className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#001a33] px-5 py-3 text-xs font-black uppercase tracking-wider text-white shadow-lg shadow-slate-900/15 hover:bg-[#062849]"
-        >
-          <Plus size={16} /> Nova transferência
-        </button>
-      </div>
-
       {/* KPI Cards */}
       <div className="grid grid-cols-2 gap-3 max-w-xl">
         {[
@@ -345,17 +327,34 @@ const TransferenciasTab: React.FC<TransferenciasTabProps> = ({ poloId }) => {
       )}
 
       {/* Tabs de período */}
-      <FinancialUnderlineTabs
-        items={[
-          { id: 'current_month' as const, label: 'Mês Atual' },
-          { id: 'all' as const, label: 'Todos' },
-        ]}
-        value={periodScope}
-        onChange={setPeriodScope}
-        ariaLabel="Período das transferências"
-        indicatorClassName="bg-indigo-600"
-        activeIconClassName="text-indigo-600"
-      />
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="min-w-0 w-full sm:w-auto">
+          <FinancialUnderlineTabs
+            compact
+            items={[
+              { id: 'current_month' as const, label: 'Mês atual' },
+              { id: 'all' as const, label: 'Todos' },
+            ]}
+            value={periodScope}
+            onChange={setPeriodScope}
+            ariaLabel="Período das transferências"
+            indicatorClassName="bg-indigo-600"
+            activeIconClassName="text-indigo-600"
+          />
+        </div>
+          <p className="min-w-0 flex-1 text-xs font-medium text-slate-500">
+            {activePolo?.nome || 'Unidade financeira'}{activePolo?.cidade ? ` - ${activePolo.cidade}/${activePolo.estado || ''}` : ''}
+          </p>
+        <div className="financial-section-actions ml-auto">
+          <h3 className="sr-only">Transferências</h3>
+          <button
+            onClick={openCreateModal}
+            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#001a33] px-5 py-3 text-xs font-black uppercase tracking-wider text-white shadow-lg shadow-slate-900/15 hover:bg-[#062849]"
+          >
+            <Plus size={16} /> Nova transferência
+          </button>
+        </div>
+      </div>
 
       {/* Filtros */}
       <div className="flex flex-wrap gap-3 items-center">
@@ -367,7 +366,7 @@ const TransferenciasTab: React.FC<TransferenciasTabProps> = ({ poloId }) => {
             placeholder="Descrição, polo, banco, conta..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+            className="w-full pl-9 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
           />
         </div>
 
@@ -390,32 +389,32 @@ const TransferenciasTab: React.FC<TransferenciasTabProps> = ({ poloId }) => {
         />
 
         {/* Conta que saiu */}
-        <select
+        <FinancialSelect
           value={originAccountFilter}
-          onChange={(e) => setOriginAccountFilter(e.target.value)}
-          className="px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-        >
-          <option value="">Todas as contas de saída</option>
-          {filterAccounts.map((account) => (
-            <option key={account.id} value={account.id}>
-              {accountLabel(account)}
-            </option>
-          ))}
-        </select>
+          onValueChange={setOriginAccountFilter}
+          ariaLabel="Conta de saída"
+          placeholder="Todas as contas de saída"
+          allowClear
+          className="min-w-[220px] flex-1 sm:w-[240px] sm:flex-none"
+          options={[
+            { value: '', label: 'Todas as contas de saída' },
+            ...filterAccounts.map((account) => ({ value: account.id, label: accountLabel(account) })),
+          ]}
+        />
 
         {/* Conta que recebeu */}
-        <select
+        <FinancialSelect
           value={destinationAccountFilter}
-          onChange={(e) => setDestinationAccountFilter(e.target.value)}
-          className="px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-        >
-          <option value="">Todas as contas de entrada</option>
-          {filterAccounts.map((account) => (
-            <option key={account.id} value={account.id}>
-              {accountLabel(account)}
-            </option>
-          ))}
-        </select>
+          onValueChange={setDestinationAccountFilter}
+          ariaLabel="Conta de entrada"
+          placeholder="Todas as contas de entrada"
+          allowClear
+          className="min-w-[220px] flex-1 sm:w-[240px] sm:flex-none"
+          options={[
+            { value: '', label: 'Todas as contas de entrada' },
+            ...filterAccounts.map((account) => ({ value: account.id, label: accountLabel(account) })),
+          ]}
+        />
 
         {/* Limpar Filtros */}
         {(search || startDate || endDate || originAccountFilter || destinationAccountFilter) && (

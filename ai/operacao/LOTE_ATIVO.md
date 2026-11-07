@@ -2,6 +2,6 @@
 
 ## Lote: 2026-11-06-financeiro-tabelas-nitidas
 
-Padronização visual das tabelas e listagens das dez abas financeiras, conforme as capturas enviadas. Preservar dados, consultas, permissões, seleção e todas as operações. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-06-financeiro-tabelas-nitidas.md`.
+Padronização compacta de tabelas, modais, abas, ações e seletores das dez abas financeiras. Preservar informações operacionais, consultas, permissões e cálculos. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-06-financeiro-tabelas-nitidas.md`.
 
-Uma frente independente de inventário, marcadores e revisão; coordenador integra estilo e verifica contratos. Após orientação do usuário, conferência somente por fotos e código, sem navegador. Validação proporcional com AST, SSR, tipagem e contratos focados. Produção não solicitada. Base remota 4.8.250.
+Três frentes independentes, integração e revisão proporcional. Conferência local com componentes reais/dados sintéticos; usuário autorizou Chrome para liberar o Safari. Comboboxes próprios, abas com linha inferior e buscas brancas. GitHub/Preview na PR #347, versão 4.8.251 sobre 4.8.250. Produção não solicitada.

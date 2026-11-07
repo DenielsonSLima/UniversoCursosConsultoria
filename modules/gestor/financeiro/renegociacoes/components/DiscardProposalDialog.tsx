@@ -22,7 +22,7 @@ const DiscardProposalDialog: React.FC<{
   if (typeof document === 'undefined') return null;
   return createPortal(
     <div
-      className="fixed inset-0 z-[2147483000] flex min-h-[100dvh] items-end justify-center bg-slate-950/55 p-0 backdrop-blur-sm sm:items-center sm:p-4"
+      className="financial-dialog-overlay fixed inset-0 z-[2147483000] flex min-h-[100dvh] items-end justify-center bg-slate-950/55 p-0 backdrop-blur-sm sm:items-center sm:p-4"
       role="dialog"
       aria-modal="true"
       aria-labelledby="discard-title"
@@ -32,9 +32,9 @@ const DiscardProposalDialog: React.FC<{
       <div
         ref={dialogRef}
         tabIndex={-1}
-        className="max-h-[95dvh] w-full overflow-y-auto overscroll-contain rounded-t-3xl bg-white p-5 shadow-2xl outline-none sm:max-w-lg sm:rounded-3xl"
+        className="financial-dialog financial-dialog--padded max-h-[95dvh] w-full overflow-y-auto overscroll-contain rounded-t-3xl bg-white p-5 shadow-2xl outline-none sm:max-w-lg sm:rounded-3xl"
       >
-        <div className="flex items-start justify-between gap-3">
+        <div className="financial-dialog-header flex items-start justify-between gap-3">
           <div>
             <p className="text-[10px] font-black uppercase tracking-wider text-rose-600">Ação auditada</p>
             <h2 id="discard-title" className="mt-1 text-lg font-black text-[#001a33]">
@@ -73,7 +73,7 @@ const DiscardProposalDialog: React.FC<{
             {renegociacaoErrorMessage(error)}
           </p>
         ) : null}
-        <div className="mt-5 flex gap-3">
+        <div className="financial-dialog-footer mt-5 flex gap-3">
           <button
             type="button"
             onClick={onClose}

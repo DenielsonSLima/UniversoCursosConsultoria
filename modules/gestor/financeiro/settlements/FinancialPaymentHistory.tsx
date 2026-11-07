@@ -8,7 +8,7 @@ export function FinancialPaymentHistory({ history, sourceKind, sourceId, onRever
   onReversed?: () => Promise<void>; onBusyChange: (busy: boolean) => void; disabled?: boolean;
 }) {
   if (!history.events.length) return null;
-  return <details className="rounded-2xl border border-slate-200 bg-white p-4">
+  return <details className="financial-dialog-section rounded-2xl border border-slate-200 bg-white p-4">
     <summary className="cursor-pointer text-sm font-black text-[#001a33]">Histórico de pagamentos ({history.events.length})</summary>
     <ol className="mt-4 divide-y divide-slate-100">{history.events.map(event => <li key={event.id} className="space-y-2 py-3 text-xs">
       <p className="flex flex-wrap justify-between gap-2 font-black text-slate-700"><span>{new Date(`${event.paymentDate}T12:00:00`).toLocaleDateString('pt-BR')}</span>

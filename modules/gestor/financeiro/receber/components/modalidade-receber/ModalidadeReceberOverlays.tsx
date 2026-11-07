@@ -64,13 +64,13 @@ export const ModalidadeReceberOverlays: React.FC<ModalidadeReceberOverlaysProps>
         <div
           role="dialog"
           aria-modal="true"
-          className="fixed inset-0 z-[9999] flex min-h-screen w-full items-center justify-center overflow-y-auto bg-slate-950/65 p-4 backdrop-blur-sm"
+          className="financial-dialog-overlay fixed inset-0 z-[9999] flex min-h-screen w-full items-center justify-center overflow-y-auto bg-slate-950/65 p-4 backdrop-blur-sm"
           onMouseDown={(event) => {
             if (event.target === event.currentTarget && !reversalMutation.isPending) closeReversalModal();
           }}
         >
           <div
-            className="relative w-full max-w-xl rounded-[2rem] bg-white p-7 shadow-2xl"
+            className="financial-dialog financial-dialog--padded relative w-full max-w-xl rounded-[2rem] bg-white p-7 shadow-2xl"
             onMouseDown={(event) => event.stopPropagation()}
           >
             <button
@@ -81,7 +81,7 @@ export const ModalidadeReceberOverlays: React.FC<ModalidadeReceberOverlaysProps>
             >
               <X size={18} />
             </button>
-            <div className="mb-6 flex items-center gap-3">
+            <div className="financial-dialog-header mb-6 flex items-center gap-3">
               <div className="rounded-2xl bg-rose-50 p-3 text-rose-600"><RefreshCw size={22} /></div>
               <div>
                 <h5 className="font-black uppercase text-[#001a33]">Estornar baixa manual</h5>
@@ -114,7 +114,7 @@ export const ModalidadeReceberOverlays: React.FC<ModalidadeReceberOverlaysProps>
               </label>
             ) : null}
 
-            <label className="mt-5 block text-[10px] font-black uppercase text-slate-500">
+            <label className="financial-dialog-section mt-5 block text-[10px] font-black uppercase text-slate-500">
               Motivo do estorno
               <textarea
                 value={reversalReason}

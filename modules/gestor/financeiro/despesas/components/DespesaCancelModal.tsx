@@ -47,9 +47,9 @@ const DespesaCancelModal: React.FC<DespesaCancelModalProps> = ({
         role="dialog"
         aria-modal="true"
         aria-labelledby="cancelar-despesa-title"
-        className="w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl animate-fadeIn"
+        className="financial-dialog financial-dialog--padded w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl animate-fadeIn"
       >
-        <header className="mb-5 flex items-start justify-between gap-4">
+        <header className="financial-dialog-header mb-5 flex items-start justify-between gap-4">
           <div>
             <h3 id="cancelar-despesa-title" className="text-lg font-black uppercase tracking-tight text-[#001a33]">
               {isPago ? 'Estornar e cancelar' : 'Cancelar lançamento'}
@@ -107,7 +107,7 @@ const DespesaCancelModal: React.FC<DespesaCancelModalProps> = ({
           </label>
         )}
 
-        <footer className="mt-6 flex gap-3">
+        <footer className="financial-dialog-footer mt-6 flex gap-3">
           <button
             type="button"
             onClick={onClose}

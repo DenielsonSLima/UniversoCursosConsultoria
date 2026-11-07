@@ -213,7 +213,7 @@ const RenegociacaoWizard: React.FC<RenegociacaoWizardProps> = ({
 
   const content = (
     <div
-      className="fixed inset-0 z-[2147482500] flex h-[100dvh] w-screen overflow-hidden bg-slate-50"
+      className="financial-dialog financial-dialog--fullscreen fixed inset-0 z-[2147482500] flex h-[100dvh] w-screen overflow-hidden bg-slate-50"
       role="dialog"
       aria-modal="true"
       aria-labelledby="renegociacao-wizard-title"
@@ -224,7 +224,7 @@ const RenegociacaoWizard: React.FC<RenegociacaoWizardProps> = ({
         tabIndex={-1}
         className="flex h-full min-h-0 w-full flex-col overflow-hidden bg-slate-50 outline-none"
       >
-        <header className="shrink-0 border-b border-slate-200 bg-white shadow-sm">
+        <header className="financial-dialog-header shrink-0 border-b border-slate-200 bg-white shadow-sm">
           <div className="mx-auto flex w-full max-w-7xl items-start justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
             <div className="min-w-0">
               <p className="text-[10px] font-black uppercase tracking-[0.18em] text-blue-700">Nova proposta</p>
@@ -267,7 +267,7 @@ const RenegociacaoWizard: React.FC<RenegociacaoWizardProps> = ({
           </ol>
         </nav>
 
-        <main className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+        <main className="financial-dialog-body financial-dialog-body--framed min-h-0 flex-1 overflow-y-auto overscroll-contain">
           <div className="mx-auto w-full max-w-7xl p-4 sm:p-6 lg:px-8">
             <h3 ref={stepHeadingRef} tabIndex={-1} className="sr-only">
               {stepHeading[step]}
@@ -394,7 +394,7 @@ const RenegociacaoWizard: React.FC<RenegociacaoWizardProps> = ({
           </div>
         </main>
 
-        <footer className="shrink-0 border-t border-slate-200 bg-white shadow-[0_-8px_24px_-20px_rgba(15,23,42,0.45)]">
+        <footer className="financial-dialog-footer financial-dialog-footer--framed shrink-0 border-t border-slate-200 bg-white shadow-[0_-8px_24px_-20px_rgba(15,23,42,0.45)]">
           <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-3 p-4 sm:px-6 lg:px-8">
             <button
               type="button"

@@ -1,73 +1,134 @@
-# Financeiro — tabelas e listagens nítidas
+# Financeiro — tabelas, modais, abas e seletores
 
 ## Objetivo e aceite
 
-Manter o visual compacto aprovado e uniformizar tabelas, agrupamentos e detalhes das dez abas financeiras. Referências: quatro capturas enviadas pelo usuário. Fonte nativa, pesos moderados, metadados de 12 px com contraste maior, cabeçalhos consistentes, valores tabulares alinhados e ícones centralizados. Sem alterar conteúdo, cálculos, consultas, permissões, seleção ou ações.
+Padronização visual compacta das dez abas financeiras e seus submódulos, conforme capturas e ajustes solicitados durante a revisão local. Tabelas legíveis, modais claros, buscas brancas, comboboxes próprios pesquisáveis e abas com linha inferior. Remover títulos e descrições que repetem a navegação; aproveitar as linhas de abas/filtros para ações. Preservar dados, avisos, permissões, cálculos, seleção, emissão, baixa, estorno e exportação.
 
 ## Manifesto explícito
 
+- `ai/operacao/LOTE_ATIVO.md`
+- `ai/operacao/qualidade/limite-linhas-manifestos.json`
+- `ai/operacao/rag/index.json`
+- `ai/operacao/registros/alteracoes/2026-11-06-financeiro-tabelas-nitidas.md`
+- `internal/versioning/CHANGELOG.md`
+- `internal/versioning/system-version.json`
+- `modules/gestor/caixa/workspace/components/CaixaWorkspacePayablesModal.tsx`
 - `modules/gestor/financeiro/FinanceiroPage.tsx`
-- `modules/gestor/financeiro/receber/components/modalidade-receber/ReceivablesList.tsx`
-- `modules/gestor/financeiro/receber/components/modalidade-receber/ReceivableItemPresentation.tsx`
-- `modules/gestor/financeiro/despesas/components/DespesaTable.tsx`
-- `modules/gestor/financeiro/despesas/components/DespesaGroupedView.tsx`
-- `modules/gestor/financeiro/despesas/components/DespesaCard.tsx`
-- `modules/gestor/financeiro/outros-creditos/OutrosCreditosTab.tsx`
-- `modules/gestor/financeiro/outros-creditos/OtherCreditRow.tsx`
-- `modules/gestor/financeiro/transferencias/components/TransferenciasList.tsx`
+- `modules/gestor/financeiro/components/FinancialSelect.tsx`
+- `modules/gestor/financeiro/components/FinancialUnderlineTabs.tsx`
+- `modules/gestor/financeiro/components/financial-select.css`
+- `modules/gestor/financeiro/components/financial-select.test.tsx`
+- `modules/gestor/financeiro/conciliacao-bancaria/BaneseCnabRemittancePanel.tsx`
+- `modules/gestor/financeiro/conciliacao-bancaria/ConciliacaoBancariaTab.tsx`
+- `modules/gestor/financeiro/conciliacao-bancaria/components/BaneseCnabReturnPanel.tsx`
+- `modules/gestor/financeiro/conciliacao-bancaria/components/CnabReturnResults.tsx`
+- `modules/gestor/financeiro/conciliacao-bancaria/components/ConciliacaoOrigemBaixaPanel.tsx`
+- `modules/gestor/financeiro/conciliacao-bancaria/components/ConciliacaoPagination.tsx`
+- `modules/gestor/financeiro/conciliacao-bancaria/components/ConciliacaoRecebimentoFilters.tsx`
 - `modules/gestor/financeiro/conciliacao-bancaria/components/ConciliacaoRecebimentoRows.tsx`
 - `modules/gestor/financeiro/conciliacao-bancaria/components/ConciliacaoReceivablesPanel.tsx`
 - `modules/gestor/financeiro/conciliacao-bancaria/components/ConciliacaoTransactionsPanel.tsx`
-- `modules/gestor/financeiro/conciliacao-bancaria/components/CnabReturnResults.tsx`
+- `modules/gestor/financeiro/convenios/ConveniosTab.tsx`
+- `modules/gestor/financeiro/convenios/components/ConvenioCloseMonthModal.tsx`
+- `modules/gestor/financeiro/convenios/components/ConvenioCreditModal.tsx`
+- `modules/gestor/financeiro/convenios/components/ConvenioDeleteModal.tsx`
+- `modules/gestor/financeiro/convenios/components/ConvenioFormModal.tsx`
+- `modules/gestor/financeiro/convenios/components/ConvenioModalShell.tsx`
+- `modules/gestor/financeiro/convenios/components/ConvenioMonthCard.tsx`
+- `modules/gestor/financeiro/convenios/components/ConvenioMonthDetailsPage.tsx`
+- `modules/gestor/financeiro/convenios/components/ConvenioMonthsTable.tsx`
+- `modules/gestor/financeiro/despesas/DespesasTab.tsx`
+- `modules/gestor/financeiro/despesas/components/DespesaCancelModal.tsx`
+- `modules/gestor/financeiro/despesas/components/DespesaCard.tsx`
+- `modules/gestor/financeiro/despesas/components/DespesaCredorPicker.tsx`
+- `modules/gestor/financeiro/despesas/components/DespesaDeleteModal.tsx`
+- `modules/gestor/financeiro/despesas/components/DespesaEditModal.tsx`
+- `modules/gestor/financeiro/despesas/components/DespesaForm.tsx`
+- `modules/gestor/financeiro/despesas/components/DespesaFormAssociations.tsx`
+- `modules/gestor/financeiro/despesas/components/DespesaFormCoreFields.tsx`
+- `modules/gestor/financeiro/despesas/components/DespesaFormSettlementFields.tsx`
+- `modules/gestor/financeiro/despesas/components/DespesaGroupedView.tsx`
+- `modules/gestor/financeiro/despesas/components/DespesaModalPortal.tsx`
+- `modules/gestor/financeiro/despesas/components/DespesaReciboModal.tsx`
+- `modules/gestor/financeiro/despesas/components/DespesaTable.tsx`
+- `modules/gestor/financeiro/despesas/fixas/DespesasFixasTab.tsx`
+- `modules/gestor/financeiro/despesas/variaveis/DespesasVariaveisTab.tsx`
+- `modules/gestor/financeiro/emprestimos/EmprestimosTab.tsx`
+- `modules/gestor/financeiro/emprestimos/components/EmprestimoBaixaModal.tsx`
+- `modules/gestor/financeiro/emprestimos/components/EmprestimoCard.tsx`
+- `modules/gestor/financeiro/emprestimos/components/EmprestimoDetailsPage.tsx`
+- `modules/gestor/financeiro/emprestimos/components/EmprestimoForm.tsx`
+- `modules/gestor/financeiro/emprestimos/components/EmprestimoLifecycleModal.tsx`
+- `modules/gestor/financeiro/emprestimos/components/EmprestimosExportModal.tsx`
+- `modules/gestor/financeiro/emprestimos/components/EmprestimosTable.tsx`
 - `modules/gestor/financeiro/financial-data.css`
-- `modules/gestor/financeiro/conciliacao-bancaria/BaneseCnabRemittancePanel.tsx`
-- `modules/gestor/financeiro/conciliacao-bancaria/components/BaneseCnabReturnPanel.tsx`
+- `modules/gestor/financeiro/financial-dialogs.css`
+- `modules/gestor/financeiro/outros-creditos/OtherCreditCancellationModal.tsx`
+- `modules/gestor/financeiro/outros-creditos/OtherCreditCreateModal.tsx`
+- `modules/gestor/financeiro/outros-creditos/OtherCreditPaymentModal.tsx`
+- `modules/gestor/financeiro/outros-creditos/OtherCreditPdvModal.tsx`
+- `modules/gestor/financeiro/outros-creditos/OtherCreditPlanFinancialForm.tsx`
+- `modules/gestor/financeiro/outros-creditos/OtherCreditPlanForm.tsx`
+- `modules/gestor/financeiro/outros-creditos/OtherCreditPlanModal.tsx`
+- `modules/gestor/financeiro/outros-creditos/OtherCreditPlanWizard.tsx`
+- `modules/gestor/financeiro/outros-creditos/OtherCreditReversalModal.tsx`
+- `modules/gestor/financeiro/outros-creditos/OtherCreditRow.tsx`
+- `modules/gestor/financeiro/outros-creditos/OutrosCreditosTab.tsx`
+- `modules/gestor/financeiro/outros-creditos/other-credit-create-modal.test.ts`
+- `modules/gestor/financeiro/outros-creditos/other-credit-pdv.test.tsx`
+- `modules/gestor/financeiro/outros-debitos/OutrosDebitosTab.tsx`
+- `modules/gestor/financeiro/receber/ReceberTab.tsx`
+- `modules/gestor/financeiro/receber/components/ReceberActions.tsx`
+- `modules/gestor/financeiro/receber/components/manual-settlement/ManualSettlementModal.tsx`
+- `modules/gestor/financeiro/receber/components/modalidade-receber/InstitutionalReceiptModal.tsx`
+- `modules/gestor/financeiro/receber/components/modalidade-receber/ModalidadeReceberOverlays.tsx`
+- `modules/gestor/financeiro/receber/components/modalidade-receber/ModalidadeReceberToolbar.tsx`
+- `modules/gestor/financeiro/receber/components/modalidade-receber/ReceivableItemPresentation.tsx`
+- `modules/gestor/financeiro/receber/components/modalidade-receber/ReceivablesList.tsx`
+- `modules/gestor/financeiro/receber/components/modalidade-receber/modalidade-receber-toolbar.test.tsx`
+- `modules/gestor/financeiro/renegociacoes/RenegociacoesTab.tsx`
+- `modules/gestor/financeiro/renegociacoes/components/CandidateEnrollment.tsx`
 - `modules/gestor/financeiro/renegociacoes/components/CandidateGroups.tsx`
 - `modules/gestor/financeiro/renegociacoes/components/CandidateStudentCard.tsx`
-- `modules/gestor/financeiro/renegociacoes/components/CandidateEnrollment.tsx`
-- `modules/gestor/financeiro/renegociacoes/components/WizardSteps.tsx`
+- `modules/gestor/financeiro/renegociacoes/components/CanonicalSummary.tsx`
+- `modules/gestor/financeiro/renegociacoes/components/DiscardProposalDialog.tsx`
 - `modules/gestor/financeiro/renegociacoes/components/ProposalCards.tsx`
 - `modules/gestor/financeiro/renegociacoes/components/ProposalDetail.tsx`
-- `modules/gestor/financeiro/renegociacoes/components/CanonicalSummary.tsx`
-- `modules/gestor/financeiro/emprestimos/components/EmprestimosTable.tsx`
-- `modules/gestor/financeiro/emprestimos/components/EmprestimoDetailsPage.tsx`
-- `modules/gestor/financeiro/convenios/components/ConvenioMonthsTable.tsx`
-- `modules/gestor/financeiro/convenios/components/ConvenioMonthDetailsPage.tsx`
-- `modules/gestor/financeiro/emprestimos/components/EmprestimoCard.tsx`
-- `modules/gestor/financeiro/convenios/components/ConvenioMonthCard.tsx`
-- `ai/operacao/registros/alteracoes/2026-11-06-financeiro-tabelas-nitidas.md`
-- `ai/operacao/LOTE_ATIVO.md`
-- `ai/operacao/qualidade/limite-linhas-manifestos.json`
+- `modules/gestor/financeiro/renegociacoes/components/RenegociacaoFilters.tsx`
+- `modules/gestor/financeiro/renegociacoes/components/RenegociacaoPanels.tsx`
+- `modules/gestor/financeiro/renegociacoes/components/RenegociacaoWizard.tsx`
+- `modules/gestor/financeiro/renegociacoes/components/WizardSteps.tsx`
+- `modules/gestor/financeiro/resumo/ResumoTab.tsx`
+- `modules/gestor/financeiro/settlements/FinancialPaymentHistory.tsx`
+- `modules/gestor/financeiro/settlements/FinancialPaymentModal.tsx`
+- `modules/gestor/financeiro/settlements/FinancialPaymentReversal.tsx`
+- `modules/gestor/financeiro/transferencias/TransferenciasTab.tsx`
+- `modules/gestor/financeiro/transferencias/components/TransferenciaFormModal.tsx`
+- `modules/gestor/financeiro/transferencias/components/TransferenciaPicker.tsx`
+- `modules/gestor/financeiro/transferencias/components/TransferenciasList.tsx`
+- `modules/gestor/relatorios/pdf/ReportPdfPreviewModal.tsx`
+- `modules/gestor/secretaria/shared/CanonicalDocumentPreviewModal.tsx`
 
-- `internal/versioning/system-version.json`
-- `internal/versioning/CHANGELOG.md`
-- `ai/operacao/rag/index.json`
-
-Total: 35 arquivos.
+Total: 102 arquivos.
 
 ## Escopo e fronteiras
 
-- Resumo: somente artigos do diálogo de compromissos, condicionado ao Financeiro ativo; nenhuma regra global de Caixa.
-- A Receber e modalidades: tabela, grupos, linhas, cartões e paginação existentes.
-- A Pagar e Outros Débitos: tabela, cartões e grupos compartilhados, mantendo seleção e rateio informativo.
-- Renegociações: candidatos, matrículas, propostas e resumos, incluindo portais.
-- Empréstimos e Convênios: tabelas, cartões e detalhes de parcelas, rateios e extrato.
-- Transferências: lista e paginação existentes.
-- Outros Créditos: tabela, grupos, seleção e linhas.
-- Conciliação: recebimentos, transações, cobranças, ocorrências e listas de remessa/retorno; formulários e preparação bancária preservados.
-
-A folha de estilo só atua em tela, sob presença do módulo Financeiro e marcadores explícitos. Sem mudanças em geradores, modelos, prévias PDF ou impressão. Uma frente independente fez inventário, marcadores e revisão; coordenador cuidou da camada visual e demais marcadores.
+- Tabelas, grupos, cartões e detalhes das dez abas com fonte nativa, contraste, densidade e valores alinhados.
+- Todos os modais ativos inventariados: despesas; recebimento e estorno; créditos, PDV, carnê e pagamento; empréstimos; convênios; transferências; renegociações; compromissos do Resumo e chrome documental.
+- Estilos de modais limitados à tela com Financeiro ativo. Conteúdo dos documentos, compositores PDF, marca-d’água, QR/códigos Banese e impressão preservados.
+- Seletores nativos do Financeiro substituídos por FinancialSelect: busca por rótulo/identificadores, ID canônico, portal próprio, teclado e estados. Texto digitado não cria vínculo. Bloqueio de fieldset e validação obrigatória conservados.
+- Abas principais, modalidades, períodos de listagem e status usam FinancialUnderlineTabs compacto. Presets de data, etapas e botões de visualização mantêm sua função própria.
+- Ações aproveitam abas internas em A Receber/A Pagar/Outros Créditos/Outros Débitos/Conciliação e filtros em Empréstimos/Convênios/Transferências. Resumo já possuía ações contextuais adequadas.
+- Três frentes independentes, integradas e revisadas; nenhum serviço, RPC, query key, autorização, payload financeiro ou cálculo alterado.
 
 ## Validação
 
-Concluída a validação técnica: AST dos 28 arquivos TSX equivalente à base após remover somente classes e import CSS; TypeScript, lint focado, build Node 24.22.1, teto de linhas e contrato operacional aprovados. Foram verificadas 128 montagens SSR dos componentes reais, sem I/O nem execução de callbacks.
+TypeScript completo, lint do manifesto e build de integração aprovados. Inventário confirma ausência de select/datalist nativo em fontes de produto do Financeiro e tablists concentrados no componente compartilhado; todos os manuais do lote abaixo de 500 linhas. Comparação AST verificou controllers e atributos de ações, além dos marcadores visuais dos modais.
 
-Contratos: 63 de 65 aprovados. Duas asserções legadas falham de forma idêntica na base 4.8.250: lifecycle de Empréstimos procura uma RPC no antigo arquivo agregador; apresentação de Receber espera abrir um título Banese sem capability canônica. Testes, cálculos e permissões não foram modificados para contornar essas falhas.
+Testes focados: 30 verificações de créditos/PDV/toolbar/modal manual; 9 do combobox real (incluindo ID canônico, teclado, foco, estados, fieldset desabilitado e seleção obrigatória ao reabrir). Contratos e smoke DOM das abas de Conciliação e Renegociações aprovados. Os contratos anteriores de tabelas tiveram 63/65 aprovados; as duas falhas de lifecycle legado e capability Banese foram reproduzidas na base 4.8.250, sem enfraquecer regras para contorná-las.
 
-Capturas analisadas e tela atual confirmada antes do patch. Usuário solicitou seguir pelas fotos e código após questionar o uso do navegador; nenhuma inspeção visual do resultado em navegador será realizada neste lote. A validação visual final permanece limitada às referências fornecidas.
+Prévia local usa os componentes reais com dados sintéticos e escritas bloqueadas. Conferência visual começou no Safari e passou ao Chrome por solicitação explícita do usuário para liberar seu navegador. Formulários, confirmações, documentos, agrupamentos e ações foram revisados; não houve emissão, pagamento, estorno, exclusão ou geração de documento real. Responsividade e estados não cobertos pela conferência visual permanecem sujeitos ao aceite na Preview.
 
 ## Entrega
 
-Versão 4.8.251 preparada para revisão na branch `release/financeiro-tabelas-4.8.251`, sobre a base remota 4.8.250. Alterações locais paralelas preservadas; somente marcadores de classe e importação do estilo foram aplicados no workspace. Commit remoto usa o candidato completo da base atual, com este manifesto. Produção não solicitada.
-
-A revisão final confirmou escopo em tela e no Financeiro ativo, inclusive portais. Índice operacional atualizado uma vez (15 fontes/80 trechos). PR e Preview terão seus checks acompanhados no GitHub; conferência visual final não foi executada por orientação do usuário.
+Versão 4.8.251 na PR #347, branch release/financeiro-tabelas-4.8.251, sobre 4.8.250. Atualização do mesmo lote após revisão do usuário; manifesto consolidado e alterações locais paralelas preservadas. Artefatos de teste, dados sintéticos e saídas de build não integram o commit. Produção não solicitada neste lote.

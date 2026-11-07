@@ -48,7 +48,7 @@ const EmprestimoLifecycleModal: React.FC<EmprestimoLifecycleModalProps> = ({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[240] flex min-h-[100dvh] items-end justify-center bg-[#001a33]/60 p-0 backdrop-blur-sm sm:items-center sm:p-4"
+      className="financial-dialog-overlay fixed inset-0 z-[240] flex min-h-[100dvh] items-end justify-center bg-[#001a33]/60 p-0 backdrop-blur-sm sm:items-center sm:p-4"
       role="presentation"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget && !isPending) onClose();
@@ -60,13 +60,13 @@ const EmprestimoLifecycleModal: React.FC<EmprestimoLifecycleModalProps> = ({
         aria-labelledby={titleId}
         aria-describedby={descriptionId}
         aria-busy={isPending}
-        className="relative w-full max-w-lg rounded-t-[2rem] border border-white/70 bg-white p-6 shadow-2xl sm:rounded-[2rem] sm:p-8"
+        className="financial-dialog financial-dialog--padded relative w-full max-w-lg rounded-t-[2rem] border border-white/70 bg-white p-6 shadow-2xl sm:rounded-[2rem] sm:p-8"
       >
         <button type="button" onClick={onClose} disabled={isPending} className="absolute right-4 top-4 rounded-xl p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-50" aria-label="Fechar confirmação de ciclo de vida">
           <X size={19} />
         </button>
 
-        <div className="flex items-start gap-4 pr-10">
+        <div className="financial-dialog-header flex items-start gap-4 pr-10">
           <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-rose-50 text-rose-600">
             {hasSettlement ? <RotateCcw size={28} aria-hidden="true" /> : <AlertTriangle size={28} aria-hidden="true" />}
           </div>
@@ -113,7 +113,7 @@ const EmprestimoLifecycleModal: React.FC<EmprestimoLifecycleModalProps> = ({
           </div>
         ) : null}
 
-        <footer className="mt-7 flex flex-col-reverse gap-3 sm:flex-row">
+        <footer className="financial-dialog-footer mt-7 flex flex-col-reverse gap-3 sm:flex-row">
           <button type="button" onClick={onClose} disabled={isPending} className="flex-1 rounded-xl border border-slate-200 px-4 py-3 text-xs font-black uppercase tracking-wide text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50">
             Manter empréstimo
           </button>

@@ -14,11 +14,11 @@ Histórico arquivado: [05/10/2026 — versões 4.8.169 a 4.8.170](./changelog/20
 
 Histórico arquivado: [05/10/2026 — versões 4.8.171 a 4.8.174](./changelog/2026-10-05-versoes-4-8-171-a-174.md).
 
-## [4.8.251] - 2026-11-06
+## [4.8.251] - 2026-11-07
 
 ### Alterado
-- Tabelas, agrupamentos e listagens das dez abas financeiras seguem um padrão de fonte, contraste, espaçamento, cabeçalhos e alinhamento de valores.
-- Cartões e detalhes financeiros acompanham o mesmo padrão, com regras restritas à tela e ao Financeiro ativo; cálculos, dados, permissões e operações preservados.
+- Tabelas e modais das dez abas financeiras seguem um padrão compacto de fonte, contraste, espaçamento e alinhamento; documentos, dados e regras preservados.
+- Abas com linha inferior, buscas brancas e seletores próprios pesquisáveis; cabeçalhos repetidos removidos e ações alinhadas às abas/filtros, preservando permissões e operações.
 
 ## [4.8.250] - 2026-11-06
 

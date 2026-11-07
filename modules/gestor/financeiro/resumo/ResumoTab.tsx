@@ -171,12 +171,11 @@ const ResumoTab: React.FC<ResumoTabProps> = ({
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-[11px] font-medium tracking-[0.08em] text-blue-600">Visão financeira</span>
               <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-medium tracking-normal text-slate-600">
                 {poloId && poloId !== 'todos' ? 'Polo selecionado' : 'Visão global'}
               </span>
             </div>
-            <h2 className="mt-1 text-[22px] font-medium tracking-tight text-[#001a33]">Resumo financeiro</h2>
+            <h2 className="sr-only">Resumo financeiro</h2>
           </div>
 
           <div className="flex flex-wrap items-center gap-3">

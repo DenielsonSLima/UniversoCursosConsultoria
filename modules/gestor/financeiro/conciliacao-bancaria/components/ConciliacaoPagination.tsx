@@ -1,3 +1,4 @@
+import FinancialSelect from '../../components/FinancialSelect';
 import React from 'react';
 import {
   ChevronLeft,
@@ -81,16 +82,9 @@ export const ConciliacaoPagination: React.FC<ConciliacaoPaginationProps> = ({
         {onPageSizeChange && (
           <div className="flex items-center gap-1.5 text-[11px]">
             <span className="text-slate-400">Exibir:</span>
-            <select
-              value={pageSize}
-              onChange={(e) => onPageSizeChange(Number(e.target.value))}
-              className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px] font-bold text-slate-700 outline-none transition-colors hover:border-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-200"
-            >
-              <option value={10}>10 por pág.</option>
-              <option value={20}>20 por pág.</option>
-              <option value={50}>50 por pág.</option>
-              <option value={100}>100 por pág.</option>
-            </select>
+            <FinancialSelect value={String(pageSize)} onValueChange={(value) => onPageSizeChange(Number(value))}
+              ariaLabel="Lançamentos por página" options={[10, 20, 50, 100].map((size) => ({ value: String(size), label: `${size} por pág.` }))}
+              className="w-36" />
           </div>
         )}
       </div>
