@@ -1,3 +1,4 @@
+import { currencyInputToCents } from '../../../../shared/utils/currency-input';
 import { useState } from 'react';
 import { formatCentsInput } from '../renegociacoes.model';
 import type { RenegociacaoScheduleEntry } from '../renegociacoes.types';
@@ -9,11 +10,9 @@ export interface ScheduleDraftEntry {
 }
 
 // Apenas conversão de entrada; composição, soma e regras financeiras são validadas no servidor.
-const parseAmount = (value: string) => {
-  const match = /^(\d+)(?:[,.](\d{1,2}))?$/.exec(value.trim());
-  if (!match) return null;
-  const cents = Number(match[1]) * 100 + Number((match[2] || '').padEnd(2, '0'));
-  return Number.isSafeInteger(cents) && cents > 0 ? cents : null;
+export const parseRenegociacaoScheduleAmount = (value: string) => {
+  const cents = currencyInputToCents(value);
+  return cents !== null && cents > 0 ? cents : null;
 };
 
 export const useRenegociacaoScheduleDraft = (entries: RenegociacaoScheduleEntry[] = []) => {
@@ -24,7 +23,7 @@ export const useRenegociacaoScheduleDraft = (entries: RenegociacaoScheduleEntry[
   const rows = draft || canonical;
   const changed = JSON.stringify(rows) !== JSON.stringify(canonical);
   const parsed = rows.map((row) => ({
-    sequence: row.sequence, dueDate: row.dueDate, amountCents: parseAmount(row.amount),
+    sequence: row.sequence, dueDate: row.dueDate, amountCents: parseRenegociacaoScheduleAmount(row.amount),
   }));
   const valid = parsed.every((row) => /^\d{4}-\d{2}-\d{2}$/.test(row.dueDate) && row.amountCents !== null);
   return {

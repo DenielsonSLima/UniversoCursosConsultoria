@@ -1,3 +1,4 @@
+import { sanitizeCurrencyInput } from '../../../shared/utils/currency-input';
 import FinancialSelect from '../components/FinancialSelect';
 import React, { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
@@ -5,7 +6,7 @@ import { Landmark, Link as LinkIcon, Loader2, Plus, QrCode, Tag, WalletCards, X 
 import DespesaCredorPicker from '../despesas/components/DespesaCredorPicker';
 import CategoriaFinanceiraInlineModal from '../despesas/components/CategoriaFinanceiraInlineModal';
 import type { OutrosCreditosModel } from './useOutrosCreditos';
-import { formatCurrency, formatCurrencyInput, normalizeCurrencyInput } from './outros-creditos.presentation';
+import { formatCurrency, formatCurrencyInput } from './outros-creditos.presentation';
 
 type ModalModel = Pick<OutrosCreditosModel,
   | 'openPdv'
@@ -213,7 +214,7 @@ export const OtherCreditCreateModal = ({ model }: { model: ModalModel }) => {
                     type="text"
                     inputMode="decimal"
                     value={value}
-                    onChange={(event) => setValue(normalizeCurrencyInput(event.target.value))}
+                    onChange={(event) => setValue(sanitizeCurrencyInput(event.target.value, value))}
                     onBlur={() => setValue((current) => formatCurrencyInput(current))}
                     placeholder="0,00"
                     className="h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-700 outline-none focus:border-emerald-400 focus:bg-white"

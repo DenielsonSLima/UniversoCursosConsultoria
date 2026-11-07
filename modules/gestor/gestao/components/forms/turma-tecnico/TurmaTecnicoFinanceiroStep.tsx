@@ -1,3 +1,4 @@
+import SharedCurrencyInput from '../../../../../shared/components/CurrencyInput';
 import React, { useEffect, useState } from 'react';
 import { BadgeDollarSign, Calculator, CalendarDays, FileText, Info, Loader2, ReceiptText, Repeat2, WalletCards } from 'lucide-react';
 import {
@@ -8,7 +9,7 @@ import {
   type TurmaTecnicoFinanceiroPreview,
 } from './turma-tecnico-financeiro-preview.service';
 import type { TurmaTecnicoFormData } from './turma-tecnico-form.types';
-import { formatCurrencyBRL, parseCurrencyBRLInput } from './turma-tecnico-form.utils';
+import { formatCurrencyBRL } from './turma-tecnico-form.utils';
 
 interface TurmaTecnicoFinanceiroStepProps {
   formData: TurmaTecnicoFormData;
@@ -29,13 +30,11 @@ interface CurrencyInputProps {
 }
 
 const CurrencyInput: React.FC<CurrencyInputProps> = ({ disabled = false, value, onValueChange }) => (
-  <input
-    type="text"
-    inputMode="numeric"
+  <SharedCurrencyInput
     disabled={disabled}
-    value={formatCurrencyBRL(value)}
-    onFocus={(event) => event.currentTarget.select()}
-    onChange={(event) => onValueChange(parseCurrencyBRLInput(event.target.value))}
+    value={value}
+    onValueChange={onValueChange}
+    prefix="R$ "
     className={inputClass}
   />
 );

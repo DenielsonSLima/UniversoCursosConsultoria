@@ -1,8 +1,8 @@
 {
-  "version": "4.8.260",
+  "version": "4.8.261",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 269,
+  "revision": 270,
   "releasedAt": "2026-11-07",
-  "summary": "Biblioteca compacta com navegação, explorador, permissões e publicação em etapas preservadas"
+  "summary": "Campos monetários com centavos automáticos em despesas, financeiro, turmas e cadastros, seguindo Contas a Receber"
 }

@@ -1,3 +1,4 @@
+import { sanitizeCurrencyInput } from '../../../../../../shared/utils/currency-input';
 import React, { useEffect, useState } from 'react';
 import { formatExternalTransferDecimal, parseExternalTransferDecimal } from './external-transfer-presentation';
 
@@ -19,8 +20,9 @@ const ExternalTransferDecimalInput: React.FC<Props> = ({ label, value, onChange,
       <input type="text" inputMode="decimal" aria-label={label} disabled={disabled} value={text}
         onFocus={() => setEditing(true)}
         onChange={(event) => {
-          setText(event.target.value);
-          onChange(parseExternalTransferDecimal(event.target.value, percentage) ?? '');
+          const nextText = percentage ? event.target.value : sanitizeCurrencyInput(event.target.value, text);
+          setText(nextText);
+          onChange(parseExternalTransferDecimal(nextText, percentage) ?? '');
         }}
         onBlur={() => {
           const parsed = parseExternalTransferDecimal(text, percentage);

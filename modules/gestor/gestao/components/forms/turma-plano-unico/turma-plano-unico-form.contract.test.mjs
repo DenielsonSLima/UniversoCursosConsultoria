@@ -70,7 +70,6 @@ test('a submissão envia somente o contrato do plano financeiro único e bloquei
 
 test('campos monetários usam real brasileiro com duas casas decimais', () => {
   assert.match(financialStepSource, /<CurrencyInput/);
-  assert.match(currencyInputSource, /formatCurrencyBRL/);
-  assert.match(currencyInputSource, /minimumFractionDigits:\s*2/);
-  assert.match(currencyInputSource, /maximumFractionDigits:\s*2/);
+  assert.match(currencyInputSource, /SharedCurrencyInput/);
+  assert.match(currencyInputSource, /prefix="R\$ "/);
 });

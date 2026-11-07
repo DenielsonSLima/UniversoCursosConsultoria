@@ -1,3 +1,4 @@
+import { sanitizeCurrencyInput } from '../../../../shared/utils/currency-input';
 import React from 'react';
 import { CalendarDays, Loader2 } from 'lucide-react';
 import { formatCents, formatRenegociacaoDate } from '../renegociacoes.model';
@@ -49,7 +50,7 @@ const RenegociacaoScheduleEditor: React.FC<Props> = ({
           <label className="text-[10px] font-black uppercase text-slate-500">
             Valor (R$)
             <input aria-label={`Valor da parcela ${row.sequence}`} inputMode="decimal" value={row.amount}
-              onChange={(event) => onChange(row.sequence, 'amount', event.target.value)}
+              onChange={(event) => onChange(row.sequence, 'amount', sanitizeCurrencyInput(event.target.value, row.amount))}
               className={inputClass} />
           </label>
         </div>

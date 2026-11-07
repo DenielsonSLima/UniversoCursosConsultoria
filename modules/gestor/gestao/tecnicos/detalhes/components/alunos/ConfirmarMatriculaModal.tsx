@@ -1,3 +1,4 @@
+import SharedCurrencyInput from '../../../../../../shared/components/CurrencyInput';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   ArrowLeft,
@@ -76,23 +77,16 @@ const formatPercent = (value: string | number, maximumFractionDigits = 4) => (
   new Intl.NumberFormat('pt-BR', { maximumFractionDigits }).format(Number(value) || 0)
 );
 
-const parseCurrencyInput = (value: string) => {
-  const digits = value.replace(/\D/g, '');
-  return digits ? Number(digits) / 100 : 0;
-};
-
 const CurrencyInput: React.FC<{
   value: number;
   onChange: (value: number) => void;
   disabled?: boolean;
 }> = ({ value, onChange, disabled = false }) => (
-  <input
-    type="text"
-    inputMode="numeric"
+  <SharedCurrencyInput
     disabled={disabled}
-    value={formatMoney(value)}
-    onFocus={(event) => event.currentTarget.select()}
-    onChange={(event) => onChange(parseCurrencyInput(event.target.value))}
+    value={value}
+    onValueChange={onChange}
+    prefix="R$ "
     className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm font-bold text-slate-700 outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-100 disabled:bg-slate-100"
   />
 );

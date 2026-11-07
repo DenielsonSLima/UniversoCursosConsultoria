@@ -1,3 +1,4 @@
+import { sanitizeCurrencyInput } from '../../../shared/utils/currency-input';
 import React from 'react';
 import { Banknote, CreditCard, Loader2, Percent, Receipt, Save, WalletCards } from 'lucide-react';
 import { CursoFinanceiroConfig } from '../cadastros.types';
@@ -58,8 +59,9 @@ const CursoFinanceiroTab: React.FC<CursoFinanceiroTabProps> = ({
               <span className="text-sm font-black text-slate-400">R$</span>
               <input
                 type="text"
+                inputMode="decimal"
                 value={valorBaseInput}
-                onChange={(event) => setValorBaseInput(event.target.value)}
+                onChange={(event) => setValorBaseInput(sanitizeCurrencyInput(event.target.value, valorBaseInput))}
                 onBlur={() => {
                   const nextValue = parseMoneyInput(valorBaseInput, financeiroConfig.valorBase);
                   updateConfig({ valorBase: nextValue });
@@ -75,8 +77,9 @@ const CursoFinanceiroTab: React.FC<CursoFinanceiroTabProps> = ({
               <span className="text-sm font-black text-slate-400">R$</span>
               <input
                 type="text"
+                inputMode="decimal"
                 value={descontoInput}
-                onChange={(event) => setDescontoInput(event.target.value)}
+                onChange={(event) => setDescontoInput(sanitizeCurrencyInput(event.target.value, descontoInput))}
                 onBlur={() => {
                   const nextValue = parseMoneyInput(descontoInput, financeiroConfig.descontoPontualidade);
                   updateConfig({ descontoPontualidade: nextValue });

@@ -1,3 +1,5 @@
+import { sanitizeCurrencyInput } from '../../shared/utils/currency-input';
+
 export const formatPatrimonioCurrency = (value: number | string) => {
   if (typeof value === 'string') {
     const cents = parsePatrimonioCurrencyToCents(value);
@@ -77,39 +79,7 @@ export const formatPatrimonioCurrencyInput = (value: string) => {
 
 export const formatPatrimonioCurrencyTyping = (value: string, previousValue: string) => {
   if (value.includes('-')) return previousValue;
-  const cleaned = value
-    .replace(/^R\$\s*/i, '')
-    .replace(/\s/g, '')
-    .replace(/[^\d,.]/g, '');
-  if (!cleaned) return '';
-
-  const formatInteger = (digits: string) => {
-    const normalized = digits.replace(/^0+(?=\d)/, '') || '0';
-    return normalized.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-  };
-  const commaCount = (cleaned.match(/,/g) || []).length;
-  if (commaCount > 1) return previousValue;
-
-  if (commaCount === 1) {
-    const [integerPart, fractionPart = ''] = cleaned.split(',');
-    const fractionDigits = fractionPart.replace(/\D/g, '');
-    if (fractionDigits.length > 2) return previousValue;
-    return `${formatInteger(integerPart.replace(/\D/g, ''))},${fractionDigits}`;
-  }
-
-  const dotCount = (cleaned.match(/\./g) || []).length;
-  if (dotCount === 1) {
-    const [integerPart, fractionPart = ''] = cleaned.split('.');
-    const previousUsesGroupedDot = previousValue.includes('.') && !previousValue.includes(',');
-    const appendedToGroupedInteger = previousUsesGroupedDot && cleaned.startsWith(previousValue);
-    const looksLikeDecimal = !appendedToGroupedInteger && fractionPart.length <= 2;
-
-    if (looksLikeDecimal) {
-      return `${formatInteger(integerPart.replace(/\D/g, ''))},${fractionPart.replace(/\D/g, '')}`;
-    }
-  }
-
-  return formatInteger(cleaned.replace(/\D/g, ''));
+  return sanitizeCurrencyInput(value, previousValue);
 };
 
 export const parsePatrimonioQuantity = (value: string): number | null => {

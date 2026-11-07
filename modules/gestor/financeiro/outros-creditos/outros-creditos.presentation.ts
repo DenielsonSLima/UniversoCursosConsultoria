@@ -1,3 +1,4 @@
+import { sanitizeCurrencyInput } from '../../../shared/utils/currency-input';
 import type { ContasReceber } from '../financeiro.types';
 
 export type StatusScope = 'received' | 'pending' | 'canceled' | 'all';
@@ -7,11 +8,7 @@ export type OtherCreditGroupMode = 'partner' | 'polo' | 'none';
 export const today = (date = new Date()) =>
   `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 
-export const formatPdvCurrencyInput = (value: string) => {
-  const digits = value.replace(/\D/g, '');
-  if (!digits) return '';
-  return (Number(digits) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-};
+export const formatPdvCurrencyInput = sanitizeCurrencyInput;
 
 export const PENDING_OUTROS_CREDIT_STATUSES: ReadonlySet<string> = new Set([
   'PENDENTE',

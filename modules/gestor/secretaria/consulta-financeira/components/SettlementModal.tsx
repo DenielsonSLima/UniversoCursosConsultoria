@@ -1,3 +1,4 @@
+import { sanitizeCurrencyInput, formatCurrencyInput } from '../../../../shared/utils/currency-input';
 import InstitutionalSelect from '../../../../shared/components/InstitutionalSelect';
 import { Loader2, ReceiptText, X } from 'lucide-react';
 import type { SecretariaSettlementController } from '../hooks/useSecretariaSettlement';
@@ -76,8 +77,11 @@ const SettlementModal = ({
               Valor recebido
             </span>
             <input
+              type="text"
+              inputMode="decimal"
               value={form.paidValue}
-              onChange={(event) => controller.setField('paidValue', event.target.value)}
+              onChange={(event) => controller.setField('paidValue', sanitizeCurrencyInput(event.target.value, form.paidValue))}
+              onBlur={(event) => controller.setField('paidValue', formatCurrencyInput(event.target.value))}
               className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-3 text-sm font-black text-slate-700 outline-none focus:border-cyan-400"
             />
           </label>
@@ -146,8 +150,11 @@ const FinancialValueInput = ({
       {label}
     </span>
     <input
+      type="text"
+      inputMode="decimal"
       value={value}
-      onChange={(event) => onChange(event.target.value)}
+      onChange={(event) => onChange(sanitizeCurrencyInput(event.target.value, value))}
+      onBlur={(event) => onChange(formatCurrencyInput(event.target.value))}
       placeholder="0,00"
       className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-3 text-sm font-black text-slate-700 outline-none focus:border-cyan-400"
     />

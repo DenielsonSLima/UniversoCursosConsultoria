@@ -1,6 +1,7 @@
+import { sanitizeCurrencyInput } from '../../../shared/utils/currency-input';
 import React from 'react';
 import { Loader2, RefreshCw } from 'lucide-react';
-import { formatCurrencyInput, normalizeCurrencyInput } from './outros-creditos.presentation';
+import { formatCurrencyInput } from './outros-creditos.presentation';
 import type { OtherCreditPlanForm } from './other-credit-plan.model';
 import type { OtherCreditPlanPreview } from './other-credit-plan.types';
 
@@ -49,7 +50,7 @@ export function OtherCreditPlanSchedule({ form, schedule, current, pending, disa
             return <tr key={item.ordem}>
               <td className="px-4 py-3 font-bold text-[#001a33]">{name}</td>
               <td className="px-4 py-3"><input aria-label={`Valor de ${name}`} type="text" inputMode="decimal" value={value}
-                onChange={event => change({ value: normalizeCurrencyInput(event.target.value) })}
+                onChange={event => change({ value: sanitizeCurrencyInput(event.target.value, value) })}
                 onBlur={() => change({ value: formatCurrencyInput(value) })} className={inputClass} /></td>
               <td className="px-4 py-3"><input aria-label={`Vencimento de ${name}`} type="date" value={dueDate}
                 onChange={event => change({ dueDate: event.target.value })} className={inputClass} /></td>

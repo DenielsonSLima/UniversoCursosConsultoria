@@ -1,3 +1,4 @@
+import { sanitizeCurrencyInput } from '../../../../shared/utils/currency-input';
 import React, { useEffect, useId, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Landmark, Loader2, Plus, X } from 'lucide-react';
@@ -94,7 +95,7 @@ export default function TransferenciaFormModal({
             </label>
             <label className="space-y-1">
               <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">Valor</span>
-              <input type="text" inputMode="decimal" value={form.valor} disabled={isPending} onChange={(event) => setForm((current) => ({ ...current, valor: event.target.value.replace(/[^\d.,]/g, '') }))} onBlur={() => {
+              <input type="text" inputMode="decimal" value={form.valor} disabled={isPending} onChange={(event) => setForm((current) => ({ ...current, valor: sanitizeCurrencyInput(event.target.value, current.valor) }))} onBlur={() => {
                 const parsed = Number(form.valor.replace(/\./g, '').replace(',', '.'));
                 setForm((current) => ({ ...current, valor: Number.isFinite(parsed) && parsed > 0 ? parsed.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '' }));
               }} placeholder="0,00" className="h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-700 outline-none focus:border-slate-400 focus:bg-white" />

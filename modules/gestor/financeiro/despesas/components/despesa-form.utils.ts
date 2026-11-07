@@ -28,30 +28,10 @@ export const parseCurrencyInput = (value: string) => {
   return Number(normalized || 0);
 };
 
-export const formatCurrencyInput = (value: string) => {
-  const parsed = parseCurrencyInput(value);
-  if (!Number.isFinite(parsed) || parsed <= 0) return '';
-  return parsed.toLocaleString('pt-BR', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-};
-
-export const formatCurrencyTyping = (value: string, previousValue: string) => {
-  const cleaned = value.replace(/[^\d,.]/g, '');
-  if (!cleaned) return '';
-  const previousInteger = previousValue.split(',')[0].replace(/\D/g, '');
-  if (previousValue.endsWith(',00')) {
-    const appended = value.startsWith(previousValue)
-      ? value.slice(previousValue.length).replace(/\D/g, '')
-      : '';
-    if (appended) return formatCurrencyInput(`${previousInteger}${appended}`);
-    if (value === previousValue.slice(0, -1)) {
-      return formatCurrencyInput(previousInteger.slice(0, -1));
-    }
-  }
-  return formatCurrencyInput(cleaned);
-};
+export {
+  formatCurrencyInput,
+  sanitizeCurrencyInput as formatCurrencyTyping,
+} from '../../../../shared/utils/currency-input.ts';
 
 export const today = () => {
   const now = new Date();

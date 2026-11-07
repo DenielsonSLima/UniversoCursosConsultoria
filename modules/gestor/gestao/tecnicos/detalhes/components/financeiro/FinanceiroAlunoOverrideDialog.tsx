@@ -1,3 +1,4 @@
+import CurrencyInput from '../../../../../../shared/components/CurrencyInput';
 import React, { useEffect, useRef, useState } from 'react';
 import { CheckCircle2, KeyRound, Loader2, LockKeyhole, RotateCcw, X } from 'lucide-react';
 import ToastNotification, { useToast } from '../../../../../parceiros/components/shared/ToastNotification';
@@ -38,11 +39,6 @@ const formatMoney = (value: string | number) => new Intl.NumberFormat('pt-BR', {
   style: 'currency',
   currency: 'BRL',
 }).format(Number(value) || 0);
-
-const parseCurrencyInput = (value: string) => {
-  const digits = value.replace(/\D/g, '');
-  return digits ? (Number(digits) / 100).toFixed(2) : '0.00';
-};
 
 const emptyOverride = (): MatriculaTecnicaOverrideInput => ({
   cobrarMatricula: null,
@@ -281,13 +277,11 @@ const FinanceiroAlunoOverrideDialog: React.FC<FinanceiroAlunoOverrideDialogProps
   ) => (
     <label className="space-y-1.5">
       <span className="text-[10px] font-black uppercase text-slate-500">{label}</span>
-      <input
-        type="text"
-        inputMode="numeric"
+      <CurrencyInput
         disabled={disabled}
-        value={formatMoney(effectiveValue(key))}
-        onFocus={(event) => event.currentTarget.select()}
-        onChange={(event) => updateField(key, parseCurrencyInput(event.target.value))}
+        value={Number(effectiveValue(key))}
+        prefix="R$ "
+        onValueChange={(value) => updateField(key, value.toFixed(2))}
         className="w-full rounded-xl border border-slate-200 px-3 py-3 text-sm font-bold outline-none focus:border-violet-500 disabled:bg-slate-100"
       />
       <span className="block text-[9px] font-semibold text-slate-400">Turma: {formatMoney(classValue)}</span>
