@@ -107,7 +107,10 @@ test('editor recebe versão e configuração canônica sem permitir alterar pron
 
 test('modelo limita campos de apresentação; dados financeiros permanecem protegidos', () => {
   const html = renderToStaticMarkup(<ReceiptTemplateEditor value={defaultPdvPrinterDraft().template} onChange={() => {}} onPreview={() => {}} />);
-  assert.match(html, /58 mm/); assert.match(html, /80 mm/);
+  assert.match(html, /role="combobox"[^>]*aria-label="Largura do papel"/);
+  assert.match(html, /value="80 mm"/);
+  const narrow = renderToStaticMarkup(<ReceiptTemplateEditor value={{ ...defaultPdvPrinterDraft().template, widthMm: 58 }} onChange={() => {}} />);
+  assert.match(narrow, /value="58 mm"/);
   assert.match(html, /min="2" max="6"/); assert.match(html, /min="8" max="12"/);
   assert.match(html, /maxLength="240"/);
   assert.match(html, /valor recebido e data vêm do pagamento confirmado/);

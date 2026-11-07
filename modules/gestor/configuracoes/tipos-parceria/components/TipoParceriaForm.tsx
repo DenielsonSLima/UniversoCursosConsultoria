@@ -24,7 +24,7 @@ const TipoParceriaForm: React.FC<TipoParceriaFormProps> = ({
   const [status, setStatus] = useState<TipoParceria['status']>(statusFixo || tipo?.status || 'ativo');
 
   return (
-    <div className="partner-registration-auxiliary fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-sm">
+    <div className="config-dialog-overlay partner-registration-auxiliary fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-sm">
       <form
         role="dialog" aria-modal="true" aria-labelledby={titleId}
         onSubmit={(event) => {
@@ -32,9 +32,9 @@ const TipoParceriaForm: React.FC<TipoParceriaFormProps> = ({
           if (!nome.trim()) return;
           onSave({ nome, descricao: descricao.trim(), status: statusFixo || status });
         }}
-        className="w-full max-w-xl overflow-hidden rounded-3xl border border-slate-100 bg-white shadow-2xl"
+        className="config-dialog w-full max-w-xl overflow-hidden rounded-3xl border border-slate-100 bg-white shadow-2xl"
       >
-        <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/70 p-6">
+        <div className="config-dialog-header flex items-center justify-between border-b border-slate-100 bg-slate-50/70 p-6">
           <div className="flex items-center gap-3">
             <div className="rounded-xl bg-blue-50 p-3 text-blue-700">
               <Handshake size={22} />
@@ -53,7 +53,7 @@ const TipoParceriaForm: React.FC<TipoParceriaFormProps> = ({
           </button>
         </div>
 
-        <div className="space-y-5 p-6">
+        <div className="config-dialog-body space-y-5 p-6">
           <div>
             <label className="mb-2 block text-sm font-bold text-slate-700">Nome do tipo</label>
             <input
@@ -87,7 +87,7 @@ const TipoParceriaForm: React.FC<TipoParceriaFormProps> = ({
           </div>
         </div>
 
-        <div className="flex justify-end gap-3 border-t border-slate-100 bg-slate-50 p-6">
+        <div className="config-dialog-footer flex justify-end gap-3 border-t border-slate-100 bg-slate-50 p-6">
           <button type="button" onClick={onClose} aria-label="Fechar tipo de parceria" className="rounded-xl px-6 py-2.5 text-sm font-bold uppercase tracking-wider text-slate-600 hover:bg-slate-200">
             Cancelar
           </button>

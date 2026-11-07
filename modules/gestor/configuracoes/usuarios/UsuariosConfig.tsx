@@ -1,3 +1,4 @@
+import './config-access.css';
 
 import React, { useEffect, useRef, useState } from 'react';
 import AccessGroupCard from './components/AccessGroupCard';
@@ -93,7 +94,7 @@ const UsuariosConfig: React.FC = () => {
   }
 
   return (
-    <div className="animate-fadeIn">
+    <div className="config-section animate-fadeIn">
       <div className="mb-8">
         <h3 className="text-2xl font-black text-[#001a33] uppercase tracking-tight">Usuários e Permissões</h3>
         <p className="text-slate-500 text-sm mt-1">

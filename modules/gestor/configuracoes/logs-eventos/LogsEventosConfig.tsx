@@ -1,3 +1,4 @@
+import InstitutionalSelect from '../../../shared/components/InstitutionalSelect';
 import React, { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -6,7 +7,6 @@ import {
   ChevronRight,
   Clock3,
   Database,
-  Filter,
   MapPin,
   RefreshCw,
   Search,
@@ -155,59 +155,23 @@ const LogsEventosConfig: React.FC = () => {
         </label>
 
         <label className="relative block">
-          <Filter size={17} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-          <select
-            value={modulo}
-            onChange={(event) => setModulo(event.target.value)}
-            className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none transition-all"
-          >
-            <option value="">Todos os módulos</option>
-            {MODULOS.map((item) => (
-              <option key={item} value={item}>{item}</option>
-            ))}
-          </select>
+          <InstitutionalSelect value={modulo} onValueChange={setModulo} ariaLabel="Módulo do evento"
+            options={[{ value: '', label: 'Todos os módulos' }, ...MODULOS.map(item => ({ value: item, label: item }))]} />
         </label>
 
         <label className="relative block">
-          <UserRound size={17} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-          <select
-            value={actorTipo}
-            onChange={(event) => setActorTipo(event.target.value)}
-            className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none transition-all"
-          >
-            <option value="">Executor</option>
-            {TIPO_OPTIONS.slice(1).map((item) => (
-              <option key={item.value} value={item.value}>{item.label}</option>
-            ))}
-          </select>
+          <InstitutionalSelect value={actorTipo} onValueChange={setActorTipo} ariaLabel="Tipo de executor"
+            options={[{ value: '', label: 'Executor' }, ...TIPO_OPTIONS.slice(1).map(item => ({ value: item.value, label: item.label }))]} />
         </label>
 
         <label className="relative block">
-          <Database size={17} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-          <select
-            value={pessoaTipo}
-            onChange={(event) => setPessoaTipo(event.target.value)}
-            className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none transition-all"
-          >
-            <option value="">Pessoa envolvida</option>
-            {TIPO_OPTIONS.slice(1, 4).map((item) => (
-              <option key={item.value} value={item.value}>{item.label}</option>
-            ))}
-          </select>
+          <InstitutionalSelect value={pessoaTipo} onValueChange={setPessoaTipo} ariaLabel="Tipo de pessoa envolvida"
+            options={[{ value: '', label: 'Pessoa envolvida' }, ...TIPO_OPTIONS.slice(1, 4).map(item => ({ value: item.value, label: item.label }))]} />
         </label>
 
         <label className="relative block">
-          <MapPin size={17} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-          <select
-            value={poloId}
-            onChange={(event) => setPoloId(event.target.value)}
-            className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none transition-all"
-          >
-            <option value="">Todos os polos</option>
-            {polos.map((polo) => (
-              <option key={polo.id} value={polo.id}>{polo.nome}</option>
-            ))}
-          </select>
+          <InstitutionalSelect value={poloId} onValueChange={setPoloId} ariaLabel="Polo do evento"
+            options={[{ value: '', label: 'Todos os polos' }, ...polos.map(polo => ({ value: polo.id, label: polo.nome }))]} />
         </label>
       </div>
 

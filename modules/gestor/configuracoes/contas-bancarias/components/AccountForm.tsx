@@ -1,3 +1,4 @@
+import InstitutionalSelect from '../../../../shared/components/InstitutionalSelect';
 
 import React, { useState } from 'react';
 import { Save, X, Building, User, Hash, CreditCard, MapPin, WalletCards } from 'lucide-react';
@@ -52,7 +53,7 @@ const AccountForm: React.FC<AccountFormProps> = ({ initialData, companyId, compa
   };
 
   return (
-    <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-xl animate-fadeIn">
+    <div className="config-card bg-white p-5 rounded-xl border border-slate-200 shadow-xl animate-fadeIn">
       <div className="flex justify-between items-center mb-6 pb-4 border-b border-slate-100">
         <h3 className="text-xl font-black text-[#001a33] uppercase tracking-tight">
           {initialData ? 'Editar Conta' : 'Nova Conta Bancária'}
@@ -85,17 +86,15 @@ const AccountForm: React.FC<AccountFormProps> = ({ initialData, companyId, compa
             <label className="text-xs font-bold text-[#001a33] uppercase tracking-wider flex items-center gap-2">
               <CreditCard size={14} className="text-blue-500" /> Tipo de Conta
             </label>
-            <select 
-              name="tipo"
+            <InstitutionalSelect
               value={formData.tipo}
-              onChange={handleChange}
-              className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-500 font-medium text-slate-700 cursor-pointer"
-            >
-              <option value="Corrente">Conta Corrente</option>
-              <option value="Poupanca">Conta Poupança</option>
-              <option value="Pagamento">Conta de Pagamento</option>
-              <option value="Caixa">Caixa da Unidade</option>
-            </select>
+              onValueChange={(value) => handleChange({ target: { name: 'tipo', value } } as React.ChangeEvent<HTMLSelectElement>)}
+              ariaLabel="Tipo de conta"
+              options={[
+                { value: 'Corrente', label: 'Conta Corrente' }, { value: 'Poupanca', label: 'Conta Poupança' },
+                { value: 'Pagamento', label: 'Conta de Pagamento' }, { value: 'Caixa', label: 'Caixa da Unidade' },
+              ]}
+            />
           </div>
         </div>
 

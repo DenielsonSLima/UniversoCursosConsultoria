@@ -1,3 +1,6 @@
+import type React from 'react';
+import '../usuarios/config-access.css';
+import InstitutionalSelect from '../../../shared/components/InstitutionalSelect';
 import { useDeferredValue, useEffect, useMemo, useState } from 'react';
 import {
   BellRing,
@@ -66,8 +69,8 @@ const DispositivosAppConfig = () => {
   if (selectedAlunoId) return <AlunoAppDeviceDetail alunoId={selectedAlunoId} onBack={() => setSelectedAlunoId(null)} />;
 
   return (
-    <div className="mx-auto max-w-7xl">
-      <header className="relative overflow-hidden rounded-[2rem] bg-[#001a33] p-6 text-white shadow-xl shadow-blue-950/10 sm:p-8">
+    <div className="config-section mx-auto max-w-7xl">
+      <header className="config-access-heading relative overflow-hidden rounded-[2rem] bg-[#001a33] p-6 text-white shadow-xl shadow-blue-950/10 sm:p-8">
         <div aria-hidden="true" className="absolute -right-12 -top-12 h-44 w-44 rounded-full border-[28px] border-blue-500/15" />
         <div className="relative flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
           <div>
@@ -84,7 +87,7 @@ const DispositivosAppConfig = () => {
 
       <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {summaryCards.map(({ label, value, icon: Icon, tone }) => (
-          <article key={label} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <article key={label} className="config-card config-access-card rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
             <div className={`mb-4 flex h-10 w-10 items-center justify-center rounded-xl ${tone}`}><Icon size={19} /></div>
             <p className="text-2xl font-extrabold text-[#001a33]">{summaryQuery.isLoading ? '—' : new Intl.NumberFormat('pt-BR').format(value)}</p>
             <p className="mt-1 text-xs font-bold text-slate-500">{label}</p>
@@ -98,13 +101,21 @@ const DispositivosAppConfig = () => {
             <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
             <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar aluno, matrícula ou e-mail" className="min-h-12 w-full rounded-xl border border-slate-200 bg-slate-50 pl-11 pr-4 text-sm font-semibold text-slate-700 outline-none transition focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-50" />
           </label>
-          <select value={poloId || ''} onChange={(event) => setPoloId(event.target.value || null)} className="min-h-12 rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm font-bold text-slate-700 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-50">
-            <option value="">Todos os polos</option>
-            {(polosQuery.data || []).map((polo) => <option key={polo.id} value={polo.id}>{polo.nome}</option>)}
-          </select>
-          <select value={status} onChange={(event) => setStatus(event.target.value as AppDeviceStatusFilter)} className="min-h-12 rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm font-bold text-slate-700 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-50">
-            {statusOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-          </select>
+          <InstitutionalSelect
+  value={String(poloId || '')}
+  onValueChange={(value) => ((event) => setPoloId(event.target.value || null))({ target: { value, name: "", type: 'select-one', tagName: 'SELECT' }, currentTarget: { value, name: "", type: 'select-one', tagName: 'SELECT' } } as React.ChangeEvent<HTMLSelectElement>)}
+  ariaLabel="Polo dos dispositivos"
+  options={[({ value: String(""), label: "Todos os polos" }),
+...(polosQuery.data || []).map((polo) => ({ value: String(polo.id), label: String(polo.nome) })) ]}
+  className="w-full"
+/>
+          <InstitutionalSelect
+  value={String(status)}
+  onValueChange={(value) => ((event) => setStatus(event.target.value as AppDeviceStatusFilter))({ target: { value, name: "", type: 'select-one', tagName: 'SELECT' }, currentTarget: { value, name: "", type: 'select-one', tagName: 'SELECT' } } as React.ChangeEvent<HTMLSelectElement>)}
+  ariaLabel="Situação dos dispositivos"
+  options={[...statusOptions.map((option) => ({ value: String(option.value), label: String(option.label) })) ]}
+  className="w-full"
+/>
         </div>
 
         {usersQuery.isLoading ? (

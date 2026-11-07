@@ -1,0 +1,30 @@
+@media screen {
+  .configuracoes-workspace .config-access-card {
+    height: auto;
+    min-height: 0;
+    border-radius: 12px;
+    box-shadow: none;
+    transform: none;
+  }
+  .configuracoes-workspace .config-access-card :is(.items-start, .items-end) { align-items: center; }
+  .configuracoes-workspace .config-access-card :is(.h-16.w-16, .h-14.w-14) { height: 40px; width: 40px; }
+  .configuracoes-workspace .config-access-card .w-20.h-20 { width: 48px; height: 48px; margin-bottom: 12px; font-size: 18px; }
+  .configuracoes-workspace .config-access-form { min-width: 0; }
+  .configuracoes-workspace .config-access-form .gap-6 { gap: 16px; }
+  .configuracoes-workspace .config-access-form .mb-10 { margin-bottom: 24px; }
+  .configuracoes-workspace .config-access-form > :is(h3,h4) { font-size: 18px; font-weight: 600; }
+  .configuracoes-workspace .config-access-heading { padding: 18px; border-radius: 12px; box-shadow: none; }
+  .configuracoes-workspace .config-access-heading :is(h1,h2,h3) { font-size: 22px; line-height: 1.35; font-weight: 500; }
+  .configuracoes-workspace .config-access-heading p { font-size: 13px; line-height: 1.55; }
+  .configuracoes-workspace .config-multi-select input[type='search'] { border: 0; border-radius: 0; padding-left: 36px; }
+  .configuracoes-workspace .config-multi-select input[type='checkbox'] { height: 16px; width: 16px; min-height: 0; }
+  body:has(.config-polo-confirm) { overflow: hidden; }
+  .config-polo-backdrop { background: transparent; backdrop-filter: none; -webkit-backdrop-filter: none; }
+  .config-polo-confirm h3 { font-size: 18px; line-height: 1.4; font-weight: 600; }
+  .config-polo-confirm .w-16.h-16 { width: 40px; height: 40px; margin-bottom: 12px; border-radius: 10px; }
+  .config-polo-confirm .w-16.h-16 svg { width: 22px; height: 22px; }
+  @media (max-width: 767px) {
+    .configuracoes-workspace .config-access-heading { padding: 16px; }
+    .configuracoes-workspace .config-access-heading :is(h1,h2,h3) { font-size: 20px; }
+  }
+}

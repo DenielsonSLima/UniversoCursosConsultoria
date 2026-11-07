@@ -176,8 +176,8 @@ const CompanyAccountsManager: React.FC<CompanyAccountsManagerProps> = ({ company
   return (
     <div className="animate-fadeIn">
       {/* Header da Empresa */}
-      <div className="flex items-center justify-between mb-8 pb-6 border-b border-slate-100">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-5 pb-4 border-b border-slate-100">
+        <div className="flex min-w-0 items-center gap-3">
           <button 
             onClick={onBack}
             className="p-2 rounded-xl border border-slate-200 text-slate-400 hover:text-blue-600 hover:border-blue-200 transition-colors"
@@ -218,7 +218,7 @@ const CompanyAccountsManager: React.FC<CompanyAccountsManagerProps> = ({ company
           {accounts.map((account) => (
             <div 
               key={account.id} 
-              className={`relative h-60 rounded-[1.5rem] p-6 text-white shadow-xl bg-gradient-to-br ${getBankColor(account.banco, account.ativo !== false)} flex flex-col justify-between overflow-hidden group transition-all duration-300 ${!account.ativo ? 'opacity-80' : 'hover:-translate-y-1'}`}
+              className={`config-bank-card relative min-h-[188px] rounded-xl p-4 text-white shadow-xl bg-gradient-to-br ${getBankColor(account.banco, account.ativo !== false)} flex flex-col justify-between overflow-hidden group transition-all duration-300 ${!account.ativo ? 'opacity-80' : 'hover:-translate-y-1'}`}
             >
               {/* Background Pattern */}
               <div className="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full blur-3xl -mr-10 -mt-10"></div>

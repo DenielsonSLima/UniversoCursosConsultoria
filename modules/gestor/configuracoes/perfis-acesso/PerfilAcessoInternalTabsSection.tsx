@@ -63,7 +63,7 @@ const PerfilAcessoInternalTabsSection: React.FC<PerfilAcessoInternalTabsSectionP
   if (!visibleSections.length) return null;
 
   return (
-    <section className="space-y-6">
+    <section className="config-section space-y-6">
       <h4 className="flex items-center gap-2 border-b border-slate-100 pb-3 text-base font-bold text-[#001a33]">
         <Info size={18} className="text-amber-500" />
         Abas Internas e Submódulos

@@ -16,17 +16,17 @@ export const proescNumber = (
   : value.toLocaleString('pt-BR');
 
 export const ProescConsoleHeader = () => (
-  <header className="rounded-[2rem] bg-[#001a33] p-6 text-white sm:p-8">
+  <header className="config-card rounded-xl border border-slate-200 bg-white p-4 text-slate-700 sm:p-5">
     <div className="flex items-center gap-3">
-      <Activity size={26} className="shrink-0 text-cyan-300" />
-      <h2 className="text-xl font-black uppercase tracking-tight sm:text-2xl">
+      <Activity size={26} className="shrink-0 text-cyan-700" />
+      <h2 className="text-lg font-semibold tracking-tight">
         Consulta API Proesc
       </h2>
     </div>
-    <p className="mt-3 max-w-3xl text-sm leading-relaxed text-slate-300">
+    <p className="mt-3 max-w-3xl text-sm leading-relaxed text-slate-600">
       Acompanhe a consulta automática, as observações das cobranças e as baixas registradas no sistema.
     </p>
-    <span className="mt-4 inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-2 text-xs font-bold">
+    <span className="mt-4 inline-flex items-center gap-2 rounded-md bg-slate-50 px-2.5 py-1 text-xs font-bold">
       <ShieldCheck size={15} />
       Acompanhamento automático
     </span>

@@ -37,7 +37,7 @@ export function ProductTypeFormDialog({
   return createPortal(
     <div
       data-product-type-dialog-root
-      className="fixed inset-0 z-[10000] flex min-h-[100dvh] items-end justify-center bg-[#001a33]/60 p-0 backdrop-blur-sm sm:items-center sm:p-4"
+      className="config-dialog-overlay fixed inset-0 z-[10000] flex min-h-[100dvh] items-end justify-center bg-[#001a33]/60 p-0 backdrop-blur-sm sm:items-center sm:p-4"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget && !isPending) onClose();
       }}
@@ -55,9 +55,9 @@ export function ProductTypeFormDialog({
           if (!normalizedName || isPending) return;
           onSubmit({ nome: normalizedName, descricao: descricao.trim() });
         }}
-        className="max-h-[92dvh] w-full max-w-xl overflow-y-auto rounded-t-[2rem] border border-white/70 bg-white shadow-2xl sm:rounded-[2rem]"
+        className="config-dialog max-h-[92dvh] w-full max-w-xl overflow-y-auto rounded-t-[2rem] border border-white/70 bg-white shadow-2xl sm:rounded-[2rem]"
       >
-        <header className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-slate-100 bg-white px-5 py-5 sm:px-7">
+        <header className="config-dialog-header sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-slate-100 bg-white px-5 py-5 sm:px-7">
           <div className="flex min-w-0 items-start gap-3">
             <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-cyan-50 text-cyan-700">
               <PackageOpen size={21} aria-hidden="true" />
@@ -82,7 +82,7 @@ export function ProductTypeFormDialog({
           </button>
         </header>
 
-        <div className="space-y-5 p-5 sm:p-7">
+        <div className="config-dialog-body space-y-5 p-5 sm:p-7">
           <label className="block">
             <span className="mb-1.5 block text-[11px] font-black uppercase tracking-wider text-slate-500">
               Nome do tipo
@@ -116,7 +116,7 @@ export function ProductTypeFormDialog({
           </label>
         </div>
 
-        <footer className="sticky bottom-0 flex flex-col-reverse gap-3 border-t border-slate-100 bg-white px-5 py-4 sm:flex-row sm:justify-end sm:px-7">
+        <footer className="config-dialog-footer sticky bottom-0 flex flex-col-reverse gap-3 border-t border-slate-100 bg-white px-5 py-4 sm:flex-row sm:justify-end sm:px-7">
           <button
             type="button"
             onClick={onClose}

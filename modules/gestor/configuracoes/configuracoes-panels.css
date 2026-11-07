@@ -1,0 +1,220 @@
+@media screen {
+  .config-section-content {
+    font-size: 13px;
+    line-height: 1.55;
+  }
+
+  .config-section-content :where(h1, h2, h3, h4), body:has(.configuracoes-workspace) .config-dialog :where(h1, h2, h3, h4) {
+    font-weight: 600;
+    letter-spacing: -.02em;
+    text-transform: none;
+    overflow-wrap: anywhere;
+  }
+
+  .config-section-content :where(h1, h2) {
+    font-size: 18px;
+    line-height: 1.4;
+  }
+
+  .config-section-content :where(h3, h4) {
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  .config-section-content :where(.text-sm, .text-base) {
+    font-size: 13px;
+    line-height: 1.55;
+  }
+
+  .config-section-content :where(.text-xs, [class~="text-[8px]"], [class~="text-[9px]"], [class~="text-[10px]"], [class~="text-[11px]"]) {
+    font-size: 12px;
+    line-height: 1.5;
+  }
+
+  .config-section-content :where(.text-2xl, .text-3xl, .text-4xl, .text-5xl):not(:where(h1, h2, h3, h4)) {
+    font-size: 23px;
+    line-height: 1.3;
+    letter-spacing: -.025em;
+  }
+
+  .config-section-content :where(.font-black, .font-extrabold) {
+    font-weight: 600;
+  }
+
+  .config-section-content :is(.font-bold, .font-semibold) {
+    font-weight: 500;
+  }
+
+  .config-section-content :is(h1, h2, h3, h4, strong):is(.font-bold, .font-semibold) {
+    font-weight: 600;
+  }
+
+  .config-section-content .uppercase {
+    text-transform: none;
+  }
+
+  .config-section-content :is(label, legend) :is(.font-black, .font-extrabold) {
+    font-weight: 500;
+  }
+
+  .config-section-content :where(.tracking-widest, .tracking-wider, .tracking-wide) {
+    letter-spacing: .01em;
+  }
+
+  .config-section-content :where(label, legend) {
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: normal;
+    text-transform: none;
+  }
+
+  .config-section-content :where(button) {
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: normal;
+    text-transform: none;
+  }
+
+  .config-section-content :where(.p-8, .p-10, .p-12) {
+    padding: 20px;
+  }
+
+  .config-section-content :where(.gap-8, .gap-10, .gap-12) {
+    gap: 20px;
+  }
+
+  .config-section-content :where(.space-y-8, .space-y-10, .space-y-12) > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 20px;
+  }
+
+  .config-section-content :where(.rounded-2xl, .rounded-3xl, [class*="rounded-[2"], [class*="rounded-[3"]) {
+    border-radius: 12px;
+  }
+
+  .config-section-content :where(.text-slate-400):not(:disabled):not([aria-disabled="true"]) {
+    color: #64748b;
+  }
+
+  .config-section-content :where(input:not([role="combobox"]):not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not([type="color"]), textarea), body:has(.configuracoes-workspace) .config-dialog :where(input:not([role="combobox"]):not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not([type="color"]), textarea) {
+    min-width: 0;
+    min-height: 38px;
+    padding: 8px 11px;
+    border: 1px solid #dbe3ed;
+    border-radius: 8px;
+    background: #fff;
+    color: #243b53;
+    font-size: 13px;
+    line-height: 20px;
+    font-weight: 400;
+  }
+
+  .config-section-content :where(textarea),
+  body:has(.configuracoes-workspace) .config-dialog :where(textarea) {
+    min-height: 96px;
+  }
+
+  .config-section-content input.pl-9 { padding-left: 36px; }
+  .config-section-content input.pl-10 { padding-left: 40px; }
+  .config-section-content input.pl-11 { padding-left: 44px; }
+  .config-section-content input.pl-12 { padding-left: 48px; }
+  .config-section-content input.pr-10 { padding-right: 40px; }
+
+  .config-section-content :where(input, textarea):disabled, body:has(.configuracoes-workspace) .config-dialog :where(input, textarea):disabled {
+    background: #f1f5f9;
+    color: #7b8da0;
+    cursor: not-allowed;
+  }
+
+  .config-section-content :where(input, textarea):focus-visible, body:has(.configuracoes-workspace) .config-dialog :where(input, textarea):focus-visible {
+    outline: 2px solid #4169e1;
+    outline-offset: 2px;
+  }
+
+  .config-section-content :where(table) {
+    width: 100%;
+    font-size: 13px;
+    border-collapse: collapse;
+  }
+
+  .config-section-content :where(th, td) {
+    padding: 12px 14px;
+    vertical-align: middle;
+    border-bottom: 1px solid #e3e9ee;
+  }
+
+  .config-section-content :where(th) {
+    background: #f8fafc;
+    color: #526579;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: normal;
+    text-transform: none;
+  }
+
+  .config-section-content :where(tbody tr:last-child td) {
+    border-bottom: 0;
+  }
+
+  body:has(.configuracoes-workspace) .config-tabs {
+    display: flex;
+    min-width: 0;
+    align-items: stretch;
+    gap: 4px;
+    overflow-x: auto;
+    border-bottom: 1px solid #e3e9ee;
+    border-radius: 0;
+    background: transparent;
+  }
+
+  body:has(.configuracoes-workspace) .config-tabs > button {
+    display: inline-flex;
+    min-height: 42px;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    padding: 10px 13px;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    color: #64748b;
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: normal;
+    text-transform: none;
+    white-space: nowrap;
+  }
+
+  body:has(.configuracoes-workspace) .config-tabs > button[data-active="true"],
+  body:has(.configuracoes-workspace) .config-tabs > button[aria-selected="true"],
+  body:has(.configuracoes-workspace) .config-tabs > button[aria-current="page"] {
+    border-bottom-color: #4169e1;
+    color: #122b42;
+  }
+
+  body:has(.configuracoes-workspace) .config-tabs > button:hover:not(:disabled) {
+    color: #4169e1;
+  }
+
+  body:has(.configuracoes-workspace) .config-tabs > button:focus-visible {
+    outline: 2px solid #4169e1;
+    outline-offset: -3px;
+  }
+
+  @media (max-width: 639px) {
+    .config-section-content :where(.p-8, .p-10, .p-12) {
+      padding: 14px;
+    }
+
+    .config-section-content :where(input:not([role="combobox"]):not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not([type="color"]), textarea), body:has(.configuracoes-workspace) .config-dialog :where(input:not([role="combobox"]):not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not([type="color"]), textarea) {
+      min-height: 44px;
+      font-size: 16px;
+    }
+
+    body:has(.configuracoes-workspace) .config-tabs > button {
+      min-height: 44px;
+    }
+  }
+}

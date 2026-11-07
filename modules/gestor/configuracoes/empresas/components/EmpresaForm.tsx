@@ -1,3 +1,4 @@
+import InstitutionalSelect from '../../../../shared/components/InstitutionalSelect';
 import React, { useState, useRef } from 'react';
 import { Upload, Save, X, Building, MapPin, Phone, RefreshCw, Search, Loader2, AlertCircle } from 'lucide-react';
 import { empresasService } from '../empresas.service';
@@ -179,7 +180,7 @@ const EmpresaForm: React.FC<EmpresaFormProps> = ({ initialData, onSave, onCancel
   };
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white p-8 rounded-[2rem] shadow-xl border border-slate-100 animate-fadeIn">
+    <form onSubmit={handleSubmit} className="config-section config-access-form bg-white p-8 rounded-[2rem] shadow-xl border border-slate-100 animate-fadeIn">
       <div className="flex justify-between items-center mb-8 pb-4 border-b border-slate-100">
         <div>
           <h3 className="text-xl font-black text-[#001a33] uppercase tracking-tight">
@@ -305,15 +306,14 @@ const EmpresaForm: React.FC<EmpresaFormProps> = ({ initialData, onSave, onCancel
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Tipo de Unidade</label>
-                <select 
-                  name="tipo"
-                  value={formData.tipo}
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 focus:border-blue-500 outline-none transition-all cursor-pointer"
-                >
-                  <option value="Matriz">Matriz</option>
-                  <option value="Filial">Filial</option>
-                </select>
+                <InstitutionalSelect
+  value={String(formData.tipo)}
+  onValueChange={(value) => (handleChange)({ target: { value, name: "tipo", type: 'select-one', tagName: 'SELECT' }, currentTarget: { value, name: "tipo", type: 'select-one', tagName: 'SELECT' } } as React.ChangeEvent<HTMLSelectElement>)}
+  ariaLabel="Tipo de empresa"
+  options={[({ value: String("Matriz"), label: "Matriz" }),
+({ value: String("Filial"), label: "Filial" }) ]}
+  className="w-full"
+/>
               </div>
             </div>
           </div>

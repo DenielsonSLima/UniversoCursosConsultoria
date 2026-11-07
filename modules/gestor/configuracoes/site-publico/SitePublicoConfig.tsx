@@ -1,3 +1,5 @@
+import '../usuarios/config-access.css';
+import { SitePublicoMultiSelect } from './SitePublicoMultiSelect';
 import React from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Check, Loader2, Megaphone, Save } from 'lucide-react';
@@ -142,16 +144,7 @@ const SitePublicoConfig: React.FC = () => {
     updateConfig({ modalidades: next, cursoIds: [], turmaIds: [] });
   };
 
-  const selectedOptions = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    const values: string[] = [];
-    const { selectedOptions: options } = event.currentTarget;
-
-    for (let index = 0; index < options.length; index += 1) {
-      values.push(options[index].value);
-    }
-
-    return values;
-  };
+  
 
   const formatPolo = (turma: SiteTickerTurmaOption) => {
     const polo = Array.isArray(turma.polos) ? turma.polos[0] : turma.polos;
@@ -211,7 +204,7 @@ const SitePublicoConfig: React.FC = () => {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="config-section space-y-8">
       <div>
         <p className="text-[10px] font-black uppercase tracking-[0.24em] text-blue-600">Site público</p>
         <h2 className="text-2xl font-black uppercase tracking-tight text-[#001a33]">Faixa de avisos do cabeçalho</h2>
@@ -338,36 +331,17 @@ const SitePublicoConfig: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            <label className="block">
+            <div className="block">
               <span className="text-xs font-black uppercase tracking-widest text-slate-400">Cursos específicos</span>
-              <select
-                multiple
-                value={config.cursoIds}
-                onChange={(event) => updateConfig({ cursoIds: selectedOptions(event), turmaIds: [] })}
-                className="mt-2 h-44 w-full rounded-2xl border border-slate-200 px-3 py-2 text-xs font-bold outline-none focus:border-blue-400"
-              >
-                {cursos.map((curso) => (
-                  <option key={curso.id} value={curso.id}>{curso.nome} ({curso.modalidade})</option>
-                ))}
-              </select>
+              <SitePublicoMultiSelect value={config.cursoIds} onChange={(values) => updateConfig({ cursoIds: values, turmaIds: [] })} ariaLabel="Cursos permitidos" options={cursos.map((curso) => ({ value: curso.id, label: curso.nome + ' (' + curso.modalidade + ')' }))} />
               <p className="mt-1 text-[10px] font-bold text-slate-400">Sem seleção anuncia todos da modalidade.</p>
-            </label>
+            </div>
 
-            <label className="block">
+            <div className="block">
               <span className="text-xs font-black uppercase tracking-widest text-slate-400">Turmas específicas</span>
-              <select
-                multiple
-                value={config.turmaIds}
-                onChange={(event) => updateConfig({ turmaIds: selectedOptions(event) })}
-                className="mt-2 h-44 w-full rounded-2xl border border-slate-200 px-3 py-2 text-xs font-bold outline-none focus:border-blue-400"
-              >
-                {turmas.map((turma) => {
-                  const curso = Array.isArray(turma.cursos) ? turma.cursos[0] : turma.cursos;
-                  return <option key={turma.id} value={turma.id}>{curso?.nome} - {formatPolo(turma)}</option>;
-                })}
-              </select>
+              <SitePublicoMultiSelect value={config.turmaIds} onChange={(values) => updateConfig({ turmaIds: values })} ariaLabel="Turmas permitidas" options={turmas.map((turma) => { const curso = Array.isArray(turma.cursos) ? turma.cursos[0] : turma.cursos; return { value: turma.id, label: (curso?.nome || '') + ' - ' + formatPolo(turma) }; })} />
               <p className="mt-1 text-[10px] font-bold text-slate-400">Sem seleção anuncia todas as turmas abertas filtradas.</p>
-            </label>
+            </div>
           </div>
         </div>
       )}
@@ -427,7 +401,7 @@ const SitePublicoConfig: React.FC = () => {
         Salvar ajustes
       </button>
 
-      <div className="rounded-[1.5rem] border border-blue-100 bg-white p-4 shadow-sm">
+      <div className="config-card config-access-card rounded-[1.5rem] border border-blue-100 bg-white p-4 shadow-sm">
         <p className="mb-3 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-blue-600">
           <Megaphone size={14} />
           Prévia da faixa

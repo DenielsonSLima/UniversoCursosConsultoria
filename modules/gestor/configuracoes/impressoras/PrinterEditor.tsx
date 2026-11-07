@@ -1,3 +1,4 @@
+import InstitutionalSelect from '../../../shared/components/InstitutionalSelect';
 import React, { useRef, useState } from 'react';
 import { AlertCircle, ArrowLeft, FileText, Printer, Save } from 'lucide-react';
 import { generateSafeUuid } from '../../../../lib/randomUuid';
@@ -49,8 +50,8 @@ export function PrinterEditor({ printer, pending, error, onSave, onClose, onPrev
         <div><p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">Configuração da estação</p><h3 id="printer-editor-title" className="mt-1 text-lg font-bold text-[#0b1f4a]">{printer ? 'Editar impressora' : 'Nova impressora'}</h3></div>
         <button type="button" onClick={onClose} disabled={pending} className="inline-flex min-h-11 items-center gap-2 rounded-lg px-3 text-xs font-semibold text-slate-500 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 disabled:opacity-40"><ArrowLeft size={16} aria-hidden="true" /> Voltar</button>
       </div>
-      <div className="flex gap-1 border-b border-slate-100 px-4 pt-2" role="group" aria-label="Seções da impressora">
-        {([{ id: 'printer', label: 'Impressora', icon: Printer }, { id: 'template', label: 'Modelo do recibo', icon: FileText }] as const).map(item => <button key={item.id} type="button" onClick={() => setTab(item.id)} aria-pressed={tab === item.id} className={`inline-flex min-h-12 items-center gap-2 border-b-2 px-3 text-xs font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 ${tab === item.id ? 'border-[#ed1c24] text-[#0b1f4a]' : 'border-transparent text-slate-500'}`}><item.icon size={16} aria-hidden="true" />{item.label}</button>)}
+      <div className="config-tabs flex overflow-x-auto border-b border-slate-100 px-4" role="group" aria-label="Seções da impressora">
+        {([{ id: 'printer', label: 'Impressora', icon: Printer }, { id: 'template', label: 'Modelo do recibo', icon: FileText }] as const).map(item => <button key={item.id} type="button" onClick={() => setTab(item.id)} aria-pressed={tab === item.id} data-active={tab === item.id} className={`inline-flex min-h-11 items-center gap-2 border-b-2 px-3 text-xs font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 ${tab === item.id ? 'border-blue-600 text-[#0b1f4a]' : 'border-transparent text-slate-500'}`}><item.icon size={16} aria-hidden="true" />{item.label}</button>)}
       </div>
       <form onSubmit={save}>
         <fieldset disabled={pending} className="space-y-5 p-5 disabled:opacity-60">
@@ -60,9 +61,10 @@ export function PrinterEditor({ printer, pending, error, onSave, onClose, onPrev
               <label className="text-xs font-semibold text-slate-600">Modelo<input maxLength={80} value={draft.model} onChange={event => setDraft({ ...draft, model: event.target.value })} placeholder="Ex.: Epson TM-T20" className={field} /></label>
             </div>
             <label className="block text-xs font-semibold text-slate-600">Conexão
-              <select value={draft.transport} onChange={event => setDraft({ ...draft, transport: event.target.value as PdvPrinterTransport, behavior: draft.behavior === 'AUTOMATICO' ? 'PERGUNTAR' : draft.behavior })} className={field}>
-                <option value="BROWSER">Diálogo de impressão do navegador</option><option value="QZ_TRAY">Ponte local · QZ Tray</option><option value="EPOS">Epson ePOS · rede</option>
-              </select>
+              <InstitutionalSelect value={draft.transport} onValueChange={transport => setDraft({ ...draft, transport: transport as PdvPrinterTransport, behavior: draft.behavior === 'AUTOMATICO' ? 'PERGUNTAR' : draft.behavior })}
+                ariaLabel="Conexão da impressora" className="mt-2" options={[
+                  { value: 'BROWSER', label: 'Diálogo de impressão do navegador' }, { value: 'QZ_TRAY', label: 'Ponte local · QZ Tray' }, { value: 'EPOS', label: 'Epson ePOS · rede' },
+                ]} />
             </label>
             <p className="rounded-xl bg-slate-50 px-4 py-3 text-xs leading-5 text-slate-600">{draft.transport === 'BROWSER' ? 'A impressora é escolhida no diálogo do navegador. Salvar este cadastro não inicia uma impressão.' : 'Este transporte depende de configuração e homologação na estação. O cadastro não confirma conexão com o equipamento.'}</p>
             <fieldset className="space-y-2">

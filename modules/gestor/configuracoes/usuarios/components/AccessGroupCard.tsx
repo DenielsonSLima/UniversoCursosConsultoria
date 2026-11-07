@@ -16,7 +16,7 @@ const AccessGroupCard: React.FC<AccessGroupCardProps> = ({ title, description, t
   return (
     <div 
       onClick={onClick}
-      className={`relative group rounded-[2rem] p-6 cursor-pointer transition-all duration-300 overflow-hidden flex flex-col justify-between h-64 border ${
+      className={`config-section config-card config-access-card relative group rounded-[2rem] p-6 cursor-pointer transition-all duration-300 overflow-hidden flex flex-col justify-between h-64 border ${
         isGlobal 
           ? 'bg-[#001a33] border-[#001a33] text-white shadow-xl shadow-blue-900/20' 
           : 'bg-white border-slate-100 hover:border-blue-300 hover:shadow-xl hover:shadow-blue-900/10'

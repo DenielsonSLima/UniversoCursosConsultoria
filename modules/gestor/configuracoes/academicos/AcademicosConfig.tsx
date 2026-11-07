@@ -1,3 +1,5 @@
+import '../usuarios/config-access.css';
+import InstitutionalSelect from '../../../shared/components/InstitutionalSelect';
 import React, { useState, useEffect } from 'react';
 import { GraduationCap, Settings, Sparkles, Save, FileSpreadsheet, BadgeCheck, FileCode, QrCode } from 'lucide-react';
 import ToastNotification, { useToast } from '../../components/ToastNotification';
@@ -93,7 +95,7 @@ const AcademicosConfig: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="config-section space-y-6">
       {/* Header */}
       <div className="flex justify-between items-center pb-4 border-b border-slate-100">
         <div className="flex items-center gap-3">
@@ -117,9 +119,10 @@ const AcademicosConfig: React.FC = () => {
       </div>
 
       {/* Sub tabs Selector */}
-      <div className="flex bg-slate-100 p-1 rounded-2xl w-full sm:w-max">
+      <div className="config-tabs flex bg-slate-100 p-1 rounded-2xl w-full sm:w-max">
         <button
           onClick={() => setActiveSubTab('matricula')}
+          data-active={activeSubTab === 'matricula'}
           className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${
             activeSubTab === 'matricula' ? 'bg-white text-purple-600 shadow-sm' : 'text-slate-500 hover:text-purple-650'
           }`}
@@ -128,6 +131,7 @@ const AcademicosConfig: React.FC = () => {
         </button>
         <button
           onClick={() => setActiveSubTab('carteirinha')}
+          data-active={activeSubTab === 'carteirinha'}
           className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${
             activeSubTab === 'carteirinha' ? 'bg-white text-purple-600 shadow-sm' : 'text-slate-500 hover:text-purple-650'
           }`}
@@ -136,6 +140,7 @@ const AcademicosConfig: React.FC = () => {
         </button>
         <button
           onClick={() => setActiveSubTab('certificados')}
+          data-active={activeSubTab === 'certificados'}
           className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${
             activeSubTab === 'certificados' ? 'bg-white text-purple-600 shadow-sm' : 'text-slate-500 hover:text-purple-650'
           }`}
@@ -144,6 +149,7 @@ const AcademicosConfig: React.FC = () => {
         </button>
         <button
           onClick={() => setActiveSubTab('validacao')}
+          data-active={activeSubTab === 'validacao'}
           className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${
             activeSubTab === 'validacao' ? 'bg-white text-purple-600 shadow-sm' : 'text-slate-500 hover:text-purple-650'
           }`}
@@ -181,29 +187,29 @@ const AcademicosConfig: React.FC = () => {
 
               <div className="space-y-1">
                 <label className="text-slate-400 font-bold uppercase tracking-wider text-[9px]">Dígitos Sequenciais</label>
-                <select
-                  value={matriculaDigits}
-                  onChange={(e) => setMatriculaDigits(Number(e.target.value))}
-                  className="w-full p-3 bg-slate-50 border border-slate-200 outline-none rounded-xl focus:border-purple-500 focus:bg-white transition-all font-bold text-slate-700 cursor-pointer"
-                >
-                  <option value={3}>3 dígitos (ex: 002)</option>
-                  <option value={4}>4 dígitos (ex: 0002)</option>
-                  <option value={5}>5 dígitos (ex: 00002)</option>
-                  <option value={6}>6 dígitos (ex: 000002)</option>
-                </select>
+                <InstitutionalSelect
+  value={String(matriculaDigits)}
+  onValueChange={(value) => ((e) => setMatriculaDigits(Number(e.target.value)))({ target: { value, name: "", type: 'select-one', tagName: 'SELECT' }, currentTarget: { value, name: "", type: 'select-one', tagName: 'SELECT' } } as React.ChangeEvent<HTMLSelectElement>)}
+  ariaLabel="Quantidade de dígitos da matrícula"
+  options={[({ value: String(3), label: "3 dígitos (ex: 002)" }),
+({ value: String(4), label: "4 dígitos (ex: 0002)" }),
+({ value: String(5), label: "5 dígitos (ex: 00002)" }),
+({ value: String(6), label: "6 dígitos (ex: 000002)" }) ]}
+  className="w-full"
+/>
               </div>
 
               <div className="space-y-1">
                 <label className="text-slate-400 font-bold uppercase tracking-wider text-[9px]">Formato do Ano</label>
-                <select
-                  value={yearFormat}
-                  onChange={(e) => setYearFormat(e.target.value)}
-                  className="w-full p-3 bg-slate-50 border border-slate-200 outline-none rounded-xl focus:border-purple-500 focus:bg-white transition-all font-bold text-slate-700 cursor-pointer"
-                >
-                  <option value="yy">Apenas 2 dígitos (ex: 26)</option>
-                  <option value="yyyy">Completo 4 dígitos (ex: 2026)</option>
-                  <option value="none">Não incluir ano</option>
-                </select>
+                <InstitutionalSelect
+  value={String(yearFormat)}
+  onValueChange={(value) => ((e) => setYearFormat(e.target.value))({ target: { value, name: "", type: 'select-one', tagName: 'SELECT' }, currentTarget: { value, name: "", type: 'select-one', tagName: 'SELECT' } } as React.ChangeEvent<HTMLSelectElement>)}
+  ariaLabel="Formato do ano da matrícula"
+  options={[({ value: String("yy"), label: "Apenas 2 dígitos (ex: 26)" }),
+({ value: String("yyyy"), label: "Completo 4 dígitos (ex: 2026)" }),
+({ value: String("none"), label: "Não incluir ano" }) ]}
+  className="w-full"
+/>
               </div>
 
               <div className="flex items-center gap-2.5 pt-6 pl-2">

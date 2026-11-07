@@ -141,14 +141,15 @@ const MensageriaConfig: React.FC = () => {
   const activeConexao = conexoes.find((c) => c.id === activeTab);
 
   return (
-    <div className="max-w-6xl animate-fadeIn">
+    <div className="config-mensageria max-w-6xl animate-fadeIn">
       <ToastNotification toasts={toasts} onRemove={removeToast} />
 
       {/* ── Tab Bar ── */}
-      <div className="mb-6 flex items-center gap-0 overflow-x-auto border-b border-slate-200">
+      <div className="config-tabs mb-6 flex items-center gap-0 overflow-x-auto border-b border-slate-200">
         {/* Resumo */}
         <button
           type="button"
+          data-active={activeTab === 'resumo'}
           onClick={() => {
             setActiveTab('resumo');
             setShowingNewForm(false);
@@ -185,6 +186,7 @@ const MensageriaConfig: React.FC = () => {
             <button
               key={c.id}
               type="button"
+              data-active={activeTab === c.id}
               onClick={() => {
                 setActiveTab(c.id);
                 setShowingNewForm(false);
@@ -209,6 +211,7 @@ const MensageriaConfig: React.FC = () => {
         {/* Botão para adicionar nova linha */}
         <button
           type="button"
+          data-active={activeTab === 'nova'}
           onClick={handleAddNumber}
           className={`flex shrink-0 items-center gap-2 border-b-2 px-5 py-3 text-sm font-semibold transition-colors -mb-px ${
             activeTab === 'nova'

@@ -1,3 +1,4 @@
+import InstitutionalSelect from '../../../shared/components/InstitutionalSelect';
 import React from 'react';
 import {
   Building2,
@@ -82,19 +83,15 @@ const EmissorFinanceiroPanel: React.FC<EmissorFinanceiroPanelProps> = ({
           >
             Polo matriz emissor
           </label>
-          <select
+          <InstitutionalSelect
             id="payment-issuer-polo"
             value={selectedIssuerId}
-            onChange={(event) => onSelect(event.target.value)}
-            className="min-h-[48px] w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm font-bold text-[#001a33] outline-none transition focus:border-emerald-400 focus:bg-white focus:ring-4 focus:ring-emerald-100"
-          >
-            <option value="">Selecione a matriz</option>
-            {candidates.map((candidate) => (
-              <option key={candidate.id} value={candidate.id}>
-                {candidate.name} · {candidate.cnpj}
-              </option>
-            ))}
-          </select>
+            onValueChange={onSelect}
+            ariaLabel="Polo matriz emissor"
+            options={[{ value: '', label: 'Selecione a matriz' }, ...candidates.map((candidate) => ({
+              value: candidate.id, label: `${candidate.name} · ${candidate.cnpj}`, keywords: candidate.cnpj,
+            }))]}
+          />
 
           {selectedIssuer && (
             <div className="mt-3 grid gap-2 sm:grid-cols-2">

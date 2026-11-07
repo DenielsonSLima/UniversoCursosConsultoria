@@ -100,7 +100,7 @@ const UserIdentitySections: React.FC<UserIdentitySectionsProps> = ({
       </button>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {companies.map(company => (
-          <div key={company.id} onClick={() => onTogglePolo(company.id)} className={`rounded-xl border p-4 flex items-center justify-between transition-all duration-200 ${formData.todosPolos ? 'cursor-not-allowed bg-slate-50 border-slate-100 opacity-60' : 'cursor-pointer'} ${formData.polosAcesso.includes(company.id) ? 'bg-blue-50 border-blue-500 shadow-sm' : 'bg-white border-slate-200 hover:border-blue-200'}`}>
+          <div key={company.id} onClick={() => onTogglePolo(company.id)} className={`config-card config-access-card rounded-xl border p-4 flex items-center justify-between transition-all duration-200 ${formData.todosPolos ? 'cursor-not-allowed bg-slate-50 border-slate-100 opacity-60' : 'cursor-pointer'} ${formData.polosAcesso.includes(company.id) ? 'bg-blue-50 border-blue-500 shadow-sm' : 'bg-white border-slate-200 hover:border-blue-200'}`}>
             <div>
               <p className={`text-xs font-black uppercase tracking-tight ${formData.polosAcesso.includes(company.id) ? 'text-blue-800' : 'text-slate-700'}`}>{company.nomeFantasia}</p>
               <p className="text-[10px] text-slate-500">{company.cidade}/{company.uf}</p>

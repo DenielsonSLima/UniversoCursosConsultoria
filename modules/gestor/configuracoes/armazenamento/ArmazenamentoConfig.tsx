@@ -151,7 +151,7 @@ const ArmazenamentoConfig: React.FC = () => {
   };
 
   return (
-    <div className="mx-auto max-w-7xl">
+    <div className="config-armazenamento mx-auto max-w-7xl">
       <div className="mb-7 flex flex-col gap-4 border-b border-slate-100 pb-6 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <div className="mb-2 flex items-center gap-2 text-xs font-black uppercase tracking-[0.18em] text-blue-600">

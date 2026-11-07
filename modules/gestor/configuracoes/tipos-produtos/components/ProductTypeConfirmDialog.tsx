@@ -64,7 +64,7 @@ export function ProductTypeConfirmDialog({
   return createPortal(
     <div
       data-product-type-dialog-root
-      className="fixed inset-0 z-[10000] flex min-h-[100dvh] items-center justify-center bg-[#001a33]/60 p-4 backdrop-blur-sm"
+      className="config-dialog-overlay fixed inset-0 z-[10000] flex min-h-[100dvh] items-center justify-center bg-[#001a33]/60 p-4 backdrop-blur-sm"
       role="presentation"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget && !isPending) onClose();
@@ -77,7 +77,7 @@ export function ProductTypeConfirmDialog({
         aria-labelledby={titleId}
         aria-describedby={messageId}
         aria-busy={isPending}
-        className="relative w-full max-w-md rounded-[2rem] border border-white/70 bg-white p-6 text-center shadow-2xl sm:p-8"
+        className="config-dialog relative w-full max-w-md rounded-[2rem] border border-white/70 bg-white p-6 text-center shadow-2xl sm:p-8"
       >
         <button
           type="button"
@@ -100,7 +100,7 @@ export function ProductTypeConfirmDialog({
           {message}
         </p>
 
-        <div className="mt-7 flex flex-col-reverse gap-3 sm:flex-row">
+        <div className="config-dialog-footer mt-5 flex flex-col-reverse gap-3 sm:flex-row">
           <button
             ref={(element) => { initialFocusRef.current = element; }}
             type="button"

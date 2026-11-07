@@ -29,6 +29,8 @@ import {
   ChevronRight
 } from 'lucide-react';
 import './configuracoes-workspace.css';
+import './configuracoes-panels.css';
+import './configuracoes-dialogs.css';
 
 // Cada submódulo é carregado somente ao abrir sua seção.
 const EmpresasConfig = React.lazy(() => import('./empresas/EmpresasConfig'));

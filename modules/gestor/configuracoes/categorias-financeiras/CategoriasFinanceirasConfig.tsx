@@ -1,3 +1,4 @@
+import InstitutionalSelect from '../../../shared/components/InstitutionalSelect';
 // File: modules/gestor/configuracoes/categorias-financeiras/CategoriasFinanceirasConfig.tsx
 
 import React, { useEffect, useState } from 'react';
@@ -77,14 +78,13 @@ const InlineForm: React.FC<InlineFormProps> = ({ tipo, editingItem, onSaved, onC
         />
       </div>
       <div className="flex gap-2">
-        <select
+        <InstitutionalSelect
           value={status}
-          onChange={(e) => setStatus(e.target.value as 'ativo' | 'inativo')}
-          className="px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-rose-500 appearance-none transition-all"
-        >
-          <option value="ativo">ATIVO</option>
-          <option value="inativo">INATIVO</option>
-        </select>
+          onValueChange={(value) => setStatus(value as 'ativo' | 'inativo')}
+          ariaLabel="Status da categoria financeira"
+          className="min-w-[120px]"
+          options={[{ value: 'ativo', label: 'ATIVO' }, { value: 'inativo', label: 'INATIVO' }]}
+        />
         <div className="flex gap-2 ml-auto">
           <button onClick={onCancel} className="p-2 rounded-xl border border-slate-200 text-slate-400 hover:text-slate-600 hover:bg-white transition-colors">
             <X size={14} />

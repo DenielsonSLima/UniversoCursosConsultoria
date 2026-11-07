@@ -1,3 +1,4 @@
+import '../usuarios/config-access.css';
 import { useEffect, useMemo, useState } from 'react';
 import {
   BellRing,
@@ -111,8 +112,8 @@ const PushNotificationsConfig = () => {
   }
 
   return (
-    <div className="mx-auto max-w-7xl">
-      <header className="relative overflow-hidden rounded-[2rem] bg-[#001a33] p-6 text-white shadow-xl shadow-blue-950/10 sm:p-8">
+    <div className="config-section mx-auto max-w-7xl">
+      <header className="config-access-heading relative overflow-hidden rounded-[2rem] bg-[#001a33] p-6 text-white shadow-xl shadow-blue-950/10 sm:p-8">
         <div aria-hidden="true" className="absolute -right-10 -top-16 h-52 w-52 rounded-full border-[32px] border-violet-400/15" />
         <div className="relative flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
           <div>
@@ -142,7 +143,7 @@ const PushNotificationsConfig = () => {
 
       <div className={`mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3 ${draft.enabled ? '' : 'pointer-events-none opacity-50'}`} aria-disabled={!draft.enabled}>
         {categories.map(({ id, title, description, icon: Icon, accent }) => (
-          <article key={id} className="group rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-lg hover:shadow-blue-950/5">
+          <article key={id} className="config-card config-access-card group rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-lg hover:shadow-blue-950/5">
             <div className="flex items-start justify-between gap-4"><div className={`flex h-11 w-11 items-center justify-center rounded-2xl ${accent}`}><Icon size={20} /></div><Toggle checked={draft.categories[id]} onChange={() => setCategory(id)} label={`Permitir ${title}`} disabled={!draft.enabled} /></div>
             <h3 className="mt-5 text-sm font-black text-[#001a33]">{title}</h3>
             <p className="mt-1.5 text-xs font-medium leading-relaxed text-slate-500">{description}</p>
