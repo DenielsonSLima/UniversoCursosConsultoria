@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "retrieval": "lexical-bm25-with-source-citations",
-  "builtAt": "2026-11-07T11:25:03.492Z",
+  "builtAt": "2026-11-07T11:31:20.374Z",
   "manifestVersion": 2,
-  "sourceSignature": "05c3f5f4fe5f84267dacdf25edb5a533db2ed3316ef4b71e318c8cd76f971e8b",
+  "sourceSignature": "dd4926c6794ede6d542e9b3f33b2095f7a0ad6a5ee65c627ec58916dbfbbcb9e",
   "sources": [
     {
       "path": "AGENTS.md",
@@ -11,7 +11,7 @@
     },
     {
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "hash": "320d2b6594de4327a970230972107ba10c1e1b3d69abe94bbc7ae903685746e1"
+      "hash": "3ccab19b0d5110a8cd5beb34dd086d3f66291f9b4ada36bfdf9cb587d3833a2d"
     },
     {
       "path": "ai/operacao/MEMORIA_CANONICA.md",
@@ -208,23 +208,13 @@
       "part": 1
     },
     {
-      "id": "fc2ed6c985a94eedf8d5",
-      "hash": "fc2ed6c985a94eedf8d51c30376b81c53c3150a2f2e4b046e1e135191a70013d",
+      "id": "4851ab6c5dfab8b37ce1",
+      "hash": "4851ab6c5dfab8b37ce112c392314aa7b1760732cd78047b260513f983c60ef7",
       "path": "ai/operacao/LOTE_ATIVO.md",
       "section": "Lote: 2026-11-07-parceiros-cadastros-compactos",
-      "text": "Padronizar cadastros, seletores e cartões de Parceiros, preservando campos, valores, validações, escopo e quatro cartões por linha no desktop amplo. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-07-parceiros-cadastros-compactos.md`.",
-      "normalizedText": "padronizar cadastros seletores e cartoes de parceiros preservando campos valores validacoes escopo e quatro cartoes por linha no desktop amplo manifesto explicito ai operacao registros alteracoes 2026 11 07 parceiros cadastros compactos md",
-      "tokenCount": 31,
-      "part": 1
-    },
-    {
-      "id": "160c15b1a8ae22973c88",
-      "hash": "160c15b1a8ae22973c888ed941106e16e2f01431a1940d2ae8f8f357c695b1a6",
-      "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Lote: 2026-11-07-parceiros-cadastros-compactos",
-      "text": "Três frentes independentes: formulários; cartões/Responsáveis; auditoria de carregamento. Conferência local no Chrome a pedido do usuário. Análise de dados separa paginação local, filtro de polo e cache, com consultas remotas somente de leitura. A skill visual e sua especificação pertencem a manifesto operacional separado, solicitado expressamente pelo usuário.",
-      "normalizedText": "tres frentes independentes formularios cartoes responsaveis auditoria de carregamento conferencia local no chrome a pedido do usuario analise de dados separa paginacao local filtro de polo e cache com consultas remotas somente de leitura a skill visual e sua especificacao pertencem a manifesto operacional separado solicitado expressamente pelo usuario",
-      "tokenCount": 44,
+      "text": "Padronizar cadastros, seletores e cartões de Parceiros, preservando campos, valores, validações, escopo e quatro cartões por linha no desktop amplo. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-07-parceiros-cadastros-compactos.md`. Três frentes independentes: formulários; cartões/Responsáveis; auditoria de carregamento. Conferência local no Chrome a pedido do usuário. Análise de dados separa paginação local, filtro de polo e cache, com consultas remotas somente de leitura. A skill visual e sua especificação pertencem a manifesto operacional separado, solicitado expressamente pelo usuário.",
+      "normalizedText": "padronizar cadastros seletores e cartoes de parceiros preservando campos valores validacoes escopo e quatro cartoes por linha no desktop amplo manifesto explicito ai operacao registros alteracoes 2026 11 07 parceiros cadastros compactos md tres frentes independentes formularios cartoes responsaveis auditoria de carregamento conferencia local no chrome a pedido do usuario analise de dados separa paginacao local filtro de polo e cache com consultas remotas somente de leitura a skill visual e sua especificacao pertencem a manifesto operacional separado solicitado expressamente pelo usuario",
+      "tokenCount": 75,
       "part": 1
     },
     {

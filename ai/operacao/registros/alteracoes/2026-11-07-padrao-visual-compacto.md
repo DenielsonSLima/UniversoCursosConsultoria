@@ -24,6 +24,8 @@ Total: 5 arquivos.
 
 ## Validação e limites
 
-Conferência de coerência entre skill versionada, especificação e padrão solicitado; cada arquivo deve permanecer abaixo de 500 linhas. A validação visual do produto pertence ao registro de Parceiros; as verificações realizadas e seus limites de cobertura estão descritos ali. No fechamento, o índice RAG foi atualizado uma única vez com o corpus curado: 15 fontes e 81 trechos; artefato sincronizado por hash. Não houve operação remota nesta frente.
+Conferência de coerência entre skill versionada, especificação e padrão solicitado; cada arquivo deve permanecer abaixo de 500 linhas. A validação visual do produto pertence ao registro de Parceiros; as verificações realizadas e seus limites de cobertura estão descritos ali. A geração inicial do corpus curado produziu 15 fontes e 81 trechos, ultrapassando o teto operacional de 80. A falha de CI motivou uma reindexação excepcional após reunir o escopo e as frentes do LOTE num único parágrafo: todas as palavras preservadas, sem alterar fontes, manifesto ou gate; resultado final 15 fontes/80 trechos. Artefato sincronizado por hash. Não houve operação remota nesta frente.
 
 A nova orientação do usuário autoriza publicar agora somente Financeiro 4.8.251 + Parceiros 4.8.252 já implementados; substitui a condição anterior de esperar todas as etapas. A skill não amplia essa autorização para implementação futura ou operação de negócio. O plano pode evoluir com novas orientações explícitas do usuário, sem pular a validação técnica do módulo anterior; os módulos previstos já foram autorizados pelo usuário.
+
+Validação da correção de CI: test:agent-operations aprovado, bootstrap 15843 bytes, 15 fontes/80 trechos, busca 33,6 ms sem mutar o índice; check:file-lines aprovado com 3775 manuais e 161 exceções/artefatos reconhecidos. Nenhuma alteração nos testes ou no teto de 80.
