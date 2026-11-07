@@ -52,8 +52,8 @@ const DespesaTable: React.FC<DespesaTableProps> = ({
   };
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-      <table className="w-full table-fixed text-left" aria-label="Lançamentos de despesas">
+    <div className="financial-data-surface overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <table className="financial-data-table financial-expenses-table w-full table-fixed text-left" aria-label="Lançamentos de despesas">
         <colgroup><col className="w-[27%]" /><col className="w-[14%]" /><col className="w-[16%]" /><col className="w-[21%]" /><col className="w-[22%]" /></colgroup>
         <thead><tr className="border-b border-slate-200 bg-slate-100/80">
           {['Lançamento', 'Datas', 'Valores', 'Pagamento', 'Situação e ações'].map((label) => <th key={label} className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-slate-500">{label}</th>)}
@@ -86,7 +86,7 @@ const DespesaTable: React.FC<DespesaTableProps> = ({
                   <p className="mt-1"><span className="block text-[9px] font-black uppercase tracking-wide text-slate-400">Vencimento</span>{formatDespesaDate(item.dataVencimento)}</p>
                   <p className="mt-1 text-[10px] font-bold text-slate-500">{item.totalParcelas > 1 ? `Parcela ${item.parcelaNumero}/${item.totalParcelas}` : 'Parcela única'}</p>
                 </td>
-                <td className="px-4 py-4 text-xs">
+                <td className="financial-data-money px-4 py-4 text-xs">
                   <p className="text-[9px] font-black uppercase tracking-wide text-slate-400">Previsto</p><p className="mt-0.5 text-sm font-black text-slate-900">{formatDespesaCurrency(item.valor)}</p>
                   {isPago && !item.paymentSummary?.hasEvents && <p className="mt-1 font-bold text-emerald-700">Pago: {formatDespesaCurrency(item.valorPago ?? item.valor)}</p>}
                   <FinancialPaymentBalance summary={item.paymentSummary} expense />

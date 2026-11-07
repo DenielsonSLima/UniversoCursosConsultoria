@@ -39,7 +39,7 @@ const CandidateStudentCard: React.FC<CandidateStudentCardProps> = ({
   );
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <section className="financial-data-group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
       <h3>
         <button
           type="button"

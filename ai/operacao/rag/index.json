@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "retrieval": "lexical-bm25-with-source-citations",
-  "builtAt": "2026-11-06T10:34:18.111Z",
+  "builtAt": "2026-11-07T02:03:15.816Z",
   "manifestVersion": 2,
-  "sourceSignature": "50b7c63fa1f1af658af61126bd7b341eaaddca4af58ce3c07f6245c5f21e8e12",
+  "sourceSignature": "93b11b9e61ba21cf42cac7350f41b14e81569300043a40ddd6405b89a730d8c0",
   "sources": [
     {
       "path": "AGENTS.md",
@@ -11,7 +11,7 @@
     },
     {
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "hash": "4d520e9aedbe83188be63ad668174adaf13512df2f888ff818b323cb826ddcfa"
+      "hash": "b036274913c5226177b0ef0a00e22835dec1cba0977da5f75ce69368b2948cc5"
     },
     {
       "path": "ai/operacao/MEMORIA_CANONICA.md",
@@ -208,23 +208,23 @@
       "part": 1
     },
     {
-      "id": "c8903834d771e4148aa1",
-      "hash": "c8903834d771e4148aa1d42207a33a130b4f7901ddf46d2df31142318f76ea80",
+      "id": "2f0cbd18283800843c81",
+      "hash": "2f0cbd18283800843c816f0c00546fbe8c9d9d3ffd99a88e0788481fbf1c316d",
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Lote: 2026-11-06-entrega-visual-cinco-modulos-4-8-250",
-      "text": "Entrega 4.8.250: Formações, Patrimônio, Relatórios, Calendário e Comunicação, na direção compacta aprovada. Implementação em cinco etapas sequenciais com três agentes, revisão independente e smoke Safari de cada módulo. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-06-entrega-visual-cinco-modulos-4-8-250.md`.",
-      "normalizedText": "entrega 4 8 250 formacoes patrimonio relatorios calendario e comunicacao na direcao compacta aprovada implementacao em cinco etapas sequenciais com tres agentes revisao independente e smoke safari de cada modulo manifesto explicito ai operacao registros alteracoes 2026 11 06 entrega visual cinco modulos 4 8 250 md",
-      "tokenCount": 41,
+      "section": "Lote: 2026-11-06-financeiro-tabelas-nitidas",
+      "text": "Padronização visual das tabelas e listagens das dez abas financeiras, conforme as capturas enviadas. Preservar dados, consultas, permissões, seleção e todas as operações. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-06-financeiro-tabelas-nitidas.md`.",
+      "normalizedText": "padronizacao visual das tabelas e listagens das dez abas financeiras conforme as capturas enviadas preservar dados consultas permissoes selecao e todas as operacoes manifesto explicito ai operacao registros alteracoes 2026 11 06 financeiro tabelas nitidas md",
+      "tokenCount": 34,
       "part": 1
     },
     {
-      "id": "4a26f1892d8eb27093ab",
-      "hash": "4a26f1892d8eb27093ab4bfc89e389123694b83d81dc9b3f7bfdf8f66f0d69d7",
+      "id": "94bd775b68ad70d20ba6",
+      "hash": "94bd775b68ad70d20ba65d13d3b3cc89e262d69a629d6f805d671e1f23dcdb1e",
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Lote: 2026-11-06-entrega-visual-cinco-modulos-4-8-250",
-      "text": "Preservar dados, consultas, permissões, regras, envios e geradores; somente apresentação e extrações equivalentes para o teto de 500 linhas. GitHub autorizado ao final: commit atômico, PR e Preview após checks. Produção não solicitada para este lote. Base publicada 4.8.249 validada pelo usuário.",
-      "normalizedText": "preservar dados consultas permissoes regras envios e geradores somente apresentacao e extracoes equivalentes para o teto de 500 linhas github autorizado ao final commit atomico pr e preview apos checks producao nao solicitada para este lote base publicada 4 8 249 validada pelo usuario",
-      "tokenCount": 38,
+      "section": "Lote: 2026-11-06-financeiro-tabelas-nitidas",
+      "text": "Uma frente independente de inventário, marcadores e revisão; coordenador integra estilo e verifica contratos. Após orientação do usuário, conferência somente por fotos e código, sem navegador. Validação proporcional com AST, SSR, tipagem e contratos focados. Produção não solicitada. Base remota 4.8.250.",
+      "normalizedText": "uma frente independente de inventario marcadores e revisao coordenador integra estilo e verifica contratos apos orientacao do usuario conferencia somente por fotos e codigo sem navegador validacao proporcional com ast ssr tipagem e contratos focados producao nao solicitada base remota 4 8 250",
+      "tokenCount": 37,
       "part": 1
     },
     {

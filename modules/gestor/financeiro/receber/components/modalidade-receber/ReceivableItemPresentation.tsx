@@ -306,7 +306,7 @@ export const ReceivableRow: React.FC<ReceivableRowProps> = ({
         ) : null}
       </div>
     </td>
-    <td className="py-5 pl-3 pr-2">
+    <td className="financial-data-money py-5 pl-3 pr-2">
       <ReceivableAmountSummary item={item} compact />
       <FinancialPaymentBalance summary={item.paymentSummary} />
     </td>
@@ -315,7 +315,7 @@ export const ReceivableRow: React.FC<ReceivableRowProps> = ({
 );
 
 export const ReceivableCard: React.FC<ItemProps> = ({ item, actions }) => (
-  <article className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+  <article className="financial-data-surface financial-data-card rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
     <div className="flex items-start justify-between gap-3">
       <div>
         <p className="font-black text-[#001a33]">{item.clienteNome}</p>

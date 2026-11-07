@@ -194,7 +194,7 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId }) => {
         </div>
       </div> : null}
 
-      <div className="overflow-hidden rounded-[2rem] border border-slate-100 bg-white shadow-sm">
+      <div className="financial-data-surface overflow-hidden rounded-[2rem] border border-slate-100 bg-white shadow-sm">
         {isLoading ? (
           <div className="flex items-center justify-center gap-3 py-16">
             <Loader2 className="animate-spin text-emerald-600" size={22} />
@@ -208,7 +208,7 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId }) => {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[980px] text-left">
+            <table className="financial-data-table financial-other-credits-table w-full min-w-[980px] text-left">
               <thead className="bg-slate-50">
                 <tr>
                   <th className="w-12 px-4 py-4"><OtherCreditSelectionCheckbox
@@ -235,7 +235,7 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId }) => {
 
                 return (
                   <tbody key={group.key} className="divide-y divide-slate-100">
-                    <tr className="bg-slate-50/80 transition-colors hover:bg-emerald-50/65">
+                    <tr className="financial-data-group bg-slate-50/80 transition-colors hover:bg-emerald-50/65">
                       <td className="w-12 px-4 py-4"><OtherCreditSelectionCheckbox
                         label={`Selecionar créditos canceláveis de ${group.label}`}
                         checked={eligibleGroup.length > 0 && selectedGroupCount === eligibleGroup.length}
@@ -246,10 +246,10 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId }) => {
                         <button
                           type="button"
                           onClick={() => toggleGroup(group.key)}
-                          className="grid w-full grid-cols-[minmax(260px,1.5fr)_minmax(160px,0.8fr)_minmax(170px,0.9fr)_minmax(130px,0.7fr)] items-center gap-4 px-5 py-4 text-left"
+                          className="financial-group-toggle grid w-full grid-cols-[minmax(260px,1.5fr)_minmax(160px,0.8fr)_minmax(170px,0.9fr)_minmax(130px,0.7fr)] items-center gap-4 px-5 py-4 text-left"
                         >
                           <span className="flex min-w-0 items-center gap-3">
-                            <span className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-2xl ${
+                            <span className={`financial-group-icon flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-2xl ${
                               isExpanded ? 'bg-[#001a33] text-white' : 'bg-white text-slate-500'
                             }`}>
                               {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}

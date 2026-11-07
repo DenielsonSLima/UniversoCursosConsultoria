@@ -36,7 +36,7 @@ const CanonicalSummary: React.FC<CanonicalSummaryProps> = ({
   approvalReasons = [],
   scheduleEditor,
 }) => (
-  <div className="space-y-4">
+  <div className="financial-data-surface space-y-4">
     {requiresApproval ? (
       <div role="status" className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-amber-900">
         <p className="flex items-center gap-2 text-xs font-black uppercase tracking-wide">
@@ -130,11 +130,11 @@ const CanonicalSummary: React.FC<CanonicalSummaryProps> = ({
         >
           <CalendarDays size={16} className="text-blue-600" /> Cronograma
         </h4>
-        <div className="mt-3 divide-y divide-slate-100 rounded-xl border border-slate-100">
+        <div className="financial-record-list mt-3 divide-y divide-slate-100 rounded-xl border border-slate-100">
           {schedule.entries.map((entry) => (
             <div
               key={`${entry.kind}-${entry.sequence}`}
-              className="flex items-center justify-between gap-4 px-3 py-2.5 text-xs"
+              className="financial-data-group flex items-center justify-between gap-4 px-3 py-2.5 text-xs"
             >
               <span>
                 <strong className="text-slate-700">
@@ -142,7 +142,7 @@ const CanonicalSummary: React.FC<CanonicalSummaryProps> = ({
                 </strong>
                 <span className="ml-2 text-slate-400">{formatRenegociacaoDate(entry.dueDate)}</span>
               </span>
-              <strong className="shrink-0 text-[#001a33]">{formatCents(entry.amountCents)}</strong>
+              <strong className="financial-data-money shrink-0 text-[#001a33]">{formatCents(entry.amountCents)}</strong>
             </div>
           ))}
         </div>
@@ -156,14 +156,14 @@ const CanonicalSummary: React.FC<CanonicalSummaryProps> = ({
       >
         <FileText size={16} className="text-blue-600" /> Títulos originais ({sourceItems.length})
       </h4>
-      <div className="mt-3 divide-y divide-slate-100">
+      <div className="financial-record-list mt-3 divide-y divide-slate-100">
         {sourceItems.map((item) => (
-          <div key={item.receivableId} className="flex items-center justify-between gap-4 py-2 text-xs">
+          <div key={item.receivableId} className="financial-data-group flex items-center justify-between gap-4 py-2 text-xs">
             <span className="text-slate-500">
               Parcela {item.number ?? item.position} • {formatRenegociacaoDate(item.dueDate)}
               {item.overdue ? ' • vencida' : ' • em aberto'}
             </span>
-            <strong className="shrink-0 text-slate-700">{formatCents(item.openAmountCents)}</strong>
+            <strong className="financial-data-money shrink-0 text-slate-700">{formatCents(item.openAmountCents)}</strong>
           </div>
         ))}
       </div>
@@ -178,7 +178,7 @@ const Value: React.FC<{ label: string; value: string; strong?: boolean; highligh
     <dt className={`text-[9px] font-black uppercase tracking-wide ${highlighted ? 'text-emerald-800' : 'text-slate-400'}`}>
       {label}
     </dt>
-    <dd className={`mt-0.5 text-sm ${highlighted ? 'font-black text-emerald-800' : strong ? 'font-black text-blue-800' : 'font-bold text-slate-700'}`}>
+    <dd className={`financial-data-money mt-0.5 text-sm ${highlighted ? 'font-black text-emerald-800' : strong ? 'font-black text-blue-800' : 'font-bold text-slate-700'}`}>
       {value}
     </dd>
   </div>

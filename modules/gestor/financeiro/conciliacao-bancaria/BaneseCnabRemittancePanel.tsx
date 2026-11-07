@@ -292,7 +292,7 @@ const BaneseCnabRemittancePanel: React.FC<BaneseCnabRemittancePanelProps> = ({
                 </p>
               </div>
             ) : (
-              <div className="mt-4 max-h-80 space-y-2 overflow-y-auto pr-1">
+              <div className="financial-data-surface financial-record-list mt-4 max-h-80 space-y-2 overflow-y-auto pr-1">
                 {eligible.map((item) => {
                   const selected = selectedIds.includes(item.id);
                   return (
@@ -354,7 +354,7 @@ const BaneseCnabRemittancePanel: React.FC<BaneseCnabRemittancePanelProps> = ({
                   </div>
                 </div>
 
-                <div className="max-h-96 space-y-2 overflow-y-auto rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <div className="financial-data-surface financial-record-list max-h-96 space-y-2 overflow-y-auto rounded-xl border border-slate-200 bg-slate-50 p-3">
                   {preview.items.map((item) => (
                     <div key={item.receivableId} className="rounded-lg bg-white p-3 shadow-sm">
                       <div className="flex items-start justify-between gap-3">
@@ -458,7 +458,7 @@ const BaneseCnabRemittancePanel: React.FC<BaneseCnabRemittancePanelProps> = ({
             {recentRemittances.length > 0 ? (
               <div className="border-t border-slate-200 pt-4">
                 <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Remessas recentes</p>
-                <div className="mt-2 space-y-2">
+                <div className="financial-data-surface financial-record-list mt-2 space-y-2">
                   {recentRemittances.map((file) => (
                     <div key={file.id} className="flex items-center justify-between gap-3 rounded-lg bg-slate-50 p-3">
                       <div className="min-w-0">

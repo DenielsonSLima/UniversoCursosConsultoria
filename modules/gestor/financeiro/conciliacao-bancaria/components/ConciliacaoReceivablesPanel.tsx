@@ -31,7 +31,7 @@ const ConciliacaoReceivablesPanel: React.FC<ConciliacaoReceivablesPanelProps> = 
   onSearchTermChange,
   onRefresh,
 }) => (
-  <section className="rounded-[2rem] border border-slate-100 bg-white p-6 shadow-sm">
+  <section className="financial-data-surface rounded-[2rem] border border-slate-100 bg-white p-6 shadow-sm">
     <div className="mb-4 flex flex-wrap gap-3">
       <Search size={16} className="mt-3 text-slate-400" />
       <input
@@ -51,7 +51,7 @@ const ConciliacaoReceivablesPanel: React.FC<ConciliacaoReceivablesPanelProps> = 
           Não foi possível carregar as cobranças do ambiente bancário ativo.
         </div>
       ) : (
-        <table className="w-full overflow-hidden rounded-2xl border border-slate-100 text-left">
+        <table className="financial-data-table financial-reconciliation-table w-full overflow-hidden rounded-2xl border border-slate-100 text-left">
           <thead className="bg-slate-50">
             <tr>
               <th className="p-3 text-[10px] font-bold uppercase text-slate-500">Descrição</th>
@@ -84,7 +84,7 @@ const ConciliacaoReceivablesPanel: React.FC<ConciliacaoReceivablesPanelProps> = 
                   </td>
                   <td className="p-3 text-xs font-bold text-slate-600">{row.nossoNumero || '-'}</td>
                   <td className="p-3 text-xs text-slate-600">{formatConciliacaoDate(row.dataVencimento)}</td>
-                  <td className="p-3 text-xs font-black text-slate-700">{formatConciliacaoCurrency(row.valor)}</td>
+                  <td className="financial-data-money p-3 text-xs font-black text-slate-700">{formatConciliacaoCurrency(row.valor)}</td>
                   <td className="p-3">
                     <span className={`rounded-full border px-2 py-1 text-[10px] font-black uppercase ${conciliacaoStatusClass(row.status)}`}>
                       {row.status}

@@ -1,0 +1,203 @@
+/* Presentation only. The page gate also contains financial dialogs portalled to body. */
+@media screen {
+  body:has(#root .financeiro-workspace) :is(.financial-data-surface, #caixa-workspace-payables-dialog article),
+  body:has(#root .financeiro-workspace) :is(.financial-data-surface, #caixa-workspace-payables-dialog article) * {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    -webkit-font-smoothing: auto;
+    -moz-osx-font-smoothing: auto;
+    text-rendering: auto;
+    font-synthesis: none;
+  }
+
+  body:has(#root .financeiro-workspace) :is(.financial-data-surface, #caixa-workspace-payables-dialog article) {
+    min-width: 0;
+    font-size: 13px;
+    line-height: 1.55;
+    color: #334155;
+    font-variant-numeric: tabular-nums;
+    border-radius: 12px;
+    box-shadow: none;
+  }
+
+  body:has(#root .financeiro-workspace) :is(.financial-data-surface, #caixa-workspace-payables-dialog article) :is(p, dd, dt, span, button, a) {
+    letter-spacing: normal;
+    text-transform: none;
+  }
+
+  body:has(#root .financeiro-workspace) :is(.financial-data-surface, #caixa-workspace-payables-dialog article) :is(.font-black, .font-extrabold, .font-bold) {
+    font-weight: 600;
+  }
+
+  body:has(#root .financeiro-workspace) :is(.financial-data-surface, #caixa-workspace-payables-dialog article) .font-semibold {
+    font-weight: 500;
+  }
+
+  body:has(#root .financeiro-workspace) :is(.financial-data-surface, #caixa-workspace-payables-dialog article) :is(.text-\[9px\], .text-\[10px\], .text-\[11px\], .text-xs) {
+    font-size: 12px;
+    line-height: 1.55;
+  }
+
+  body:has(#root .financeiro-workspace) :is(.financial-data-surface, #caixa-workspace-payables-dialog article) :is(.text-sm, .text-base) {
+    font-size: 13px;
+    line-height: 1.55;
+  }
+
+  body:has(#root .financeiro-workspace) :is(.financial-data-surface, #caixa-workspace-payables-dialog article) .text-lg {
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  body:has(#root .financeiro-workspace) :is(.financial-data-surface, #caixa-workspace-payables-dialog article) .text-slate-400 {
+    color: #526175;
+    font-weight: 400;
+  }
+
+  body:has(#root .financeiro-workspace) :is(.financial-data-surface, #caixa-workspace-payables-dialog article) .text-emerald-600 {
+    color: #047857;
+  }
+
+  body:has(#root .financeiro-workspace) :is(.financial-data-surface, #caixa-workspace-payables-dialog article) :is(button, a) {
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.45;
+    box-shadow: none;
+  }
+
+  body:has(#root .financeiro-workspace) .financial-data-surface button:disabled {
+    cursor: not-allowed;
+  }
+
+  body:has(#root .financeiro-workspace) .financial-data-surface input[type='checkbox'] {
+    flex-shrink: 0;
+    vertical-align: middle;
+  }
+
+  body:has(#root .financeiro-workspace) .financial-data-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 13px;
+    line-height: 1.55;
+  }
+
+  body:has(#root .financeiro-workspace) .financial-data-surface:has(> .financial-data-table) {
+    overflow-x: auto;
+  }
+
+  body:has(#root .financeiro-workspace) .financial-data-table > thead > tr {
+    background: #f8fafc;
+  }
+
+  body:has(#root .financeiro-workspace) .financial-data-table > thead > tr > th {
+    padding: 12px 14px;
+    border-bottom: 1px solid #dbe3ec;
+    color: #475569;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.4;
+    letter-spacing: normal;
+    text-transform: none;
+    vertical-align: middle;
+  }
+
+  body:has(#root .financeiro-workspace) .financial-data-table > tbody > tr > :is(td, th) {
+    border-bottom: 1px solid #e8edf3;
+    font-size: 13px;
+    line-height: 1.55;
+    vertical-align: middle;
+  }
+
+  body:has(#root .financeiro-workspace) .financial-data-table > tbody > tr > :is(td, th):not([colspan]) {
+    padding: 12px 14px;
+  }
+
+  body:has(#root .financeiro-workspace) .financial-data-table > tbody > tr[class~='bg-emerald-50/45'] {
+    background: #f8fafc;
+  }
+
+  body:has(#root .financeiro-workspace) .financial-data-table .financial-data-group {
+    background: #f8fafc;
+  }
+
+  body:has(#root .financeiro-workspace) .financial-data-table .financial-data-group:hover {
+    background: #f1f5f9;
+  }
+
+  body:has(#root .financeiro-workspace) .financial-group-toggle {
+    min-height: 64px;
+    padding: 12px 14px;
+    align-items: center;
+    gap: 14px;
+  }
+
+  body:has(#root .financeiro-workspace) .financial-group-icon {
+    display: inline-flex;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    align-items: center;
+    justify-content: center;
+  }
+
+  body:has(#root .financeiro-workspace) .financial-group-toggle .text-slate-400 {
+    margin-top: 2px;
+    font-size: 12px;
+    font-weight: 400;
+  }
+
+  body:has(#root .financeiro-workspace) .financial-data-table .financial-data-money {
+    text-align: right;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+
+  body:has(#root .financeiro-workspace) .financial-data-table .financial-data-money :is(.whitespace-nowrap, .font-mono) {
+    white-space: nowrap;
+  }
+
+  body:has(#root .financeiro-workspace) .financial-loans-table > thead > tr > th:nth-child(4),
+  body:has(#root .financeiro-workspace) .financial-agreements-table > thead > tr > th:nth-child(3),
+  body:has(#root .financeiro-workspace) .financial-agreements-table > thead > tr > th:nth-child(4),
+  body:has(#root .financeiro-workspace) .financial-agreements-table > thead > tr > th:nth-child(5),
+  body:has(#root .financeiro-workspace) .financial-receivables-table > thead > tr > th:nth-child(5),
+  body:has(#root .financeiro-workspace) .financial-other-credits-table > thead > tr > th:nth-child(6),
+  body:has(#root .financeiro-workspace) .financial-expenses-table > thead > tr > th:nth-child(3),
+  body:has(#root .financeiro-workspace) .financial-transfers-table > thead > tr > th:nth-child(4),
+  body:has(#root .financeiro-workspace) .financial-reconciliation-table > thead > tr > th:nth-child(4) {
+    text-align: right;
+  }
+
+  body:has(#root .financeiro-workspace) .financial-data-table :is(td, th) > button:only-child {
+    vertical-align: middle;
+  }
+
+  body:has(#root .financeiro-workspace) .financial-data-table td :is(button, a) {
+    min-height: 32px;
+    border-radius: 8px;
+  }
+
+  body:has(#root .financeiro-workspace) .financial-data-card {
+    border-radius: 12px;
+    box-shadow: none;
+  }
+
+  body:has(#root .financeiro-workspace) .financial-record-list > :is(article, section) {
+    border-radius: 12px;
+    box-shadow: none;
+  }
+
+  body:has(#root .financeiro-workspace) .financial-expenses-table {
+    min-width: 960px;
+  }
+
+  @media (max-width: 767px) {
+    body:has(#root .financeiro-workspace) .financial-data-table td :is(button, a) {
+      min-height: 40px;
+    }
+
+    body:has(#root .financeiro-workspace) .financial-data-surface input:not([type='checkbox']):not([type='radio']),
+    body:has(#root .financeiro-workspace) .financial-data-surface select {
+      font-size: 16px;
+    }
+  }
+}

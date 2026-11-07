@@ -350,7 +350,7 @@ const ConciliacaoRecebimentoRows: React.FC<ConciliacaoRecebimentoRowsProps> = ({
 
   return (
     <>
-      <table className="hidden w-full text-left lg:table">
+      <table className="financial-data-surface financial-data-table financial-reconciliation-table hidden w-full text-left lg:table">
         <caption className="sr-only">
           Cobranças monitoradas e detalhes das respectivas baixas financeiras
         </caption>
@@ -374,7 +374,7 @@ const ConciliacaoRecebimentoRows: React.FC<ConciliacaoRecebimentoRowsProps> = ({
                 </th>
                 <td className="p-3.5 font-mono text-[11px] font-bold text-slate-600">{row.nossoNumero || '-'}</td>
                 <td className="p-3.5 text-slate-600">{formatConciliacaoDate(row.dataVencimento)}</td>
-                <td className="p-3.5 font-black text-slate-800">{formatConciliacaoCurrency(row.valor)}</td>
+                <td className="financial-data-money p-3.5 font-black text-slate-800">{formatConciliacaoCurrency(row.valor)}</td>
                 <td className="p-3.5">{statusBadge(row)}</td>
                 <td className="p-3.5">{settlementOriginBadge(row)}</td>
               </tr>
@@ -393,7 +393,7 @@ const ConciliacaoRecebimentoRows: React.FC<ConciliacaoRecebimentoRowsProps> = ({
         })}
       </table>
 
-      <div className="divide-y divide-slate-200 lg:hidden">
+      <div className="financial-data-surface financial-record-list divide-y divide-slate-200 lg:hidden">
         {rows.map((row) => {
           const isRefreshing = refreshingIds.includes(row.id);
           return (

@@ -64,7 +64,7 @@ const DespesaCard: React.FC<DespesaCardProps> = ({
   const selectable = isAberto && !item.paymentSummary?.hasEvents && !item.isRateioDerived && Boolean(onSelectionChange);
 
   return (
-    <article className={`relative overflow-hidden rounded-3xl border bg-white shadow-sm transition-all duration-300 hover:shadow-lg ${selected ? 'ring-2 ring-rose-300' : ''} ${cfg.border}`}>
+    <article className={`financial-data-surface financial-data-card relative overflow-hidden rounded-3xl border bg-white shadow-sm transition-all duration-300 hover:shadow-lg ${selected ? 'ring-2 ring-rose-300' : ''} ${cfg.border}`}>
       <div className={`h-1 w-full ${isPago ? 'bg-emerald-500' : item.status === 'VENCIDO' ? 'bg-rose-500' : isCancelado ? 'bg-slate-300' : 'bg-amber-400'}`} />
 
       <div className="p-5">

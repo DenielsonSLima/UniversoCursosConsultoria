@@ -114,7 +114,7 @@ const BaneseCnabReturnPanel: React.FC<BaneseCnabReturnPanelProps> = ({
       {recentReturnFiles.length > 0 ? (
         <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
           <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Retornos recentes · recuperação histórica</p>
-          <div className="mt-2 max-h-52 space-y-2 overflow-y-auto">
+          <div className="financial-data-surface financial-record-list mt-2 max-h-52 space-y-2 overflow-y-auto">
             {recentReturnFiles.map((file) => (
               <div key={file.id} className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white p-2.5">
                 <div className="min-w-0">
@@ -200,7 +200,7 @@ const BaneseCnabReturnPanel: React.FC<BaneseCnabReturnPanelProps> = ({
             </p>
           </div>
           <CnabSummaryGrid summary={previewSummary} />
-          <div className="max-h-72 space-y-2 overflow-y-auto rounded-xl border border-slate-200 bg-slate-50 p-3">
+          <div className="financial-data-surface financial-record-list max-h-72 space-y-2 overflow-y-auto rounded-xl border border-slate-200 bg-slate-50 p-3">
             <p className="sticky top-0 bg-slate-50 pb-1 text-[10px] font-black uppercase tracking-widest text-slate-500">Eventos da prévia</p>
             <CnabOutcomeList outcomes={preview.records || []} />
           </div>

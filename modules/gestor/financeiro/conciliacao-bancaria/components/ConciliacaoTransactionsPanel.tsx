@@ -12,13 +12,13 @@ const ConciliacaoTransactionsPanel: React.FC<ConciliacaoTransactionsPanelProps> 
   transactions,
   isUnavailable = false,
 }) => (
-  <section className="rounded-[2rem] border border-slate-100 bg-white p-6 shadow-sm">
+  <section className="financial-data-surface rounded-[2rem] border border-slate-100 bg-white p-6 shadow-sm">
     <div className="mb-4 flex items-center gap-2">
       <AlertCircle size={16} className="text-blue-600" />
       <h3 className="text-sm font-black uppercase tracking-widest text-slate-700">Histórico de retorno persistido</h3>
     </div>
     <div className="overflow-x-auto">
-      <table className="w-full overflow-hidden rounded-2xl border border-slate-100 text-left">
+      <table className="financial-data-table w-full overflow-hidden rounded-2xl border border-slate-100 text-left">
         <thead className="bg-slate-50">
           <tr>
             <th className="p-3 text-[10px] font-bold uppercase text-slate-500">Atualização</th>

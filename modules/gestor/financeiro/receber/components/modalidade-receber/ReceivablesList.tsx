@@ -79,7 +79,7 @@ export const ReceivablesList: React.FC<ReceivablesListProps> = ({
   onChangePage,
 }) => (
   <>
-    <div className="relative overflow-hidden rounded-[2rem] border border-slate-100 bg-white">
+    <div className="financial-data-surface relative overflow-hidden rounded-[2rem] border border-slate-100 bg-white">
       {isPageFetching && !isLoading ? (
         <div className="absolute right-5 top-4 z-10 inline-flex items-center gap-2 rounded-full bg-white/95 px-3 py-1.5 text-[10px] font-black uppercase text-emerald-700 shadow-sm">
           <Loader2 className="animate-spin" size={12} /> Atualizando
@@ -144,7 +144,7 @@ export const ReceivablesList: React.FC<ReceivablesListProps> = ({
         </div>
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[1080px] table-fixed text-left">
+          <table className="financial-data-table financial-receivables-table w-full min-w-[1080px] table-fixed text-left">
             <colgroup>
               <col className="w-[18%]" />
               <col className="w-[23%]" />
@@ -179,15 +179,15 @@ export const ReceivablesList: React.FC<ReceivablesListProps> = ({
               const first = group.first;
               return (
                 <tbody key={group.key} className="divide-y divide-slate-100">
-                  <tr className="bg-slate-50/80 transition-colors hover:bg-blue-50/70">
+                  <tr className="financial-data-group bg-slate-50/80 transition-colors hover:bg-blue-50/70">
                     <td colSpan={6} className="p-0">
                       <button
                         type="button"
                         onClick={() => onToggleGroup(group.key)}
-                        className="grid w-full grid-cols-[minmax(260px,1.5fr)_minmax(180px,0.9fr)_minmax(180px,0.9fr)_minmax(140px,0.7fr)] items-center gap-4 px-5 py-4 text-left"
+                        className="financial-group-toggle grid w-full grid-cols-[minmax(260px,1.5fr)_minmax(180px,0.9fr)_minmax(180px,0.9fr)_minmax(140px,0.7fr)] items-center gap-4 px-5 py-4 text-left"
                       >
                         <span className="flex min-w-0 items-center gap-3">
-                          <span className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-2xl ${
+                          <span className={`financial-group-icon flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-2xl ${
                             isExpanded ? 'bg-[#001a33] text-white' : 'bg-white text-slate-500'
                           }`}>
                             {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}

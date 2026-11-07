@@ -150,14 +150,14 @@ const ProposalDetail: React.FC<ProposalDetailProps> = ({ agreementId, poloId, on
                 approvalReasons={detail.canonicalSnapshot.approvalReasons}
               />
 
-              <section className="rounded-2xl border border-slate-200 bg-white p-5">
+              <section className="financial-data-surface rounded-2xl border border-slate-200 bg-white p-5">
                 <h3 className="flex items-center gap-2 text-xs font-black uppercase tracking-wide text-[#001a33]">
                   <Clock3 size={16} className="text-blue-600" /> Histórico auditável
                 </h3>
                 {detail.events.length ? (
-                  <ol className="mt-4 space-y-4">
+                  <ol className="financial-record-list mt-4 space-y-4">
                     {detail.events.map((event) => (
-                      <li key={event.id} className="relative border-l-2 border-slate-200 pl-4">
+                      <li key={event.id} className="financial-data-group relative border-l-2 border-slate-200 pl-4">
                         <span className="absolute -left-[5px] top-1 h-2 w-2 rounded-full bg-blue-600" />
                         <p className="text-xs font-black text-slate-700">{event.label}</p>
                         <p className="mt-0.5 text-[10px] font-medium text-slate-400">
