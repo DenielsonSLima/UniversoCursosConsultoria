@@ -20,6 +20,7 @@ O responsável aprovou o aceite técnico após capturar no Chrome local 3054 os 
 - `lib/profile-photo-recovery.ts`
 - `lib/profile-photo-transport.test.ts`
 - `lib/profile-photo-transport.ts`
+- `modules/gestor/parceiros/aluno-registration.browser.test.mjs`
 - `modules/gestor/parceiros/components/cards/AlunoCard.tsx`
 - `modules/gestor/parceiros/components/cards/PFCard.tsx`
 - `modules/gestor/parceiros/components/cards/PartnerCardAvatar.test.mjs`
@@ -28,7 +29,7 @@ O responsável aprovou o aceite técnico após capturar no Chrome local 3054 os 
 - `modules/gestor/parceiros/hooks/useParceirosQueries.photo-cache.test.mjs`
 - `modules/gestor/parceiros/hooks/useParceirosQueries.ts`
 
-Total: 19 arquivos. Produto inclui transporte, recuperação privada, avatares, frescor da lista e testes-fonte; operação inclui CI/registro/versão. TMP, imagens sintéticas, harnesses, logs e bundles ficam fora da entrega.
+Total: 20 arquivos. Produto inclui transporte, recuperação privada, avatares, frescor da lista e testes-fonte; operação inclui CI/registro/versão. TMP, imagens sintéticas, harnesses, logs e bundles ficam fora da entrega.
 
 ## Causa e correção
 
@@ -55,6 +56,10 @@ Aluno/Professor/PF usam avatar local: iniciais durante loading/erro, lazy/async 
 Testes integrados 22/22: 12 transporte, 4 recuperação, 4 query/cache/foco e 2 avatar. Simulam autorização, sessão, URLs e tempo sem rede. Prova negativa da query com staleInfinity falhou ao remontar após 4 min antes do ajuste; invalidações ativas/inativas e polo/global preservados. Concorrência de lotes >100 e cache de assinatura persistente não foram incluídos.
 
 O fechamento limitado ao MIME e o pedido posterior de avatar tiveram seus índices nos candidatos anteriores. A main avançou por entregas paralelas 255/256/257; a nova base integrada exigiu um novo fechamento e uma única geração RAG final autorizada, após congelar o lote. O CI operacional preexistente também gera o índice antes das verificações. Comunicação foi adiada pelo usuário, sem fundir o candidato isolado; Biblioteca é a próxima etapa após publicação 258.
+
+## Ajuste do teste de cadastro na CI
+
+A integração da recuperação privada acrescentou uma dependência de SDK ao import dos cards. O teste browser de cadastro agora substitui exclusivamente recoverPartnerPhoto por um resolvedor local async null no namespace controlled-io, preservando seus cenários, guardas e isolamento. Nenhum componente, serviço ou comportamento de produto foi alterado nesta correção de teste. O arquivo-fonte integra o manifesto (203 linhas). Prova isolada sem pacotes Supabase/Capacitor: baseline bloqueava os sete cenários por três imports SDK não resolvidos; patch compila e aprova 7/7 testes e lint. Runtime local Node24.22.1/Playwright1.58.1/Chromium1200; o workflow declara Playwright1.58.2, portanto a execução local não afirma identidade completa de toolchain da CI. Logs e metadados permanecem temporários. O build integrado anterior permanece válido porque o produto é byte idêntico.
 
 ## Publicação e preservação
 

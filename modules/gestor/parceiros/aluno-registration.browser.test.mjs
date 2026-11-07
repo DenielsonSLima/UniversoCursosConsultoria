@@ -23,6 +23,7 @@ before(async () => {
     files: 'export const errorMessage=()=>"Error";export const getFileExtension=()=>"png";',
     validators: 'export const validateAlunoProfessorIdentity=()=>{};',
     documents: 'export const documentosAlunoService={};',
+    photoRecovery: 'export const recoverPartnerPhoto=async()=>null;',
     enrollmentMutations: 'export const parceirosMatriculasService={};',
     toast: 'export const useToast=()=>({toasts:[],removeToast(){},toast:{success(){},error(){}}});export default function Toast(){return null}',
     inactiveTab: 'export default function InactiveTab(){return null}',
@@ -51,7 +52,8 @@ before(async () => {
     bundle: true, write: false, format: 'iife', jsx: 'automatic', nodePaths: dependencies ? [dependencies] : [],
     define: { 'import.meta.env': '{}' }, plugins: [{ name: 'controlled-io-and-unopened-tabs', setup(plugin) {
       const map = [
-        [/lib\/supabase$/, 'rpc'], [/portal-activation\.service$/, 'portal'],
+        [/lib\/supabase$/, 'rpc'], [/lib\/profile-photo-recovery$/, 'photoRecovery'],
+        [/portal-activation\.service$/, 'portal'],
         [/utils\/file-utils$/, 'files'], [/utils\/parceiro-validators$/, 'validators'],
         [/documentos-aluno\.service$/, 'documents'], [/parceiros-matriculas\.service$/, 'enrollmentMutations'],
         [/shared\/ToastNotification$/, 'toast'], [/shared\/constants\/terms$/, 'terms'], [/lib\/app-url$/, 'urls'],

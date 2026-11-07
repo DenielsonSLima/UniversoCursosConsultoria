@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "retrieval": "lexical-bm25-with-source-citations",
-  "builtAt": "2026-11-07T20:15:11.966Z",
+  "builtAt": "2026-11-07T20:22:56.068Z",
   "manifestVersion": 2,
-  "sourceSignature": "269092619b2927deb6da1742bf9b9896a69e84894beae4186c18c53724b60d0a",
+  "sourceSignature": "a8ee3e0f3d810d93625c35b045c9d4d0bb892dca0080875bcb6a84e62270c6f9",
   "sources": [
     {
       "path": "AGENTS.md",
@@ -11,7 +11,7 @@
     },
     {
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "hash": "9a15ba8c6807f208767b2c59abaf0a842396318223a037147e2664e2b495da09"
+      "hash": "fd7399c2eef63e681a95941f27a5b48850243c0a4296af7c868908b91d4d87da"
     },
     {
       "path": "ai/operacao/MEMORIA_CANONICA.md",
@@ -208,13 +208,13 @@
       "part": 1
     },
     {
-      "id": "f8b548cc90e1769ab894",
-      "hash": "f8b548cc90e1769ab894d46ff0f33c7c711950d252a272e6802803bdd3310eea",
+      "id": "10ad63f1d57784871972",
+      "hash": "10ad63f1d577848719722aca3309a6ce0be1a7ca12ea9d54952ffcdeaec77599",
       "path": "ai/operacao/LOTE_ATIVO.md",
       "section": "Lote: 2026-11-07-hotfix-foto-cadastro-individual",
-      "text": "Corrigir fotos de Parceiros: MIME individual, avatar completo e recuperação privada única, com frescor da lista por remontagem/foco. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-07-hotfix-foto-cadastro-individual.md`, 19 arquivos. Candidato 4.8.258/revisão 267 sobre main257/035025ed8cc55e9e660312f72c6691b2500656eb; base isolada comprovada pelo responsável em 107/107 blobs. Preservar integralmente Carteirinhas 255, NFS-e 256 e Secretaria 257, RLS, ACL, sessão, bucket, TTL 300, origem/path, escopo polo/global e Realtime; sem polling nem cache persistente de autorização.",
-      "normalizedText": "corrigir fotos de parceiros mime individual avatar completo e recuperacao privada unica com frescor da lista por remontagem foco manifesto explicito ai operacao registros alteracoes 2026 11 07 hotfix foto cadastro individual md 19 arquivos candidato 4 8 258 revisao 267 sobre main257 035025ed8cc55e9e660312f72c6691b2500656eb base isolada comprovada pelo responsavel em 107 107 blobs preservar integralmente carteirinhas 255 nfs e 256 e secretaria 257 rls acl sessao bucket ttl 300 origem path escopo polo global e realtime sem polling nem cache persistente de autorizacao",
-      "tokenCount": 77,
+      "text": "Corrigir fotos de Parceiros: MIME individual, avatar completo e recuperação privada única, com frescor da lista por remontagem/foco. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-07-hotfix-foto-cadastro-individual.md`; arquivos enumerados no registro. Candidato 4.8.258/revisão 267 sobre main257/035025ed8cc55e9e660312f72c6691b2500656eb; base isolada comprovada pelo responsável em 107/107 blobs. Preservar integralmente Carteirinhas 255, NFS-e 256 e Secretaria 257, RLS, ACL, sessão, bucket, TTL 300, origem/path, escopo polo/global e Realtime; sem polling nem cache persistente de autorização.",
+      "normalizedText": "corrigir fotos de parceiros mime individual avatar completo e recuperacao privada unica com frescor da lista por remontagem foco manifesto explicito ai operacao registros alteracoes 2026 11 07 hotfix foto cadastro individual md arquivos enumerados no registro candidato 4 8 258 revisao 267 sobre main257 035025ed8cc55e9e660312f72c6691b2500656eb base isolada comprovada pelo responsavel em 107 107 blobs preservar integralmente carteirinhas 255 nfs e 256 e secretaria 257 rls acl sessao bucket ttl 300 origem path escopo polo global e realtime sem polling nem cache persistente de autorizacao",
+      "tokenCount": 79,
       "part": 1
     },
     {
