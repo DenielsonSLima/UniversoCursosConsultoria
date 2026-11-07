@@ -4,15 +4,15 @@ Os módulos desta sequência já estão autorizados pelo usuário. Concluir e va
 
 | Etapa | Frente | Estado | Critério de passagem |
 | --- | --- | --- | --- |
-| 0 | Parceiros: cadastros Aluno/Professor/PF/PJ, cartões, Responsáveis e seletores | Verificado localmente; publicação atual autorizada | Publicar somente Financeiro 4.8.251 + Parceiros 4.8.252 conforme nova solicitação; CSS móvel aceito por PF real a 390 px e marcador compartilhado; respeitar os limites de cobertura documentados e os gates de publicação. |
-| 1 | Caixa: prioridade de carregamento e origem dos cálculos | Pendente; não iniciado nesta rodada | Primeiro mapear RPCs, cadeia de requests, duplicações, cache e cálculos no frontend; medir o cenário real com métricas agregadas sem dados pessoais. Revisar diagnóstico e proposta antes do patch. |
-| 2 | Configurações | Pendente; não iniciado nesta rodada | Delimitar submódulos, comparar com o padrão compacto, preservar campos e contratos, implementar e validar quando o gate técnico anterior estiver satisfeito. |
-| 3 | Comunicação | Pendente; não iniciado nesta rodada | Conferir o fluxo real e seu contrato; mudanças visuais não autorizam envio, ativação, push ou operação remota. |
-| 4 | Biblioteca | Pendente; não iniciado nesta rodada | Mapear o escopo após o gate técnico anterior; preservar conteúdo, permissões e comportamento; smoke proporcional após o patch. |
+| 0 | Parceiros: cadastros Aluno/Professor/PF/PJ, cartões, Responsáveis e seletores | Concluída e publicada em produção | PR #347/merge 2b29a02745fe44ebc7f64373c67123235103d6b5, 14 checks verdes e deployment dpl_8bJCAmbfhmQq97jHZEM4yX1bXTdY READY. HTTP público 200 e asset com 4.8.252 confirmados; não equivale a validação autenticada ou de operações. |
+| 1 | Caixa: prioridade de carregamento e origem dos cálculos | Validação local concluída; aguardando publicação | Priorizar prestação na fila e invalidar linha de corte; manter cálculos no backend e separar estatística histórica, simulação e medição real. Regressões e smoke local de ordem/troca de mês conferidos; build/TypeScript/RAG aprovados, publicação sob o responsável antes de avançar. |
+| 2 | Configurações | Aguardando etapa anterior; não iniciado | Delimitar submódulos, comparar com o padrão compacto, preservar campos e contratos, implementar e validar quando o gate técnico anterior estiver satisfeito. |
+| 3 | Comunicação | Aguardando etapa anterior; não iniciado | Conferir o fluxo real e seu contrato; mudanças visuais não autorizam envio, ativação, push ou operação remota. |
+| 4 | Biblioteca | Aguardando etapa anterior; não iniciado | Mapear o escopo após o gate técnico anterior; preservar conteúdo, permissões e comportamento; smoke proporcional após o patch. |
 
 ## Prioridade específica de Caixa
 
-O pedido atual prioriza desempenho, não um redesign principal. Só após o aceite de Parceiros, investigar o tempo até os dados, waterfalls, requests duplicados e retorno das RPCs. Registrar métricas comparáveis antes/depois e distinguir rede, banco, cache e renderização. Consultas remotas devem seguir MCP e as guardas do projeto.
+O pedido atual prioriza desempenho, não um redesign principal. Com Parceiros integrada, investigar o tempo até os dados, waterfalls, requests duplicados e retorno das RPCs. Registrar métricas comparáveis antes/depois e distinguir rede, banco, cache e renderização. Consultas remotas devem seguir MCP e as guardas do projeto.
 
 Valores e cálculos financeiros devem vir do contrato canônico do backend/RPC. Se a auditoria encontrar cálculo financeiro no frontend, demonstrar o caminho e preparar a correção contratual; não reproduzir fórmula no cliente nem mudar números, reconciliação ou permissões por CSS. A origem canônica e o resultado real devem ser validados antes de avançar.
 
@@ -22,6 +22,6 @@ Valores e cálculos financeiros devem vir do contrato canônico do backend/RPC. 
 - Cada etapa terá escopo, manifesto, riscos, teste focado e smoke do fluxo afetado. Build completo no fechamento quando a integração/publicação justificar.
 - Registrar erros e limitações reais; teste sintético não substitui conferência visual nem prova acesso a produção.
 - Preservar alterações paralelas e não incluir tmp, harnesses, PDFs ou screenshots gerados na entrega.
-- A orientação mais recente autoriza publicar AGORA somente Financeiro 4.8.251 e Parceiros 4.8.252, já implementados, para conferência posterior do usuário em produção. Ela substitui a condição anterior de esperar todos os módulos. Não há publicação de implementação futura de Caixa, Configurações, Comunicação ou Biblioteca neste lote.
+- O usuário autorizou entregar o que estiver pronto e continuar a sequência. Não é necessário perguntar novamente ao concluir cada módulo; os checks e o gate técnico do responsável antecedem sua publicação. Nada deste plano autoriza publicar implementação não validada ou afirmar que uma integração já está Ready em produção.
 
 Este plano registra intenção e sequência. Não afirma que os próximos módulos foram analisados ou alterados.

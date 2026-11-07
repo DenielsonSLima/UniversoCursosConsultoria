@@ -14,6 +14,12 @@ Histórico arquivado: [05/10/2026 — versões 4.8.169 a 4.8.170](./changelog/20
 
 Histórico arquivado: [05/10/2026 — versões 4.8.171 a 4.8.174](./changelog/2026-10-05-versoes-4-8-171-a-174.md).
 
+## [4.8.253] - 2026-11-07
+
+### Alterado
+- Caixa prioriza a prestação mensal na fila de leitura, preservando consultas, valores canônicos, escopo e cancelamento.
+- Linha de corte acompanha a invalidação Realtime do polo e consolidado; diagnóstico distingue métricas históricas e ensaio sintético de ganho real em produção.
+
 ## [4.8.252] - 2026-11-07
 
 ### Alterado

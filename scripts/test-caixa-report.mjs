@@ -3,10 +3,29 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { build } from 'esbuild';
+import { createRequire } from 'node:module';
 
 const root = resolve(import.meta.dirname, '..');
+const args = process.argv.slice(2);
+if (args.length > 1 || (args[0] && args[0] !== '--performance')) {
+  throw new Error('Uso: node scripts/test-caixa-report.mjs [--performance]');
+}
+const performanceOnly = args[0] === '--performance';
+const testEnvironment = { ...process.env };
+if (performanceOnly) {
+  const require = createRequire(import.meta.url);
+  let jsdomPath;
+  try {
+    jsdomPath = resolve(process.env.CAIXA_JSDOM_PATH || process.env.CAIXA_UI_JSDOM_PATH || require.resolve('jsdom'));
+    require.resolve(jsdomPath);
+  } catch {
+    throw new Error('Regressões do Caixa exigem jsdom. Defina CAIXA_JSDOM_PATH para a instalação temporária.');
+  }
+  testEnvironment.CAIXA_JSDOM_PATH = jsdomPath;
+  testEnvironment.CAIXA_UI_JSDOM_PATH = jsdomPath;
+}
 const outputDirectory = mkdtempSync(join(tmpdir(), 'caixa-report-tests-'));
-const tests = [
+const reportTests = [
   'modules/gestor/caixa/composition-review/caixa-composition-review.test.ts',
   'modules/gestor/financeiro/conciliacao-bancaria/components/ConciliacaoRecebimentoRows.test.tsx',
   'modules/gestor/caixa/caixa-data-scope.test.ts',
@@ -36,6 +55,10 @@ const tests = [
   'modules/gestor/caixa/report/caixa-report.composicao-parcial.test.tsx',
 ];
 
+const tests = performanceOnly
+  ? ['modules/gestor/caixa/caixa-linha-corte.realtime.test.tsx']
+  : reportTests;
+
 try {
   const outputs = [];
   for (const [index, entry] of tests.entries()) {
@@ -57,6 +80,9 @@ try {
     outputs.push(output);
   }
 
+  // This test bundles its real page itself; preserve its source-relative URLs.
+  if (performanceOnly) outputs.push(resolve(root, 'modules/gestor/caixa/caixa-first-summary.behavior.test.mjs'));
+
   const result = spawnSync(
     process.execPath,
     [
@@ -65,8 +91,9 @@ try {
       '--test',
       ...outputs,
     ],
-    { cwd: root, encoding: 'utf8', stdio: 'inherit' },
+    { cwd: root, encoding: 'utf8', stdio: 'inherit', env: testEnvironment },
   );
+  if (result.error) throw result.error;
   process.exitCode = result.status ?? 1;
 } finally {
   rmSync(outputDirectory, { recursive: true, force: true });

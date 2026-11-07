@@ -1,8 +1,8 @@
 {
-  "version": "4.8.252",
+  "version": "4.8.253",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 261,
+  "revision": 262,
   "releasedAt": "2026-11-07",
-  "summary": "Parceiros com cadastros, cartões, Responsáveis e seletores próprios compactos"
+  "summary": "Caixa com prestação priorizada no carregamento e linha de corte sincronizada por Realtime"
 }

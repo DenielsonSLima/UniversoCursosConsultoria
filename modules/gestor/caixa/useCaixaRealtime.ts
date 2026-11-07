@@ -12,6 +12,7 @@ import { caixaComposicaoQueryKeys } from './caixa-composicao.queries';
 import { caixaReviewKeys } from './review-pending/caixa-review-pending.service';
 
 const DEBOUNCE_MS = 500;
+const LINHA_CORTE_QUERY_KEY = ['caixa', 'linha-corte'] as const;
 
 export const useCaixaRealtime = () => {
   const queryClient = useQueryClient();
@@ -26,6 +27,7 @@ export const useCaixaRealtime = () => {
     const invalidatePendingScopes = (refetchType: 'active' | 'none') => {
       if (requiresBroadFinancialInvalidation) {
         void queryClient.invalidateQueries({ queryKey: caixaQueryKeys.statements, refetchType });
+        void queryClient.invalidateQueries({ queryKey: LINHA_CORTE_QUERY_KEY, refetchType });
         void queryClient.invalidateQueries({
           queryKey: caixaQueryKeys.financiamentoResumos,
           refetchType,
@@ -55,6 +57,10 @@ export const useCaixaRealtime = () => {
           void queryClient.invalidateQueries({ queryKey: caixaReviewKeys.forPolo(scope), refetchType });
           void queryClient.invalidateQueries({
             queryKey: caixaQueryKeys.statementsForPolo(scope),
+            refetchType,
+          });
+          void queryClient.invalidateQueries({
+            queryKey: [...LINHA_CORTE_QUERY_KEY, scope],
             refetchType,
           });
           void queryClient.invalidateQueries({
