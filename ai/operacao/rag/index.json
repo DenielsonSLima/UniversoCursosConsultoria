@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "retrieval": "lexical-bm25-with-source-citations",
-  "builtAt": "2026-11-07T18:50:41.967Z",
+  "builtAt": "2026-11-07T20:15:11.966Z",
   "manifestVersion": 2,
-  "sourceSignature": "ef9e5183345b52f2b92bba683a12c6ec04a0c8ef4124ce7a087b9ee06e167afd",
+  "sourceSignature": "269092619b2927deb6da1742bf9b9896a69e84894beae4186c18c53724b60d0a",
   "sources": [
     {
       "path": "AGENTS.md",
@@ -11,7 +11,7 @@
     },
     {
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "hash": "b7df77539e6cf9891f1387030f69f2ed164bd9d10b6c2c2b7a874552eea870bf"
+      "hash": "9a15ba8c6807f208767b2c59abaf0a842396318223a037147e2664e2b495da09"
     },
     {
       "path": "ai/operacao/MEMORIA_CANONICA.md",
@@ -208,13 +208,23 @@
       "part": 1
     },
     {
-      "id": "9edf905eaecc4c6fec67",
-      "hash": "9edf905eaecc4c6fec673a390db122520f14a78c95499625dc1de30d4bef7e07",
+      "id": "f8b548cc90e1769ab894",
+      "hash": "f8b548cc90e1769ab894d46ff0f33c7c711950d252a272e6802803bdd3310eea",
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Lote: 2026-11-07-secretaria-submodulos-compactos",
-      "text": "Padronizar submódulos da Secretaria: campos compactos, títulos leves, abas com linha inferior e seletores pesquisáveis sem menus nativos. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-07-secretaria-submodulos-compactos.md`, 41 arquivos. Candidato 4.8.257/revisão 266 sobre main 73e11e219334e24d62efdfd57432914718ade782; entregas paralelas 4.8.255/256 preservadas. Usuário solicitou três agentes e produção; autorizou Chrome nesta tarefa em substituição à preferência antiga por Safari. IDs, handlers, permissões, operações e documentos permanecem preservados; não reaplicar migrations. Build, TypeScript, teto de linhas e 14 testes focados aprovados; Chrome conferiu componentes reais em desktop/390px com dados sintéticos. Fixtures EAD incluem CSS real. Registro detalha revisão, limitações e integração. Publicar via MCP após checks/Preview e conferir a versão entregue.",
-      "normalizedText": "padronizar submodulos da secretaria campos compactos titulos leves abas com linha inferior e seletores pesquisaveis sem menus nativos manifesto explicito ai operacao registros alteracoes 2026 11 07 secretaria submodulos compactos md 41 arquivos candidato 4 8 257 revisao 266 sobre main 73e11e219334e24d62efdfd57432914718ade782 entregas paralelas 4 8 255 256 preservadas usuario solicitou tres agentes e producao autorizou chrome nesta tarefa em substituicao a preferencia antiga por safari ids handlers permissoes operacoes e documentos permanecem preservados nao reaplicar migrations build typescript teto de linhas e 14 testes focados aprovados chrome conferiu componentes reais em desktop 390px com dados sinteticos fixtures ead incluem css real registro detalha revisao limitacoes e integracao publicar via mcp apos checks preview e conferir a versao entregue",
-      "tokenCount": 107,
+      "section": "Lote: 2026-11-07-hotfix-foto-cadastro-individual",
+      "text": "Corrigir fotos de Parceiros: MIME individual, avatar completo e recuperação privada única, com frescor da lista por remontagem/foco. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-07-hotfix-foto-cadastro-individual.md`, 19 arquivos. Candidato 4.8.258/revisão 267 sobre main257/035025ed8cc55e9e660312f72c6691b2500656eb; base isolada comprovada pelo responsável em 107/107 blobs. Preservar integralmente Carteirinhas 255, NFS-e 256 e Secretaria 257, RLS, ACL, sessão, bucket, TTL 300, origem/path, escopo polo/global e Realtime; sem polling nem cache persistente de autorização.",
+      "normalizedText": "corrigir fotos de parceiros mime individual avatar completo e recuperacao privada unica com frescor da lista por remontagem foco manifesto explicito ai operacao registros alteracoes 2026 11 07 hotfix foto cadastro individual md 19 arquivos candidato 4 8 258 revisao 267 sobre main257 035025ed8cc55e9e660312f72c6691b2500656eb base isolada comprovada pelo responsavel em 107 107 blobs preservar integralmente carteirinhas 255 nfs e 256 e secretaria 257 rls acl sessao bucket ttl 300 origem path escopo polo global e realtime sem polling nem cache persistente de autorizacao",
+      "tokenCount": 77,
+      "part": 1
+    },
+    {
+      "id": "b06a597cd461df3c32af",
+      "hash": "b06a597cd461df3c32af4821f0b200c4bb1807d3d9b3d62e078f2ef7b2eba46f",
+      "path": "ai/operacao/LOTE_ATIVO.md",
+      "section": "Lote: 2026-11-07-hotfix-foto-cadastro-individual",
+      "text": "Chrome 3054 antes/depois comprovou card correto/cadastro quebrado e mesma foto sintética após correção, zero produção. Validação integrada: 22/22 testes, TypeScript, lint, teto de linhas e build 4531 módulos/13,89 s aprovados. Mudança de base exige um novo índice RAG final após congelar metadados, até 80 trechos. Comunicação adiada pelo usuário; Biblioteca é a próxima etapa após foto 258. Não sobrescrever metadados NFS-e paralelos no workspace; nenhuma sincronização ou operação remota nesta preparação.",
+      "normalizedText": "chrome 3054 antes depois comprovou card correto cadastro quebrado e mesma foto sintetica apos correcao zero producao validacao integrada 22 22 testes typescript lint teto de linhas e build 4531 modulos 13 89 s aprovados mudanca de base exige um novo indice rag final apos congelar metadados ate 80 trechos comunicacao adiada pelo usuario biblioteca e a proxima etapa apos foto 258 nao sobrescrever metadados nfs e paralelos no workspace nenhuma sincronizacao ou operacao remota nesta preparacao",
+      "tokenCount": 71,
       "part": 1
     },
     {

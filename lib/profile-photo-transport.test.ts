@@ -155,3 +155,36 @@ test('assinatura retornada deve pertencer ao path solicitado, além da origem pr
   });
   assert.deepEqual(await (await transport(`${base}/rest/v1/parceiros`)).json(), { foto_url: null });
 });
+
+test('cadastro individual single hidrata a mesma foto da lista com o MIME de objeto PostgREST', async () => {
+  for (const mediaType of ['application/vnd.pgrst.object+json', 'application/vnd.pgrst.object+json; charset=utf-8']) {
+    const calls: Request[] = [];
+    const transport = createProfilePhotoFetch(base, async (input, init) => {
+      const request = new Request(input, init); calls.push(request);
+      return request.url.includes('/rest/v1/')
+        ? new Response(JSON.stringify({ id: 'student-demo', foto_url: marker }), {
+          headers: { 'content-type': mediaType, 'x-test-header': 'preserved' },
+        })
+        : json([{ path, signedURL: `/object/sign/fotos-perfil/${path}?token=short-lived`, error: null }]);
+    });
+    const response = await transport(`${base}/rest/v1/parceiros?id=eq.student-demo`, {
+      headers: { Accept: 'application/vnd.pgrst.object+json', Authorization: 'Bearer student-reader', apikey: 'public-key' },
+    });
+    assert.deepEqual(await response.json(), { id: 'student-demo', foto_url: signed });
+    assert.equal(response.headers.get('content-type'), mediaType);
+    assert.equal(response.headers.get('x-test-header'), 'preserved');
+    assert.equal(calls.length, 2);
+    assert.equal(calls[1].headers.get('authorization'), 'Bearer student-reader');
+    assert.deepEqual(await calls[1].json(), { expiresIn: 300, paths: [path] });
+  }
+});
+
+test('objeto PostgREST não expõe a referência quando a assinatura é negada', async () => {
+  const transport = createProfilePhotoFetch(base, async input => {
+    const request = new Request(input);
+    return request.url.includes('/rest/v1/')
+      ? new Response(JSON.stringify({ foto_url: marker }), { headers: { 'content-type': 'application/vnd.pgrst.object+json' } })
+      : json({ error: 'denied' }, 403);
+  });
+  assert.deepEqual(await (await transport(`${base}/rest/v1/parceiros?id=eq.student-demo`)).json(), { foto_url: null });
+});

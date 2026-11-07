@@ -1,3 +1,5 @@
+import { recoverPartnerPhoto } from '../../../../../lib/profile-photo-recovery';
+import PartnerCardAvatar from './PartnerCardAvatar';
 // File: modules/gestor/parceiros/components/cards/AlunoCard.tsx
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -60,13 +62,7 @@ const AlunoCard: React.FC<AlunoCardProps> = ({ data, onClick, onDelete }) => {
       {/* Header */}
       <div className="partner-card-heading flex justify-between items-center gap-2 mb-3 relative z-20">
         <div className="flex min-w-0 flex-1 items-center gap-3">
-          <div className="partner-card-avatar h-[52px] w-[52px] shrink-0 overflow-hidden rounded-2xl border border-blue-100 bg-blue-50 text-blue-600 shadow-sm">
-            <img
-              src={data.foto || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=E0F2FE&color=2563EB&bold=true`}
-              alt={displayName}
-              className="w-full h-full object-cover"
-            />
-          </div>
+          <PartnerCardAvatar onPhotoError={src => recoverPartnerPhoto(queryClient, src)} src={data.foto} name={displayName} className="h-[52px] w-[52px] shrink-0 overflow-hidden rounded-2xl border border-blue-100 bg-blue-50 text-blue-600 shadow-sm" />
           <div className="flex flex-col min-w-0">
             <h3 className="text-[13px] font-medium leading-[1.5] tracking-[-0.01em] text-[#122b42] antialiased break-words transition-colors group-hover:text-blue-700" title={displayName}>
               {displayName}

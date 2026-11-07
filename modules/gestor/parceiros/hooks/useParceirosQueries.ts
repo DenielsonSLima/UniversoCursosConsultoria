@@ -17,7 +17,9 @@ export const useParceirosQueries = (
       poloId: scope.poloId || undefined,
       includeGlobal: scope.includeGlobal,
     }),
-    staleTime: Number.POSITIVE_INFINITY,
+    staleTime: 240_000,
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
     gcTime: 30 * 60_000,
     enabled: scope.enablePartners !== false,
   });

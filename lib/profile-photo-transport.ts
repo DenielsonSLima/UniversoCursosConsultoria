@@ -70,8 +70,9 @@ export const createProfilePhotoFetch = (
     }
 
     const response = await fetcher(request);
+    const responseType = response.headers.get('content-type')?.split(';', 1)[0].trim().toLowerCase();
     if (!response.ok || request.method === 'HEAD'
-      || !response.headers.get('content-type')?.includes('application/json')) return response;
+      || !['application/json', 'application/vnd.pgrst.object+json'].includes(responseType || '')) return response;
     let data: unknown;
     try { data = await response.clone().json(); } catch { return response; }
 

@@ -16,6 +16,13 @@ Histórico arquivado: [05/10/2026 — versões 4.8.171 a 4.8.174](./changelog/20
 
 Histórico arquivado: [06/10/2026 a 09/10/2026 — versões 4.8.175 a 4.8.195](./changelog/2026-10-06-a-09-versoes-4-8-175-a-195.md).
 
+## [4.8.258] - 2026-11-07
+
+### Corrigido
+- Fotos privadas do cadastro individual usam o mesmo resolvedor da lista em respostas de objeto do PostgREST.
+- Avatares locais usam iniciais até a foto completa; uma recuperação privada e a revalidação da lista ao voltar/focar tratam URLs expiradas sem polling.
+- Assinatura temporária, permissões, origem e caminhos autorizados permanecem preservados; fotos negadas continuam ocultas.
+
 ## [4.8.257] - 2026-11-07
 
 ### Corrigido
