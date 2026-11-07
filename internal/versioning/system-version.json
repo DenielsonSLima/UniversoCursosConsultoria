@@ -1,8 +1,8 @@
 {
-  "version": "4.8.257",
+  "version": "4.8.258",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 266,
+  "revision": 267,
   "releasedAt": "2026-11-07",
-  "summary": "Secretaria com submódulos compactos, abas discretas e seletores pesquisáveis integrados ao sistema"
+  "summary": "Fotos de Parceiros com resolvedor privado no cadastro, avatares completos e recuperação única de URLs expiradas"
 }

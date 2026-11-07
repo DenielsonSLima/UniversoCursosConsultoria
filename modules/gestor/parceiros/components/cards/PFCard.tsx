@@ -1,3 +1,5 @@
+import { recoverPartnerPhoto } from '../../../../../lib/profile-photo-recovery';
+import PartnerCardAvatar from './PartnerCardAvatar';
 // File: modules/gestor/parceiros/components/cards/PFCard.tsx
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -47,13 +49,7 @@ const PFCard: React.FC<PFCardProps> = ({ data, onClick, onDelete }) => {
       {/* Header */}
       <div className="partner-card-heading flex justify-between items-center gap-2 mb-3 relative z-20">
         <div className="flex min-w-0 flex-1 items-center gap-3">
-          <div className="partner-card-avatar w-11 h-11 rounded-[14px] bg-amber-50 text-amber-600 flex items-center justify-center overflow-hidden border border-amber-100 shadow-sm shrink-0">
-            <img
-              src={data.foto || `https://ui-avatars.com/api/?name=${encodeURIComponent(data.nome)}&background=FEF3C7&color=D97706&bold=true`}
-              alt={data.nome}
-              className="w-full h-full object-cover"
-            />
-          </div>
+          <PartnerCardAvatar onPhotoError={src => recoverPartnerPhoto(queryClient, src)} src={data.foto} name={data.nome} className="w-11 h-11 rounded-[14px] bg-amber-50 text-amber-600 flex items-center justify-center overflow-hidden border border-amber-100 shadow-sm shrink-0" />
           <div className="flex flex-col min-w-0">
             <h3 className="text-[13px] font-medium text-[#122b42] break-words group-hover:text-amber-600 transition-colors" title={data.nome}>
               {data.nome}

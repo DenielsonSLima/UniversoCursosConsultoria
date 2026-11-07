@@ -53,7 +53,18 @@ jobs:
         env:
           LGPD_JSDOM_PATH: ${{ runner.temp }}/lgpd-test-runtime/node_modules/jsdom
         run: |
-          node --test lib/profile-photo-transport.test.ts lib/supabase-auth-storage.test.ts supabase/functions/profile-photo-access/access.test.ts supabase/functions/profile-photo-migration/migrate.test.ts supabase/functions/profile-photo-migration/operation-route.test.mjs supabase/functions/whatsapp-media/transcription-route.test.mjs modules/gestor/comunicacao/components/whatsapp/inbox/MediaMessageActions.privacy.interaction.test.mjs modules/gestor/comunicacao/components/StartInternalConversationModal.permissions.interaction.test.mjs
+          node --test \
+            lib/profile-photo-transport.test.ts \
+            lib/profile-photo-recovery.test.mjs \
+            lib/supabase-auth-storage.test.ts \
+            modules/gestor/parceiros/components/cards/PartnerCardAvatar.test.mjs \
+            modules/gestor/parceiros/hooks/useParceirosQueries.photo-cache.test.mjs \
+            supabase/functions/profile-photo-access/access.test.ts \
+            supabase/functions/profile-photo-migration/migrate.test.ts \
+            supabase/functions/profile-photo-migration/operation-route.test.mjs \
+            supabase/functions/whatsapp-media/transcription-route.test.mjs \
+            modules/gestor/comunicacao/components/whatsapp/inbox/MediaMessageActions.privacy.interaction.test.mjs \
+            modules/gestor/comunicacao/components/StartInternalConversationModal.permissions.interaction.test.mjs
 
       - name: Testar política de IA e guardas compartilhadas
         run: |
