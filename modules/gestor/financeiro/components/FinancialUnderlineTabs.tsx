@@ -49,7 +49,7 @@ const FinancialUnderlineTabs = <T extends string,>({
   const activeTabRef = useRef<FinancialTabElement | null>(null);
 
   useEffect(() => {
-    activeTabRef.current?.scrollIntoView({
+    activeTabRef.current?.scrollIntoView?.({
       behavior: 'smooth',
       block: 'nearest',
       inline: 'nearest',

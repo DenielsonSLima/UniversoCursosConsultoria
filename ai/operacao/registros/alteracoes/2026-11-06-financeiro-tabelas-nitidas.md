@@ -135,3 +135,6 @@ Prévia local usa os componentes reais com dados sintéticos e escritas bloquead
 Versão 4.8.251 na PR #347, branch release/financeiro-tabelas-4.8.251, sobre 4.8.250. Atualização do mesmo lote após revisão do usuário; manifesto consolidado e alterações locais paralelas preservadas. Artefatos de teste, dados sintéticos e saídas de build não integram o commit. Produção não solicitada neste lote.
 
 Ajuste de suporte à validação: document-identity-history usava ubuntu-latest, que passou a Ubuntu 26.04; Playwright 1.58.2 abortou a instalação antes dos testes. O único job afetado fica fixado em ubuntu-24.04, preservando comandos, dependências, permissões e asserções.
+
+
+Fechamento de CI (2026-11-07): a execução da PR em `25e375` falhou nos dois testes DOM de Convênios porque o ambiente sintético não implementa `scrollIntoView`. A chamada do componente compartilhado agora verifica também a existência do método (`scrollIntoView?.(...)`), preservando o comportamento em navegadores. Convênios passou 2/2 sem alterar asserções de confirmação, pending/Escape, retry/idempotência ou isolamento por polo. Os 20 testes DOM de Renegociações do mesmo trecho da pipeline e as 9 verificações do combobox passaram com jsdom 26.1.0 já disponível em dependência temporária; lint do componente aprovado. Nenhuma instalação global, operação financeira ou alteração de regras foi feita.
