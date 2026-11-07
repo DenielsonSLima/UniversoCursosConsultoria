@@ -1,8 +1,8 @@
 {
-  "version": "4.8.259",
+  "version": "4.8.260",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 268,
+  "revision": 269,
   "releasedAt": "2026-11-07",
-  "summary": "Histórico de Emissões com busca automática e filtros combinados de modalidade, curso e turma"
+  "summary": "Biblioteca compacta com navegação, explorador, permissões e publicação em etapas preservadas"
 }

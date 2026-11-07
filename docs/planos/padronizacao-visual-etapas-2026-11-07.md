@@ -7,9 +7,9 @@ Os módulos desta sequência já estão autorizados pelo usuário. Concluir e va
 | 0 | Parceiros: cadastros Aluno/Professor/PF/PJ, cartões, Responsáveis e seletores | Concluída e publicada em produção | PR #347/merge 2b29a02745fe44ebc7f64373c67123235103d6b5, 14 checks verdes e deployment dpl_8bJCAmbfhmQq97jHZEM4yX1bXTdY READY. HTTP público 200 e asset com 4.8.252 confirmados; não equivale a validação autenticada ou de operações. |
 | 1 | Caixa: prioridade de carregamento e origem dos cálculos | Concluída e publicada em produção | PR #348/merge 7696675efb8db16b585d13a99c43ed2d2af72caf, sete checks verdes e deployment dpl_8UUawZsgmARrmxFLBxr7tN3s5nLe READY. HTTP público 308 → www 200 e asset 4.8.253 confirmados; sem medição autenticada de ganho em produção. |
 | 2 | Configurações | Publicada em produção | PR #349/merge 73ea12b82dcd392761a19a84aa0eaf17002e553e, oito checks verdes e deployment dpl_FtSxWJPujuETjp6Qwx3q78nLMTuY READY; raiz 308 → www 200 e asset 4.8.254 confirmado pelo responsável. |
-| 2a | Hotfix da foto em Parceiros | Prioridade do usuário; publicação em preparação | Candidato 4.8.258/revisão 267: MIME individual, avatar completo, recuperação privada única e revalidação 4 min por remontagem/foco; sem polling ou mudança de permissões. |
+| 2a | Hotfix da foto em Parceiros | PR #354 integrada; deployment em andamento | Main 2ff0ac6c1a09c91c49e47841c28cbdb38ad6755c, dez checks verdes; candidato 4.8.258/revisão267 com MIME individual, avatar completo, recuperação privada e revalidação por remontagem/foco. |
 | 3 | Comunicação | Adiada pelo usuário | Candidato isolado preservado, sem fundir ou publicar neste hotfix. |
-| 4 | Biblioteca | Próxima etapa após foto 258 | Preservar conteúdo/permissões; somente iniciar após publicar e validar a correção priorizada. |
+| 4 | Biblioteca | Candidato 260/revisão 269 em conferência local | Interface compacta; explorador, liberação e publicação em etapas com contratos preservados. Gate visual representativo aprovado; validação integrada final e identidade da base main259, preservando foto258 e Histórico259 antecedem a publicação. |
 
 ## Prioridade específica de Caixa
 
