@@ -1,5 +1,6 @@
+import InstitutionalSelect from '../../../../shared/components/InstitutionalSelect';
 import React from 'react';
-import { Filter, Search } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { DOCUMENT_TABS } from '../historico-emissoes.constants';
 import type { TurmaFilter } from '../historico-emissoes.types';
 
@@ -38,18 +39,14 @@ const EmissionsToolbar: React.FC<Props> = ({
         />
       </div>
       <div className="flex w-full shrink-0 gap-3 md:w-auto">
-        <div className="flex flex-1 items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3.5 md:flex-initial">
-          <Filter size={15} className="shrink-0 text-slate-400" />
-          <select
+        <div className="min-w-0 flex-1 md:flex-initial">
+          <InstitutionalSelect
+            ariaLabel="Filtrar emissões por turma"
             value={selectedTurmaId}
-            onChange={(event) => onTurmaChange(event.target.value)}
-            className="w-full cursor-pointer border-none bg-transparent text-xs font-bold text-slate-600 outline-none"
-          >
-            <option value="todos">Filtrar por Turma (Todas)</option>
-            {turmas.map((turma) => (
-              <option key={turma.id} value={turma.id}>{turma.nome} ({turma.codigo})</option>
-            ))}
-          </select>
+            onValueChange={onTurmaChange}
+            options={[{ value: 'todos', label: 'Filtrar por turma (todas)' }, ...turmas.map((turma) => ({ value: turma.id, label: `${turma.nome} (${turma.codigo})` }))]}
+            className="w-full md:min-w-[220px]"
+          />
         </div>
         <button
           onClick={onSearch}
@@ -60,13 +57,14 @@ const EmissionsToolbar: React.FC<Props> = ({
       </div>
     </div>
 
-    <div className="flex flex-wrap gap-1 rounded-2xl border border-slate-100 bg-white p-1.5 shadow-sm">
+    <div data-secretaria-modes className="flex flex-wrap gap-1 rounded-2xl border border-slate-100 bg-white p-1.5 shadow-sm">
       {DOCUMENT_TABS.map((tab) => {
         const TabIcon = tab.icon;
         const selected = activeTab === tab.key;
         return (
           <button
             key={tab.key}
+            aria-pressed={selected}
             onClick={() => onTabChange(tab.key)}
             className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-[10px] font-black uppercase tracking-wider transition-all ${
               selected

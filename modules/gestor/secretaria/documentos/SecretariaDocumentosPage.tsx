@@ -1,3 +1,4 @@
+import InstitutionalSelect from '../../../shared/components/InstitutionalSelect';
 // File: modules/gestor/secretaria/documentos/SecretariaDocumentosPage.tsx
 
 import React, { useState } from 'react';
@@ -23,6 +24,7 @@ const SecretariaDocumentosPage: React.FC<SecretariaDocumentosPageProps> = ({ ini
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedAlunoObj, setSelectedAlunoObj] = useState<any | null>(null);
   const [selectedTurmaId, setSelectedTurmaId] = useState<string>('');
+  const [documentVariant, setDocumentVariant] = useState('');
   const isTransferencia = docType === 'transferencia';
   const documento = isTransferencia ? 'transferencia' : 'declaracao_matricula';
 
@@ -78,15 +80,17 @@ const SecretariaDocumentosPage: React.FC<SecretariaDocumentosPageProps> = ({ ini
   return (
     <div className="animate-fadeIn">
       {/* Tab Switcher */}
-      <div className="bg-white p-1 rounded-2xl border border-slate-200 inline-flex mb-8 shadow-sm">
+      <div data-secretaria-modes className="bg-white p-1 rounded-2xl border border-slate-200 inline-flex mb-8 shadow-sm">
         <button
-          onClick={() => { setDocType('declaracao'); setStep(1); setSelectedAlunoObj(null); setSearchTerm(''); }}
+          aria-pressed={docType === 'declaracao'}
+          onClick={() => { setDocType('declaracao'); setDocumentVariant(''); setStep(1); setSelectedAlunoObj(null); setSearchTerm(''); }}
           className={`px-6 py-3 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all ${docType === 'declaracao' ? 'bg-[#001a33] text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}
         >
           <FileText size={16} /> Declarações
         </button>
         <button
-          onClick={() => { setDocType('transferencia'); setStep(1); setSelectedAlunoObj(null); setSearchTerm(''); }}
+          aria-pressed={docType === 'transferencia'}
+          onClick={() => { setDocType('transferencia'); setDocumentVariant(''); setStep(1); setSelectedAlunoObj(null); setSearchTerm(''); }}
           className={`px-6 py-3 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all ${docType === 'transferencia' ? 'bg-[#001a33] text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}
         >
           <ArrowRightLeft size={16} /> Transferência
@@ -161,41 +165,25 @@ const SecretariaDocumentosPage: React.FC<SecretariaDocumentosPageProps> = ({ ini
              <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200 mb-6">
                 <div className="mb-4">
                     <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Curso / Turma Relacionada</label>
-                    <select 
-                      className="w-full p-3 bg-white border border-slate-200 rounded-xl outline-none focus:border-blue-500"
+                    <InstitutionalSelect
+                      ariaLabel="Curso ou turma relacionada"
                       value={selectedTurmaId}
-                      onChange={(e) => setSelectedTurmaId(e.target.value)}
-                    >
-                        {matriculas.map((m: any) => (
-                            <option key={m.id} value={m.turmas?.id}>
-                                {m.turmas?.cursos?.nome} ({m.turmas?.nome})
-                            </option>
-                        ))}
-                        {matriculas.length === 0 && (
-                            <option value="">
-                              {isTransferencia
-                                ? 'Nenhum curso técnico ativo encontrado'
-                                : 'Nenhum curso/turma encontrado'}
-                            </option>
-                        )}
-                    </select>
+                      onValueChange={setSelectedTurmaId}
+                      placeholder={isTransferencia ? 'Selecione um curso técnico ativo' : 'Selecione um curso ou turma'}
+                      options={matriculas.map((m: any) => ({ value: m.turmas?.id || '', label: `${m.turmas?.cursos?.nome} (${m.turmas?.nome})` }))}
+                    />
                 </div>
                 <div className="mb-4">
                     <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Tipo de Documento</label>
-                    <select className="w-full p-3 bg-white border border-slate-200 rounded-xl outline-none focus:border-blue-500">
-                        {docType === 'declaracao' ? (
-                            <>
-                                <option>Declaração de Cursando (Simples)</option>
-                                <option>Declaração para Estágio</option>
-                                <option>Declaração de Conclusão</option>
-                            </>
-                        ) : (
-                            <>
-                                <option>Guia de Transferência Externa</option>
-                                <option>Memorando de Solicitação de Vaga</option>
-                            </>
-                        )}
-                    </select>
+                    <InstitutionalSelect
+                      ariaLabel="Tipo de documento"
+                      value={documentVariant || (docType === 'declaracao' ? 'Declaração de Cursando (Simples)' : 'Guia de Transferência Externa')}
+                      onValueChange={setDocumentVariant}
+                      options={(docType === 'declaracao'
+                        ? ['Declaração de Cursando (Simples)', 'Declaração para Estágio', 'Declaração de Conclusão']
+                        : ['Guia de Transferência Externa', 'Memorando de Solicitação de Vaga'])
+                        .map((label) => ({ value: label, label }))}
+                    />
                 </div>
                 <div>
                     <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Observações (Opcional)</label>

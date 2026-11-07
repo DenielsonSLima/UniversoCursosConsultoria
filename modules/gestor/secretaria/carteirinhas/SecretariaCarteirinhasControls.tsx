@@ -1,3 +1,4 @@
+import InstitutionalSelect from '../../../shared/components/InstitutionalSelect';
 import React from 'react';
 import { CreditCard, Image, Loader2, Printer, Search, Trash2, Users, X } from 'lucide-react';
 import { onlyDigits } from '../../../../lib/documentFormatters';
@@ -52,11 +53,12 @@ const ModeNavigation: React.FC<{
   ];
   return (
     <div className="border-b border-slate-100 p-4">
-      <div className="grid gap-2 md:grid-cols-3">
+      <div data-secretaria-modes className="grid gap-2 md:grid-cols-3">
         {items.map(({ key, icon: Icon, title, description }) => (
           <button
             key={key}
             onClick={() => setMode(key)}
+            aria-pressed={mode === key}
             className={`flex items-center gap-3 rounded-2xl border p-4 text-left transition-colors ${mode === key ? 'border-cyan-200 bg-cyan-50 text-cyan-800' : 'border-slate-100 bg-slate-50 text-slate-500 hover:border-slate-200'}`}
           >
             <Icon size={20} />
@@ -146,7 +148,7 @@ const IndividualControls: React.FC<Pick<SecretariaCarteirinhasControlsProps,
       )}
       <LayoutSelector individual layoutType={layoutType} setLayoutType={setLayoutType} />
       <div className="flex flex-col items-center justify-center rounded-[2.5rem] border-2 border-dashed border-slate-200 bg-slate-50/50 p-8 text-center">
-        <div className="relative mb-6 flex h-[54mm] w-[85.6mm] shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-lg">
+        <div className="relative mb-6 flex aspect-[85.6/54] w-full max-w-[85.6mm] shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-lg">
           <CreditCard size={48} className="absolute -bottom-4 -right-4 rotate-12 scale-150 opacity-20" />
           <div className="z-10 p-4 text-center"><p className="text-[7px] font-black uppercase tracking-widest opacity-80">Visualização do Modelo</p><h4 className="mt-1 text-[10px] font-black uppercase tracking-wider">{selectedAluno?.nome || 'SELECIONE UM ALUNO'}</h4><p className="mt-0.5 text-[8px] font-bold opacity-90">{selectedAluno ? `CIE-${startNumber}` : '-'}</p></div>
         </div>
@@ -165,7 +167,13 @@ const BatchControls: React.FC<Pick<SecretariaCarteirinhasControlsProps,
   <div className="animate-fadeIn">
     <h3 className="mb-6 text-xl font-black uppercase tracking-tight text-[#001a33]">Emissão em Lote</h3>
     <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-2">
-      <div><label className="mb-2 block text-xs font-bold uppercase text-slate-500">Selecione a Turma</label><select value={selectedTurmaId} onChange={(event) => setSelectedTurmaId(event.target.value)} className="w-full cursor-pointer rounded-2xl border border-slate-200 bg-slate-50 p-4 font-bold text-slate-700 outline-none focus:border-purple-500"><option value="todos">Todos os alunos técnicos deste polo</option>{turmas.map((turma) => <option key={turma.id} value={turma.id}>{turma.nome} ({turma.codigo})</option>)}</select></div>
+      <div><label className="mb-2 block text-xs font-bold uppercase text-slate-500">Selecione a Turma</label><InstitutionalSelect
+                                                                                                               value={selectedTurmaId}
+                                                                                                               onValueChange={(value) => setSelectedTurmaId(value)}
+                                                                                                               ariaLabel="Selecione a turma"
+                                                                                                               options={[{ value: 'todos', label: 'Todos os alunos técnicos deste polo' }, ...turmas.map((turma) => ({ value: turma.id, label: `${turma.nome} (${turma.codigo})` }))]}
+                                                                                                               className="w-full"
+                                                                                                             /></div>
       <div><label className="mb-2 block text-xs font-bold uppercase text-slate-500">Validade acadêmica</label><input type="text" value={validadeGeral} disabled className="w-full rounded-2xl border border-blue-100 bg-blue-50 p-4 font-bold text-blue-700" /></div>
     </div>
     <LayoutSelector layoutType={layoutType} setLayoutType={setLayoutType} />

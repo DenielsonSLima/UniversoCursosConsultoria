@@ -1,3 +1,4 @@
+import InstitutionalSelect from '../../../../shared/components/InstitutionalSelect';
 import {
   BadgePercent,
   CalendarClock,
@@ -218,19 +219,15 @@ const DependenciasFinancialRules = ({
         </div>
         <label className="block min-w-0 lg:w-72">
           <span className="text-[9px] font-black uppercase tracking-wider text-slate-500">Disciplina técnica do polo</span>
-          <select
+          <InstitutionalSelect
+            ariaLabel="Disciplina técnica do polo"
             value={disciplineId}
-            onChange={(event) => selectDiscipline(event.target.value)}
-            className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700"
-          >
-            <option value="">Selecione</option>
-            {disciplines.map((discipline) => (
-              <option key={discipline.id} value={discipline.id}>
-                {discipline.nome}
-                {discipline.cursoNome ? ` — ${discipline.cursoNome}` : ''}
-              </option>
-            ))}
-          </select>
+            onValueChange={selectDiscipline}
+            options={[{ value: '', label: 'Selecione' }, ...disciplines.map((discipline) => ({
+              value: discipline.id, label: `${discipline.nome}${discipline.cursoNome ? ` — ${discipline.cursoNome}` : ''}`,
+            }))]}
+            className="mt-1 w-full"
+          />
         </label>
         <label className="block lg:w-36">
           <span className="text-[9px] font-black uppercase tracking-wider text-slate-500">% da parcela</span>

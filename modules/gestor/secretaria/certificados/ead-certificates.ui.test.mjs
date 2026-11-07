@@ -40,15 +40,17 @@ before(async () => {
         createRoot(document.getElementById('root')).render(<Page/>);`,
       loader: 'tsx', resolveDir: directory,
     },
-    bundle: true, format: 'esm', write: false,
+    bundle: true, format: 'esm', write: false, outfile: 'fixture.js',
     nodePaths: dependencies ? [dependencies] : [],
     plugins: [fixturePlugin(mockModules)],
   });
-  const javascript = result.outputFiles[0].text;
+  const javascript = result.outputFiles.find((file) => file.path.endsWith('.js')).text;
+  const css = result.outputFiles.find((file) => file.path.endsWith('.css'))?.text || '';
+  const html = fixtureHtml.replace('</head>', `<style>${css}</style></head>`);
   server = createServer((request, response) => {
     const isScript = request.url === '/bundle.js';
     response.writeHead(200, { 'Content-Type': isScript ? 'text/javascript' : 'text/html' });
-    response.end(isScript ? javascript : fixtureHtml);
+    response.end(isScript ? javascript : html);
   });
   await new Promise((accept) => server.listen(0, '127.0.0.1', accept));
   origin = `http://127.0.0.1:${server.address().port}`;

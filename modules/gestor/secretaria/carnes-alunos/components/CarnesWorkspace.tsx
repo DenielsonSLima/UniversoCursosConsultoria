@@ -1,3 +1,4 @@
+import InstitutionalSelect from '../../../../shared/components/InstitutionalSelect';
 import {
   AlertCircle,
   ArrowLeft,
@@ -201,27 +202,23 @@ const CarnesWorkspace = ({ controller }: CarnesWorkspaceProps) => {
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
           <label>
             <span className="mb-1.5 block text-[10px] font-black uppercase tracking-wider text-slate-500">Curso</span>
-            <select
+            <InstitutionalSelect
+              ariaLabel="Curso dos carnês"
               value={controller.courseId}
               disabled={controller.generating}
-              onChange={(event) => controller.changeCourse(event.target.value)}
-              className="min-h-12 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700 outline-none focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100 disabled:opacity-50"
-            >
-              <option value="">Todos os cursos</option>
-              {controller.courseOptions.map((option) => <option key={option.id} value={option.id}>{option.name}</option>)}
-            </select>
+              onValueChange={controller.changeCourse}
+              options={[{ value: '', label: 'Todos os cursos' }, ...controller.courseOptions.map((option) => ({ value: option.id, label: option.name }))]}
+            />
           </label>
           <label>
             <span className="mb-1.5 block text-[10px] font-black uppercase tracking-wider text-slate-500">Turma</span>
-            <select
+            <InstitutionalSelect
+              ariaLabel="Turma dos carnês"
               value={controller.classId}
               disabled={controller.generating}
-              onChange={(event) => controller.changeClass(event.target.value)}
-              className="min-h-12 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700 outline-none focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100 disabled:opacity-50"
-            >
-              <option value="">Todas as turmas</option>
-              {controller.classOptions.map((option) => <option key={option.id} value={option.id}>{option.name}</option>)}
-            </select>
+              onValueChange={controller.changeClass}
+              options={[{ value: '', label: 'Todas as turmas' }, ...controller.classOptions.map((option) => ({ value: option.id, label: option.name }))]}
+            />
           </label>
         </div>
       ) : null}

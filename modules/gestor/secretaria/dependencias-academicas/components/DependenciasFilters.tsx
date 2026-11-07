@@ -1,3 +1,4 @@
+import InstitutionalSelect from '../../../../shared/components/InstitutionalSelect';
 import { LayoutGrid, Search, Table2, X } from 'lucide-react';
 
 export type DependenciasViewMode = 'table' | 'cards';
@@ -24,8 +25,6 @@ interface DependenciasFiltersProps {
   onViewModeChange: (value: DependenciasViewMode) => void;
   onClear: () => void;
 }
-
-const selectClassName = 'h-11 min-w-[150px] rounded-xl border border-slate-200 bg-slate-50 px-3 text-xs font-semibold text-slate-700 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-50';
 
 const DependenciasFilters = ({
   search,
@@ -62,49 +61,20 @@ const DependenciasFilters = ({
 
     <label>
       <span className="sr-only">Filtrar por modalidade</span>
-      <select
-        aria-label="Filtrar por modalidade"
-        value={modalidade}
-        onChange={(event) => onModalidadeChange(event.target.value)}
-        className={selectClassName}
-      >
-        <option value="">Todas as modalidades</option>
-        {modalidades.map((option) => (
-          <option key={option.value} value={option.value}>{option.label}</option>
-        ))}
-      </select>
+      <InstitutionalSelect ariaLabel="Filtrar por modalidade" value={modalidade} onValueChange={onModalidadeChange}
+        options={[{ value: '', label: 'Todas as modalidades' }, ...modalidades]} className="min-w-[150px]" />
     </label>
 
     <label>
       <span className="sr-only">Filtrar por curso</span>
-      <select
-        aria-label="Filtrar por curso"
-        value={curso}
-        disabled={!cursos.length}
-        onChange={(event) => onCursoChange(event.target.value)}
-        className={selectClassName}
-      >
-        <option value="">Todos os cursos</option>
-        {cursos.map((option) => (
-          <option key={option.value} value={option.value}>{option.label}</option>
-        ))}
-      </select>
+      <InstitutionalSelect ariaLabel="Filtrar por curso" value={curso} onValueChange={onCursoChange} disabled={!cursos.length}
+        options={[{ value: '', label: 'Todos os cursos' }, ...cursos]} className="min-w-[150px]" />
     </label>
 
     <label>
       <span className="sr-only">Filtrar por turma</span>
-      <select
-        aria-label="Filtrar por turma"
-        value={turma}
-        disabled={!turmas.length}
-        onChange={(event) => onTurmaChange(event.target.value)}
-        className={selectClassName}
-      >
-        <option value="">Todas as turmas</option>
-        {turmas.map((option) => (
-          <option key={option.value} value={option.value}>{option.label}</option>
-        ))}
-      </select>
+      <InstitutionalSelect ariaLabel="Filtrar por turma" value={turma} onValueChange={onTurmaChange} disabled={!turmas.length}
+        options={[{ value: '', label: 'Todas as turmas' }, ...turmas]} className="min-w-[150px]" />
     </label>
 
     {hasFilters ? (

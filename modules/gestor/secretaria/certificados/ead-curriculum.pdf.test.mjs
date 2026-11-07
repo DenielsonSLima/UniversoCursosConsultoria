@@ -76,7 +76,7 @@ before(async () => {
           <div id="issued">{emitted}</div>
         </> : emitted);
       };`, loader: 'tsx', resolveDir: directory },
-    bundle: true, format: 'iife', write: false, define: { 'import.meta.env': '{}' },
+    bundle: true, format: 'iife', write: false, outfile: 'fixture.js', define: { 'import.meta.env': '{}' },
     nodePaths: dependencies ? [dependencies] : [],
     plugins: [{ name: 'controlled-io-real-renderers', setup(plugin) {
       plugin.onResolve({ filter: /\.ttf\?url$/ }, args => ({
@@ -107,13 +107,14 @@ before(async () => {
       plugin.onLoad({ filter: /.*/, namespace: 'io' }, () => ({ contents: signatureFixtureModule }));
     } }],
   });
-  javascript = compiled.outputFiles[0].text;
+  javascript = compiled.outputFiles.find((file) => file.path.endsWith('.js')).text;
+  const bundledCss = compiled.outputFiles.find((file) => file.path.endsWith('.css'))?.text || '';
   const config = requireTool(resolve(root, 'tailwind.config.cjs'));
   const styles = (await readFile(resolve(root, 'styles.css'), 'utf8')).replace(/^@import.*$/gm, '');
   css = (await postcss([tailwindcss({ ...config,
     content: [resolve(root, 'modules/gestor/secretaria/certificados/**/*.tsx'),
       resolve(root, 'modules/gestor/cadastros/modelos-documentos/diploma/**/*.tsx')],
-  })]).process(styles, { from: resolve(root, 'styles.css') })).css;
+  })]).process(styles, { from: resolve(root, 'styles.css') })).css + '\n' + bundledCss;
   browser = await chromium.launch({ headless: true,
     ...(process.env.EAD_UI_BROWSER_EXECUTABLE ? { executablePath: process.env.EAD_UI_BROWSER_EXECUTABLE } : {}) });
 });

@@ -3,21 +3,24 @@ import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
 test('pasta em lote segue o seletor compacto da carteirinha e permite todo o polo', async () => {
-  const [page, service] = await Promise.all([
-    readFile(new URL('../shared/SecretariaDocumentoEmissionPage.tsx', import.meta.url), 'utf8'),
+  const [workspace, selection, service] = await Promise.all([
+    readFile(new URL('../shared/useSecretariaDocumentoWorkspace.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../shared/SecretariaDocumentoBatchSelection.tsx', import.meta.url), 'utf8'),
     readFile(new URL('../shared/secretaria-documentos.service.ts', import.meta.url), 'utf8'),
   ]);
 
-  assert.match(page, /supportsAllStudentsBatch = definition\.id === 'pasta_identificacao'/);
-  assert.match(page, /supportsBatchModalidadeFilter/);
-  assert.match(page, /mapModalidadeOptions\(definition\.id\)/);
-  assert.match(page, /Tipo de modalidade/);
-  assert.match(page, /selectedBatchModalidade/);
-  assert.match(page, /<option value="todos">Todos os alunos deste polo<\/option>/);
-  assert.match(page, /selectedTurmaId === 'todos'/);
-  assert.match(page, /allStudentsInPolo:/);
-  assert.match(page, /pastaBatchTurmas = turmas/);
-  assert.match(page, /alunos ativos no polo/);
+  assert.match(workspace, /supportsAllStudentsBatch = definition\.id === 'pasta_identificacao'/);
+  assert.match(workspace, /supportsBatchModalidadeFilter/);
+  assert.match(workspace, /mapModalidadeOptions\(definition\.id\)/);
+  assert.match(selection, /Tipo de modalidade/);
+  assert.match(selection, /selectedBatchModalidade/);
+  assert.match(selection, /value: 'todos', label: 'Todos os alunos deste polo'/);
+  assert.match(selection, /<InstitutionalSelect/);
+  assert.doesNotMatch(selection, /<select\b/);
+  assert.match(selection, /selectedTurmaId === 'todos'/);
+  assert.match(workspace, /allStudentsInPolo:/);
+  assert.match(workspace, /pastaBatchTurmas = turmas/);
+  assert.match(selection, /alunos ativos no polo/);
 
   assert.match(service, /allStudentsInPolo\?: boolean/);
   assert.match(service, /if \(input\.allStudentsInPolo\)/);

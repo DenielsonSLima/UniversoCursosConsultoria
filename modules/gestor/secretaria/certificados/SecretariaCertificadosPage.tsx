@@ -1,3 +1,4 @@
+import InstitutionalSelect from '../../../shared/components/InstitutionalSelect';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -282,11 +283,11 @@ const SecretariaCertificadosPage: React.FC = () => {
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-2 rounded-2xl border border-slate-200 bg-white p-1.5">
+      <div data-secretaria-modes className="flex flex-wrap gap-2 rounded-2xl border border-slate-200 bg-white p-1.5">
         {MODALIDADES.map(tab => {
           const Icon = tab.icon;
           return (
-            <button key={tab.id} onClick={() => setModalidade(tab.id)}
+            <button key={tab.id} aria-pressed={modalidade === tab.id} onClick={() => setModalidade(tab.id)}
               className={`flex items-center gap-2 rounded-xl px-4 py-3 text-xs font-black uppercase tracking-wider transition-all ${modalidade === tab.id ? 'bg-[#001a33] text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}>
               <Icon size={15} /> {tab.label}
             </button>
@@ -301,9 +302,9 @@ const SecretariaCertificadosPage: React.FC = () => {
         </p>
       )}
 
-      <div className="flex gap-2">
+      <div data-secretaria-modes className="flex gap-2">
         {(['PENDENTE', 'FINALIZADO'] as CertificadoStatus[]).map(value => (
-          <button key={value} onClick={() => setStatus(value)}
+          <button key={value} aria-pressed={status === value} onClick={() => setStatus(value)}
             className={`rounded-xl px-5 py-2.5 text-xs font-black uppercase tracking-wider ${status === value ? 'bg-blue-600 text-white' : 'border border-slate-200 bg-white text-slate-500'}`}>
             {value === 'PENDENTE' ? 'Pendentes' : 'Finalizados'}
           </button>
@@ -316,15 +317,10 @@ const SecretariaCertificadosPage: React.FC = () => {
           <input value={search} onChange={e => setSearch(e.target.value)}
             placeholder="Buscar aluno ou CPF..." className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-3 text-sm font-semibold outline-none focus:border-blue-500" />
         </div>
-        <select value={turmaId} onChange={e => setTurmaId(e.target.value)} className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs font-bold text-slate-600">
-          <option value="todos">Todas as turmas</option>
-          {turmas.map(turma => <option key={turma.id} value={turma.id}>{turma.nome}</option>)}
-        </select>
-        <select value={groupBy} onChange={e => setGroupBy(e.target.value as typeof groupBy)} className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs font-bold text-slate-600">
-          <option value="turma">Agrupar por turma</option>
-          <option value="polo">Agrupar por polo</option>
-          <option value="nenhum">Sem agrupamento</option>
-        </select>
+        <InstitutionalSelect ariaLabel="Turma dos certificados" value={turmaId} onValueChange={setTurmaId}
+          options={[{ value: 'todos', label: 'Todas as turmas' }, ...turmas.map((turma) => ({ value: turma.id, label: turma.nome }))]} className="md:min-w-[180px]" />
+        <InstitutionalSelect ariaLabel="Agrupamento dos certificados" value={groupBy} onValueChange={(value) => setGroupBy(value as typeof groupBy)}
+          options={[{ value: 'turma', label: 'Agrupar por turma' }, { value: 'polo', label: 'Agrupar por polo' }, { value: 'nenhum', label: 'Sem agrupamento' }]} className="md:min-w-[180px]" />
         <button onClick={() => void reload()} className="flex items-center justify-center gap-2 rounded-xl bg-[#001a33] px-5 py-3 text-xs font-black uppercase text-white">
           <Filter size={14} /> Filtrar
         </button>
@@ -411,4 +407,3 @@ const SecretariaCertificadosPage: React.FC = () => {
 };
 
 export default SecretariaCertificadosPage;
-
