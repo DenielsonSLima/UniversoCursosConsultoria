@@ -73,9 +73,9 @@ export default function TransferenciaFormModal({
   const unavailable = polosLoading || polosError || originAccountsLoading || originAccountsError
     || destinationAccountsLoading || destinationAccountsError;
   return createPortal(
-    <div className="fixed inset-0 z-[9999] flex min-h-[100dvh] items-center justify-center bg-[#001a33]/70 p-4 backdrop-blur-sm">
-      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1} className="max-h-[calc(100dvh-2rem)] w-full max-w-5xl overflow-y-auto rounded-[2rem] bg-white p-6 shadow-2xl outline-none">
-        <div className="mb-5 flex items-start justify-between gap-4">
+    <div className="financial-dialog-overlay fixed inset-0 z-[9999] flex min-h-[100dvh] items-center justify-center bg-[#001a33]/70 p-4 backdrop-blur-sm">
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1} className="financial-dialog financial-dialog--padded max-h-[calc(100dvh-2rem)] w-full max-w-5xl overflow-y-auto rounded-[2rem] bg-white p-6 shadow-2xl outline-none">
+        <div className="financial-dialog-header mb-5 flex items-start justify-between gap-4">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">Nova transferência</p>
             <h4 id={titleId} className="text-xl font-black uppercase tracking-tight text-[#001a33]">Transferência entre contas</h4>
@@ -106,7 +106,7 @@ export default function TransferenciaFormModal({
               const accent = origin ? 'rose' : 'emerald';
               const poloId = origin ? form.poloOrigemId : form.poloDestinoId;
               return (
-                <section key={side} aria-label={origin ? 'Origem' : 'Destino'} className={`min-w-0 rounded-3xl border p-4 ${origin ? 'border-rose-100 bg-rose-50/50' : 'border-emerald-100 bg-emerald-50/50'}`}>
+                <section key={side} aria-label={origin ? 'Origem' : 'Destino'} className={`financial-dialog-section min-w-0 rounded-3xl border p-4 ${origin ? 'border-rose-100 bg-rose-50/50' : 'border-emerald-100 bg-emerald-50/50'}`}>
                   <div className={`mb-4 flex items-center gap-2 text-xs font-black uppercase tracking-wider ${origin ? 'text-rose-700' : 'text-emerald-700'}`}><Landmark size={15} />{origin ? 'Origem' : 'Destino'}</div>
                   <div className="space-y-4">
                     <TransferenciaPicker
@@ -127,7 +127,7 @@ export default function TransferenciaFormModal({
               );
             })}
           </div>
-          <div className="flex flex-col-reverse gap-3 border-t border-slate-100 pt-5 sm:flex-row sm:justify-end">
+          <div className="financial-dialog-footer flex flex-col-reverse gap-3 border-t border-slate-100 pt-5 sm:flex-row sm:justify-end">
             <button type="button" onClick={onClose} disabled={isPending} className="rounded-2xl border border-slate-200 px-5 py-3 text-xs font-black uppercase tracking-wider text-slate-500 hover:bg-slate-50 disabled:opacity-50">Cancelar</button>
             <button type="submit" disabled={isPending || unavailable} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#001a33] px-6 py-3 text-xs font-black uppercase tracking-wider text-white shadow-lg shadow-slate-900/15 disabled:opacity-50">
               {isPending ? <Loader2 className="animate-spin" size={16} /> : <Plus size={16} />} Salvar transferência

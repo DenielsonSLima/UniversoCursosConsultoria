@@ -33,7 +33,7 @@ const EmprestimoCard: React.FC<EmprestimoCardProps> = ({
   const nextParcela = getEmprestimoNextParcela(item);
 
   return (
-    <article className="flex h-full flex-col rounded-2xl border border-slate-100 bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
+    <article className="financial-data-surface financial-data-card flex h-full flex-col rounded-2xl border border-slate-100 bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
       <div className="flex items-start justify-between gap-3">
         <button
           type="button"
@@ -60,11 +60,11 @@ const EmprestimoCard: React.FC<EmprestimoCardProps> = ({
       >
         <span className="rounded-xl bg-slate-50 p-3">
           <span className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-wider text-slate-400"><CircleDollarSign size={12} /> Crédito</span>
-          <strong className="mt-1 block text-sm font-black text-[#001a33]">{formatEmprestimoCurrency(item.valorLiberado)}</strong>
+          <strong className="financial-data-money mt-1 block text-sm font-black text-[#001a33]">{formatEmprestimoCurrency(item.valorLiberado)}</strong>
         </span>
         <span className="rounded-xl bg-slate-50 p-3">
           <span className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-wider text-slate-400"><ReceiptText size={12} /> Dívida</span>
-          <strong className="mt-1 block text-sm font-black text-[#001a33]">{formatEmprestimoCurrency(item.valorTotalDivida)}</strong>
+          <strong className="financial-data-money mt-1 block text-sm font-black text-[#001a33]">{formatEmprestimoCurrency(item.valorTotalDivida)}</strong>
         </span>
       </button>
 
@@ -77,7 +77,7 @@ const EmprestimoCard: React.FC<EmprestimoCardProps> = ({
             <p className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-slate-400"><CalendarDays size={12} /> Próxima parcela</p>
             <div className="mt-1 flex items-end justify-between gap-3">
               <span className="text-xs font-bold text-slate-600">{formatEmprestimoDate(nextParcela.dataVencimento)}</span>
-              <strong className="text-sm font-black text-[#001a33]">{formatEmprestimoCurrency(nextParcela.valorTotal)}</strong>
+              <strong className="financial-data-money text-sm font-black text-[#001a33]">{formatEmprestimoCurrency(nextParcela.valorTotal)}</strong>
             </div>
           </>
         ) : (

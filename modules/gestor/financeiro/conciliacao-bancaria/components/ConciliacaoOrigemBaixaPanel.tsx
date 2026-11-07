@@ -94,19 +94,10 @@ export const ConciliacaoOrigemBaixaPanel: React.FC<ConciliacaoOrigemBaixaPanelPr
         </div>
       </div>
 
-      {/* Header & Title */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h3 className="text-base font-black uppercase tracking-wide text-slate-800">
-            Painel de Conciliação e Origem das Baixas
-          </h3>
-          <p className="mt-1 text-xs text-slate-500">
-            Recebimentos Banese e Proesc, retornos CNAB240, baixas no Caixa e histórico migrado.
-          </p>
-        </div>
-
-
-      </div>
+      <h3 className="sr-only">Painel de Conciliação e Origem das Baixas</h3>
+      <p className="text-xs text-slate-500">
+        Recebimentos Banese e Proesc, retornos CNAB240, baixas no Caixa e histórico migrado.
+      </p>
 
       {/* KPI Cards por Canal de Baixa */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-7">

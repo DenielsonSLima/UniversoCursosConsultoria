@@ -1,6 +1,8 @@
 
 import React from 'react';
-import { Search, Filter, Layers, CheckCircle2, MonitorPlay, BookOpenCheck, Stethoscope, Wrench, Users, X } from 'lucide-react';
+import { Search, MonitorPlay, BookOpenCheck, Stethoscope, Wrench, Users, X } from 'lucide-react';
+import InstitutionalSelect from '../../../shared/components/InstitutionalSelect';
+import './partner-filters.css';
 import type { ParceirosTabType } from '../hooks/useParceirosFilters';
 
 export type AlunoModalidadeFilter = 'EAD' | 'LIVRE' | 'ESPECIALIZACAO' | 'TECNICO';
@@ -58,7 +60,7 @@ const ParceirosFilters: React.FC<ParceirosFiltersProps> = ({
   };
 
   return (
-    <div className="space-y-3 mb-6 w-full">
+    <div className="partner-filters space-y-3 mb-5 w-full">
       <div className="flex flex-col md:flex-row gap-3 w-full">
       
         {/* Campo de Busca Estilizado */}
@@ -68,7 +70,8 @@ const ParceirosFilters: React.FC<ParceirosFiltersProps> = ({
           </div>
           <input 
             ref={searchInputRef}
-            type="text" 
+            type="text"
+            aria-label="Buscar parceiros"
             placeholder="Pesquisar por nome, CNPJ, CPF ou cidade..." 
             className="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-11 pr-12 text-sm font-medium text-slate-700 shadow-sm outline-none transition-all placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
             value={searchTerm}
@@ -87,82 +90,44 @@ const ParceirosFilters: React.FC<ParceirosFiltersProps> = ({
           )}
         </div>
 
-        <div className="flex flex-col md:flex-row flex-[3] gap-3">
-          {/* Status */}
-          <div className="relative group flex-1">
-            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-emerald-600 z-10 pointer-events-none">
-              <CheckCircle2 size={16} />
-            </div>
-            <select 
-              aria-label="Filtrar parceiros por status"
-              className="w-full appearance-none bg-white pl-11 pr-10 py-3 border border-slate-200 rounded-2xl outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 text-slate-700 font-bold text-sm cursor-pointer shadow-sm relative z-0"
-              value={statusFilter}
-              onChange={(e) => onStatusChange && onStatusChange(e.target.value)}
-            >
-              <option value="todos">Todos os status</option>
-              <option value="ativo">Ativos</option>
-              <option value="inativo">Inativos</option>
-            </select>
-            <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 z-10">
-              <svg width="10" height="6" viewBox="0 0 10 6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M1 1L5 5L9 1" />
-              </svg>
-            </div>
-          </div>
-
-          {/* Turmas */}
-          <div className="relative group flex-1">
-            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-blue-600 z-10 pointer-events-none">
-              <Layers size={16} />
-            </div>
-            <select 
-              aria-label="Filtrar parceiros por turma"
-              className="w-full appearance-none bg-white pl-11 pr-10 py-3 border border-slate-200 rounded-2xl outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 text-slate-700 font-bold text-sm cursor-pointer shadow-sm relative z-0"
-              value={selectedTurma}
-              disabled={loadingTurmas || turmasError}
-              onChange={(e) => onTurmaChange && onTurmaChange(e.target.value)}
-            >
-              <option value="todas">
-                {turmasError ? 'Turmas indisponíveis' : (loadingTurmas ? 'Carregando turmas...' : 'Todas as turmas')}
-              </option>
-              {!loadingTurmas && !turmasError && turmas.length === 0 && (
-                <option value="" disabled>Nenhuma turma em andamento</option>
-              )}
-              {turmas.map((turma) => (
-                <option key={turma.id} value={turma.id}>
-                  {turma.nome || turma.cursoNome || turma.codigo || 'Turma sem nome'}
-                </option>
-              ))}
-            </select>
-            <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 z-10">
-              <svg width="10" height="6" viewBox="0 0 10 6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M1 1L5 5L9 1" />
-              </svg>
-            </div>
-          </div>
-
-          {/* Ordenação */}
-          <div className="relative group flex-1">
-            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-blue-600 z-10 pointer-events-none">
-              <Filter size={16} />
-            </div>
-            <select 
-              aria-label="Ordenar parceiros"
-              className="w-full appearance-none bg-white pl-11 pr-10 py-3 border border-slate-200 rounded-2xl outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 text-slate-700 font-bold text-sm cursor-pointer shadow-sm relative z-0"
-              value={sortOrder}
-              onChange={(e) => onSortChange(e.target.value)}
-            >
-              <option value="az">A - Z</option>
-              <option value="za">Z - A</option>
-              <option value="recent">Recente</option>
-              <option value="oldest">Antigo</option>
-            </select>
-            <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 z-10">
-              <svg width="10" height="6" viewBox="0 0 10 6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M1 1L5 5L9 1" />
-              </svg>
-            </div>
-          </div>
+        <div className="partner-filter-selects">
+          <InstitutionalSelect
+            ariaLabel="Filtrar parceiros por status"
+            value={statusFilter}
+            onValueChange={(value) => onStatusChange?.(value)}
+            options={[
+              { value: 'todos', label: 'Todos os status' },
+              { value: 'ativo', label: 'Ativos' },
+              { value: 'inativo', label: 'Inativos' },
+            ]}
+          />
+          <InstitutionalSelect
+            ariaLabel="Filtrar parceiros por turma"
+            value={selectedTurma}
+            onValueChange={(value) => onTurmaChange?.(value)}
+            disabled={loadingTurmas || turmasError}
+            loading={loadingTurmas}
+            error={turmasError ? 'Não foi possível carregar as turmas.' : undefined}
+            options={[
+              { value: 'todas', label: 'Todas as turmas' },
+              ...(!loadingTurmas && !turmasError && turmas.length === 0
+                ? [{ value: '', label: 'Nenhuma turma em andamento', disabled: true }] : []),
+              ...turmas.map((turma) => ({
+                value: turma.id,
+                label: turma.nome || turma.cursoNome || turma.codigo || 'Turma sem nome',
+                keywords: [turma.codigo, turma.cursoNome].filter(Boolean).join(' '),
+              })),
+            ]}
+          />
+          <InstitutionalSelect
+            ariaLabel="Ordenar parceiros"
+            value={sortOrder}
+            onValueChange={onSortChange}
+            options={[
+              { value: 'az', label: 'A - Z' }, { value: 'za', label: 'Z - A' },
+              { value: 'recent', label: 'Recente' }, { value: 'oldest', label: 'Antigo' },
+            ]}
+          />
         </div>
       </div>
 

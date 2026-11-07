@@ -2,6 +2,7 @@
 // File: modules/gestor/parceiros/components/ParceirosList.tsx
 
 import React, { useState, useEffect } from 'react';
+import './cards/partner-cards.css';
 import { ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
 import PFCard from './cards/PFCard';
 import PJCard from './cards/PJCard';

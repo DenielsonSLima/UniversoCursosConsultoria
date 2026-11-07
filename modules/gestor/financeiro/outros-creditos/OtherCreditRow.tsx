@@ -61,7 +61,7 @@ export const OtherCreditRow: React.FC<{
         <p className="text-[10px] font-bold text-slate-500">Forma: {item.formaPagamento || (item.asaasPaymentId || item.asaasPaymentLinkId ? 'Link bancário' : 'Não definida')}</p>
         {item.asaasStatus && <p className="text-[10px] font-black uppercase text-blue-500">Gateway: {item.asaasStatus}</p>}
       </td>
-      <td className="px-5 py-4">
+      <td className="financial-data-money px-5 py-4">
         <ReceivableAmountSummary item={item} compact />
         <FinancialPaymentBalance summary={item.paymentSummary} />
       </td>

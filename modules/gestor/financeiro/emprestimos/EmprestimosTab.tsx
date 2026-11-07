@@ -2,7 +2,6 @@ import React, { useDeferredValue, useEffect, useMemo, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   FileOutput,
-  Landmark,
   LayoutGrid,
   List,
   Loader2,
@@ -11,6 +10,7 @@ import {
 } from 'lucide-react';
 
 import ToastNotification, { useToast } from '../../components/ToastNotification';
+import FinancialUnderlineTabs from '../components/FinancialUnderlineTabs';
 import { caixaQueryKeys } from '../../caixa/caixa.service';
 import { textMatchesSearch } from '../../../../lib/search';
 import {
@@ -294,44 +294,40 @@ const EmprestimosTab: React.FC<EmprestimosTabProps> = ({ poloId: scopedPoloId, i
     <div className="financial-section-workspace space-y-5 animate-fadeIn">
       <ToastNotification toasts={toasts} onRemove={removeToast} />
 
-      <div className="financial-section-heading flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div className="financial-section-identity">
-          <p className="financial-section-eyebrow flex items-center gap-2 text-xs font-black uppercase tracking-[0.2em] text-indigo-600"><Landmark size={16} /> {isMatriz ? 'Gestão centralizada' : 'Gestão por polo'}</p>
-          <h3 className="mt-1 text-2xl font-black uppercase tracking-tight text-[#001a33]">Empréstimos</h3>
-          <p className="mt-1 max-w-2xl text-sm font-medium text-slate-500">
-            {isMatriz
-              ? 'Crédito entra na conta selecionada da Matriz; parcelas e rateios são obrigações canônicas dos polos.'
-              : 'Crédito, conta de destino, parcelas e Contas a Pagar pertencem exclusivamente a este polo.'}
-          </p>
-        </div>
-        <div className="financial-section-actions flex flex-wrap gap-2">
-          <button type="button" onClick={() => setShowExport(true)} disabled={!poloResponsavelId} className="inline-flex items-center justify-center gap-2 rounded-2xl border border-indigo-200 bg-white px-4 py-3 text-xs font-black uppercase tracking-wider text-indigo-700 transition-colors hover:bg-indigo-50 disabled:cursor-not-allowed disabled:opacity-50"><FileOutput size={16} /> Exportar PDF</button>
-          <button type="button" onClick={() => setShowForm(true)} disabled={!poloResponsavelId || polosQuery.isPending} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-5 py-3 text-xs font-black uppercase tracking-wider text-white shadow-lg shadow-indigo-900/15 transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"><Plus size={16} /> Novo empréstimo</button>
-        </div>
-      </div>
-
       <div className="rounded-2xl border border-indigo-100 bg-indigo-50/40 px-4 py-3 text-xs font-medium leading-relaxed text-slate-600">
+        <h3 className="sr-only">Empréstimos</h3>
+        <span>{isMatriz
+              ? 'Crédito entra na conta selecionada da Matriz; parcelas e rateios são obrigações canônicas dos polos.'
+              : 'Crédito, conta de destino, parcelas e Contas a Pagar pertencem exclusivamente a este polo.'}</span>{' '}
         <strong className="font-black text-indigo-700">Polo responsável:</strong> {poloResponsavelNome}. Valores, desdobramento das parcelas, conta de crédito, rateio e baixa são processados pelo backend; a tela apenas envia os dados solicitados e mostra o retorno canônico.
       </div>
 
-      <div className="flex flex-col gap-3 rounded-2xl border border-slate-100 bg-white p-3 shadow-sm lg:flex-row lg:items-center">
-        <div className="flex rounded-xl bg-slate-100 p-1" role="tablist" aria-label="Situação dos empréstimos">
-          {([
-            ['ATIVOS', 'Ativos', counts.ativos],
-            ['FINALIZADOS', 'Finalizados', counts.finalizados],
-          ] as const).map(([scope, label, count]) => (
-            <button key={scope} type="button" role="tab" aria-selected={statusScope === scope} onClick={() => setStatusScope(scope)} className={`rounded-lg px-3 py-2 text-[10px] font-black uppercase tracking-wide transition-colors ${statusScope === scope ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
-              {label} <span className={`ml-1 rounded-full px-1.5 py-0.5 ${statusScope === scope ? 'bg-indigo-50 text-indigo-700' : 'bg-slate-200 text-slate-500'}`}>{count}</span>
-            </button>
-          ))}
+      <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-slate-100 bg-white p-3 shadow-sm">
+        <div className="min-w-0 max-w-full shrink-0">
+          <FinancialUnderlineTabs
+            compact
+            items={([
+              ['ATIVOS', 'Ativos', counts.ativos],
+              ['FINALIZADOS', 'Finalizados', counts.finalizados],
+            ] as const).map(([id, label, badge]) => ({ id, label, badge }))}
+            value={statusScope}
+            onChange={setStatusScope}
+            ariaLabel="Situação dos empréstimos"
+            indicatorClassName="bg-indigo-600"
+            activeIconClassName="text-indigo-600"
+          />
         </div>
         <div className="relative min-w-[220px] flex-1">
           <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar por credor, contrato ou conta..." className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-9 pr-4 text-sm font-medium outline-none transition-all placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500" />
+          <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar por credor, contrato ou conta..." className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-4 text-sm font-medium outline-none transition-all placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500" />
         </div>
         <div className="inline-flex shrink-0 rounded-xl border border-slate-200 bg-white p-1" aria-label="Forma de visualização">
           <button type="button" onClick={() => setViewMode('cards')} aria-label="Visualizar como cards" aria-pressed={viewMode === 'cards'} className={`rounded-lg p-2 transition-colors ${viewMode === 'cards' ? 'bg-indigo-50 text-indigo-700' : 'text-slate-400 hover:text-slate-700'}`}><LayoutGrid size={16} /></button>
           <button type="button" onClick={() => setViewMode('table')} aria-label="Visualizar como tabela" aria-pressed={viewMode === 'table'} className={`rounded-lg p-2 transition-colors ${viewMode === 'table' ? 'bg-indigo-50 text-indigo-700' : 'text-slate-400 hover:text-slate-700'}`}><List size={16} /></button>
+        </div>
+        <div className="financial-section-actions ml-auto flex flex-wrap gap-2">
+          <button type="button" onClick={() => setShowExport(true)} disabled={!poloResponsavelId} className="inline-flex items-center justify-center gap-2 rounded-2xl border border-indigo-200 bg-white px-4 py-3 text-xs font-black uppercase tracking-wider text-indigo-700 transition-colors hover:bg-indigo-50 disabled:cursor-not-allowed disabled:opacity-50"><FileOutput size={16} /> Exportar PDF</button>
+          <button type="button" onClick={() => setShowForm(true)} disabled={!poloResponsavelId || polosQuery.isPending} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-5 py-3 text-xs font-black uppercase tracking-wider text-white shadow-lg shadow-indigo-900/15 transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"><Plus size={16} /> Novo empréstimo</button>
         </div>
       </div>
 

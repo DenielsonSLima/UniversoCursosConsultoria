@@ -1,4 +1,5 @@
 import React from 'react';
+import FinancialUnderlineTabs from '../../components/FinancialUnderlineTabs';
 import type {
   RenegociacaoCandidateFilters,
   RenegociacaoFilterOptions,
@@ -28,21 +29,16 @@ const RenegociacaoFilters: React.FC<RenegociacaoFiltersProps> = ({
 }) => (
   <div className="space-y-3 rounded-2xl border border-slate-100 bg-white p-3 shadow-sm">
     {view === 'EM_ANDAMENTO' ? (
-      <div className="flex gap-2" role="group" aria-label="Situação das propostas">
-        {([
-          ['PROPOSED', 'Propostas'], ['DRAFT', 'Rascunhos'],
-        ] as const).map(([status, label]) => (
-          <button
-            key={status}
-            type="button"
-            aria-pressed={ongoingStatus === status}
-            onClick={() => onStatus(status)}
-            className={`min-h-10 rounded-xl border px-3 text-xs font-bold ${ongoingStatus === status ? 'border-blue-200 bg-blue-50 text-blue-800' : 'border-slate-200 bg-white text-slate-500 hover:text-slate-800'}`}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
+      <FinancialUnderlineTabs
+        compact
+        items={[
+          { id: 'PROPOSED' as const, label: 'Propostas' },
+          { id: 'DRAFT' as const, label: 'Rascunhos' },
+        ]}
+        value={ongoingStatus}
+        onChange={onStatus}
+        ariaLabel="Situação das propostas"
+      />
     ) : null}
     <div className={`grid gap-3 ${view === 'A_NEGOCIAR' ? 'items-end lg:grid-cols-[minmax(16rem,2fr)_minmax(12rem,1fr)_minmax(14rem,1fr)]' : ''}`}>
       <RenegociacaoSearch

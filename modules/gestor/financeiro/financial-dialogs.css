@@ -1,0 +1,324 @@
+/* Screen-only financial chrome. Document pages and PDF renderers keep their own styles. */
+@media screen {
+  body:has(#root .financeiro-workspace) .financial-dialog-overlay {
+    padding: 20px;
+    background-color: rgb(15 23 42 / 48%);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    animation: none;
+    transform: none;
+    backface-visibility: visible;
+    will-change: auto;
+  }
+
+  body:has(#root .financeiro-workspace) .financial-dialog {
+    min-width: 0;
+    max-height: calc(100dvh - 40px);
+    border: 1px solid #dbe3ec;
+    border-radius: 14px;
+    box-shadow: 0 24px 80px -24px rgb(15 23 42 / 35%);
+    animation: none;
+    transform: none;
+    backface-visibility: visible;
+    will-change: auto;
+  }
+
+  body:has(#root .financeiro-workspace) .financial-dialog--padded {
+    padding: 20px;
+    overflow-y: auto;
+  }
+
+  body:has(#root .financeiro-workspace) .financial-dialog--fullscreen {
+    max-height: 100dvh;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  body:has(#root .financeiro-workspace) .financial-dialog-overlay:has(> .financial-dialog--fullscreen) {
+    padding: 0;
+  }
+
+  body:has(#root .financeiro-workspace) :is(.financial-dialog:not(.financial-dialog--document), .financial-dialog-header, .financial-dialog-footer),
+  body:has(#root .financeiro-workspace) :is(.financial-dialog:not(.financial-dialog--document), .financial-dialog-header, .financial-dialog-footer) * {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    -webkit-font-smoothing: auto;
+    text-rendering: auto;
+    font-synthesis: none;
+  }
+
+  body:has(#root .financeiro-workspace) .financial-dialog:not(.financial-dialog--document) {
+    color: #334155;
+    background-color: white;
+    font-size: 13px;
+    line-height: 1.55;
+    font-variant-numeric: tabular-nums;
+  }
+
+  body:has(#root .financeiro-workspace) :is(.financial-dialog:not(.financial-dialog--document), .financial-dialog-header, .financial-dialog-footer) :is(p, span, label, dt, dd, button, a, h2, h3, h4, h5, legend) {
+    letter-spacing: normal;
+    text-transform: none;
+  }
+
+  body:has(#root .financeiro-workspace) :is(.financial-dialog:not(.financial-dialog--document), .financial-dialog-header, .financial-dialog-footer) :is(.font-black, .font-extrabold, .font-bold) {
+    font-weight: 600;
+  }
+
+  body:has(#root .financeiro-workspace) .financial-dialog:not(.financial-dialog--document) .uppercase {
+    text-transform: none;
+    letter-spacing: normal;
+  }
+
+  body:has(#root .financeiro-workspace) .financial-dialog:not(.financial-dialog--document) .font-semibold {
+    font-weight: 500;
+  }
+
+  body:has(#root .financeiro-workspace) :is(.financial-dialog:not(.financial-dialog--document), .financial-dialog-header, .financial-dialog-footer) :is(.text-\[8px\], .text-\[9px\], .text-\[10px\], .text-\[11px\], .text-xs) {
+    font-size: 12px;
+    line-height: 1.5;
+  }
+
+  body:has(#root .financeiro-workspace) .financial-dialog:not(.financial-dialog--document) :is(.text-sm, .text-base) {
+    font-size: 13px;
+    line-height: 1.55;
+  }
+
+  body:has(#root .financeiro-workspace) .financial-dialog:not(.financial-dialog--document) .text-slate-400 {
+    color: #607286;
+  }
+
+  body:has(#root .financeiro-workspace) .financial-dialog:not(.financial-dialog--document) :is(.text-2xl, .text-3xl, .text-4xl) {
+    font-size: 22px;
+    line-height: 1.35;
+  }
+
+  body:has(#root .financeiro-workspace) .financial-dialog-header {
+    min-width: 0;
+    padding: 16px 20px;
+    border-top: 0;
+    border-bottom: 1px solid #e2e8f0;
+    color: #122b42;
+    background: white;
+    box-shadow: none;
+    backdrop-filter: none;
+  }
+
+  body:has(#root .financeiro-workspace) .financial-dialog-header :is(h2, h3, h4, h5) {
+    color: #122b42;
+    font-size: 18px;
+    font-weight: 600;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+  }
+
+  body:has(#root .financeiro-workspace) .financial-dialog-header p {
+    color: #607286;
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 1.5;
+  }
+
+  body:has(#root .financeiro-workspace) .financial-dialog-header :is(.text-emerald-300, .text-emerald-200) {
+    color: #047857;
+  }
+
+  body:has(#root .financeiro-workspace) .financial-dialog-header :is(.text-slate-300, .text-blue-200, .text-blue-300) {
+    color: #526175;
+  }
+
+  body:has(#root .financeiro-workspace) .financial-dialog-header:has(> div:only-child) {
+    padding: 0;
+  }
+
+  body:has(#root .financeiro-workspace) .financial-dialog-header > div:only-child {
+    min-height: 0;
+    padding: 16px 20px;
+  }
+
+  body:has(#root .financeiro-workspace) .financial-dialog--padded > .financial-dialog-header {
+    margin-bottom: 16px;
+    padding: 0 0 14px;
+  }
+
+  body:has(#root .financeiro-workspace) .financial-dialog-body:not(.financial-dialog-body--framed) {
+    min-width: 0;
+    padding: 20px;
+  }
+
+  body:has(#root .financeiro-workspace) .financial-dialog--padded > .financial-dialog-body {
+    padding: 0;
+  }
+
+  body:has(#root .financeiro-workspace) .financial-dialog-section {
+    min-width: 0;
+    border-radius: 10px;
+    box-shadow: none;
+  }
+
+  body:has(#root .financeiro-workspace) .financial-dialog:not(.financial-dialog--document) :is(input:not([type='checkbox']):not([type='radio']):not([type='file']), select, textarea, button[role='combobox']) {
+    min-height: 38px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 400;
+    line-height: 1.5;
+  }
+
+  body:has(#root .financeiro-workspace) .financial-dialog:not(.financial-dialog--document) :is(input:not([type='checkbox']):not([type='radio']):not([type='file']), select) {
+    height: 38px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+
+  body:has(#root .financeiro-workspace) .financial-dialog:not(.financial-dialog--document) select {
+    padding: 7px 10px;
+  }
+
+  body:has(#root .financeiro-workspace) .financial-dialog:not(.financial-dialog--document) textarea {
+    padding: 10px 12px;
+  }
+
+  body:has(#root .financeiro-workspace) .financial-dialog:not(.financial-dialog--document) label > span {
+    font-weight: 500;
+  }
+
+  body:has(#root .financeiro-workspace) .financial-dialog-footer {
+    margin-top: 16px;
+    padding: 14px 20px;
+    border-top: 1px solid #e2e8f0;
+    box-shadow: none;
+  }
+
+  body:has(#root .financeiro-workspace) .financial-dialog-body .financial-dialog-footer,
+  body:has(#root .financeiro-workspace) .financial-dialog--padded > .financial-dialog-footer {
+    padding: 14px 0 0;
+  }
+
+  body:has(#root .financeiro-workspace) .financial-dialog-footer--framed {
+    margin-top: 0;
+    padding: 0;
+  }
+
+  body:has(#root .financeiro-workspace) :is(.financial-dialog:not(.financial-dialog--document), .financial-dialog-header, .financial-dialog-footer) :is(button, a) {
+    min-height: 36px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.45;
+    box-shadow: none;
+  }
+
+  body:has(#root .financeiro-workspace) .financial-dialog-footer button {
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+
+  body:has(#root .financeiro-workspace) .financial-dialog-header button[aria-label^='Fechar'] {
+    min-width: 36px;
+    padding: 8px;
+    color: #526175;
+    background-color: #f1f5f9;
+    border-color: #e2e8f0;
+  }
+
+  body:has(#root .financeiro-workspace) .financial-dialog-header button[class~='bg-white/10'],
+  body:has(#root .financeiro-workspace) .financial-dialog-header button[class~='bg-slate-700/60'] {
+    color: #475569;
+    background-color: #f1f5f9;
+    border-color: #dbe3ec;
+  }
+
+  body:has(#root .financeiro-workspace) .financial-dialog:not(.financial-dialog--document) [class~='text-blue-100/60'] {
+    color: #607286;
+  }
+
+  body:has(#root .financeiro-workspace) .financial-dialog .financial-dialog-header:is(.pr-10, .pr-14) {
+    padding-right: 56px;
+  }
+
+  body:has(#root .financeiro-workspace) .financial-dialog--padded > form .financial-dialog-footer {
+    padding: 14px 0 0;
+  }
+
+  body:has(#root .financeiro-workspace) .financial-dialog .financial-dialog-picker-input > svg {
+    top: 50%;
+    transform: translateY(-50%);
+  }
+
+  body:has(#root .financeiro-workspace) .financial-dialog .financial-dialog-section:is(.p-4, .p-5, .p-6) {
+    padding: 16px;
+  }
+
+  body:has(#root .financeiro-workspace) .financial-dialog :is(.financial-dialog-summary, [aria-label='Resumo do atendimento'], [aria-label='Pagamento da cobrança']) {
+    border-radius: 12px;
+    box-shadow: none;
+  }
+
+  body:has(#root .financeiro-workspace) .financial-dialog :is(.financial-dialog-summary, [aria-label='Resumo do atendimento']) [class*='text-blue-'] {
+    color: #cbd5e1;
+  }
+
+  body:has(#root .financeiro-workspace) .financial-dialog-summary [class~='text-[42px]'] {
+    font-size: 28px;
+    line-height: 1.3;
+  }
+
+  body:has(#root .financeiro-workspace) .financial-dialog [aria-label='Pagamento da cobrança'] > p[class*='text-[clamp'] {
+    font-size: 28px;
+    line-height: 1.3;
+  }
+
+  body:has(#root .financeiro-workspace) .financial-dialog .financial-dialog-field {
+    height: 48px;
+    padding: 4px 12px;
+    border-radius: 8px;
+    transform: none;
+    box-shadow: none;
+  }
+
+  body:has(#root .financeiro-workspace) .financial-dialog-field > span:first-child {
+    width: 28px;
+    height: 28px;
+  }
+
+  body:has(#root .financeiro-workspace) .financial-dialog-header .truncate {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+  }
+
+  body:has(#root .financeiro-workspace) .financial-dialog-decoration {
+    visibility: hidden;
+  }
+
+  body:has(#root .financeiro-workspace) .financial-dialog--document iframe {
+    min-height: 0;
+  }
+
+  @media (max-width: 767px) {
+    body:has(#root .financeiro-workspace) .financial-dialog-overlay {
+      padding: 10px;
+    }
+
+    body:has(#root .financeiro-workspace) .financial-dialog:not(.financial-dialog--fullscreen) {
+      max-height: calc(100dvh - 20px);
+    }
+
+    body:has(#root .financeiro-workspace) .financial-dialog--padded,
+    body:has(#root .financeiro-workspace) .financial-dialog-body:not(.financial-dialog-body--framed) {
+      padding: 16px;
+    }
+
+    body:has(#root .financeiro-workspace) .financial-dialog--padded > .financial-dialog-body {
+      padding: 0;
+    }
+
+    body:has(#root .financeiro-workspace) .financial-dialog:not(.financial-dialog--document) :is(input:not([type='checkbox']):not([type='radio']), select, textarea, button[role='combobox']) {
+      min-height: 44px;
+      font-size: 16px;
+    }
+
+    body:has(#root .financeiro-workspace) :is(.financial-dialog:not(.financial-dialog--document), .financial-dialog-header, .financial-dialog-footer) :is(button, a) {
+      min-height: 44px;
+    }
+  }
+}

@@ -128,9 +128,9 @@ const EmprestimoBaixaModal: React.FC<EmprestimoBaixaModalProps> = ({
   if (typeof document === 'undefined') return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-[230] flex items-center justify-center overflow-y-auto bg-black/40 p-4 backdrop-blur-sm animate-fadeIn overscroll-contain">
-      <div className="my-auto max-h-[calc(100dvh-2rem)] w-full max-w-2xl overflow-y-auto rounded-[2rem] bg-white p-6 shadow-2xl sm:p-7">
-        <div className="flex items-start justify-between gap-4">
+    <div className="financial-dialog-overlay fixed inset-0 z-[230] flex items-center justify-center overflow-y-auto bg-black/40 p-4 backdrop-blur-sm animate-fadeIn overscroll-contain">
+      <div className="financial-dialog financial-dialog--padded my-auto max-h-[calc(100dvh-2rem)] w-full max-w-2xl overflow-y-auto rounded-[2rem] bg-white p-6 shadow-2xl sm:p-7">
+        <div className="financial-dialog-header flex items-start justify-between gap-4">
           <div>
             <p className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.18em] text-indigo-600"><Landmark size={14} /> Baixa do polo responsável</p>
             <h3 className="mt-1 text-lg font-black uppercase tracking-tight text-[#001a33]">Selecionar parcelas para baixa</h3>
@@ -147,8 +147,8 @@ const EmprestimoBaixaModal: React.FC<EmprestimoBaixaModalProps> = ({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="mt-5 space-y-4">
-          <section className="overflow-hidden rounded-2xl border border-indigo-100">
+        <form onSubmit={handleSubmit} className="financial-dialog-body mt-5 space-y-4">
+          <section className="financial-dialog-section overflow-hidden rounded-2xl border border-indigo-100">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-indigo-100 bg-indigo-50/50 px-4 py-3">
               <div>
                 <p className="text-[10px] font-black uppercase tracking-wider text-indigo-700">Parcelas em aberto</p>
@@ -242,7 +242,7 @@ const EmprestimoBaixaModal: React.FC<EmprestimoBaixaModalProps> = ({
             </div>
           </div>
 
-          <section className="overflow-hidden rounded-2xl border border-indigo-100 bg-indigo-50/35">
+          <section className="financial-dialog-section overflow-hidden rounded-2xl border border-indigo-100 bg-indigo-50/35">
             <button
               type="button"
               onClick={() => setAdjustmentsOpen((current) => !current)}
@@ -305,7 +305,7 @@ const EmprestimoBaixaModal: React.FC<EmprestimoBaixaModalProps> = ({
             </div>
           )}
 
-          <div className="flex gap-3 pt-1">
+          <div className="financial-dialog-footer flex gap-3 pt-1">
             <button
               type="button"
               onClick={onClose}

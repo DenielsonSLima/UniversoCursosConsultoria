@@ -1,8 +1,8 @@
 {
-  "version": "4.8.250",
+  "version": "4.8.252",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 259,
-  "releasedAt": "2026-11-06",
-  "summary": "Formações, Patrimônio, Relatórios, Calendário e Comunicação com visual compacto"
+  "revision": 261,
+  "releasedAt": "2026-11-07",
+  "summary": "Parceiros com cadastros, cartões, Responsáveis e seletores próprios compactos"
 }

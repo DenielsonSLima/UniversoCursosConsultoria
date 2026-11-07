@@ -1,3 +1,5 @@
+import InstitutionalSelect from '../../../../../shared/components/InstitutionalSelect';
+import { partnerSelectChange } from '../partner-select-change';
 import type React from 'react';
 import { Accessibility, Loader2, Upload, User } from 'lucide-react';
 
@@ -41,7 +43,7 @@ const ParceiroAlunoFormStepPersonal: React.FC<PersonalStepProps> = ({
     </div>
 
     <div className="flex flex-col md:flex-row gap-6 items-center bg-slate-50 p-5 rounded-2xl border border-slate-200 mb-5">
-      <div className="aspect-[3/4] w-24 rounded-xl bg-slate-100 border-2 border-slate-200 relative overflow-hidden group shrink-0">
+      <div className="partner-registration-photo partner-registration-photo--portrait aspect-[3/4] w-24 rounded-xl bg-slate-100 border-2 border-slate-200 relative overflow-hidden group shrink-0">
         {formData.foto ? (
           <img src={formData.foto} alt="Prévia da Foto" className="w-full h-full object-cover" />
         ) : (
@@ -80,13 +82,13 @@ const ParceiroAlunoFormStepPersonal: React.FC<PersonalStepProps> = ({
     <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
       <div>
         <label className={LABEL_CLS}>Status do Aluno <span className="text-red-500">*</span></label>
-        <select name="status" value={formData.status} onChange={onChange} className={INPUT_CLS} required>
-          <option value="ATIVO">ATIVO</option>
-          <option value="INATIVO">INATIVO</option>
-          <option value="TRANCADO">TRANCADO</option>
-          <option value="CONCLUÍDO">CONCLUÍDO</option>
-          <option value="DESISTENTE">DESISTENTE</option>
-        </select>
+        <InstitutionalSelect value={formData.status} onValueChange={partnerSelectChange("status", onChange)}
+          ariaLabel="Status do aluno" required
+          options={[{ value: "ATIVO", label: "ATIVO" },
+            { value: "INATIVO", label: "INATIVO" },
+            { value: "TRANCADO", label: "TRANCADO" },
+            { value: "CONCLUÍDO", label: "CONCLUÍDO" },
+            { value: "DESISTENTE", label: "DESISTENTE" }]} className="w-full" />
       </div>
 
       <div className="md:col-span-2">
@@ -119,29 +121,29 @@ const ParceiroAlunoFormStepPersonal: React.FC<PersonalStepProps> = ({
 
       <div>
         <label className={LABEL_CLS}>Sexo <span className="text-red-500">*</span></label>
-        <select name="sexo" value={formData.sexo} onChange={onChange} className={INPUT_CLS} required>
-          <option value="">Selecione...</option>
-          <option value="MASCULINO">MASCULINO</option>
-          <option value="FEMININO">FEMININO</option>
-          <option value="NÃO-BINÁRIO">NÃO-BINÁRIO</option>
-          <option value="PREFIRO NÃO INFORMAR">PREFIRO NÃO INFORMAR</option>
-        </select>
+        <InstitutionalSelect value={formData.sexo} onValueChange={partnerSelectChange("sexo", onChange)}
+          ariaLabel="Sexo" required
+          options={[{ value: "", label: "Selecione..." },
+            { value: "MASCULINO", label: "MASCULINO" },
+            { value: "FEMININO", label: "FEMININO" },
+            { value: "NÃO-BINÁRIO", label: "NÃO-BINÁRIO" },
+            { value: "PREFIRO NÃO INFORMAR", label: "PREFIRO NÃO INFORMAR" }]} className="w-full" />
       </div>
 
       <div>
         <label className={LABEL_CLS}>Raça/Cor</label>
-        <select name="racaCor" value={formData.racaCor} onChange={onChange} className={INPUT_CLS}>
-          <option value="">Selecione...</option>
-          {RACA_COR_OPTIONS.map((option) => <option key={option} value={option}>{option}</option>)}
-        </select>
+        <InstitutionalSelect value={formData.racaCor} onValueChange={partnerSelectChange("racaCor", onChange)}
+          ariaLabel="Raça/cor" 
+          options={[{ value: "", label: "Selecione..." },
+            ...RACA_COR_OPTIONS.map((option) => ({ value: option, label: option }))]} className="w-full" />
       </div>
 
       <div>
         <label className={LABEL_CLS}>Estado Civil</label>
-        <select name="estadoCivil" value={formData.estadoCivil} onChange={onChange} className={INPUT_CLS}>
-          <option value="">Selecione...</option>
-          {ESTADOS_CIVIS.map((estado) => <option key={estado} value={estado}>{estado}</option>)}
-        </select>
+        <InstitutionalSelect value={formData.estadoCivil} onValueChange={partnerSelectChange("estadoCivil", onChange)}
+          ariaLabel="Estado civil" 
+          options={[{ value: "", label: "Selecione..." },
+            ...ESTADOS_CIVIS.map((estado) => ({ value: estado, label: estado }))]} className="w-full" />
       </div>
 
       <div>
@@ -192,10 +194,10 @@ const ParceiroAlunoFormStepPersonal: React.FC<PersonalStepProps> = ({
       {formData.pcd && (
         <div className="mt-2">
           <label className={LABEL_CLS}>Tipo de Deficiência</label>
-          <select name="pcdTipo" value={formData.pcdTipo} onChange={onChange} className={INPUT_CLS}>
-            <option value="">Selecione...</option>
-            {PCD_TIPOS.map((tipo) => <option key={tipo} value={tipo}>{tipo}</option>)}
-          </select>
+          <InstitutionalSelect value={formData.pcdTipo} onValueChange={partnerSelectChange("pcdTipo", onChange)}
+            ariaLabel="Tipo de deficiência" 
+            options={[{ value: "", label: "Selecione..." },
+              ...PCD_TIPOS.map((tipo) => ({ value: tipo, label: tipo }))]} className="w-full" />
         </div>
       )}
     </div>

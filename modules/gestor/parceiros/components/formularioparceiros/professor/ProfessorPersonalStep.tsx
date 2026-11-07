@@ -1,3 +1,5 @@
+import InstitutionalSelect from '../../../../../shared/components/InstitutionalSelect';
+import { partnerSelectChange } from '../partner-select-change';
 import React from 'react';
 import { CheckCircle2, Loader2, RefreshCw, Upload, User } from 'lucide-react';
 import { RACA_COR_OPTIONS } from '../../../utils/parceiros.constants';
@@ -43,7 +45,7 @@ const ProfessorPersonalStep: React.FC<ProfessorPersonalStepProps> = ({
     </div>
 
     <div className="flex flex-col items-center gap-6 rounded-2xl border border-slate-200 bg-slate-50 p-5 md:flex-row">
-      <div className="group relative h-24 w-24 shrink-0 overflow-hidden rounded-full border-2 border-slate-200 bg-slate-100">
+      <div className="partner-registration-photo group relative h-24 w-24 shrink-0 overflow-hidden rounded-full border-2 border-slate-200 bg-slate-100">
         {formData.foto ? (
           <img src={formData.foto} alt="Prévia da foto do professor" className="h-full w-full object-cover" />
         ) : (
@@ -146,20 +148,20 @@ const ProfessorPersonalStep: React.FC<ProfessorPersonalStepProps> = ({
       </div>
       <div>
         <label className={labelCls}>Sexo</label>
-        <select name="sexo" value={formData.sexo} onChange={onChange} className={inputCls}>
-          <option value="">Selecione...</option>
-          <option value="MASCULINO">MASCULINO</option>
-          <option value="FEMININO">FEMININO</option>
-          <option value="NÃO-BINÁRIO">NÃO-BINÁRIO</option>
-          <option value="PREFIRO NÃO INFORMAR">PREFIRO NÃO INFORMAR</option>
-        </select>
+        <InstitutionalSelect value={formData.sexo} onValueChange={partnerSelectChange("sexo", onChange)}
+          ariaLabel="Sexo" 
+          options={[{ value: "", label: "Selecione..." },
+            { value: "MASCULINO", label: "MASCULINO" },
+            { value: "FEMININO", label: "FEMININO" },
+            { value: "NÃO-BINÁRIO", label: "NÃO-BINÁRIO" },
+            { value: "PREFIRO NÃO INFORMAR", label: "PREFIRO NÃO INFORMAR" }]} className="w-full" />
       </div>
       <div>
         <label className={labelCls}>Raça/cor</label>
-        <select name="racaCor" value={formData.racaCor} onChange={onChange} className={inputCls}>
-          <option value="">Selecione...</option>
-          {RACA_COR_OPTIONS.map((option) => <option key={option} value={option}>{option}</option>)}
-        </select>
+        <InstitutionalSelect value={formData.racaCor} onValueChange={partnerSelectChange("racaCor", onChange)}
+          ariaLabel="Raça/cor" 
+          options={[{ value: "", label: "Selecione..." },
+            ...RACA_COR_OPTIONS.map((option) => ({ value: option, label: option }))]} className="w-full" />
       </div>
       <div className="md:col-span-2">
         <label className={labelCls}>RG</label>

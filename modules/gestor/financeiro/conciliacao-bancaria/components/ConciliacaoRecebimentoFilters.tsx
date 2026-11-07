@@ -1,3 +1,5 @@
+import FinancialUnderlineTabs from '../../components/FinancialUnderlineTabs';
+import FinancialSelect from '../../components/FinancialSelect';
 import React from 'react';
 import { CalendarDays, Search, X } from 'lucide-react';
 import type { SourceSystemConciliacao } from '../conciliacao-bancaria.fetch';
@@ -17,7 +19,12 @@ interface ConciliacaoRecebimentoFiltersProps {
   onClearSettlementPeriod: () => void;
 }
 
-const STATUS_OPTIONS = ['TODOS', 'PAGO', 'PENDENTE', 'VENCIDO'] as const;
+const STATUS_OPTIONS = [
+  { id: 'TODOS', label: 'Todos' },
+  { id: 'PAGO', label: 'Pago' },
+  { id: 'PENDENTE', label: 'Pendente' },
+  { id: 'VENCIDO', label: 'Vencido' },
+] as const;
 
 const ConciliacaoRecebimentoFilters: React.FC<ConciliacaoRecebimentoFiltersProps> = ({
   searchTerm,
@@ -69,15 +76,10 @@ const ConciliacaoRecebimentoFilters: React.FC<ConciliacaoRecebimentoFiltersProps
             <span className="mb-1.5 block text-[10px] font-black uppercase tracking-wider text-slate-500">
               Origem
             </span>
-            <select
-              value={sourceSystemFilter}
-              onChange={(event) => onChangeSourceSystem(event.target.value as SourceSystemConciliacao)}
-              className="min-h-10 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-            >
-              <option value="ALL">Todas</option>
-              <option value="PROESC">Proesc</option>
-              <option value="BANESE">Banese</option>
-            </select>
+            <FinancialSelect value={sourceSystemFilter}
+              onValueChange={(value) => onChangeSourceSystem(value as SourceSystemConciliacao)} ariaLabel="Origem da conciliação"
+              options={[{ value: 'ALL', label: 'Todas' }, { value: 'PROESC', label: 'Proesc' }, { value: 'BANESE', label: 'Banese' }]}
+              className="w-full" />
           </label>
         </div>
 
@@ -126,27 +128,17 @@ const ConciliacaoRecebimentoFilters: React.FC<ConciliacaoRecebimentoFiltersProps
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200/80 pt-3">
-        <fieldset className="flex flex-wrap items-center gap-2">
-          <legend className="sr-only">Filtrar por situação da cobrança</legend>
-          <span aria-hidden="true" className="text-[10px] font-bold uppercase text-slate-400">
-            Status:
-          </span>
-          {STATUS_OPTIONS.map((status) => (
-            <button
-              key={status}
-              type="button"
-              aria-pressed={selectedStatus === status}
-              onClick={() => onSelectStatus(status)}
-              className={`min-h-8 rounded-lg px-2.5 py-1 text-[10px] font-black uppercase transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
-                selectedStatus === status
-                  ? 'bg-slate-800 text-white shadow-sm'
-                  : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-100'
-              }`}
-            >
-              {status}
-            </button>
-          ))}
-        </fieldset>
+        <div className="min-w-0 w-full sm:w-auto sm:flex-1">
+          <FinancialUnderlineTabs
+            compact
+            items={STATUS_OPTIONS}
+            value={selectedStatus}
+            onChange={onSelectStatus}
+            ariaLabel="Filtrar por situação da cobrança"
+            indicatorClassName="bg-blue-600"
+            activeIconClassName="text-blue-600"
+          />
+        </div>
 
         <p aria-live="polite" className="text-[10px] font-bold text-slate-500">
           {totalItems === 1 ? '1 cobrança encontrada' : `${totalItems} cobranças encontradas`}

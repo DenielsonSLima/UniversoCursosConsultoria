@@ -3,7 +3,6 @@ import {
   Activity,
   ArrowDownLeft,
   ArrowUpRight,
-  FileSpreadsheet,
   Layers,
 } from 'lucide-react';
 import { integracaoBancariaService } from '../../configuracoes/integracao-bancaria/integracao-bancaria.service';
@@ -25,6 +24,7 @@ export type SubTabConciliacao = 'remessas' | 'retorno' | 'conciliacao' | 'diagno
 
 const ConciliacaoBancariaTab: React.FC<ConciliacaoBancariaTabProps> = ({ poloId }) => {
   const [activeSubTab, setActiveSubTab] = useState<SubTabConciliacao>('conciliacao');
+  const [actionsContainer, setActionsContainer] = useState<HTMLDivElement | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [page, setPage] = useState(1);
@@ -147,67 +147,52 @@ const ConciliacaoBancariaTab: React.FC<ConciliacaoBancariaTabProps> = ({ poloId 
     <div className="financial-section-workspace space-y-6 animate-fadeIn">
       {/* Top Banner & Navigation Sub-Tabs */}
       <div className="financial-reconciliation-heading rounded-[2.5rem] border border-slate-100 bg-white p-6 shadow-sm">
-        <div className="financial-section-heading flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-6">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="rounded-xl bg-blue-50 p-2 text-blue-600">
-                <FileSpreadsheet size={20} />
-              </span>
-              <div className="financial-section-identity">
-                <h2 className="text-xl font-black tracking-tight text-slate-800">
-                  Conciliação · Banese e Proesc
-                </h2>
-                <p className="text-xs font-semibold text-slate-500">
-                  Pagamentos, origens de baixa e acompanhamento automático de cobranças Banese e Proesc.
-                </p>
-              </div>
-            </div>
+        <h2 className="sr-only">Conciliação · Banese e Proesc</h2>
+
+        <div className="financial-sub-navigation flex flex-wrap items-center justify-between gap-3">
+          <div className="min-w-0 w-full sm:w-auto sm:flex-1">
+            <FinancialUnderlineTabs
+              compact
+              items={[
+                {
+                  id: 'conciliacao' as const,
+                  label: 'Conciliação & baixas',
+                  icon: <Layers size={16} />,
+                  badge: queries.channelCounts.totalCount || queries.totalCount || undefined,
+                  activeIconClassName: 'text-blue-600',
+                  badgeClassName: 'bg-blue-50 text-blue-700',
+                },
+                {
+                  id: 'remessas' as const,
+                  label: 'Remessas pendentes',
+                  icon: <ArrowUpRight size={16} />,
+                  badge: eligibleCount > 0 ? eligibleCount : undefined,
+                  activeIconClassName: 'text-amber-600',
+                  badgeClassName: 'bg-amber-50 text-amber-700',
+                },
+                {
+                  id: 'retorno' as const,
+                  label: 'Retorno pendente',
+                  icon: <ArrowDownLeft size={16} />,
+                  badge: recentReturnsCount > 0 ? recentReturnsCount : undefined,
+                  activeIconClassName: 'text-purple-600',
+                  badgeClassName: 'bg-purple-50 text-purple-700',
+                },
+                {
+                  id: 'diagnostico' as const,
+                  label: 'Diagnóstico & API',
+                  icon: <Activity size={16} />,
+                  activeIconClassName: 'text-emerald-600',
+                },
+              ]}
+              value={activeSubTab}
+              onChange={setActiveSubTab}
+              ariaLabel="Áreas da conciliação bancária"
+              indicatorClassName="bg-blue-600"
+              equalWidth
+            />
           </div>
-
-
-        </div>
-
-        <div className="financial-sub-navigation mt-6">
-          <FinancialUnderlineTabs
-            compact
-            items={[
-              {
-                id: 'conciliacao' as const,
-                label: 'Conciliação & Baixas',
-                icon: <Layers size={16} />,
-                badge: queries.channelCounts.totalCount || queries.totalCount || undefined,
-                activeIconClassName: 'text-blue-600',
-                badgeClassName: 'bg-blue-50 text-blue-700',
-              },
-              {
-                id: 'remessas' as const,
-                label: 'Remessas Pendentes',
-                icon: <ArrowUpRight size={16} />,
-                badge: eligibleCount > 0 ? eligibleCount : undefined,
-                activeIconClassName: 'text-amber-600',
-                badgeClassName: 'bg-amber-50 text-amber-700',
-              },
-              {
-                id: 'retorno' as const,
-                label: 'Retorno Pendente',
-                icon: <ArrowDownLeft size={16} />,
-                badge: recentReturnsCount > 0 ? recentReturnsCount : undefined,
-                activeIconClassName: 'text-purple-600',
-                badgeClassName: 'bg-purple-50 text-purple-700',
-              },
-              {
-                id: 'diagnostico' as const,
-                label: 'Diagnóstico & API',
-                icon: <Activity size={16} />,
-                activeIconClassName: 'text-emerald-600',
-              },
-            ]}
-            value={activeSubTab}
-            onChange={setActiveSubTab}
-            ariaLabel="Áreas da conciliação bancária"
-            indicatorClassName="bg-blue-600"
-            equalWidth
-          />
+          <div ref={setActionsContainer} className="ml-auto shrink-0" />
         </div>
       </div>
 
@@ -278,6 +263,7 @@ const ConciliacaoBancariaTab: React.FC<ConciliacaoBancariaTabProps> = ({ poloId 
       {activeSubTab === 'remessas' && (
         <div className="space-y-6">
           <BaneseCnabRemittancePanel
+            actionsContainer={actionsContainer}
             overview={cnabReady ? queries.cnabOverviewQuery.data : undefined}
             isLoading={queries.cnabOverviewQuery.isLoading || queries.cnabOverviewQuery.isFetching}
             error={overviewError}
@@ -291,6 +277,7 @@ const ConciliacaoBancariaTab: React.FC<ConciliacaoBancariaTabProps> = ({ poloId 
       {activeSubTab === 'retorno' && (
         <div className="space-y-6">
           <BaneseCnabReturnPanel
+          actionsContainer={actionsContainer}
             controller={cnabReturn}
             cnabReady={cnabReady}
             overviewError={overviewError}

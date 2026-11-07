@@ -9,6 +9,7 @@ export const RenegociacaoViewTabs: React.FC<{
   onChange: (view: RenegociacaoView) => void;
 }> = ({ value, onChange }) => (
   <FinancialUnderlineTabs
+    compact
     items={(Object.keys(viewLabel) as RenegociacaoView[]).map((view) => ({ id: view, label: viewLabel[view] }))}
     value={value}
     onChange={onChange}

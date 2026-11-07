@@ -17,6 +17,8 @@ import FinancialUnderlineTabs from './components/FinancialUnderlineTabs';
 import { canOpenFinancialSection } from './financeiro-sections';
 import { useFinancialSection } from './hooks/useFinancialSection';
 import './financeiro-workspace.css';
+import './financial-data.css';
+import './financial-dialogs.css';
 
 const FinanceiroResumoTab = lazy(() => import('./resumo/FinanceiroResumoTab'));
 const ReceberTab = lazy(() => import('./receber/ReceberTab'));

@@ -80,7 +80,7 @@ export const SelectionStep: React.FC<{
 }> = ({ items, selected, allSelected, onToggle, onToggleAll }) => {
   const eligibleCount = items.filter((item) => item.eligibility.eligible).length;
   return (
-    <section>
+    <section className="financial-data-surface financial-record-list">
     <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
       <div>
         <h3 className="text-base font-black text-[#001a33]">Escolha qualquer combinação de parcelas</h3>
@@ -108,7 +108,7 @@ export const SelectionStep: React.FC<{
         return (
           <label
             key={item.receivableId}
-            className={`flex gap-3 rounded-2xl border p-4 ${
+            className={`financial-data-group flex gap-3 rounded-2xl border p-4 ${
               blocked
                 ? 'cursor-not-allowed border-slate-100 bg-slate-50 opacity-70'
                 : checked
@@ -142,7 +142,7 @@ export const SelectionStep: React.FC<{
                 <span className="mt-1 block text-[11px] font-bold text-amber-700">{item.eligibility.reason}</span>
               ) : null}
             </span>
-            <strong className="shrink-0 text-sm text-[#001a33]">{debt}</strong>
+            <strong className="financial-data-money shrink-0 text-sm text-[#001a33]">{debt}</strong>
           </label>
         );
       })}

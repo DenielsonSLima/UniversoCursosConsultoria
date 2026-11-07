@@ -16,7 +16,7 @@ interface ConvenioMonthCardProps {
 }
 
 const ConvenioMonthCard: React.FC<ConvenioMonthCardProps> = ({ mes, onOpen, onCloseMonth, onDelete }) => (
-  <article className="flex h-full flex-col overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
+  <article className="financial-data-surface financial-data-card flex h-full flex-col overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
     <div className="border-b border-slate-100 bg-gradient-to-br from-cyan-50/80 via-white to-white p-5">
       <div className="flex items-start justify-between gap-3">
         <button type="button" onClick={() => onOpen(mes)} className="min-w-0 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500">
@@ -40,7 +40,7 @@ const ConvenioMonthCard: React.FC<ConvenioMonthCardProps> = ({ mes, onOpen, onCl
       ].map(([label, value, color]) => (
         <span key={String(label)} className="rounded-xl bg-slate-50 p-3">
           <span className="block text-[9px] font-black uppercase tracking-wide text-slate-400">{label}</span>
-          <strong className={`mt-1 block text-sm font-black ${color}`}>{formatConvenioCurrency(Number(value))}</strong>
+          <strong className={`financial-data-money mt-1 block text-sm font-black ${color}`}>{formatConvenioCurrency(Number(value))}</strong>
         </span>
       ))}
     </button>
@@ -49,7 +49,7 @@ const ConvenioMonthCard: React.FC<ConvenioMonthCardProps> = ({ mes, onOpen, onCl
       <div className="mb-4 flex items-end justify-between gap-3">
         <span>
           <span className="block text-[9px] font-black uppercase tracking-wider text-slate-400">Saldo projetado</span>
-          <strong className={`mt-1 block text-lg font-black ${mes.saldoProjetado < 0 ? 'text-rose-700' : 'text-[#001a33]'}`}>{formatConvenioCurrency(mes.saldoProjetado)}</strong>
+          <strong className={`financial-data-money mt-1 block text-lg font-black ${mes.saldoProjetado < 0 ? 'text-rose-700' : 'text-[#001a33]'}`}>{formatConvenioCurrency(mes.saldoProjetado)}</strong>
         </span>
         <span className="text-right text-[9px] font-bold uppercase tracking-wide text-slate-400">{mes.quantidadeDespesas} despesa(s)</span>
       </div>

@@ -214,15 +214,15 @@ const ReportPdfPreviewModal: React.FC<ReportPdfPreviewModalProps> = ({
     <div
       ref={dialogRef}
       tabIndex={-1}
-      className="fixed inset-0 z-[140] flex items-center justify-center bg-slate-950/70 p-0 outline-none backdrop-blur-sm"
+      className="financial-dialog-overlay fixed inset-0 z-[140] flex items-center justify-center bg-slate-950/70 p-0 outline-none backdrop-blur-sm"
       role="dialog"
       aria-modal="true"
       aria-labelledby={titleId}
       aria-describedby={statusId}
       aria-busy={isBusy}
     >
-      <div className="flex h-full w-full flex-col overflow-hidden bg-white shadow-2xl">
-        <header className="flex flex-col gap-3 border-b border-slate-100 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5 sm:py-4">
+      <div className="financial-dialog financial-dialog--fullscreen financial-dialog--document flex h-full w-full flex-col overflow-hidden bg-white shadow-2xl">
+        <header className="financial-dialog-header flex flex-col gap-3 border-b border-slate-100 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5 sm:py-4">
           <div className="flex min-w-0 items-center gap-3">
             <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${toneStyle.soft}`} aria-hidden="true">
               <FileText size={19} />
@@ -305,7 +305,7 @@ const ReportPdfPreviewModal: React.FC<ReportPdfPreviewModalProps> = ({
           )}
         </div>
 
-        <footer className="shrink-0 border-t border-slate-100 bg-white px-4 py-2 text-center text-[11px] font-medium text-slate-500">
+        <footer className="financial-dialog-footer shrink-0 border-t border-slate-100 bg-white px-4 py-2 text-center text-[11px] font-medium text-slate-500">
           {pdfError ? (
             <span className="inline-flex items-center gap-1.5 text-rose-700"><AlertTriangle size={13} />{pdfError}</span>
           ) : (

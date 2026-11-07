@@ -1,3 +1,4 @@
+import FinancialSelect from '../../components/FinancialSelect';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Building2,
@@ -172,25 +173,14 @@ const DespesaCredorPicker: React.FC<DespesaCredorPickerProps> = ({
           {tipoLabel}{required ? ' *' : ''}
         </label>
         <div className="relative">
-          <select
-            value={tipo}
-            onChange={(event) => {
-              onTipoChange(event.target.value as DespesaCredorTipo | '');
-              onChange('');
-              setSearch('');
-              setOpen(false);
-            }}
-            className={`w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 pr-10 text-sm font-semibold outline-none transition-all focus:ring-2 ${accentClasses.focus}`}
-          >
-            <option value="">{required ? 'Selecionar tipo...' : 'Selecionar tipo (opcional)...'}</option>
-            {credorTipos.map((option) => (
-              <option key={option.value} value={option.value}>{option.label}</option>
-            ))}
-          </select>
-          <ChevronDown
-            size={15}
-            className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-slate-400"
-          />
+          <FinancialSelect value={tipo} onValueChange={(nextTipo) => {
+            onTipoChange(nextTipo as DespesaCredorTipo | '');
+            onChange('');
+            setSearch('');
+            setOpen(false);
+          }} ariaLabel={tipoLabel} placeholder={required ? 'Selecionar tipo...' : 'Selecionar tipo (opcional)...'}
+            options={[{ value: '', label: required ? 'Selecionar tipo...' : 'Selecionar tipo (opcional)...' },
+              ...credorTipos.map((option) => ({ value: option.value, label: option.label }))]} className="w-full" />
         </div>
       </div>
 

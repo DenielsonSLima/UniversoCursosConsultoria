@@ -67,9 +67,9 @@ const ProposalDetail: React.FC<ProposalDetailProps> = ({ agreementId, poloId, on
       aria-labelledby="renegociacao-detail-title"
       aria-busy={query.isFetching || discard.isPending}
       aria-hidden={showDiscard ? true : undefined}
-      className="fixed inset-0 z-[2147482500] flex h-[100dvh] w-screen flex-col overflow-hidden bg-slate-50 text-slate-900 outline-none"
+      className="financial-dialog financial-dialog--fullscreen fixed inset-0 z-[2147482500] flex h-[100dvh] w-screen flex-col overflow-hidden bg-slate-50 text-slate-900 outline-none"
     >
-      <header className="shrink-0 border-b border-slate-200 bg-white shadow-sm">
+      <header className="financial-dialog-header shrink-0 border-b border-slate-200 bg-white shadow-sm">
         <div className="mx-auto flex min-h-[76px] w-full max-w-7xl items-center gap-3 px-4 py-3 sm:px-6 lg:px-8">
           <button
             type="button"
@@ -90,7 +90,7 @@ const ProposalDetail: React.FC<ProposalDetailProps> = ({ agreementId, poloId, on
         </div>
       </header>
 
-      <main className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+      <main className="financial-dialog-body financial-dialog-body--framed min-h-0 flex-1 overflow-y-auto overscroll-contain">
         <div className="mx-auto w-full max-w-7xl space-y-5 px-4 py-5 sm:px-6 sm:py-6 lg:px-8">
           {query.isPending ? (
             <LoadingPanel label="Carregando proposta e histórico..." />
@@ -150,14 +150,14 @@ const ProposalDetail: React.FC<ProposalDetailProps> = ({ agreementId, poloId, on
                 approvalReasons={detail.canonicalSnapshot.approvalReasons}
               />
 
-              <section className="rounded-2xl border border-slate-200 bg-white p-5">
+              <section className="financial-data-surface rounded-2xl border border-slate-200 bg-white p-5">
                 <h3 className="flex items-center gap-2 text-xs font-black uppercase tracking-wide text-[#001a33]">
                   <Clock3 size={16} className="text-blue-600" /> Histórico auditável
                 </h3>
                 {detail.events.length ? (
-                  <ol className="mt-4 space-y-4">
+                  <ol className="financial-record-list mt-4 space-y-4">
                     {detail.events.map((event) => (
-                      <li key={event.id} className="relative border-l-2 border-slate-200 pl-4">
+                      <li key={event.id} className="financial-data-group relative border-l-2 border-slate-200 pl-4">
                         <span className="absolute -left-[5px] top-1 h-2 w-2 rounded-full bg-blue-600" />
                         <p className="text-xs font-black text-slate-700">{event.label}</p>
                         <p className="mt-0.5 text-[10px] font-medium text-slate-400">

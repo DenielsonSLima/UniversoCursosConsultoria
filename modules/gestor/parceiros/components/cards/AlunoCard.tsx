@@ -171,8 +171,8 @@ const AlunoCard: React.FC<AlunoCardProps> = ({ data, onClick, onDelete }) => {
               </div>
             )}
             {(data.nomeMae || data.nomePai) && (
-              <div className="flex items-start gap-2 text-xs text-slate-700">
-                <Users size={13} className="mt-0.5 shrink-0 text-slate-400" />
+              <div className="flex items-center gap-2 text-xs text-slate-700">
+                <Users size={13} className="shrink-0 text-slate-400" />
                 <div className="flex min-w-0 flex-col">
                   {data.nomeMae && <span className="truncate"><span className="mr-1 text-[10px] font-bold text-slate-500">Mãe:</span>{data.nomeMae}</span>}
                   {data.nomePai && <span className="truncate"><span className="mr-1 text-[10px] font-bold text-slate-500">Pai:</span>{data.nomePai}</span>}

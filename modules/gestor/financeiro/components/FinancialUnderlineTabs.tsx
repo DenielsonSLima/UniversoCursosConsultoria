@@ -1,3 +1,4 @@
+import FinancialSelect from './FinancialSelect';
 import {
   useEffect,
   useRef,
@@ -48,7 +49,7 @@ const FinancialUnderlineTabs = <T extends string,>({
   const activeTabRef = useRef<FinancialTabElement | null>(null);
 
   useEffect(() => {
-    activeTabRef.current?.scrollIntoView({
+    activeTabRef.current?.scrollIntoView?.({
       behavior: 'smooth',
       block: 'nearest',
       inline: 'nearest',
@@ -79,13 +80,13 @@ const FinancialUnderlineTabs = <T extends string,>({
       {mobileMode === 'select' ? (
         <label className="block text-[10px] font-black uppercase tracking-wide text-slate-500 md:hidden">
           Seção financeira
-          <select
+          <FinancialSelect
             value={value}
-            onChange={(event) => onChange(event.target.value as T)}
-            className="mt-1 min-h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-bold normal-case tracking-normal text-[#001a33] shadow-sm outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            {items.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
-          </select>
+            onValueChange={(next) => onChange(next as T)}
+            options={items.map((item) => ({ value: item.id, label: item.label }))}
+            ariaLabel={ariaLabel}
+            className="mt-1"
+          />
         </label>
       ) : null}
 

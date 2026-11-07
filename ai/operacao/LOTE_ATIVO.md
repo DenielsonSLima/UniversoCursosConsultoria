@@ -1,7 +1,7 @@
 # Lote ativo
 
-## Lote: 2026-11-06-entrega-visual-cinco-modulos-4-8-250
+## Lote: 2026-11-07-parceiros-cadastros-compactos
 
-Entrega 4.8.250: Formações, Patrimônio, Relatórios, Calendário e Comunicação, na direção compacta aprovada. Implementação em cinco etapas sequenciais com três agentes, revisão independente e smoke Safari de cada módulo. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-06-entrega-visual-cinco-modulos-4-8-250.md`.
+Padronizar cadastros, seletores e cartões de Parceiros, preservando campos, valores, validações, escopo e quatro cartões por linha no desktop amplo. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-07-parceiros-cadastros-compactos.md`. Três frentes independentes: formulários; cartões/Responsáveis; auditoria de carregamento. Conferência local no Chrome a pedido do usuário. Análise de dados separa paginação local, filtro de polo e cache, com consultas remotas somente de leitura. A skill visual e sua especificação pertencem a manifesto operacional separado, solicitado expressamente pelo usuário.
 
-Preservar dados, consultas, permissões, regras, envios e geradores; somente apresentação e extrações equivalentes para o teto de 500 linhas. GitHub autorizado ao final: commit atômico, PR e Preview após checks. Produção não solicitada para este lote. Base publicada 4.8.249 validada pelo usuário.
+Base técnica: Financeiro PR #347, 4.8.251; entrega Parceiros depende desse código. A orientação mais recente do usuário autoriza produção AGORA somente para Financeiro 4.8.251 e Parceiros 4.8.252 implementados, para conferência posterior. Substitui a condição anterior de esperar todas as etapas; Caixa, Configurações, Comunicação e Biblioteca continuam pendentes, sem início nesta rodada. Parceiros verificado localmente; CSS móvel compartilhado aceito por PF real a 390 px e markup comum, com limites de cobertura documentados. Não alterar dados, RLS ou consultas operacionais como efeito de manutenção visual.

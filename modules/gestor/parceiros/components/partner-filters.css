@@ -1,0 +1,23 @@
+@media screen {
+  .partner-filters .partner-filter-selects {
+    display: grid;
+    flex: 3;
+    min-width: 0;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+  }
+  .partner-filters input:not([role='combobox']) {
+    height: 38px;
+    border-radius: 8px;
+    background: #fff;
+    font-size: 13px;
+    font-weight: 400;
+    box-shadow: none;
+  }
+  .partner-filters input::placeholder { color: #64748b; }
+  .partner-filters button { text-transform: none; letter-spacing: normal; }
+  @media (max-width: 767px) {
+    .partner-filters .partner-filter-selects { grid-template-columns: 1fr; }
+    .partner-filters input:not([role='combobox']) { height: 44px; font-size: 16px; }
+  }
+}

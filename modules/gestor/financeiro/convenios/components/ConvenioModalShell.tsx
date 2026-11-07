@@ -60,16 +60,16 @@ const ConvenioModalShell: React.FC<ConvenioModalShellProps> = ({
   }, []);
 
   const modal = (
-    <div className="fixed inset-0 z-[220] flex min-h-[100dvh] items-center justify-center overflow-y-auto bg-slate-950/45 p-4 backdrop-blur-sm animate-fadeIn sm:p-6">
+    <div className="financial-dialog-overlay fixed inset-0 z-[220] flex min-h-[100dvh] items-center justify-center overflow-y-auto bg-slate-950/45 p-4 backdrop-blur-sm animate-fadeIn sm:p-6">
       <section
         ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
         aria-describedby={subtitleId}
-        className="my-auto max-h-[calc(100dvh-2rem)] w-full max-w-2xl overflow-y-auto rounded-3xl border border-slate-200 bg-white shadow-2xl shadow-slate-950/20 sm:max-h-[calc(100dvh-3rem)]"
+        className="financial-dialog my-auto max-h-[calc(100dvh-2rem)] w-full max-w-2xl overflow-y-auto rounded-3xl border border-slate-200 bg-white shadow-2xl shadow-slate-950/20 sm:max-h-[calc(100dvh-3rem)]"
       >
-        <header className="flex items-start justify-between gap-4 border-b border-slate-100 px-6 py-5">
+        <header className="financial-dialog-header flex items-start justify-between gap-4 border-b border-slate-100 px-6 py-5">
           <div>
             <h3 id={titleId} className="text-lg font-black uppercase tracking-tight text-[#001a33]">{title}</h3>
             <p id={subtitleId} className="mt-1 text-xs font-medium text-slate-500">{subtitle}</p>

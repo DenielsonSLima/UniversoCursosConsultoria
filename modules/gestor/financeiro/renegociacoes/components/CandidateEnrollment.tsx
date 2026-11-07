@@ -98,7 +98,7 @@ const CandidateEnrollment: React.FC<CandidateEnrollmentProps> = ({
   };
 
   return (
-    <article className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+    <article className="financial-data-group overflow-hidden rounded-2xl border border-slate-200 bg-white">
       <button
         type="button"
         aria-expanded={expanded}

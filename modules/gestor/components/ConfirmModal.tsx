@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useId } from 'react';
 import { createPortal } from 'react-dom';
 import { AlertTriangle, X } from 'lucide-react';
 
@@ -24,6 +24,7 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
   cancelText = 'Cancelar',
   variant = 'danger'
 }) => {
+  const titleId = useId();
   if (!isOpen) return null;
   if (typeof document === 'undefined') return null;
 
@@ -39,36 +40,37 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
   const colors = getColors();
 
   return createPortal(
-    <div className="fixed inset-0 z-[9999] flex min-h-[100dvh] items-center justify-center p-4">
+    <div className="partner-responsavel-confirm-overlay fixed inset-0 z-[9999] flex min-h-[100dvh] items-center justify-center p-4">
       {/* Backdrop com Blur */}
       <div 
-        className="absolute inset-0 bg-[#001a33]/60 backdrop-blur-sm transition-opacity" 
+        className="partner-responsavel-confirm-backdrop absolute inset-0 bg-[#001a33]/60 backdrop-blur-sm transition-opacity" 
         onClick={onClose}
       ></div>
 
       {/* Modal Content */}
-      <div className="relative bg-white rounded-[2rem] w-full max-w-md p-8 shadow-2xl transform transition-all animate-fadeIn border border-slate-100">
+      <div role="dialog" aria-modal="true" aria-labelledby={titleId} className="partner-responsavel-confirm-dialog relative bg-white rounded-[2rem] w-full max-w-md p-8 shadow-2xl transform transition-all animate-fadeIn border border-slate-100">
         <button 
           onClick={onClose}
+          aria-label="Fechar confirmação"
           className="absolute top-4 right-4 p-2 rounded-full text-slate-400 hover:bg-slate-50 hover:text-slate-600 transition-colors"
         >
           <X size={20} />
         </button>
 
         <div className="flex flex-col items-center text-center">
-          <div className={`w-16 h-16 ${colors.bg} rounded-2xl flex items-center justify-center mb-6 ${colors.icon}`}>
+          <div className={`partner-responsavel-confirm-icon w-16 h-16 ${colors.bg} rounded-2xl flex items-center justify-center mb-6 ${colors.icon}`}>
             <AlertTriangle size={32} />
           </div>
 
-          <h3 className="text-xl font-black text-[#001a33] mb-2 uppercase tracking-tight">
+          <h3 id={titleId} className="partner-responsavel-confirm-title text-xl font-black text-[#001a33] mb-2 uppercase tracking-tight">
             {title}
           </h3>
           
-          <p className="text-slate-500 mb-8 leading-relaxed text-sm">
+          <p className="partner-responsavel-confirm-message text-slate-500 mb-8 leading-relaxed text-sm">
             {message}
           </p>
 
-          <div className="flex gap-3 w-full">
+          <div className="partner-responsavel-confirm-footer flex gap-3 w-full">
             <button
               onClick={onClose}
               className="flex-1 py-3.5 rounded-xl border border-slate-200 text-slate-600 font-bold text-xs uppercase tracking-wider hover:bg-slate-50 transition-colors"

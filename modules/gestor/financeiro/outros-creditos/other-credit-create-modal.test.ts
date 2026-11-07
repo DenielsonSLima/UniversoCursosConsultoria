@@ -18,7 +18,7 @@ test('recebimento manual abre como workspace de viewport completo', () => {
     /max-w-4xl/,
     'O contêiner de diálogo central não pode limitar a superfície do fluxo manual.',
   );
-  assert.match(source, /className="flex-1 overflow-y-auto/);
+  assert.match(source, /<main className="[^"\n]*\bflex-1 overflow-y-auto\b/);
   assert.match(source, /document\.body\.style\.overflow = 'hidden'/);
   assert.match(source, /event\.key === 'Escape'/);
 });

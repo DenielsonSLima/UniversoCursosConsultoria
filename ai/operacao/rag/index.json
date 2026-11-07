@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "retrieval": "lexical-bm25-with-source-citations",
-  "builtAt": "2026-11-06T10:34:18.111Z",
+  "builtAt": "2026-11-07T11:31:20.374Z",
   "manifestVersion": 2,
-  "sourceSignature": "50b7c63fa1f1af658af61126bd7b341eaaddca4af58ce3c07f6245c5f21e8e12",
+  "sourceSignature": "dd4926c6794ede6d542e9b3f33b2095f7a0ad6a5ee65c627ec58916dbfbbcb9e",
   "sources": [
     {
       "path": "AGENTS.md",
@@ -11,7 +11,7 @@
     },
     {
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "hash": "4d520e9aedbe83188be63ad668174adaf13512df2f888ff818b323cb826ddcfa"
+      "hash": "3ccab19b0d5110a8cd5beb34dd086d3f66291f9b4ada36bfdf9cb587d3833a2d"
     },
     {
       "path": "ai/operacao/MEMORIA_CANONICA.md",
@@ -208,23 +208,23 @@
       "part": 1
     },
     {
-      "id": "c8903834d771e4148aa1",
-      "hash": "c8903834d771e4148aa1d42207a33a130b4f7901ddf46d2df31142318f76ea80",
+      "id": "4851ab6c5dfab8b37ce1",
+      "hash": "4851ab6c5dfab8b37ce112c392314aa7b1760732cd78047b260513f983c60ef7",
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Lote: 2026-11-06-entrega-visual-cinco-modulos-4-8-250",
-      "text": "Entrega 4.8.250: Formações, Patrimônio, Relatórios, Calendário e Comunicação, na direção compacta aprovada. Implementação em cinco etapas sequenciais com três agentes, revisão independente e smoke Safari de cada módulo. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-06-entrega-visual-cinco-modulos-4-8-250.md`.",
-      "normalizedText": "entrega 4 8 250 formacoes patrimonio relatorios calendario e comunicacao na direcao compacta aprovada implementacao em cinco etapas sequenciais com tres agentes revisao independente e smoke safari de cada modulo manifesto explicito ai operacao registros alteracoes 2026 11 06 entrega visual cinco modulos 4 8 250 md",
-      "tokenCount": 41,
+      "section": "Lote: 2026-11-07-parceiros-cadastros-compactos",
+      "text": "Padronizar cadastros, seletores e cartões de Parceiros, preservando campos, valores, validações, escopo e quatro cartões por linha no desktop amplo. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-07-parceiros-cadastros-compactos.md`. Três frentes independentes: formulários; cartões/Responsáveis; auditoria de carregamento. Conferência local no Chrome a pedido do usuário. Análise de dados separa paginação local, filtro de polo e cache, com consultas remotas somente de leitura. A skill visual e sua especificação pertencem a manifesto operacional separado, solicitado expressamente pelo usuário.",
+      "normalizedText": "padronizar cadastros seletores e cartoes de parceiros preservando campos valores validacoes escopo e quatro cartoes por linha no desktop amplo manifesto explicito ai operacao registros alteracoes 2026 11 07 parceiros cadastros compactos md tres frentes independentes formularios cartoes responsaveis auditoria de carregamento conferencia local no chrome a pedido do usuario analise de dados separa paginacao local filtro de polo e cache com consultas remotas somente de leitura a skill visual e sua especificacao pertencem a manifesto operacional separado solicitado expressamente pelo usuario",
+      "tokenCount": 75,
       "part": 1
     },
     {
-      "id": "4a26f1892d8eb27093ab",
-      "hash": "4a26f1892d8eb27093ab4bfc89e389123694b83d81dc9b3f7bfdf8f66f0d69d7",
+      "id": "146114016419de1d8787",
+      "hash": "146114016419de1d8787a10a7745ab8fe7af3903208762fc748eef9a81ecf615",
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Lote: 2026-11-06-entrega-visual-cinco-modulos-4-8-250",
-      "text": "Preservar dados, consultas, permissões, regras, envios e geradores; somente apresentação e extrações equivalentes para o teto de 500 linhas. GitHub autorizado ao final: commit atômico, PR e Preview após checks. Produção não solicitada para este lote. Base publicada 4.8.249 validada pelo usuário.",
-      "normalizedText": "preservar dados consultas permissoes regras envios e geradores somente apresentacao e extracoes equivalentes para o teto de 500 linhas github autorizado ao final commit atomico pr e preview apos checks producao nao solicitada para este lote base publicada 4 8 249 validada pelo usuario",
-      "tokenCount": 38,
+      "section": "Lote: 2026-11-07-parceiros-cadastros-compactos",
+      "text": "Base técnica: Financeiro PR #347, 4.8.251; entrega Parceiros depende desse código. A orientação mais recente do usuário autoriza produção AGORA somente para Financeiro 4.8.251 e Parceiros 4.8.252 implementados, para conferência posterior. Substitui a condição anterior de esperar todas as etapas; Caixa, Configurações, Comunicação e Biblioteca continuam pendentes, sem início nesta rodada. Parceiros verificado localmente; CSS móvel compartilhado aceito por PF real a 390 px e markup comum, com limites de cobertura documentados. Não alterar dados, RLS ou consultas operacionais como efeito de manutenção visual.",
+      "normalizedText": "base tecnica financeiro pr 347 4 8 251 entrega parceiros depende desse codigo a orientacao mais recente do usuario autoriza producao agora somente para financeiro 4 8 251 e parceiros 4 8 252 implementados para conferencia posterior substitui a condicao anterior de esperar todas as etapas caixa configuracoes comunicacao e biblioteca continuam pendentes sem inicio nesta rodada parceiros verificado localmente css movel compartilhado aceito por pf real a 390 px e markup comum com limites de cobertura documentados nao alterar dados rls ou consultas operacionais como efeito de manutencao visual",
+      "tokenCount": 78,
       "part": 1
     },
     {

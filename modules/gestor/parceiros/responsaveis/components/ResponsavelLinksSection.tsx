@@ -1,3 +1,4 @@
+import InstitutionalSelect from '../../../../shared/components/InstitutionalSelect';
 import React from 'react';
 import { Link2, Loader2 } from 'lucide-react';
 import type {
@@ -61,24 +62,21 @@ const ResponsavelLinksSection: React.FC<ResponsavelLinksSectionProps> = ({
         <form onSubmit={linking.submit} className="mt-3 rounded-2xl bg-slate-50 p-3">
           <label className="text-[10px] font-black uppercase tracking-wide text-slate-500">
             Aluno *
-            <select
+            <InstitutionalSelect
               required
               value={linking.alunoId}
-              onChange={(event) => linking.setAlunoId(event.target.value)}
-              className={RESPONSAVEL_FIELD_CLASS_NAME}
+              onValueChange={linking.setAlunoId}
+              ariaLabel="Aluno para vínculo"
+              placeholder="Selecione o aluno"
               disabled={alunosPending || alunosError}
-            >
-              <option value="">
-                {alunosPending
-                  ? 'Carregando alunos…'
-                  : alunosError
-                    ? 'Alunos indisponíveis'
-                    : 'Selecione o aluno'}
-              </option>
-              {alunos.map((aluno) => (
-                <option key={aluno.id} value={aluno.id}>{aluno.nome}</option>
-              ))}
-            </select>
+              loading={alunosPending}
+              error={alunosError ? 'Alunos indisponíveis' : undefined}
+              options={[
+                { value: '', label: 'Selecione o aluno' },
+                ...alunos.map((aluno) => ({ value: aluno.id, label: aluno.nome, keywords: aluno.id })),
+              ]}
+              className="mt-1 w-full"
+            />
           </label>
           {alunosError ? (
             <p className="mt-2 text-[10px] font-bold text-rose-700">
@@ -90,19 +88,22 @@ const ResponsavelLinksSection: React.FC<ResponsavelLinksSectionProps> = ({
           ) : null}
           <label className="mt-3 block text-[10px] font-black uppercase tracking-wide text-slate-500">
             Parentesco *
-            <select
+            <InstitutionalSelect
               required
               value={linking.parentesco}
-              onChange={(event) => linking.setParentesco(event.target.value as Parentesco | '')}
-              className={RESPONSAVEL_FIELD_CLASS_NAME}
-            >
-              <option value="">Selecione o parentesco</option>
-              <option value="MAE">Mãe</option>
-              <option value="PAI">Pai</option>
-              <option value="TUTOR">Tutor(a)</option>
-              <option value="GUARDIAO_JUDICIAL">Guardião(ã) judicial</option>
-              <option value="OUTRO">Outro</option>
-            </select>
+              onValueChange={(value) => linking.setParentesco(value as Parentesco | '')}
+              ariaLabel="Parentesco com o aluno"
+              placeholder="Selecione o parentesco"
+              options={[
+                { value: '', label: 'Selecione o parentesco' },
+                { value: 'MAE', label: 'Mãe' },
+                { value: 'PAI', label: 'Pai' },
+                { value: 'TUTOR', label: 'Tutor(a)' },
+                { value: 'GUARDIAO_JUDICIAL', label: 'Guardião(ã) judicial' },
+                { value: 'OUTRO', label: 'Outro' },
+              ]}
+              className="mt-1 w-full"
+            />
           </label>
           {linking.parentesco === 'OUTRO' ? (
             <label className="mt-3 block text-[10px] font-black uppercase tracking-wide text-slate-500">
@@ -121,14 +122,16 @@ const ResponsavelLinksSection: React.FC<ResponsavelLinksSectionProps> = ({
           {canRegisterVerification ? (
             <label className="mt-3 block text-[10px] font-black uppercase tracking-wide text-slate-500">
               Situação do vínculo *
-              <select
+              <InstitutionalSelect
                 value={linking.status}
-                onChange={(event) => handleStatusChange(event.target.value as VinculoStatus)}
-                className={RESPONSAVEL_FIELD_CLASS_NAME}
-              >
-                <option value="PENDENTE">Registrar como pendente</option>
-                <option value="VERIFICADO">Registrar como verificado</option>
-              </select>
+                onValueChange={(value) => handleStatusChange(value as VinculoStatus)}
+                ariaLabel="Situação do vínculo"
+                options={[
+                  { value: 'PENDENTE', label: 'Registrar como pendente' },
+                  { value: 'VERIFICADO', label: 'Registrar como verificado' },
+                ]}
+                className="mt-1 w-full"
+              />
             </label>
           ) : null}
           {linking.status === 'VERIFICADO' && canRegisterVerification ? (
@@ -138,17 +141,20 @@ const ResponsavelLinksSection: React.FC<ResponsavelLinksSectionProps> = ({
               </p>
               <label className="mt-2 block text-[10px] font-black uppercase tracking-wide text-slate-500">
                 Método *
-                <select
+                <InstitutionalSelect
                   required
                   value={linking.verificationMethod}
-                  onChange={(event) => linking.setVerificationMethod(event.target.value as ResponsavelVinculoVerificacaoMetodo | '')}
-                  className={RESPONSAVEL_FIELD_CLASS_NAME}
-                >
-                  <option value="">Selecione o método</option>
-                  <option value="DOCUMENTO_CONFERIDO">Documento conferido</option>
-                  <option value="DECISAO_JUDICIAL">Decisão judicial</option>
-                  <option value="PRESENCIAL">Conferência presencial</option>
-                </select>
+                  onValueChange={(value) => linking.setVerificationMethod(value as ResponsavelVinculoVerificacaoMetodo | '')}
+                  ariaLabel="Método de verificação do vínculo"
+                  placeholder="Selecione o método"
+                  options={[
+                    { value: '', label: 'Selecione o método' },
+                    { value: 'DOCUMENTO_CONFERIDO', label: 'Documento conferido' },
+                    { value: 'DECISAO_JUDICIAL', label: 'Decisão judicial' },
+                    { value: 'PRESENCIAL', label: 'Conferência presencial' },
+                  ]}
+                  className="mt-1 w-full"
+                />
               </label>
               <label className="mt-3 block text-[10px] font-black uppercase tracking-wide text-slate-500">
                 Referência ou protocolo *

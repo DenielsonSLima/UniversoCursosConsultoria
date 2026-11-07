@@ -38,8 +38,8 @@ const EmprestimosTable: React.FC<EmprestimosTableProps> = ({
   }
 
   return (
-    <div className="overflow-x-auto rounded-2xl border border-slate-100">
-      <table className="w-full text-left">
+    <div className="financial-data-surface overflow-x-auto rounded-2xl border border-slate-100">
+      <table className="financial-data-table financial-loans-table w-full text-left">
         <thead>
           <tr className="border-b border-slate-100 bg-slate-50">
             <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-slate-400">Contrato</th>
@@ -64,7 +64,7 @@ const EmprestimosTable: React.FC<EmprestimosTableProps> = ({
                 </td>
                 <td className="px-4 py-3">
                   <p className="text-sm font-semibold text-slate-700">{formatEmprestimoDate(item.dataLiberacao)}</p>
-                  <p className="mt-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-600">
+                  <p className="financial-data-money mt-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-600">
                     Crédito: {formatEmprestimoCurrency(item.valorLiberado)}
                   </p>
                 </td>
@@ -74,14 +74,14 @@ const EmprestimosTable: React.FC<EmprestimosTableProps> = ({
                   </p>
                 </td>
                 <td className="px-4 py-3 text-right">
-                  <p className="text-sm font-black text-[#001a33]">{formatEmprestimoCurrency(item.valorTotalDivida)}</p>
+                  <p className="financial-data-money text-sm font-black text-[#001a33]">{formatEmprestimoCurrency(item.valorTotalDivida)}</p>
                   <p className="mt-0.5 text-[10px] font-bold text-slate-400">{item.totalParcelas || item.parcelas.length} parcelas</p>
                 </td>
                 <td className="px-4 py-3">
                   {nextParcela ? (
                     <>
                       <p className="text-sm font-semibold text-slate-700">{formatEmprestimoDate(nextParcela.dataVencimento)}</p>
-                      <p className="mt-0.5 flex items-center gap-1 text-[10px] font-bold text-indigo-600"><ReceiptText size={11} /> {formatEmprestimoCurrency(nextParcela.valorTotal)}</p>
+                      <p className="financial-data-money mt-0.5 flex items-center gap-1 text-[10px] font-bold text-indigo-600"><ReceiptText size={11} /> {formatEmprestimoCurrency(nextParcela.valorTotal)}</p>
                     </>
                   ) : (
                     <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700"><CheckCircle2 size={13} /> Sem parcelas abertas</span>

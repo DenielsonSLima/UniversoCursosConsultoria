@@ -43,9 +43,9 @@ export const OtherCreditReversalModal: React.FC<{
   }, []);
 
   if (typeof document === 'undefined') return null;
-  return createPortal(<div className="fixed inset-0 z-[140] flex items-center justify-center bg-[#001a33]/60 p-4 backdrop-blur-sm">
+  return createPortal(<div className="financial-dialog-overlay fixed inset-0 z-[140] flex items-center justify-center bg-[#001a33]/60 p-4 backdrop-blur-sm">
     <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="other-credit-reversal-title"
-      className="max-h-[90dvh] w-full max-w-lg overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl"
+      className="financial-dialog financial-dialog--padded max-h-[90dvh] w-full max-w-lg overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl"
       onKeyDown={event => {
         if (event.key === 'Escape') { event.stopPropagation(); if (!reversal.isPending) onClose(); }
         if (event.key !== 'Tab') return;
@@ -54,7 +54,7 @@ export const OtherCreditReversalModal: React.FC<{
         if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
         if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
       }}>
-      <div className="flex items-start justify-between gap-4">
+      <div className="financial-dialog-header flex items-start justify-between gap-4">
         <div><p className="text-xs font-black uppercase tracking-widest text-rose-700">Correção de lançamento</p>
           <h2 id="other-credit-reversal-title" className="mt-2 text-xl font-black text-[#001a33]">Estornar recebimento</h2></div>
         <button ref={closeRef} type="button" aria-label="Fechar estorno" disabled={reversal.isPending} onClick={onClose}
@@ -75,7 +75,7 @@ export const OtherCreditReversalModal: React.FC<{
           Confirmo a correção do recebimento lançado por engano, preservando o histórico financeiro.
         </label>
         {reversal.isError && <p role="alert" className="mt-4 rounded-xl bg-rose-50 p-3 text-sm text-rose-800">{reversal.error.message}</p>}
-        <div className="mt-6 flex flex-wrap justify-end gap-3">
+        <div className="financial-dialog-footer mt-6 flex flex-wrap justify-end gap-3">
           <button type="button" disabled={reversal.isPending} onClick={onClose} className="rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-600">Voltar</button>
           <button type="submit" disabled={!allowed || !confirmed || !validReversalReason(reason) || reversal.isPending}
             className="inline-flex items-center gap-2 rounded-xl bg-rose-700 px-4 py-3 text-sm font-bold text-white disabled:opacity-40"><RotateCcw size={16} />{reversal.isPending ? 'Estornando...' : 'Confirmar estorno'}</button>

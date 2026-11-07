@@ -1,5 +1,6 @@
+import FinancialSelect from '../components/FinancialSelect';
 import React, { useEffect, useMemo, useState } from 'react';
-import { Banknote, BookOpen, ChevronDown, ChevronLeft, ChevronRight, Loader2, Plus, QrCode, Search, WalletCards, XCircle } from 'lucide-react';
+import { BookOpen, ChevronDown, ChevronLeft, ChevronRight, Loader2, Plus, QrCode, Search, WalletCards, XCircle } from 'lucide-react';
 import ToastNotification from '../../components/ToastNotification';
 import { ReceivablePaymentModal } from '../settlements/ReceivablePaymentModal';
 import FinancialUnderlineTabs from '../components/FinancialUnderlineTabs';
@@ -43,25 +44,7 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId }) => {
     <div className="financial-section-workspace animate-fadeIn space-y-6">
       <ToastNotification toasts={toasts} onRemove={removeToast} />
 
-      <div className="financial-section-heading flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div className="financial-section-identity">
-          <p className="financial-section-eyebrow mb-2 flex items-center gap-2 text-xs font-black uppercase tracking-[0.2em] text-emerald-600">
-            <Banknote size={16} /> Entradas avulsas
-          </p>
-          <h3 className="text-2xl font-black uppercase tracking-tight text-[#001a33]">Outros Créditos</h3>
-          <p className="mt-1 max-w-2xl text-sm font-medium text-slate-500">
-            Entradas avulsas, juros, rendimentos e carnês para serviços ou aulas de prática.
-          </p>
-        </div>
-        <div className="financial-section-actions flex flex-wrap gap-3"><button
-          onClick={openCreateModal}
-          className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 py-3 text-xs font-black uppercase tracking-wider text-slate-600 hover:bg-slate-50"
-        >
-          <Plus size={16} /> Novo crédito
-        </button>
-        <button onClick={planModel.openNew} className="inline-flex items-center justify-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-3 text-xs font-black uppercase tracking-wider text-emerald-800 hover:bg-emerald-100"><BookOpen size={16} /> Gerar carnê</button>
-        <button onClick={model.openPdv} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-700 px-6 py-3 text-xs font-black uppercase tracking-wider text-white shadow-lg shadow-emerald-900/15 hover:bg-emerald-800"><QrCode size={18} /> Abrir PDV</button></div>
-      </div>
+      <h3 className="sr-only">Outros Créditos</h3>
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -79,19 +62,32 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId }) => {
       </div>
 
       {/* Tabs de status */}
-      <FinancialUnderlineTabs
-        items={[
-          { id: 'pending' as const, label: 'A receber', badge: totals.pending, badgeClassName: 'bg-emerald-50 text-emerald-700' },
-          { id: 'received' as const, label: 'Recebidos', badge: totals.received, badgeClassName: 'bg-emerald-50 text-emerald-700' },
-          { id: 'canceled' as const, label: 'Cancelados', badge: totals.canceled, badgeClassName: 'bg-emerald-50 text-emerald-700' },
-          { id: 'all' as const, label: 'Todos', badge: totals.all, badgeClassName: 'bg-emerald-50 text-emerald-700' },
-        ]}
-        value={statusScope}
-        onChange={setStatusScope}
-        ariaLabel="Situação dos outros créditos"
-        indicatorClassName="bg-emerald-600"
-        activeIconClassName="text-emerald-600"
-      />
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="min-w-0 w-full lg:w-auto lg:min-w-[420px] lg:flex-1">
+          <FinancialUnderlineTabs
+            compact
+            items={[
+              { id: 'pending' as const, label: 'A receber', badge: totals.pending, badgeClassName: 'bg-emerald-50 text-emerald-700' },
+              { id: 'received' as const, label: 'Recebidos', badge: totals.received, badgeClassName: 'bg-emerald-50 text-emerald-700' },
+              { id: 'canceled' as const, label: 'Cancelados', badge: totals.canceled, badgeClassName: 'bg-emerald-50 text-emerald-700' },
+              { id: 'all' as const, label: 'Todos', badge: totals.all, badgeClassName: 'bg-emerald-50 text-emerald-700' },
+            ]}
+            value={statusScope}
+            onChange={setStatusScope}
+            ariaLabel="Situação dos outros créditos"
+            indicatorClassName="bg-emerald-600"
+            activeIconClassName="text-emerald-600"
+          />
+        </div>
+        <div className="financial-section-actions ml-auto flex flex-wrap items-center gap-2"><button
+          onClick={openCreateModal}
+          className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 py-3 text-xs font-black uppercase tracking-wider text-slate-600 hover:bg-slate-50"
+        >
+          <Plus size={16} /> Novo crédito
+        </button>
+        <button onClick={planModel.openNew} className="inline-flex items-center justify-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-3 text-xs font-black uppercase tracking-wider text-emerald-800 hover:bg-emerald-100"><BookOpen size={16} /> Gerar carnê</button>
+        <button onClick={model.openPdv} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-700 px-6 py-3 text-xs font-black uppercase tracking-wider text-white shadow-lg shadow-emerald-900/15 hover:bg-emerald-800"><QrCode size={18} /> Abrir PDV</button></div>
+      </div>
 
       {/* Filtros */}
       <div className="flex flex-wrap gap-3 items-center">
@@ -126,28 +122,22 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId }) => {
         />
 
         {/* Categoria */}
-        <select
+        <FinancialSelect
           value={categoryFilterId}
-          onChange={(event) => setCategoryFilterId(event.target.value)}
-          className="px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
-          aria-label="Filtrar por categoria"
-        >
-          <option value="">Todas as categorias</option>
-          {categories.map((category) => (
-            <option key={category.id} value={category.id}>{category.nome}</option>
-          ))}
-        </select>
+          onValueChange={setCategoryFilterId}
+          options={[{ value: '', label: 'Todas as categorias' }, ...categories.map(category => ({ value: category.id, label: category.nome, keywords: category.id }))]}
+          ariaLabel="Filtrar por categoria"
+          className="w-full min-w-0 sm:w-[220px]"
+        />
 
         {/* Agrupamento */}
-        <select
+        <FinancialSelect
           value={groupMode}
-          onChange={(e) => setGroupMode(e.target.value as OtherCreditGroupMode)}
-          className="px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
-        >
-          <option value="partner">Agrupar por parceiro</option>
-          <option value="polo">Agrupar por polo</option>
-          <option value="none">Sem agrupamento</option>
-        </select>
+          onValueChange={value => setGroupMode(value as OtherCreditGroupMode)}
+          options={[{ value: 'partner', label: 'Agrupar por parceiro' }, { value: 'polo', label: 'Agrupar por polo' }, { value: 'none', label: 'Sem agrupamento' }]}
+          ariaLabel="Forma de agrupamento dos créditos"
+          className="w-full min-w-0 sm:w-[220px]"
+        />
 
         {/* Limpar Filtros */}
         {(search || startDate || endDate || categoryFilterId) && (
@@ -170,13 +160,13 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId }) => {
           <p className="mt-1 text-xs text-amber-800">Retome uma operação para confirmar o resultado de todos os seus créditos.</p>
           {cancellation.resumeError ? <p role="alert" className="mt-2 text-sm text-rose-800">{cancellation.resumeError}</p> : null}</div>
         <div className="flex flex-wrap gap-2">
-          <select aria-label="Operação de cancelamento para retomar" value={cancellation.resumeId || cancellation.savedAttempts[0].idempotencyKey}
-            onChange={event => cancellation.setResumeId(event.target.value)} disabled={cancellation.pending}
-            className="max-w-full rounded-xl border border-amber-200 bg-white p-3 text-xs font-bold text-amber-900">
-            {cancellation.savedAttempts.map(attempt => <option key={attempt.idempotencyKey} value={attempt.idempotencyKey}>
-              {attempt.receivableIds.length} crédito(s) · {new Date(attempt.createdAt).toLocaleString('pt-BR')}
-            </option>)}
-          </select>
+          <FinancialSelect ariaLabel="Operação de cancelamento para retomar"
+            value={cancellation.resumeId || cancellation.savedAttempts[0].idempotencyKey}
+            onValueChange={cancellation.setResumeId}
+            disabled={cancellation.pending}
+            options={cancellation.savedAttempts.map(attempt => ({ value: attempt.idempotencyKey, label: `${attempt.receivableIds.length} crédito(s) · ${new Date(attempt.createdAt).toLocaleString('pt-BR')}`, keywords: attempt.idempotencyKey }))}
+            className="w-full min-w-0 sm:w-[300px]"
+          />
           <button type="button" onClick={cancellation.resume} disabled={cancellation.pending || isLoading}
           className="rounded-xl bg-amber-800 px-4 py-3 text-xs font-black uppercase text-white disabled:opacity-50">Retomar cancelamento</button>
         </div>
@@ -194,7 +184,7 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId }) => {
         </div>
       </div> : null}
 
-      <div className="overflow-hidden rounded-[2rem] border border-slate-100 bg-white shadow-sm">
+      <div className="financial-data-surface overflow-hidden rounded-[2rem] border border-slate-100 bg-white shadow-sm">
         {isLoading ? (
           <div className="flex items-center justify-center gap-3 py-16">
             <Loader2 className="animate-spin text-emerald-600" size={22} />
@@ -208,7 +198,7 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId }) => {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[980px] text-left">
+            <table className="financial-data-table financial-other-credits-table w-full min-w-[980px] text-left">
               <thead className="bg-slate-50">
                 <tr>
                   <th className="w-12 px-4 py-4"><OtherCreditSelectionCheckbox
@@ -235,7 +225,7 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId }) => {
 
                 return (
                   <tbody key={group.key} className="divide-y divide-slate-100">
-                    <tr className="bg-slate-50/80 transition-colors hover:bg-emerald-50/65">
+                    <tr className="financial-data-group bg-slate-50/80 transition-colors hover:bg-emerald-50/65">
                       <td className="w-12 px-4 py-4"><OtherCreditSelectionCheckbox
                         label={`Selecionar créditos canceláveis de ${group.label}`}
                         checked={eligibleGroup.length > 0 && selectedGroupCount === eligibleGroup.length}
@@ -246,10 +236,10 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId }) => {
                         <button
                           type="button"
                           onClick={() => toggleGroup(group.key)}
-                          className="grid w-full grid-cols-[minmax(260px,1.5fr)_minmax(160px,0.8fr)_minmax(170px,0.9fr)_minmax(130px,0.7fr)] items-center gap-4 px-5 py-4 text-left"
+                          className="financial-group-toggle grid w-full grid-cols-[minmax(260px,1.5fr)_minmax(160px,0.8fr)_minmax(170px,0.9fr)_minmax(130px,0.7fr)] items-center gap-4 px-5 py-4 text-left"
                         >
                           <span className="flex min-w-0 items-center gap-3">
-                            <span className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-2xl ${
+                            <span className={`financial-group-icon flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-2xl ${
                               isExpanded ? 'bg-[#001a33] text-white' : 'bg-white text-slate-500'
                             }`}>
                               {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}

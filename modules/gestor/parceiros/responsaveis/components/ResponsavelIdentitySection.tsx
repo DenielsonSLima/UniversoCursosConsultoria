@@ -1,3 +1,4 @@
+import InstitutionalSelect from '../../../../shared/components/InstitutionalSelect';
 import React from 'react';
 import { CheckCircle2, Loader2 } from 'lucide-react';
 import type { ResponsavelIdentidadeVerificacaoMetodo } from '../responsaveis.contract';
@@ -50,16 +51,19 @@ const ResponsavelIdentitySection: React.FC<ResponsavelIdentitySectionProps> = ({
         <form onSubmit={verification.submit} className="mt-3">
           <label className="text-[10px] font-black uppercase tracking-wide text-slate-500">
             Método *
-            <select
+            <InstitutionalSelect
               required
               value={verification.method}
-              onChange={(event) => verification.setMethod(event.target.value as ResponsavelIdentidadeVerificacaoMetodo | '')}
-              className={RESPONSAVEL_FIELD_CLASS_NAME}
-            >
-              <option value="">Selecione o método</option>
-              <option value="DOCUMENTO_CONFERIDO">Documento conferido</option>
-              <option value="PRESENCIAL">Conferência presencial</option>
-            </select>
+              onValueChange={(value) => verification.setMethod(value as ResponsavelIdentidadeVerificacaoMetodo | '')}
+              ariaLabel="Método de verificação da identidade"
+              placeholder="Selecione o método"
+              options={[
+                { value: '', label: 'Selecione o método' },
+                { value: 'DOCUMENTO_CONFERIDO', label: 'Documento conferido' },
+                { value: 'PRESENCIAL', label: 'Conferência presencial' },
+              ]}
+              className="mt-1 w-full"
+            />
           </label>
           <label className="mt-3 block text-[10px] font-black uppercase tracking-wide text-slate-500">
             Referência ou protocolo *

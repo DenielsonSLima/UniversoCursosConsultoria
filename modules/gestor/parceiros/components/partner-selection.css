@@ -1,0 +1,94 @@
+@media screen {
+  .partner-selection-overlay {
+    background: rgb(15 23 42 / 48%);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  .partner-selection-dialog {
+    max-width: 780px;
+    padding: 24px;
+    border: 1px solid #dbe3ec;
+    border-radius: 14px;
+    color: #334155;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    -webkit-font-smoothing: auto;
+    box-shadow: 0 24px 80px -24px rgb(15 23 42 / 35%);
+  }
+
+  .partner-selection-dialog > button[aria-label] {
+    top: 16px;
+    right: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    padding: 8px;
+    border-radius: 8px;
+    color: #607286;
+    background: #f1f5f9;
+  }
+
+  .partner-selection-heading {
+    margin: 0 0 20px;
+    padding-right: 36px;
+    text-align: left;
+  }
+
+  .partner-selection-heading h3 {
+    font-size: 18px;
+    font-weight: 600;
+    line-height: 1.35;
+    text-transform: none;
+    letter-spacing: normal;
+  }
+
+  .partner-selection-heading p {
+    margin-top: 5px;
+    color: #607286;
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 1.5;
+  }
+
+  .partner-selection-options { gap: 10px; }
+
+  .partner-selection-options > button {
+    min-width: 0;
+    padding: 16px 10px;
+    border-width: 1px;
+    border-radius: 10px;
+  }
+
+  .partner-selection-options > button > div {
+    width: 40px;
+    height: 40px;
+    margin-bottom: 10px;
+    border-radius: 10px;
+    box-shadow: none;
+    transform: none;
+  }
+
+  .partner-selection-options > button > div > svg { width: 22px; height: 22px; }
+
+  .partner-selection-options > button > span {
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.45;
+    text-transform: none;
+    letter-spacing: normal;
+  }
+
+  .partner-selection-options > button > span:last-child {
+    font-size: 12px;
+    font-weight: 400;
+    color: #607286;
+  }
+
+  @media (max-width: 767px) {
+    .partner-selection-dialog { padding: 20px 16px; }
+    .partner-selection-dialog > button[aria-label] { width: 44px; height: 44px; top: 12px; right: 12px; }
+    .partner-selection-heading { padding-right: 44px; }
+  }
+}

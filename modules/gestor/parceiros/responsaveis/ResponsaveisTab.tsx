@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import './responsaveis.css';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { ShieldAlert } from 'lucide-react';
 import type { ResponsavelLegal } from './responsaveis.contract';
@@ -146,7 +147,7 @@ const ResponsaveisTab: React.FC<ResponsaveisTabProps> = ({
   }
 
   return (
-    <section className="space-y-5">
+    <section className="partner-responsaveis space-y-4">
       <ResponsaveisToolbar
         hasListAccess={Boolean(listAccess)}
         canManageGlobal={listAccess?.canManageGlobal === true}

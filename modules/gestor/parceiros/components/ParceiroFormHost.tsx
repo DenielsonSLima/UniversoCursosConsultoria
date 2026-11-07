@@ -1,4 +1,6 @@
 import React from 'react';
+import './formularioparceiros/partner-registration.css';
+import './formularioparceiros/partner-registration-auxiliary.css';
 import ParceiroAlunoForm from './formularioparceiros/aluno/ParceiroAlunoForm';
 import ParceiroProfessorForm from './formularioparceiros/professor/ParceiroProfessorForm';
 import ParceiroPFForm from './formularioparceiros/pf/ParceiroPFForm';
@@ -98,8 +100,8 @@ const ParceiroFormHost: React.FC<ParceiroFormHostProps> = ({
   })();
 
   return (
-    <div className="">
-      <div className="bg-white p-10 rounded-[2.5rem] shadow-xl border border-slate-100 max-w-4xl mx-auto relative overflow-hidden">
+    <div className="partner-registration-layout">
+      <div className="partner-registration-host bg-white mx-auto relative">
         <div className={`absolute top-0 left-0 w-full h-2 bg-gradient-to-r ${config.accent}`} />
         {form}
       </div>

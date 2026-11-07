@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   CheckCircle2,
   Download,
@@ -23,6 +24,7 @@ import type {
 } from './conciliacao-bancaria.types';
 
 interface BaneseCnabRemittancePanelProps {
+  actionsContainer?: HTMLDivElement | null;
   overview?: BaneseCnabOverview;
   isLoading: boolean;
   error?: string | null;
@@ -64,6 +66,7 @@ const BaneseCnabRemittancePanel: React.FC<BaneseCnabRemittancePanelProps> = ({
   error,
   onRefresh,
   onChanged,
+  actionsContainer,
 }) => {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [preview, setPreview] = useState<BaneseCnabRemittancePreviewResult | null>(null);
@@ -209,33 +212,27 @@ const BaneseCnabRemittancePanel: React.FC<BaneseCnabRemittancePanelProps> = ({
     }
   };
 
+  const actions = (
+    <div className="financial-section-actions flex flex-wrap items-center gap-2">
+      {overview ? <EnvironmentBadge environment={overview.environment} /> : null}
+      <button
+        type="button"
+        onClick={onRefresh}
+        disabled={isLoading}
+        className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-[9px] font-black uppercase tracking-wider text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+      >
+        <RefreshCw size={12} className={isLoading ? 'animate-spin' : ''} /> Atualizar
+      </button>
+    </div>
+  );
+
   return (
     <section className="rounded-[2rem] border border-slate-100 bg-white p-6 shadow-sm">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div className="flex items-start gap-3">
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
-            <FileOutput size={22} />
-          </span>
-          <div>
-            <p className="text-[10px] font-black uppercase tracking-widest text-emerald-700">Exportação bancária</p>
-            <h3 className="mt-1 text-lg font-black text-[#001a33]">Remessa CNAB 240 Banese</h3>
-            <p className="mt-1 max-w-2xl text-xs font-semibold leading-relaxed text-slate-500">
-              Selecione cobranças de contingência, confira a prévia e só então gere o arquivo .rem para envio ao banco.
-            </p>
-          </div>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {overview ? <EnvironmentBadge environment={overview.environment} /> : null}
-          <button
-            type="button"
-            onClick={onRefresh}
-            disabled={isLoading}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-[9px] font-black uppercase tracking-wider text-slate-600 hover:bg-slate-50 disabled:opacity-50"
-          >
-            <RefreshCw size={12} className={isLoading ? 'animate-spin' : ''} /> Atualizar
-          </button>
-        </div>
-      </div>
+      <h3 className="sr-only">Remessa CNAB 240 Banese</h3>
+      {actionsContainer ? createPortal(actions, actionsContainer) : actions}
+      <p className="max-w-2xl text-xs font-semibold leading-relaxed text-slate-500">
+        Selecione cobranças de contingência, confira a prévia e só então gere o arquivo .rem para envio ao banco.
+      </p>
 
       <div className="mt-5 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-xs font-semibold leading-relaxed text-blue-800">
         <strong>Proteção contra duplicidade:</strong> títulos registrados ou com
@@ -292,7 +289,7 @@ const BaneseCnabRemittancePanel: React.FC<BaneseCnabRemittancePanelProps> = ({
                 </p>
               </div>
             ) : (
-              <div className="mt-4 max-h-80 space-y-2 overflow-y-auto pr-1">
+              <div className="financial-data-surface financial-record-list mt-4 max-h-80 space-y-2 overflow-y-auto pr-1">
                 {eligible.map((item) => {
                   const selected = selectedIds.includes(item.id);
                   return (
@@ -354,7 +351,7 @@ const BaneseCnabRemittancePanel: React.FC<BaneseCnabRemittancePanelProps> = ({
                   </div>
                 </div>
 
-                <div className="max-h-96 space-y-2 overflow-y-auto rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <div className="financial-data-surface financial-record-list max-h-96 space-y-2 overflow-y-auto rounded-xl border border-slate-200 bg-slate-50 p-3">
                   {preview.items.map((item) => (
                     <div key={item.receivableId} className="rounded-lg bg-white p-3 shadow-sm">
                       <div className="flex items-start justify-between gap-3">
@@ -458,7 +455,7 @@ const BaneseCnabRemittancePanel: React.FC<BaneseCnabRemittancePanelProps> = ({
             {recentRemittances.length > 0 ? (
               <div className="border-t border-slate-200 pt-4">
                 <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Remessas recentes</p>
-                <div className="mt-2 space-y-2">
+                <div className="financial-data-surface financial-record-list mt-2 space-y-2">
                   {recentRemittances.map((file) => (
                     <div key={file.id} className="flex items-center justify-between gap-3 rounded-lg bg-slate-50 p-3">
                       <div className="min-w-0">

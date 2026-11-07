@@ -66,7 +66,7 @@ const ConvenioFormModal: React.FC<ConvenioFormModalProps> = ({
       subtitle="Cadastre o convênio e abra sua primeira competência com saldo inicial zero."
       onClose={onClose}
     >
-      <form onSubmit={submit} className="space-y-5 p-6">
+      <form onSubmit={submit} className="financial-dialog-body space-y-5 p-6">
         <ConvenioFaculdadePicker
           options={parceiros}
           value={parceiroId}
@@ -107,7 +107,7 @@ const ConvenioFormModal: React.FC<ConvenioFormModalProps> = ({
 
         {error ? <p role="alert" className="rounded-xl border border-rose-100 bg-rose-50 px-4 py-3 text-xs font-bold text-rose-700">{error.message}</p> : null}
 
-        <div className="flex justify-end gap-3 border-t border-slate-100 pt-5">
+        <div className="financial-dialog-footer flex justify-end gap-3 border-t border-slate-100 pt-5">
           <button type="button" onClick={onClose} disabled={isPending} className="rounded-xl border border-slate-200 px-5 py-3 text-xs font-black uppercase tracking-wide text-slate-600 disabled:opacity-50">Cancelar</button>
           <button type="submit" disabled={isPending || !parceiroId || parceirosLoading || parceirosError} className="inline-flex items-center gap-2 rounded-xl bg-cyan-700 px-5 py-3 text-xs font-black uppercase tracking-wide text-white shadow-lg shadow-cyan-950/15 hover:bg-cyan-800 disabled:opacity-50">
             {isPending ? <Loader2 size={15} className="animate-spin" /> : <PlusCircle size={15} />}

@@ -1,5 +1,5 @@
 import React, { useCallback, useDeferredValue, useEffect, useRef, useState } from 'react';
-import { HandCoins, Info, ReceiptText } from 'lucide-react';
+import { Info, ReceiptText } from 'lucide-react';
 import ToastNotification, { useToast } from '../../components/ToastNotification';
 import CandidateGroups from './components/CandidateGroups';
 import ProposalCards from './components/ProposalCards';
@@ -217,22 +217,16 @@ const RenegociacoesTab: React.FC<RenegociacoesTabProps> = ({ poloId, isMatriz, o
   return (
     <div className="financial-section-workspace space-y-5 animate-fadeIn">
       <ToastNotification toasts={toasts} onRemove={removeToast} />
-      <header className="financial-section-heading flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div className="financial-section-identity">
-          <p className="financial-section-eyebrow flex items-center gap-2 text-xs font-black uppercase tracking-[0.2em] text-blue-700">
-            <HandCoins size={17} /> Gestão de acordos
-          </p>
+      <header className="flex flex-wrap items-center justify-between gap-3">
+        <div className="min-w-0 w-full lg:w-auto lg:flex-1">
           <h2
             ref={workspaceHeadingRef}
             tabIndex={-1}
-            className="mt-1 text-2xl font-black uppercase tracking-tight text-[#001a33]"
+            className="sr-only"
           >
             Renegociações
           </h2>
-          <p className="mt-1 max-w-3xl text-sm font-medium text-slate-500">
-            Monte propostas com qualquer combinação de parcelas vencidas ou a vencer, mantendo o cálculo e o histórico
-            auditáveis.
-          </p>
+          <RenegociacaoViewTabs value={view} onChange={changeView} />
         </div>
         {onNavigateToReceivables ? (
           <button
@@ -245,7 +239,6 @@ const RenegociacoesTab: React.FC<RenegociacoesTabProps> = ({ poloId, isMatriz, o
         ) : null}
       </header>
 
-      <RenegociacaoViewTabs value={view} onChange={changeView} />
       <div className="flex gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs font-medium leading-relaxed text-slate-600">
         <Info size={16} className="mt-0.5 shrink-0" />
         <p>

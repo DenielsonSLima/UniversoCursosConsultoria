@@ -1,3 +1,4 @@
+import FinancialSelect from '../components/FinancialSelect';
 import React, { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Landmark, Link as LinkIcon, Loader2, Plus, QrCode, Tag, WalletCards, X } from 'lucide-react';
@@ -92,7 +93,7 @@ export const OtherCreditCreateModal = ({ model }: { model: ModalModel }) => {
   return createPortal((
         <div
           ref={dialogRef}
-          className="fixed inset-0 z-[140] flex h-[100dvh] w-screen flex-col overflow-hidden bg-[#eef2f7] text-[#071b3f]"
+          className="financial-dialog financial-dialog--fullscreen fixed inset-0 z-[140] flex h-[100dvh] w-screen flex-col overflow-hidden bg-[#eef2f7] text-[#071b3f]"
           role="dialog"
           aria-modal="true"
           aria-labelledby="outros-creditos-modal-title"
@@ -100,13 +101,13 @@ export const OtherCreditCreateModal = ({ model }: { model: ModalModel }) => {
           tabIndex={-1}
           onKeyDown={handleDialogKeyDown}
         >
-          <div className="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden="true">
+          <div className="financial-dialog-decoration pointer-events-none fixed inset-0 overflow-hidden" aria-hidden="true">
             <div className="absolute inset-x-0 top-0 h-56 bg-[#001a33]" />
             <div className="absolute -right-32 -top-24 h-96 w-96 rounded-full bg-emerald-400/15 blur-[100px]" />
             <div className="absolute left-[8%] top-36 h-44 w-44 rounded-full bg-blue-400/10 blur-[80px]" />
           </div>
 
-          <header className="relative z-20 shrink-0 border-t-[3px] border-t-emerald-500 bg-[#001a33]/95 text-white shadow-lg shadow-slate-950/10 backdrop-blur-xl">
+          <header className="financial-dialog-header relative z-20 shrink-0 border-t-[3px] border-t-emerald-500 bg-[#001a33]/95 text-white shadow-lg shadow-slate-950/10 backdrop-blur-xl">
             <div className="mx-auto flex min-h-[82px] w-full max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-8">
               <div className="flex min-w-0 items-center gap-4">
                 <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-emerald-300/20 bg-emerald-300/10 text-emerald-300">
@@ -129,9 +130,9 @@ export const OtherCreditCreateModal = ({ model }: { model: ModalModel }) => {
             </div>
           </header>
 
-          <main className="flex-1 overflow-y-auto overscroll-contain">
+          <main className="financial-dialog-body financial-dialog-body--framed flex-1 overflow-y-auto overscroll-contain">
             <form onSubmit={validateAndSubmit} className="relative z-10 mx-auto w-full max-w-7xl px-4 py-5 sm:px-8 sm:py-8">
-              <fieldset disabled={createMutation.isPending} className="space-y-5 rounded-[2rem] border border-white bg-white p-4 shadow-[0_28px_80px_-36px_rgba(0,26,51,0.45)] disabled:opacity-70 sm:p-6 lg:p-8">
+              <fieldset disabled={createMutation.isPending} className="financial-dialog-section space-y-5 rounded-[2rem] border border-white bg-white p-4 shadow-[0_28px_80px_-36px_rgba(0,26,51,0.45)] disabled:opacity-70 sm:p-6 lg:p-8">
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 {[
                   { id: 'LOCAL_PAGO' as const, label: 'Receber agora', desc: 'Entrada local no caixa/conta', icon: Landmark },
@@ -169,16 +170,14 @@ export const OtherCreditCreateModal = ({ model }: { model: ModalModel }) => {
                     <Tag size={11} /> Categoria
                   </span>
                   <div className="relative flex gap-2">
-                    <select
+                    <FinancialSelect
                       value={categoryId}
-                      onChange={(event) => setCategoryId(event.target.value)}
-                      className="h-12 min-w-0 flex-1 rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-700 outline-none focus:border-emerald-400"
-                    >
-                      <option value="">Selecionar categoria...</option>
-                      {categories.map((category) => (
-                        <option key={category.id} value={category.id}>{category.nome}</option>
-                      ))}
-                    </select>
+                      onValueChange={setCategoryId}
+                      options={[{ value: '', label: 'Selecionar categoria...' }, ...categories.map(category => ({ value: category.id, label: category.nome, keywords: category.id }))]}
+                      ariaLabel="Categoria financeira"
+                      disabled={createMutation.isPending}
+                      className="min-w-0 flex-1"
+                    />
                     <button
                       type="button"
                       onClick={() => setShowCategoryModal((current) => !current)}
@@ -260,18 +259,14 @@ export const OtherCreditCreateModal = ({ model }: { model: ModalModel }) => {
                     {mode === 'LOCAL_PAGO' && (
                       <label className="space-y-1">
                         <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">Conta / caixa de entrada</span>
-                        <select
+                        <FinancialSelect
                           value={accountId}
-                          onChange={(event) => setAccountId(event.target.value)}
-                          className="h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-700 outline-none focus:border-emerald-400"
-                        >
-                          <option value="">Selecione a conta</option>
-                          {activeAccounts.map((account) => (
-                            <option key={account.id} value={account.id}>
-                              {account.banco} - {account.conta} - Saldo: {formatCurrency(account.saldoAtual || 0)}
-                            </option>
-                          ))}
-                        </select>
+                          onValueChange={setAccountId}
+                          options={[{ value: '', label: 'Selecione a conta' }, ...activeAccounts.map(account => ({ value: account.id!, label: `${account.banco} - ${account.conta} - Saldo: ${formatCurrency(account.saldoAtual || 0)}`, keywords: `${account.id} ${account.agencia} ${account.titular}` }))]}
+                          ariaLabel="Conta / caixa de entrada"
+                          disabled={createMutation.isPending}
+                          className="w-full min-w-0"
+                        />
                         {activeAccounts.length === 0 && (
                           <p className="text-[10px] font-bold text-amber-600">Nenhuma conta ativa vinculada à unidade atual.</p>
                         )}
@@ -281,22 +276,16 @@ export const OtherCreditCreateModal = ({ model }: { model: ModalModel }) => {
                       <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
                         {mode === 'GATEWAY' ? 'Forma da cobrança' : 'Forma de recebimento'}
                       </span>
-                      <select
+                      <FinancialSelect
                         value={paymentMethod}
-                        onChange={(event) => setPaymentMethod(event.target.value as any)}
-                        className="h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-700 outline-none focus:border-emerald-400"
-                      >
-                        {mode === 'GATEWAY' ? (
-                          <option value="BOLETO">BolePix (Banese)</option>
-                        ) : (
-                          <>
-                            <option value="PIX">Pix</option>
-                            <option value="BOLETO">Boleto</option>
-                            <option value="CARTAO">Cartão</option>
-                            <option value="DINHEIRO">Dinheiro</option>
-                          </>
-                        )}
-                      </select>
+                        onValueChange={value => setPaymentMethod(value as any)}
+                        options={mode === 'GATEWAY'
+                          ? [{ value: 'BOLETO', label: 'BolePix (Banese)' }]
+                          : [{ value: 'PIX', label: 'Pix' }, { value: 'BOLETO', label: 'Boleto' }, { value: 'CARTAO', label: 'Cartão' }, { value: 'DINHEIRO', label: 'Dinheiro' }]}
+                        ariaLabel={mode === 'GATEWAY' ? 'Forma da cobrança' : 'Forma de recebimento'}
+                        disabled={createMutation.isPending}
+                        className="w-full min-w-0"
+                      />
                     </label>
                   </>
                 )}
@@ -308,7 +297,7 @@ export const OtherCreditCreateModal = ({ model }: { model: ModalModel }) => {
                 </div>
               )}
 
-              <div className="flex flex-col-reverse gap-3 border-t border-slate-100 pt-5 sm:flex-row sm:justify-end">
+              <div className="financial-dialog-footer flex flex-col-reverse gap-3 border-t border-slate-100 pt-5 sm:flex-row sm:justify-end">
                 <button
                   type="button"
                   onClick={closeCreateModal}

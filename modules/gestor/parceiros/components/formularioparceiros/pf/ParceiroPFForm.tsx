@@ -1,3 +1,6 @@
+import '../partner-registration.css';
+import InstitutionalSelect from '../../../../../shared/components/InstitutionalSelect';
+import { partnerSelectChange } from '../partner-select-change';
 // File: modules/gestor/parceiros/components/formularioparceiros/pf/ParceiroPFForm.tsx
 // Formulário completo de Pessoa Física (Prestador de Serviço)
 
@@ -164,9 +167,9 @@ const ParceiroPFForm: React.FC<ParceiroPFFormProps> = ({
   const labelCls = 'block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1.5 ml-0.5';
 
   return (
-    <div className="">
+    <div className="partner-registration">
       {/* Header */}
-      <div className="flex justify-between items-center border-b border-slate-100 pb-5 mb-6">
+      <div className="partner-registration-header flex justify-between items-center border-b border-slate-100 pb-5 mb-6">
         <div>
           <h3 className="text-xl font-black text-[#001a33] uppercase tracking-tight">Novo Parceiro PF</h3>
           <p className="text-slate-500 text-sm font-medium mt-0.5">Prestador de Serviço — Pessoa Física</p>
@@ -179,7 +182,7 @@ const ParceiroPFForm: React.FC<ParceiroPFFormProps> = ({
       </div>
 
       {/* Step Indicator */}
-      <div className="flex items-center justify-between mb-8 relative">
+      <div className="partner-registration-steps flex items-center justify-between mb-8 relative">
         <div className="absolute top-5 left-0 right-0 h-0.5 bg-slate-100 z-0" />
         {STEPS.map((step) => {
           const Icon = step.icon;
@@ -238,13 +241,13 @@ const ParceiroPFForm: React.FC<ParceiroPFFormProps> = ({
 
               <div>
                 <label className={labelCls}>Sexo</label>
-                <select name="sexo" value={formData.sexo} onChange={handleChange} className={inputCls}>
-                  <option value="">Selecione...</option>
-                  <option value="MASCULINO">MASCULINO</option>
-                  <option value="FEMININO">FEMININO</option>
-                  <option value="NÃO-BINÁRIO">NÃO-BINÁRIO</option>
-                  <option value="PREFIRO NÃO INFORMAR">PREFIRO NÃO INFORMAR</option>
-                </select>
+                <InstitutionalSelect value={formData.sexo} onValueChange={partnerSelectChange("sexo", handleChange)}
+                  ariaLabel="Sexo" 
+                  options={[{ value: "", label: "Selecione..." },
+                    { value: "MASCULINO", label: "MASCULINO" },
+                    { value: "FEMININO", label: "FEMININO" },
+                    { value: "NÃO-BINÁRIO", label: "NÃO-BINÁRIO" },
+                    { value: "PREFIRO NÃO INFORMAR", label: "PREFIRO NÃO INFORMAR" }]} className="w-full" />
               </div>
 
               <div>
@@ -315,10 +318,10 @@ const ParceiroPFForm: React.FC<ParceiroPFFormProps> = ({
 
               <div>
                 <label className={labelCls}>UF</label>
-                <select name="uf" value={formData.uf} onChange={handleChange} className={inputCls}>
-                  <option value="">UF</option>
-                  {UFS.map(u => <option key={u} value={u}>{u}</option>)}
-                </select>
+                <InstitutionalSelect value={formData.uf} onValueChange={partnerSelectChange("uf", handleChange)}
+                  ariaLabel="UF" 
+                  options={[{ value: "", label: "UF" },
+                    ...UFS.map(u => ({ value: u, label: u }))]} className="w-full" />
               </div>
             </div>
           </div>
@@ -337,14 +340,10 @@ const ParceiroPFForm: React.FC<ParceiroPFFormProps> = ({
                 <label className={labelCls}>Tipo de Serviço Prestado <span className="text-red-500">*</span></label>
                 <div className="flex gap-2">
                   {!showCustomServico ? (
-                    <select
-                      value={selectedServico}
-                      onChange={(e) => setSelectedServico(e.target.value)}
-                      className={`${inputCls} flex-grow`}
-                    >
-                      <option value="">Selecione o tipo de serviço...</option>
-                      {PRESET_SERVICOS.map(s => <option key={s} value={s}>{s}</option>)}
-                    </select>
+                    <InstitutionalSelect value={selectedServico} onValueChange={(value) => setSelectedServico(value)}
+                      ariaLabel="Tipo de serviço prestado" 
+                      options={[{ value: "", label: "Selecione o tipo de serviço..." },
+                        ...PRESET_SERVICOS.map(s => ({ value: s, label: s }))]} className="min-w-0 flex-1" />
                   ) : (
                     <input
                       type="text"
@@ -369,14 +368,10 @@ const ParceiroPFForm: React.FC<ParceiroPFFormProps> = ({
                 <label className={labelCls}>Tipo de Vínculo</label>
                 <div className="flex gap-2">
                   {!showCustomVinculo ? (
-                    <select
-                      value={selectedVinculo}
-                      onChange={(e) => setSelectedVinculo(e.target.value)}
-                      className={`${inputCls} flex-grow`}
-                    >
-                      <option value="">Selecione...</option>
-                      {PRESET_VINCULOS.map(v => <option key={v} value={v}>{v}</option>)}
-                    </select>
+                    <InstitutionalSelect value={selectedVinculo} onValueChange={(value) => setSelectedVinculo(value)}
+                      ariaLabel="Tipo de vínculo" 
+                      options={[{ value: "", label: "Selecione..." },
+                        ...PRESET_VINCULOS.map(v => ({ value: v, label: v }))]} className="min-w-0 flex-1" />
                   ) : (
                     <input
                       type="text"
@@ -407,18 +402,18 @@ const ParceiroPFForm: React.FC<ParceiroPFFormProps> = ({
 
               <div>
                 <label className={labelCls}>Banco</label>
-                <select name="banco" value={formData.banco} onChange={handleChange} className={inputCls}>
-                  <option value="">Selecione...</option>
-                  {BANCOS.map(b => <option key={b} value={b}>{b}</option>)}
-                </select>
+                <InstitutionalSelect value={formData.banco.toLocaleUpperCase('pt-BR')} onValueChange={partnerSelectChange("banco", handleChange)}
+                  ariaLabel="Banco" 
+                  options={[{ value: "", label: "Selecione..." },
+                    ...BANCOS.map(b => ({ value: b.toLocaleUpperCase('pt-BR'), label: b }))]} className="w-full" />
               </div>
 
               <div>
                 <label className={labelCls}>Tipo de Conta</label>
-                <select name="tipoConta" value={formData.tipoConta} onChange={handleChange} className={inputCls}>
-                  <option value="Corrente">Corrente</option>
-                  <option value="Poupança">Poupança</option>
-                </select>
+                <InstitutionalSelect value={formData.tipoConta.toLocaleUpperCase('pt-BR')} onValueChange={partnerSelectChange("tipoConta", handleChange)}
+                  ariaLabel="Tipo de conta" 
+                  options={[{ value: "CORRENTE", label: "Corrente" },
+                    { value: "POUPANÇA", label: "Poupança" }]} className="w-full" />
               </div>
 
               <div>
@@ -443,7 +438,7 @@ const ParceiroPFForm: React.FC<ParceiroPFFormProps> = ({
         )}
 
         {/* Navegação */}
-        <div className="flex justify-between gap-3 pt-6 mt-6 border-t border-slate-100">
+        <div className="partner-registration-footer flex justify-between gap-3 pt-6 mt-6 border-t border-slate-100">
           <button
             type="button"
             onClick={currentStep === 1 ? onCancel : handleBack}

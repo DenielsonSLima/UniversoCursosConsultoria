@@ -22,7 +22,7 @@ export default function TransferenciasList({
   isLoading, isError, transferencias, pageItems, currentPage, totalPages, setPage, openReverseModal,
 }: TransferenciasListProps) {
   return (
-      <div className="overflow-hidden rounded-3xl border border-slate-100 bg-white shadow-sm">
+      <div className="financial-data-surface overflow-hidden rounded-3xl border border-slate-100 bg-white shadow-sm">
         {isLoading ? (
           <div className="flex items-center justify-center gap-3 py-20">
             <Loader2 className="animate-spin text-[#001a33]" size={22} />
@@ -39,7 +39,7 @@ export default function TransferenciasList({
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[980px] text-left">
+            <table className="financial-data-table financial-transfers-table w-full min-w-[980px] text-left">
               <thead className="bg-slate-50">
                 <tr>
                   {['Data / descrição', 'Origem', 'Destino', 'Valor', 'Ações'].map((head) => (
@@ -93,7 +93,7 @@ export default function TransferenciasList({
                         </div>
                       </div>
                     </td>
-                    <td className="px-5 py-4">
+                    <td className="financial-data-money px-5 py-4">
                       <p className="text-lg font-black text-[#001a33]">{formatCurrency(transfer.valor)}</p>
                     </td>
                     <td className="px-5 py-4">

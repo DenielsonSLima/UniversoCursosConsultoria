@@ -94,7 +94,7 @@ const CandidateGroupsWorkspace: React.FC<CandidateGroupsWorkspaceProps> = ({
     );
 
   return (
-    <div className="space-y-4">
+    <div className="financial-data-surface financial-record-list space-y-4">
       <p className="text-xs font-medium leading-relaxed text-slate-500">
         Parcelas em aberto, vencidas ou a vencer, conforme os filtros. Ordem: mais parcelas em atraso,
         depois vencimento atrasado mais antigo e nome do aluno. A elegibilidade é conferida ao expandir a matrícula.

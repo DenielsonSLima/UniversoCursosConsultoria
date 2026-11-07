@@ -222,7 +222,7 @@ export const ManualSettlementModal: React.FC<ManualSettlementModalProps> = ({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[9999] flex min-h-screen w-full items-center justify-center overflow-y-auto bg-[#001225]/80 p-3 backdrop-blur-md sm:p-6"
+      className="financial-dialog-overlay fixed inset-0 z-[9999] flex min-h-screen w-full items-center justify-center overflow-y-auto bg-[#001225]/80 p-3 backdrop-blur-md sm:p-6"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget && !pending) onClose();
       }}
@@ -237,9 +237,9 @@ export const ManualSettlementModal: React.FC<ManualSettlementModalProps> = ({
         tabIndex={-1}
         onKeyDown={handleDialogKeyDown}
         onMouseDown={(event) => event.stopPropagation()}
-        className="relative flex max-h-[calc(100dvh-1.5rem)] w-full max-w-4xl flex-col overflow-hidden rounded-[1.75rem] border border-white/10 bg-white shadow-[0_35px_100px_-24px_rgba(0,18,37,0.75)] outline-none sm:max-h-[calc(100dvh-3rem)] sm:rounded-[2rem]"
+        className="financial-dialog relative flex max-h-[calc(100dvh-1.5rem)] w-full max-w-4xl flex-col overflow-hidden rounded-[1.75rem] border border-white/10 bg-white shadow-[0_35px_100px_-24px_rgba(0,18,37,0.75)] outline-none sm:max-h-[calc(100dvh-3rem)] sm:rounded-[2rem]"
       >
-        <header className="relative shrink-0 overflow-hidden bg-[#001a33] px-5 py-5 text-white sm:px-7 sm:py-6">
+        <header className="financial-dialog-header relative shrink-0 overflow-hidden bg-[#001a33] px-5 py-5 text-white sm:px-7 sm:py-6">
           <div className="pointer-events-none absolute -right-14 -top-20 h-48 w-48 rounded-full border border-emerald-300/15 bg-emerald-400/10" />
           <div className="pointer-events-none absolute right-24 top-10 h-20 w-20 rounded-full bg-cyan-300/5 blur-xl" />
           <div className="relative flex items-start gap-4 pr-10">
@@ -267,7 +267,7 @@ export const ManualSettlementModal: React.FC<ManualSettlementModalProps> = ({
           </button>
         </header>
 
-        <div className="overflow-y-auto overscroll-contain px-4 py-5 sm:px-7 sm:py-6">
+        <div className="financial-dialog-body overflow-y-auto overscroll-contain px-4 py-5 sm:px-7 sm:py-6">
           {receivable.tipoLancamento === 'MATRICULA' ? (
             <div className="mb-4 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-xs font-semibold leading-relaxed text-blue-800">
               {enrollmentNotice ?? 'Ao confirmar esta matrícula, o sistema criará as parcelas futuras conforme o cronograma e a rota bancária configurada.'}
@@ -282,7 +282,7 @@ export const ManualSettlementModal: React.FC<ManualSettlementModalProps> = ({
           ) : null}
 
           <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1.45fr)_minmax(260px,0.75fr)]">
-            <section aria-labelledby={`${titleId}-details`} className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4 sm:p-5">
+            <section aria-labelledby={`${titleId}-details`} className="financial-dialog-section rounded-2xl border border-slate-200 bg-slate-50/60 p-4 sm:p-5">
               <div className="mb-4 flex items-start justify-between gap-4">
                 <div>
                   <p id={`${titleId}-details`} className="text-sm font-black text-[#001a33]">Dados do recebimento</p>
@@ -393,7 +393,7 @@ export const ManualSettlementModal: React.FC<ManualSettlementModalProps> = ({
             </p>
           ) : null}
 
-          <footer className="mt-5 flex flex-col-reverse gap-3 border-t border-slate-100 pt-5 sm:flex-row sm:items-center sm:justify-end">
+          <footer className="financial-dialog-footer mt-5 flex flex-col-reverse gap-3 border-t border-slate-100 pt-5 sm:flex-row sm:items-center sm:justify-end">
             <button
               type="button"
               onClick={onClose}

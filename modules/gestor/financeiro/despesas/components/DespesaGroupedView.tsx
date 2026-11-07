@@ -90,7 +90,7 @@ const DespesaGroupedView: React.FC<DespesaGroupedViewProps> = ({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="financial-data-surface financial-record-list space-y-4">
       {groups.map((group) => {
         const isOpen = expanded.has(group.key);
         return (
@@ -98,7 +98,7 @@ const DespesaGroupedView: React.FC<DespesaGroupedViewProps> = ({
             {/* Header do grupo */}
             <button
               onClick={() => toggleGroup(group.key)}
-              className="w-full flex items-center justify-between px-5 py-4 bg-slate-50 hover:bg-slate-100 transition-colors"
+              className="financial-group-toggle w-full flex items-center justify-between px-5 py-4 bg-slate-50 hover:bg-slate-100 transition-colors"
             >
               <div className="flex items-center gap-3">
                 <div className="p-1.5 bg-rose-100 text-rose-600 rounded-lg">

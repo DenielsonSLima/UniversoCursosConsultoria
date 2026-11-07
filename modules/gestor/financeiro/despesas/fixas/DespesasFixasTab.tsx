@@ -1,10 +1,12 @@
+import FinancialSelect from '../../components/FinancialSelect';
 import { useExpensePayment } from '../hooks/useExpensePayment';
 // File: modules/gestor/financeiro/despesas/fixas/DespesasFixasTab.tsx
 
 import React, { useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
-  Plus, Search, LayoutGrid, LayoutList, Tag, RefreshCw,
-  Building, Layers,
+  Plus, Search, LayoutGrid, LayoutList, RefreshCw,
+  Layers,
 } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -35,7 +37,7 @@ import { useDespesasFixasReport } from './useDespesasFixasReport';
 const formatCurrency = (v: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0);
 
-const DespesasFixasTab: React.FC<{ poloId?: string | null }> = ({ poloId: scopedPoloId }) => {
+const DespesasFixasTab: React.FC<{ poloId?: string | null; actionsContainer?: HTMLDivElement | null }> = ({ poloId: scopedPoloId, actionsContainer }) => {
   const queryClient = useQueryClient();
   const { toasts, removeToast, toast } = useToast();
 
@@ -198,51 +200,45 @@ const DespesasFixasTab: React.FC<{ poloId?: string | null }> = ({ poloId: scoped
   };
 
   const tabs: { id: DespesaStatusScope; label: string }[] = [
-    { id: 'mes_atual', label: 'Mês Atual' },
-    { id: 'em_aberto', label: 'Em Aberto' },
+    { id: 'mes_atual', label: 'Mês atual' },
+    { id: 'em_aberto', label: 'Em aberto' },
     { id: 'todos', label: 'Todos' },
   ];
+
+  const actions = (
+    <div className="flex flex-wrap items-center gap-2">
+      <h4 className="sr-only">Despesas Fixas</h4>
+      <FinancialReportExportButton
+        title="Extrato de Despesas Fixas"
+        subtitle="Despesas recorrentes e contas a pagar conforme os filtros selecionados."
+        rightTitle="Extrato de Despesas"
+        rightType="Despesas fixas"
+        fileName={`extrato-despesas-fixas-${new Date().toISOString().slice(0, 10)}`}
+        columns={report.columns}
+        rows={report.rows}
+        filters={report.filters}
+        summaryCards={report.summaryCards}
+        poloId={poloId}
+        tone="rose"
+        buttonLabel="Exportar PDF"
+        disabled={lancamentosQuery.isLoading || !summaryQuery.isSuccess}
+      />
+      <button
+        onClick={() => setShowForm(true)}
+        className="flex items-center gap-2 px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-black uppercase tracking-wide shadow-md shadow-rose-900/20 transition-colors"
+      >
+        <Plus size={14} />
+        Nova Despesa
+      </button>
+    </div>
+  );
 
   return (
     <div className="space-y-5 animate-fadeIn">
       <ToastNotification toasts={toasts} onRemove={removeToast} />
 
       {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h4 className="text-base font-black text-[#001a33] uppercase tracking-tight flex items-center gap-2">
-            <Building size={16} className="text-rose-500" />
-            Despesas Fixas
-          </h4>
-          <p className="text-xs text-slate-400 font-medium mt-0.5">
-            Aluguel, salários, energia e custos recorrentes
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <FinancialReportExportButton
-            title="Extrato de Despesas Fixas"
-            subtitle="Despesas recorrentes e contas a pagar conforme os filtros selecionados."
-            rightTitle="Extrato de Despesas"
-            rightType="Despesas fixas"
-            fileName={`extrato-despesas-fixas-${new Date().toISOString().slice(0, 10)}`}
-            columns={report.columns}
-            rows={report.rows}
-            filters={report.filters}
-            summaryCards={report.summaryCards}
-            poloId={poloId}
-            tone="rose"
-            buttonLabel="Exportar PDF"
-            disabled={lancamentosQuery.isLoading || !summaryQuery.isSuccess}
-          />
-          <button
-            onClick={() => setShowForm(true)}
-            className="flex items-center gap-2 px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-black uppercase tracking-wide shadow-md shadow-rose-900/20 transition-colors"
-          >
-            <Plus size={14} />
-            Nova Despesa
-          </button>
-        </div>
-      </div>
+      {actionsContainer === undefined ? actions : actionsContainer ? createPortal(actions, actionsContainer) : null}
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -266,6 +262,7 @@ const DespesasFixasTab: React.FC<{ poloId?: string | null }> = ({ poloId: scoped
 
       {/* Tabs de status */}
       <FinancialUnderlineTabs
+        compact
         items={tabs}
         value={statusScope}
         onChange={setStatusScope}
@@ -284,7 +281,7 @@ const DespesasFixasTab: React.FC<{ poloId?: string | null }> = ({ poloId: scoped
               placeholder="Buscar lançamentos..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-rose-500 outline-none transition-all"
+              className="w-full pl-9 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-rose-500 outline-none transition-all"
             />
           </div>
 
@@ -307,29 +304,14 @@ const DespesasFixasTab: React.FC<{ poloId?: string | null }> = ({ poloId: scoped
           />
 
           <div className="relative xl:col-span-2">
-            <Tag size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <select
-              value={categoriaId}
-              onChange={(e) => setCategoriaId(e.target.value)}
-              className="w-full pl-8 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-rose-500 outline-none appearance-none transition-all"
-              aria-label="Filtrar por categoria"
-            >
-              <option value="">Todas as categorias</option>
-              {categorias.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
-            </select>
+            <FinancialSelect value={categoriaId} onValueChange={setCategoriaId} ariaLabel="Filtrar por categoria"
+              placeholder="Todas as categorias" options={[{ value: '', label: 'Todas as categorias' },
+                ...categorias.map((categoria) => ({ value: categoria.id, label: categoria.nome }))]} className="w-full" />
           </div>
 
-          <select
-            value={turmaId}
-            onChange={(e) => setTurmaId(e.target.value)}
-            className="w-full xl:col-span-2 px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-rose-500 outline-none transition-all"
-            aria-label="Filtrar por turma"
-          >
-            <option value="">Todas as turmas</option>
-            {turmas.map((t) => (
-              <option key={t.id} value={t.id}>{t.nome}</option>
-            ))}
-          </select>
+          <FinancialSelect value={turmaId} onValueChange={setTurmaId} ariaLabel="Filtrar por turma"
+            placeholder="Todas as turmas" options={[{ value: '', label: 'Todas as turmas' },
+              ...turmas.map((turma) => ({ value: turma.id, label: turma.nome, keywords: turma.codigo }))]} className="w-full xl:col-span-2" />
         </div>
 
         <div className="flex flex-wrap items-center justify-end gap-2">

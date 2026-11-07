@@ -7,6 +7,7 @@ import EspecializacaoReceberTab from './especializacao/EspecializacaoReceberTab'
 import EadReceberTab from './ead/EadReceberTab';
 import TecnicoReceberTab from './tecnico/TecnicoReceberTab';
 import FinancialUnderlineTabs from '../components/FinancialUnderlineTabs';
+import { ReceberActionsContext } from './components/ReceberActions';
 
 type CourseType = 'livres' | 'especializacao' | 'ead' | 'tecnico';
 
@@ -17,6 +18,7 @@ interface ReceberTabProps {
 
 const ReceberTab: React.FC<ReceberTabProps> = ({ poloId, isMatriz }) => {
   const [activeCourseTab, setActiveCourseTab] = useState<CourseType>('tecnico');
+  const [actionsContainer, setActionsContainer] = useState<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (!isMatriz && activeCourseTab === 'ead') {
@@ -47,23 +49,28 @@ const ReceberTab: React.FC<ReceberTabProps> = ({ poloId, isMatriz }) => {
   };
 
   return (
-    <div className="financial-section-workspace space-y-6 animate-fadeIn">
-      <div className="financial-sub-navigation mb-4">
-        <FinancialUnderlineTabs
-          compact
-          items={subtabs}
-          value={activeCourseTab}
-          onChange={setActiveCourseTab}
-          ariaLabel="Modalidades das contas a receber"
-          indicatorClassName="bg-emerald-600"
-          activeIconClassName="text-emerald-600"
-        />
-      </div>
+    <ReceberActionsContext.Provider value={actionsContainer}>
+      <div className="financial-section-workspace space-y-6 animate-fadeIn">
+        <div className="financial-sub-navigation flex flex-wrap items-center justify-between gap-3">
+          <div className="min-w-0 w-full sm:w-auto sm:flex-1">
+            <FinancialUnderlineTabs
+              compact
+              items={subtabs}
+              value={activeCourseTab}
+              onChange={setActiveCourseTab}
+              ariaLabel="Modalidades das contas a receber"
+              indicatorClassName="bg-emerald-600"
+              activeIconClassName="text-emerald-600"
+            />
+          </div>
+          <div ref={setActionsContainer} className="ml-auto shrink-0" />
+        </div>
 
-      <div className="mt-4">
-        {renderSubTab()}
+        <div>
+          {renderSubTab()}
+        </div>
       </div>
-    </div>
+    </ReceberActionsContext.Provider>
   );
 };
 

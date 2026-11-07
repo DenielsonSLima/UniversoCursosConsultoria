@@ -1,3 +1,4 @@
+import FinancialSelect from '../components/FinancialSelect';
 import React, { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import {
@@ -46,7 +47,7 @@ export function PdvForm({ model }: { model: OutrosCreditosModel }) {
 
   return (
     <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="pdv-title"
-      className="fixed inset-0 z-[140] h-[100dvh] overflow-y-auto bg-[#eef2f7] text-[#071b3f] selection:bg-blue-200"
+      className="financial-dialog financial-dialog--fullscreen fixed inset-0 z-[140] h-[100dvh] overflow-y-auto bg-[#eef2f7] text-[#071b3f] selection:bg-blue-200"
       onKeyDown={event => {
         if (event.key === 'Escape' && !busy) model.closeCreateModal();
         if (event.key !== 'Tab') return;
@@ -55,14 +56,14 @@ export function PdvForm({ model }: { model: OutrosCreditosModel }) {
         if (event.shiftKey && document.activeElement === nodes[0]) { event.preventDefault(); nodes[nodes.length - 1].focus(); }
         if (!event.shiftKey && document.activeElement === nodes[nodes.length - 1]) { event.preventDefault(); nodes[0].focus(); }
       }}>
-      <div className="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden="true">
+      <div className="financial-dialog-decoration pointer-events-none fixed inset-0 overflow-hidden" aria-hidden="true">
         <div className="absolute inset-x-0 top-0 h-[246px] bg-[#071b3f]" />
         <div className="absolute -right-28 -top-8 h-[360px] w-[360px] rounded-full bg-blue-500/20 blur-[100px]" />
         <div className="absolute left-[8%] top-36 h-40 w-40 rounded-full bg-[#ed1c24]/10 blur-[70px]" />
         <div className="absolute inset-x-0 top-[245px] h-px bg-gradient-to-r from-transparent via-blue-300/60 to-transparent" />
       </div>
 
-      <header className="sticky top-0 z-30 border-t-[3px] border-t-[#ed1c24] bg-[#071b3f]/90 text-white shadow-lg shadow-slate-950/10 backdrop-blur-xl">
+      <header className="financial-dialog-header sticky top-0 z-30 border-t-[3px] border-t-[#ed1c24] bg-[#071b3f]/90 text-white shadow-lg shadow-slate-950/10 backdrop-blur-xl">
         <div className="mx-auto flex min-h-[78px] max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-8">
           <div className="flex min-w-0 flex-1 items-center gap-4 sm:gap-6">
             <span className="flex h-11 w-[124px] shrink-0 items-center justify-center rounded-xl bg-white px-3 shadow-sm sm:h-12 sm:w-[154px]">
@@ -86,7 +87,7 @@ export function PdvForm({ model }: { model: OutrosCreditosModel }) {
         </div>
       </header>
 
-      <form onSubmit={model.validateAndSubmit} className="relative z-10 mx-auto grid w-full max-w-7xl content-start gap-x-7 px-4 pb-8 pt-4 sm:px-8 sm:pt-5 lg:grid-cols-[minmax(0,1fr)_380px] lg:pb-10">
+      <form onSubmit={model.validateAndSubmit} className="financial-dialog-body relative z-10 mx-auto grid w-full max-w-7xl content-start gap-x-7 px-4 pb-8 pt-4 sm:px-8 sm:pt-5 lg:grid-cols-[minmax(0,1fr)_380px] lg:pb-10">
         <div className="mb-4 lg:col-span-2 lg:flex lg:justify-end">
           <nav aria-label="Etapas do recebimento" className="w-full rounded-2xl border border-white/10 bg-white/[0.07] p-2.5 backdrop-blur-md lg:w-[380px]">
             <ol className="grid grid-cols-3 gap-2">
@@ -102,7 +103,7 @@ export function PdvForm({ model }: { model: OutrosCreditosModel }) {
           </nav>
         </div>
 
-        <fieldset disabled={busy} className="min-w-0 space-y-5 rounded-[28px] border border-white/70 bg-white p-5 shadow-[0_24px_70px_-28px_rgba(7,27,63,0.35)] sm:p-7 lg:p-8">
+        <fieldset disabled={busy} className="financial-dialog-section min-w-0 space-y-5 rounded-[28px] border border-white/70 bg-white p-5 shadow-[0_24px_70px_-28px_rgba(7,27,63,0.35)] sm:p-7 lg:p-8">
           <div className="flex items-start justify-between gap-4 border-b border-slate-100 pb-5">
             <div>
               <p className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.18em] text-blue-700"><span className="h-1.5 w-1.5 rounded-full bg-[#ed1c24]" aria-hidden="true" /> Dados do atendimento</p>
@@ -131,7 +132,7 @@ export function PdvForm({ model }: { model: OutrosCreditosModel }) {
             </div>
             <div className="grid gap-4 sm:grid-cols-[1.22fr_1fr]">
               <label className="group block"><span className="mb-2 block text-[11px] font-bold uppercase tracking-wide text-slate-500">Valor a receber</span>
-                <div className="flex h-[88px] items-center gap-3 rounded-2xl border border-slate-200 bg-[#f7f9fc] px-5 transition-all group-focus-within:-translate-y-0.5 group-focus-within:border-blue-500 group-focus-within:bg-white group-focus-within:shadow-[0_14px_34px_-18px_rgba(37,99,235,0.55)] group-focus-within:ring-4 group-focus-within:ring-blue-500/10">
+                <div className="financial-dialog-field flex h-[88px] items-center gap-3 rounded-2xl border border-slate-200 bg-[#f7f9fc] px-5 transition-all group-focus-within:-translate-y-0.5 group-focus-within:border-blue-500 group-focus-within:bg-white group-focus-within:shadow-[0_14px_34px_-18px_rgba(37,99,235,0.55)] group-focus-within:ring-4 group-focus-within:ring-blue-500/10">
                   <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white text-sm font-black text-blue-800 shadow-sm">R$</span>
                   <input ref={amountRef} type="text" inputMode="decimal" required aria-label="Valor da cobrança" placeholder="0,00" value={model.value}
                     onChange={event => model.setValue(formatPdvCurrencyInput(event.target.value))}
@@ -139,7 +140,7 @@ export function PdvForm({ model }: { model: OutrosCreditosModel }) {
                 </div>
               </label>
               <label className="group block"><span className="mb-2 block text-[11px] font-bold uppercase tracking-wide text-slate-500">Vencimento</span>
-                <div className="relative flex h-[88px] items-center gap-3 rounded-2xl border border-slate-200 bg-[#f7f9fc] px-4 transition-all group-focus-within:-translate-y-0.5 group-focus-within:border-blue-500 group-focus-within:bg-white group-focus-within:shadow-[0_14px_34px_-18px_rgba(37,99,235,0.55)] group-focus-within:ring-4 group-focus-within:ring-blue-500/10">
+                <div className="financial-dialog-field relative flex h-[88px] items-center gap-3 rounded-2xl border border-slate-200 bg-[#f7f9fc] px-4 transition-all group-focus-within:-translate-y-0.5 group-focus-within:border-blue-500 group-focus-within:bg-white group-focus-within:shadow-[0_14px_34px_-18px_rgba(37,99,235,0.55)] group-focus-within:ring-4 group-focus-within:ring-blue-500/10">
                   <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white text-blue-800 shadow-sm"><CalendarDays size={20} /></span>
                   <input type="date" required aria-label="Vencimento" value={model.dueDate} onChange={event => model.setDueDate(event.target.value)} className={`peer min-w-0 flex-1 bg-transparent text-sm font-bold outline-none ${!model.dueDate ? 'text-transparent focus:text-[#071b3f]' : ''}`} />
                   {!model.dueDate && <span aria-hidden="true" className="pointer-events-none absolute left-[4.25rem] text-sm text-slate-400 peer-focus:hidden">dd/mm/aaaa</span>}
@@ -158,7 +159,9 @@ export function PdvForm({ model }: { model: OutrosCreditosModel }) {
               <div className="relative">
                 <label htmlFor="pdv-category" className="block text-xs font-bold text-slate-500">Categoria</label>
                 <div className="mt-2 flex gap-2">
-                  <select id="pdv-category" value={model.categoryId} onChange={event => model.setCategoryId(event.target.value)} className="h-12 min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-4 text-sm outline-none focus:border-blue-600"><option value="">Outras entradas</option>{model.categories.map(category => <option key={category.id} value={category.id}>{category.nome}</option>)}</select>
+                  <FinancialSelect id="pdv-category" value={model.categoryId} onValueChange={model.setCategoryId}
+                    options={[{ value: '', label: 'Outras entradas' }, ...model.categories.map(category => ({ value: category.id, label: category.nome, keywords: category.id }))]}
+                    ariaLabel="Categoria financeira" disabled={busy} className="min-w-0 flex-1" />
                   <button type="button" aria-label="Adicionar categoria" aria-expanded={model.showCategoryModal} onClick={() => model.setShowCategoryModal(current => !current)} className="flex h-12 items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-4 font-bold text-blue-800 transition hover:bg-blue-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"><Plus size={18} /><span className="hidden sm:inline">Nova</span></button>
                 </div>
                 {model.showCategoryModal && <CategoriaFinanceiraInlineModal tipo="OUTRO_CREDITO" accent="emerald" onClose={() => model.setShowCategoryModal(false)} onCriada={id => { model.setCategoryId(id); model.setShowCategoryModal(false); }} />}
@@ -169,7 +172,7 @@ export function PdvForm({ model }: { model: OutrosCreditosModel }) {
         </fieldset>
 
         <aside className="mt-6 flex min-w-0 flex-col lg:mt-0">
-          <div className="relative overflow-hidden rounded-[28px] border border-white/15 bg-[#071b3f] text-white shadow-[0_26px_70px_-28px_rgba(7,27,63,0.72)] lg:sticky lg:top-28">
+          <div className="financial-dialog-summary relative overflow-hidden rounded-[28px] border border-white/15 bg-[#071b3f] text-white shadow-[0_26px_70px_-28px_rgba(7,27,63,0.72)] lg:sticky lg:top-28">
             <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-blue-500/25 blur-[70px]" aria-hidden="true" />
             <div className="pointer-events-none absolute -bottom-24 -left-24 h-56 w-56 rounded-full bg-[#ed1c24]/10 blur-[70px]" aria-hidden="true" />
             <div className="relative border-b border-white/10 px-6 py-5 sm:px-7">

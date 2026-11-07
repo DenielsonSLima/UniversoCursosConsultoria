@@ -32,7 +32,7 @@ export function OtherCreditPlanContent({ model, resources }: { model: OtherCredi
     {model.refreshProgress ? <p role="status" aria-live="polite" className="text-sm font-bold text-emerald-800">Consulta bancária: {model.refreshProgress.done} de {model.refreshProgress.total} cobrança(s) conferida(s).</p> : null}
     {model.planId && model.plan ? <p className="text-xs leading-5 text-slate-500">As parcelas já estão salvas em Outros Créditos. Emita os boletos para baixar o carnê. Se uma emissão parar, os boletos confirmados são preservados.</p> : null}
 
-    {model.planId ? <div className="flex flex-wrap justify-end gap-3 border-t border-slate-100 pt-5">
+    {model.planId ? <div className="financial-dialog-footer flex flex-wrap justify-end gap-3 border-t border-slate-100 pt-5">
       {model.planId ? <>
         <button type="button" onClick={model.refresh} disabled={model.busy || model.planRefreshing} className={buttonClass}>
           <RefreshCw size={16} className={model.planRefreshing ? 'animate-spin' : ''} /> Atualizar carnê
@@ -83,8 +83,8 @@ export function OtherCreditPlanModal({ model, resources }: { model: OtherCreditP
   };
   if (!model.isOpen || typeof document === 'undefined') return null;
   return createPortal(<div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="other-credit-plan-title" aria-busy={model.busy}
-    tabIndex={-1} onKeyDown={handleKeyDown} className="fixed inset-0 z-[150] flex h-[100dvh] w-screen flex-col overflow-hidden bg-[#eef2f7] text-[#071b3f]">
-    <header className="shrink-0 border-t-[3px] border-emerald-500 bg-[#001a33] text-white">
+    tabIndex={-1} onKeyDown={handleKeyDown} className="financial-dialog financial-dialog--fullscreen fixed inset-0 z-[150] flex h-[100dvh] w-screen flex-col overflow-hidden bg-[#eef2f7] text-[#071b3f]">
+    <header className="financial-dialog-header shrink-0 border-t-[3px] border-emerald-500 bg-[#001a33] text-white">
       <div className="mx-auto flex min-h-[82px] max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-8">
         <div className="flex items-center gap-3"><BookOpen size={24} className="text-emerald-300" />
           <div><p className="text-[10px] font-black uppercase tracking-widest text-emerald-300">Outros Créditos</p>
@@ -95,9 +95,9 @@ export function OtherCreditPlanModal({ model, resources }: { model: OtherCreditP
           className="inline-flex h-11 items-center gap-2 rounded-xl border border-white/20 px-4 text-sm font-bold disabled:opacity-40"><span className="hidden sm:inline">Fechar</span><X size={18} /></button>
       </div>
     </header>
-    <main ref={scrollRef} className="flex-1 overflow-y-auto overscroll-contain">
+    <main ref={scrollRef} className="financial-dialog-body financial-dialog-body--framed flex-1 overflow-y-auto overscroll-contain">
       <div className="mx-auto max-w-7xl px-4 py-5 sm:px-8 sm:py-8">
-        <div className="rounded-[2rem] border border-white bg-white p-4 shadow-lg sm:p-6 lg:p-8"><OtherCreditPlanContent model={model} resources={resources} /></div>
+        <div className="financial-dialog-section rounded-[2rem] border border-white bg-white p-4 shadow-lg sm:p-6 lg:p-8"><OtherCreditPlanContent model={model} resources={resources} /></div>
       </div>
     </main>
   </div>, document.body);

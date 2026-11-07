@@ -46,7 +46,7 @@ export const CnabOutcomeList: React.FC<{ outcomes: BaneseCnabReturnRecord[] }> =
 
   const visibleOutcomes = outcomes.slice(0, 40);
   return (
-    <div className="space-y-2">
+    <div className="financial-data-surface financial-record-list space-y-2">
       {visibleOutcomes.map((outcome, index) => (
         <div
           key={outcome.id || `${outcome.lineNumber}-${outcome.nossoNumero}-${index}`}

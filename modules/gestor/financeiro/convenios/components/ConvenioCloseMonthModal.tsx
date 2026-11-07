@@ -33,7 +33,7 @@ const ConvenioCloseMonthModal: React.FC<ConvenioCloseMonthModalProps> = ({
       subtitle={`${mes.nome} · ${formatConvenioCompetencia(mes.competencia)}`}
       onClose={onClose}
     >
-      <div className="space-y-5 p-6">
+      <div className="financial-dialog-body space-y-5 p-6">
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {[
             ['Saldo inicial', mes.saldoInicial],
@@ -74,7 +74,7 @@ const ConvenioCloseMonthModal: React.FC<ConvenioCloseMonthModalProps> = ({
 
         {error ? <p role="alert" className="rounded-xl border border-rose-100 bg-rose-50 px-4 py-3 text-xs font-bold text-rose-700">{error.message}</p> : null}
 
-        <div className="flex justify-end gap-3 border-t border-slate-100 pt-5">
+        <div className="financial-dialog-footer flex justify-end gap-3 border-t border-slate-100 pt-5">
           <button type="button" onClick={onClose} disabled={isPending} className="rounded-xl border border-slate-200 px-5 py-3 text-xs font-black uppercase tracking-wide text-slate-600 disabled:opacity-50">Voltar</button>
           <button
             type="button"

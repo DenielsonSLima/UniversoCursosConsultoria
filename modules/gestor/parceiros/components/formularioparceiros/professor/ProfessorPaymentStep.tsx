@@ -1,3 +1,5 @@
+import InstitutionalSelect from '../../../../../shared/components/InstitutionalSelect';
+import { partnerSelectChange } from '../partner-select-change';
 import React from 'react';
 import { DollarSign } from 'lucide-react';
 import {
@@ -30,10 +32,10 @@ const ProfessorPaymentStep: React.FC<ProfessorPaymentStepProps> = ({
     <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
       <div className="md:col-span-2">
         <label className={labelCls}>Tipo de vínculo</label>
-        <select name="tipoVinculo" value={formData.tipoVinculo} onChange={onChange} className={inputCls}>
-          <option value="">Selecione...</option>
-          {PRESET_VINCULOS.map((item) => <option key={item} value={item}>{item}</option>)}
-        </select>
+        <InstitutionalSelect value={formData.tipoVinculo} onValueChange={partnerSelectChange("tipoVinculo", onChange)}
+          ariaLabel="Tipo de vínculo" 
+          options={[{ value: "", label: "Selecione..." },
+            ...PRESET_VINCULOS.map((item) => ({ value: item, label: item }))]} className="w-full" />
       </div>
 
       <div className="md:col-span-2">
@@ -42,10 +44,10 @@ const ProfessorPaymentStep: React.FC<ProfessorPaymentStepProps> = ({
       </div>
       <div>
         <label className={labelCls}>Tipo da chave Pix</label>
-        <select name="tipoChavePix" value={formData.tipoChavePix} onChange={onChange} className={inputCls}>
-          <option value="">Selecione o tipo...</option>
-          {PIX_KEY_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-        </select>
+        <InstitutionalSelect value={formData.tipoChavePix} onValueChange={partnerSelectChange("tipoChavePix", onChange)}
+          ariaLabel="Tipo de chave Pix" 
+          options={[{ value: "", label: "Selecione o tipo..." },
+            ...PIX_KEY_OPTIONS.map((option) => ({ value: option.value, label: option.label }))]} className="w-full" />
       </div>
       <div>
         <label className={labelCls}>Chave Pix</label>
@@ -70,18 +72,18 @@ const ProfessorPaymentStep: React.FC<ProfessorPaymentStepProps> = ({
       </div>
       <div>
         <label className={labelCls}>Banco</label>
-        <select name="banco" value={formData.banco} onChange={onChange} className={inputCls}>
-          <option value="">Selecione o banco...</option>
-          {BANCOS.map((item) => <option key={item} value={item}>{item}</option>)}
-        </select>
+        <InstitutionalSelect value={formData.banco} onValueChange={partnerSelectChange("banco", onChange)}
+          ariaLabel="Banco" 
+          options={[{ value: "", label: "Selecione o banco..." },
+            ...BANCOS.map((item) => ({ value: item, label: item }))]} className="w-full" />
       </div>
       <div>
         <label className={labelCls}>Tipo de conta</label>
-        <select name="tipoConta" value={formData.tipoConta} onChange={onChange} className={inputCls}>
-          <option value="">Selecione...</option>
-          <option value="CORRENTE">Corrente</option>
-          <option value="POUPANÇA">Poupança</option>
-        </select>
+        <InstitutionalSelect value={formData.tipoConta} onValueChange={partnerSelectChange("tipoConta", onChange)}
+          ariaLabel="Tipo de conta" 
+          options={[{ value: "", label: "Selecione..." },
+            { value: "CORRENTE", label: "Corrente" },
+            { value: "POUPANÇA", label: "Poupança" }]} className="w-full" />
       </div>
       <div>
         <label className={labelCls}>Agência</label>

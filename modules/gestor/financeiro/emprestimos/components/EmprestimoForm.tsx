@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import BankAccountPicker from '../../components/BankAccountPicker';
+import FinancialSelect from '../../components/FinancialSelect';
 import { caixaQueryKeys } from '../../../caixa/caixa.service';
 import { financeiroQueryKeys } from '../../financeiro.queryKeys';
 import {
@@ -169,9 +170,9 @@ const EmprestimoForm: React.FC<EmprestimoFormProps> = ({
   if (typeof document === 'undefined') return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-[220] flex items-center justify-center overflow-hidden bg-black/40 p-4 backdrop-blur-sm animate-fadeIn overscroll-contain">
-      <div className="max-h-[calc(100dvh-2rem)] w-full max-w-5xl overflow-y-auto rounded-[2rem] bg-white shadow-2xl">
-        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-100 bg-white px-7 pb-4 pt-7">
+    <div className="financial-dialog-overlay fixed inset-0 z-[220] flex items-center justify-center overflow-hidden bg-black/40 p-4 backdrop-blur-sm animate-fadeIn overscroll-contain">
+      <div className="financial-dialog max-h-[calc(100dvh-2rem)] w-full max-w-5xl overflow-y-auto rounded-[2rem] bg-white shadow-2xl">
+        <div className="financial-dialog-header sticky top-0 z-10 flex items-center justify-between border-b border-slate-100 bg-white px-7 pb-4 pt-7">
           <div>
             <p className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.18em] text-indigo-600">
               <Landmark size={14} /> {isMatriz ? 'Crédito centralizado na Matriz' : 'Crédito próprio do polo'}
@@ -190,29 +191,27 @@ const EmprestimoForm: React.FC<EmprestimoFormProps> = ({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-4 px-7 py-6 md:grid-cols-2">
+        <form onSubmit={handleSubmit} className="financial-dialog-body grid grid-cols-1 gap-4 px-7 py-6 md:grid-cols-2">
           <div>
             <label className="mb-1.5 block text-[10px] font-black uppercase tracking-wider text-slate-400">
               <Landmark size={11} className="mr-1 inline" /> Banco credor (Parceiro PJ • categoria Banco) *
             </label>
-            <select
+            <FinancialSelect
               value={credorParceiroId}
-              onChange={(event) => setCredorParceiroId(event.target.value)}
+              onValueChange={setCredorParceiroId}
+              ariaLabel="Banco credor"
+              placeholder="Selecione um banco cadastrado..."
               required
+              allowClear
+              loading={bancosCredoresQuery.isPending}
               disabled={bancosCredoresQuery.isPending || bancosCredoresQuery.isError}
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold outline-none transition-all focus:ring-2 focus:ring-indigo-500 disabled:cursor-not-allowed disabled:text-slate-400"
-            >
-              <option value="">
-                {bancosCredoresQuery.isPending
-                  ? 'Carregando bancos cadastrados...'
-                  : 'Selecione um banco cadastrado...'}
-              </option>
-              {bancosCredores.map((banco) => (
-                <option key={banco.id} value={banco.id}>
-                  {banco.nome}{banco.cpfCnpj ? ` • ${banco.cpfCnpj}` : ''}
-                </option>
-              ))}
-            </select>
+              error={bancosCredoresQuery.isError ? 'Não foi possível carregar os bancos cadastrados.' : undefined}
+              options={bancosCredores.map((banco) => ({
+                value: banco.id,
+                label: `${banco.nome}${banco.cpfCnpj ? ` • ${banco.cpfCnpj}` : ''}`,
+                keywords: banco.cpfCnpj || undefined,
+              }))}
+            />
             {bancosCredoresQuery.isError ? (
               <p className="mt-1.5 text-[11px] font-medium text-rose-600">
                 Não foi possível carregar os bancos cadastrados. Tente novamente ao reabrir o formulário.
@@ -455,7 +454,7 @@ const EmprestimoForm: React.FC<EmprestimoFormProps> = ({
             </div>
           )}
 
-          <div className="flex gap-3 pt-2 md:col-span-2">
+          <div className="financial-dialog-footer flex gap-3 pt-2 md:col-span-2">
             <button
               type="button"
               onClick={onClose}

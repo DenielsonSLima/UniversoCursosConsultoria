@@ -43,7 +43,7 @@ export function OtherCreditPlanWizard({ model, resources }: { model: OtherCredit
       <OtherCreditPlanSchedule form={form} schedule={model.schedule} current={Boolean(model.preview)} pending={model.previewPending}
         disabled={disabled} onChange={model.changeForm} onRefresh={() => model.previewPlan()} />
     </OtherCreditPlanFinancialForm> : null}
-    {model.step === 3 ? <fieldset disabled={disabled} className="min-w-0 space-y-5">
+    {model.step === 3 ? <fieldset disabled={disabled} className="financial-dialog-section min-w-0 space-y-5">
       <dl className="grid gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:grid-cols-2">
         {[
           ['Pagador', customerName], ['Categoria', categoryName], ['Descrição', form.description],
@@ -55,7 +55,7 @@ export function OtherCreditPlanWizard({ model, resources }: { model: OtherCredit
         {model.attempt ? 'A configuração deste pedido está preservada. Confirme novamente para recuperar o mesmo carnê.' : 'Volte ao financeiro para recalcular as parcelas antes de criar.'}
       </p>}
     </fieldset> : null}
-    <div className="sticky bottom-0 z-10 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 bg-white py-4">
+    <div className="financial-dialog-footer sticky bottom-0 z-10 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 bg-white py-4">
       <p className="text-xs font-bold text-slate-500">Etapa {model.step} de 3</p>
       <div className={`grid w-full gap-2 sm:flex sm:w-auto sm:gap-3 ${model.step > 1 && !model.attempt ? 'grid-cols-2' : 'grid-cols-1'}`}>
         {model.step > 1 && !model.attempt ? <button type="button" onClick={model.previousStep} disabled={model.busy || model.previewPending}

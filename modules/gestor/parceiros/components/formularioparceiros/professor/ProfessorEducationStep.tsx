@@ -1,3 +1,5 @@
+import InstitutionalSelect from '../../../../../shared/components/InstitutionalSelect';
+import { partnerSelectChange } from '../partner-select-change';
 import React from 'react';
 import { AlertCircle, GraduationCap } from 'lucide-react';
 import {
@@ -28,10 +30,10 @@ const ProfessorEducationStep: React.FC<ProfessorEducationStepProps> = ({
     <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
       <div>
         <label className={labelCls}>Titulação</label>
-        <select name="titulacao" value={formData.titulacao} onChange={onChange} className={inputCls}>
-          <option value="">Selecione a titulação...</option>
-          {PRESET_TITULACOES.map((item) => <option key={item} value={item}>{item}</option>)}
-        </select>
+        <InstitutionalSelect value={formData.titulacao} onValueChange={partnerSelectChange("titulacao", onChange)}
+          ariaLabel="Titulação" 
+          options={[{ value: "", label: "Selecione a titulação..." },
+            ...PRESET_TITULACOES.map((item) => ({ value: item, label: item }))]} className="w-full" />
       </div>
       <div>
         <label className={labelCls}>Área de formação</label>
@@ -47,10 +49,10 @@ const ProfessorEducationStep: React.FC<ProfessorEducationStepProps> = ({
       </div>
       <div>
         <label className={labelCls}>Conselho / registro profissional</label>
-        <select name="registroProfissional" value={formData.registroProfissional} onChange={onChange} className={inputCls}>
-          <option value="">Selecione...</option>
-          {REGISTROS.map((item) => <option key={item} value={item}>{item}</option>)}
-        </select>
+        <InstitutionalSelect value={formData.registroProfissional} onValueChange={partnerSelectChange("registroProfissional", onChange)}
+          ariaLabel="Registro profissional" 
+          options={[{ value: "", label: "Selecione..." },
+            ...REGISTROS.map((item) => ({ value: item, label: item }))]} className="w-full" />
       </div>
       <div>
         <label className={labelCls}>Número do registro</label>
