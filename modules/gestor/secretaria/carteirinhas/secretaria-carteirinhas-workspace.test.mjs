@@ -10,7 +10,12 @@ const modules = process.env.EAD_UI_NODE_MODULES || resolve('node_modules');
 const { build } = await import(pathToFileURL(join(modules, 'esbuild/lib/main.js')));
 const folder = await mkdtemp(join(tmpdir(), 'carteirinha-workspace-'));
 const output = join(folder, 'page.mjs');
-after(() => rm(folder, { recursive: true, force: true }));
+after(async () => {
+  await rm(folder, { recursive: true, force: true });
+  delete globalThis.__cardWorkspaceTest;
+  delete globalThis.window;
+  delete globalThis.alert;
+});
 
 // Controlled hooks execute the actual Page and its effect/handler transitions;
 // network, presentation children and formatting are outside this state contract.
@@ -49,7 +54,13 @@ const stubs = {
   academicUtils: 'export const formatMatricula = id => `MAT-${id}`;',
   'carteirinha-date-formatters': 'export const formatCarteirinhaDate = value => value;',
   'document-validation.service': `export const createDocumentReissueKey = () => 'request';
-    export const documentValidationService = {reissue: () => new Promise(resolve => {
+    export const documentValidationService = {reissue: ({enrollmentId}) => new Promise(resolve => {
+      const test = globalThis.__cardWorkspaceTest;
+      if (test.autoIssue) {
+        test.issued.push(enrollmentId);
+        resolve({code: 'CIE-' + enrollmentId, expiresAt: null, validationPublic: true});
+        return;
+      }
       globalThis.__cardWorkspaceTest.resolveIssue = resolve;
     })};`,
   'secretaria-carteirinhas.helpers': 'export const TEMPLATE_DEFAULT = {startNumber: 1000};',
@@ -125,7 +136,42 @@ test('workspace refetch cannot replace an in-flight/open card batch and applies 
   assert.equal(view.type, 'Controls');
   assert.equal(view.props.alunos[0].nome, 'TERCEIRO ALUNO');
   assert.equal(view.props.selectedAluno, null);
-  delete globalThis.__cardWorkspaceTest;
-  delete globalThis.window;
-  delete globalThis.alert;
+});
+
+test('all, class and custom batches preserve RPC order across A4 sheets and layouts', async () => {
+  // Backend returns alphabetical order, including accents and mixed case.
+  const names = ['Ágata', 'ALICE', 'breno', 'CAIO', 'DANIEL', 'Érica',
+    'FÁBIO', 'GABRIEL', 'HELENA', 'JAINE', 'KALYNE', 'NATALY', 'ROBERT'];
+  for (const layout of ['dobra', 'espelhado']) {
+    for (const mode of ['lote', 'turma', 'personalizado']) {
+      state.hooks = []; state.autoIssue = true; state.issued = [];
+      const data = workspace('unused', '#001a33');
+      data.enrollments = names.map((name, index) => ({
+        ...data.enrollments[0], enrollmentId: `enrollment-${index}`, alunoId: `student-${index}`,
+        alunoNome: name, turmaId: index % 2 === 0 ? 'turma-a' : 'turma-b',
+      }));
+      // A second enrollment must not change the primary card or duplicate it.
+      data.enrollments.splice(1, 0, {...data.enrollments[0], enrollmentId: 'older', turmaId: 'turma-b'});
+      state.query = {data, isLoading: false, isError: false};
+      let view = render();
+      const original = [...view.props.alunos];
+      view.props.setMode(mode === 'turma' ? 'lote' : mode);
+      view.props.setLayoutType(layout);
+      if (mode === 'turma') view.props.setSelectedTurmaId('turma-a');
+      if (mode === 'personalizado') view.props.setCustomSelectedAlunos([...original].reverse());
+      const expected = original.filter((_, index) => mode !== 'turma' || index % 2 === 0);
+      view = render();
+      assert.deepEqual(view.props.alunosParaImprimir.map(aluno => aluno.id), expected.map(aluno => aluno.id));
+      view.props.onPrintAction();
+      await new Promise(resolve => setImmediate(resolve));
+      view = render();
+      assert.equal(view.type, 'PrintLayout');
+      assert.equal(view.props.layoutType, layout);
+      assert.deepEqual(view.props.alunos.map(aluno => aluno.nome), expected.map(aluno => aluno.nome));
+      assert.deepEqual(state.issued, expected.map(aluno => aluno.enrollmentId));
+      assert.ok(view.props.alunos.every(aluno => aluno.validationCode === `CIE-${aluno.enrollmentId}`));
+      assert.equal(original[0].enrollmentId, 'enrollment-0');
+      assert.equal(view.props.alunos.length, mode === 'turma' ? 7 : 13);
+    }
+  }
 });

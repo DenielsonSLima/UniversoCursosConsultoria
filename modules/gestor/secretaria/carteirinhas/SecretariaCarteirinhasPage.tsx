@@ -145,17 +145,20 @@ const SecretariaCarteirinhasPage: React.FC<SecretariaCarteirinhasPageProps> = ({
     }
   };
 
-  const handlePrintAction = async () => {
-    if (validationRequestInFlightRef.current) return;
-    const targets = mode === 'individual'
+  // O workspace define a ordem canônica; filtros preservam essa sequência,
+  // inclusive quando a seleção personalizada foi feita em outra ordem.
+  const customSelectedIds = new Set(customSelectedAlunos.map((aluno) => aluno.id));
+  const rawAlunosParaImprimir = mode === 'individual'
       ? (selectedAluno ? [selectedAluno] : [])
       : mode === 'lote'
         ? (selectedTurmaId === 'todos'
             ? alunos
             : alunos.filter((aluno) => aluno.turmaIds?.includes(selectedTurmaId)))
-        : customSelectedAlunos;
+        : alunos.filter((aluno) => customSelectedIds.has(aluno.id));
 
-    const eligibleTargets = targets.filter((aluno) => aluno.enrollmentId);
+  const handlePrintAction = async () => {
+    if (validationRequestInFlightRef.current) return;
+    const eligibleTargets = rawAlunosParaImprimir.filter((aluno) => aluno.enrollmentId);
     if (!eligibleTargets.length) {
       alert('Nenhuma matrícula válida foi encontrada para gerar os códigos de consulta.');
       return;
@@ -204,14 +207,6 @@ const SecretariaCarteirinhasPage: React.FC<SecretariaCarteirinhasPageProps> = ({
       setIsPreparingValidation(false);
     }
   };
-
-  const rawAlunosParaImprimir = mode === 'individual'
-    ? (selectedAluno ? [selectedAluno] : [])
-    : mode === 'lote'
-      ? (selectedTurmaId === 'todos'
-          ? alunos
-          : alunos.filter((aluno) => aluno.turmaIds?.includes(selectedTurmaId)))
-      : customSelectedAlunos;
 
   const startNumber = templateConfig.startNumber || 1000;
   const alunosParaImprimir = rawAlunosParaImprimir.map((aluno, index) => {
