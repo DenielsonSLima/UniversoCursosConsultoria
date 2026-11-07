@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useId, useState } from 'react';
+import InstitutionalSelect from '../../../../shared/components/InstitutionalSelect';
 import { X, Save } from 'lucide-react';
 import { Categoria } from '../categorias.service';
 
@@ -19,6 +20,7 @@ const CategoriaForm: React.FC<CategoriaFormProps> = ({
   tipoFixo,
   statusFixo,
 }) => {
+  const titleId = useId();
   const [nome, setNome] = useState(categoria?.nome || '');
   const [tipo, setTipo] = useState<Categoria['tipo']>(tipoFixo || categoria?.tipo || 'pj');
   const [descricao, setDescricao] = useState(categoria?.descricao || '');
@@ -39,11 +41,11 @@ const CategoriaForm: React.FC<CategoriaFormProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-fadeIn">
-      <form onSubmit={handleSubmit} className="bg-white rounded-3xl w-full max-w-xl overflow-hidden shadow-2xl">
+    <div className="partner-registration-auxiliary fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-fadeIn">
+      <form role="dialog" aria-modal="true" aria-labelledby={titleId} onSubmit={handleSubmit} className="bg-white rounded-3xl w-full max-w-xl overflow-hidden shadow-2xl">
         <div className="flex items-center justify-between p-6 border-b border-slate-100 bg-slate-50/50">
           <div>
-            <h2 className="text-xl font-bold text-[#001a33]">
+            <h2 id={titleId} className="text-xl font-bold text-[#001a33]">
               {categoria ? 'Editar Categoria' : 'Nova Categoria'}
             </h2>
             <p className="text-sm text-slate-500 mt-1">
@@ -53,6 +55,7 @@ const CategoriaForm: React.FC<CategoriaFormProps> = ({
           <button 
             type="button"
             onClick={onClose}
+            aria-label="Fechar categoria"
             className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors"
           >
             <X size={20} />
@@ -79,17 +82,13 @@ const CategoriaForm: React.FC<CategoriaFormProps> = ({
               <label className="block text-sm font-bold text-slate-700 mb-2">
                 Grupo de Cadastro
               </label>
-              <select 
+              <InstitutionalSelect
                 value={tipoFixo || tipo}
-                onChange={(e) => setTipo(e.target.value as Categoria['tipo'])}
+                onValueChange={(value) => setTipo(value as Categoria['tipo'])}
                 disabled={Boolean(tipoFixo)}
-                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none transition-all text-slate-900"
-              >
-                <option value="aluno">Aluno</option>
-                <option value="professor">Professor</option>
-                <option value="pf">Pessoa Física (PF)</option>
-                <option value="pj">Pessoa Jurídica (PJ)</option>
-              </select>
+                ariaLabel="Grupo de cadastro"
+                options={[{"value": "aluno", "label": "Aluno"}, {"value": "professor", "label": "Professor"}, {"value": "pf", "label": "Pessoa Física (PF)"}, {"value": "pj", "label": "Pessoa Jurídica (PJ)"}]}
+              />
             </div>
 
             <div className="md:col-span-2">
@@ -109,15 +108,13 @@ const CategoriaForm: React.FC<CategoriaFormProps> = ({
               <label className="block text-sm font-bold text-slate-700 mb-2">
                 Status
               </label>
-              <select 
+              <InstitutionalSelect
                 value={statusFixo || status}
-                onChange={(e) => setStatus(e.target.value as Categoria['status'])}
+                onValueChange={(value) => setStatus(value as Categoria['status'])}
                 disabled={Boolean(statusFixo)}
-                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none transition-all"
-              >
-                <option value="ativo">Ativo</option>
-                <option value="inativo">Inativo</option>
-              </select>
+                ariaLabel="Status"
+                options={[{"value": "ativo", "label": "Ativo"}, {"value": "inativo", "label": "Inativo"}]}
+              />
             </div>
 
           </div>
@@ -127,6 +124,7 @@ const CategoriaForm: React.FC<CategoriaFormProps> = ({
           <button 
             type="button"
             onClick={onClose}
+            aria-label="Fechar categoria"
             className="px-6 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-200 rounded-xl transition-colors uppercase tracking-wider"
           >
             Cancelar

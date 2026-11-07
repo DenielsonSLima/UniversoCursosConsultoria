@@ -1,3 +1,4 @@
+import '../partner-registration.css';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   AlertCircle,
@@ -199,8 +200,8 @@ const ParceiroProfessorForm: React.FC<ParceiroProfessorFormProps> = ({
   };
 
   return (
-    <div>
-      <div className="mb-6 flex items-center justify-between border-b border-slate-100 pb-5">
+    <div className="partner-registration">
+      <div className="partner-registration-header mb-6 flex items-center justify-between border-b border-slate-100 pb-5">
         <div>
           <h3 className="text-xl font-black uppercase tracking-tight text-[#001a33]">Novo professor</h3>
           <p className="mt-0.5 text-sm font-medium text-slate-500">Somente polo, nome e CPF são obrigatórios.</p>
@@ -212,7 +213,7 @@ const ParceiroProfessorForm: React.FC<ParceiroProfessorFormProps> = ({
         )}
       </div>
 
-      <div className="relative mb-8 flex items-center justify-between">
+      <div className="partner-registration-steps relative mb-8 flex items-center justify-between">
         <div className="absolute left-0 right-0 top-5 z-0 h-0.5 bg-slate-100" />
         {STEPS.map((step) => {
           const Icon = step.icon;
@@ -277,7 +278,7 @@ const ParceiroProfessorForm: React.FC<ParceiroProfessorFormProps> = ({
         {currentStep === 3 && <ProfessorPaymentStep formData={formData} inputCls={inputCls} labelCls={labelCls} onChange={handleChange} />}
         {currentStep === 4 && <ProfessorContactStep formData={formData} inputCls={inputCls} labelCls={labelCls} onChange={handleChange} onCepBlur={handleCepBlur} />}
 
-        <div className="mt-6 flex justify-between gap-3 border-t border-slate-100 pt-6">
+        <div className="partner-registration-footer mt-6 flex justify-between gap-3 border-t border-slate-100 pt-6">
           <button type="button" onClick={currentStep === 1 ? onCancel : handleBack} disabled={isSaving} className="flex items-center gap-2 rounded-xl border border-slate-200 px-6 py-3 text-xs font-bold uppercase tracking-wider text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50">
             <ChevronLeft size={16} /> {currentStep === 1 ? 'Cancelar' : 'Voltar'}
           </button>

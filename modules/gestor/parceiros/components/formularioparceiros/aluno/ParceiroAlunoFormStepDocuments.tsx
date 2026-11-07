@@ -1,3 +1,5 @@
+import InstitutionalSelect from '../../../../../shared/components/InstitutionalSelect';
+import { partnerSelectChange } from '../partner-select-change';
 import type React from 'react';
 import { AlertCircle, Shield } from 'lucide-react';
 
@@ -37,12 +39,10 @@ const ParceiroAlunoFormStepDocuments: React.FC<AlunoFormStepProps & {
     <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
       <div className="md:col-span-3">
         <label className={LABEL_CLS}>Tipo de Documento de Identificação</label>
-        <select name="tipoDocumento" value={formData.tipoDocumento} onChange={onChange} className={INPUT_CLS}>
-          <option value="">Selecione se quiser informar agora</option>
-          {TECHNICAL_DOCUMENT_TYPE_OPTIONS.map((option) => (
-            <option key={option.value} value={option.value}>{option.label}</option>
-          ))}
-        </select>
+        <InstitutionalSelect value={formData.tipoDocumento} onValueChange={partnerSelectChange("tipoDocumento", onChange)}
+          ariaLabel="Tipo de documento" 
+          options={[{ value: "", label: "Selecione se quiser informar agora" },
+            ...TECHNICAL_DOCUMENT_TYPE_OPTIONS.map((option) => ({ value: option.value, label: option.label }))]} className="w-full" />
       </div>
 
       {isCin ? (
@@ -85,10 +85,10 @@ const ParceiroAlunoFormStepDocuments: React.FC<AlunoFormStepProps & {
         <>
           <div>
             <label className={LABEL_CLS}>UF Emissão</label>
-            <select name="rgUfEmissao" value={formData.rgUfEmissao} onChange={onChange} className={INPUT_CLS}>
-              <option value="">UF</option>
-              {UFS.map((uf) => <option key={uf} value={uf}>{uf}</option>)}
-            </select>
+            <InstitutionalSelect value={formData.rgUfEmissao} onValueChange={partnerSelectChange("rgUfEmissao", onChange)}
+              ariaLabel="UF de emissão do RG" 
+              options={[{ value: "", label: "UF" },
+                ...UFS.map((uf) => ({ value: uf, label: uf }))]} className="w-full" />
           </div>
 
           <div>
@@ -118,22 +118,18 @@ const ParceiroAlunoFormStepDocuments: React.FC<AlunoFormStepProps & {
 
       <div>
         <label className={LABEL_CLS}>Tipo de Certidão</label>
-        <select name="certidaoTipo" value={formData.certidaoTipo} onChange={onChange} className={INPUT_CLS}>
-          <option value="">Selecione se quiser informar agora</option>
-          {CERTIDAO_CIVIL_TYPE_OPTIONS.map((option) => (
-            <option key={option.value} value={option.value}>{option.label}</option>
-          ))}
-        </select>
+        <InstitutionalSelect value={formData.certidaoTipo} onValueChange={partnerSelectChange("certidaoTipo", onChange)}
+          ariaLabel="Tipo de certidão" 
+          options={[{ value: "", label: "Selecione se quiser informar agora" },
+            ...CERTIDAO_CIVIL_TYPE_OPTIONS.map((option) => ({ value: option.value, label: option.label }))]} className="w-full" />
       </div>
 
       <div className="md:col-span-2">
         <label className={LABEL_CLS}>Modelo da Certidão</label>
-        <select name="certidaoModelo" value={formData.certidaoModelo} onChange={onChange} className={INPUT_CLS}>
-          <option value="">Selecione se quiser informar agora</option>
-          {CERTIDAO_CIVIL_MODEL_OPTIONS.map((option) => (
-            <option key={option.value} value={option.value}>{option.label}</option>
-          ))}
-        </select>
+        <InstitutionalSelect value={formData.certidaoModelo} onValueChange={partnerSelectChange("certidaoModelo", onChange)}
+          ariaLabel="Modelo da certidão" 
+          options={[{ value: "", label: "Selecione se quiser informar agora" },
+            ...CERTIDAO_CIVIL_MODEL_OPTIONS.map((option) => ({ value: option.value, label: option.label }))]} className="w-full" />
       </div>
 
       {formData.certidaoModelo === 'NOVO' ? (
@@ -202,10 +198,10 @@ const ParceiroAlunoFormStepDocuments: React.FC<AlunoFormStepProps & {
 
       <div>
         <label className={LABEL_CLS}>UF do Título</label>
-        <select name="tituloEleitorUf" value={formData.tituloEleitorUf} onChange={onChange} className={INPUT_CLS}>
-          <option value="">UF</option>
-          {UFS.map((uf) => <option key={uf} value={uf}>{uf}</option>)}
-        </select>
+        <InstitutionalSelect value={formData.tituloEleitorUf} onValueChange={partnerSelectChange("tituloEleitorUf", onChange)}
+          ariaLabel="UF do título de eleitor" 
+          options={[{ value: "", label: "UF" },
+            ...UFS.map((uf) => ({ value: uf, label: uf }))]} className="w-full" />
       </div>
 
       <div className="md:col-span-3">

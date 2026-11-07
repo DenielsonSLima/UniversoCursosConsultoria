@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useId, useState } from 'react';
+import InstitutionalSelect from '../../../../shared/components/InstitutionalSelect';
 import { Handshake, Save, X } from 'lucide-react';
 import { TipoParceria } from '../tipos-parceria.service';
 
@@ -17,13 +18,15 @@ const TipoParceriaForm: React.FC<TipoParceriaFormProps> = ({
   onSave,
   statusFixo,
 }) => {
+  const titleId = useId();
   const [nome, setNome] = useState(tipo?.nome || '');
   const [descricao, setDescricao] = useState(tipo?.descricao || '');
   const [status, setStatus] = useState<TipoParceria['status']>(statusFixo || tipo?.status || 'ativo');
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-sm">
+    <div className="partner-registration-auxiliary fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-sm">
       <form
+        role="dialog" aria-modal="true" aria-labelledby={titleId}
         onSubmit={(event) => {
           event.preventDefault();
           if (!nome.trim()) return;
@@ -37,7 +40,7 @@ const TipoParceriaForm: React.FC<TipoParceriaFormProps> = ({
               <Handshake size={22} />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-[#001a33]">
+              <h2 id={titleId} className="text-xl font-bold text-[#001a33]">
                 {tipo ? 'Editar tipo de parceria' : 'Novo tipo de parceria'}
               </h2>
               <p className="mt-1 text-sm text-slate-500">
@@ -45,7 +48,7 @@ const TipoParceriaForm: React.FC<TipoParceriaFormProps> = ({
               </p>
             </div>
           </div>
-          <button type="button" onClick={onClose} className="rounded-full p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700">
+          <button type="button" onClick={onClose} aria-label="Fechar tipo de parceria" className="rounded-full p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700">
             <X size={20} />
           </button>
         </div>
@@ -74,20 +77,18 @@ const TipoParceriaForm: React.FC<TipoParceriaFormProps> = ({
           </div>
           <div>
             <label className="mb-2 block text-sm font-bold text-slate-700">Status</label>
-            <select
-              value={statusFixo || status}
-              onChange={(event) => setStatus(event.target.value as TipoParceria['status'])}
-              disabled={Boolean(statusFixo)}
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 p-3 text-[#001a33] outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-            >
-              <option value="ativo">Ativo</option>
-              <option value="inativo">Inativo</option>
-            </select>
+            <InstitutionalSelect
+                value={statusFixo || status}
+                onValueChange={(value) => setStatus(value as TipoParceria['status'])}
+                disabled={Boolean(statusFixo)}
+                ariaLabel="Status"
+                options={[{"value": "ativo", "label": "Ativo"}, {"value": "inativo", "label": "Inativo"}]}
+              />
           </div>
         </div>
 
         <div className="flex justify-end gap-3 border-t border-slate-100 bg-slate-50 p-6">
-          <button type="button" onClick={onClose} className="rounded-xl px-6 py-2.5 text-sm font-bold uppercase tracking-wider text-slate-600 hover:bg-slate-200">
+          <button type="button" onClick={onClose} aria-label="Fechar tipo de parceria" className="rounded-xl px-6 py-2.5 text-sm font-bold uppercase tracking-wider text-slate-600 hover:bg-slate-200">
             Cancelar
           </button>
           <button

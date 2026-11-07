@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react';
+import './partner-selection.css';
 import { Building, GraduationCap, User, Users, UsersRound, X } from 'lucide-react';
 
 type FormType = 'aluno' | 'professor' | 'responsavel' | 'selection' | 'pf' | 'pj' | null;
@@ -78,7 +79,7 @@ const ParceiroSelectionModal: React.FC<ParceiroSelectionModalProps> = ({
   }, []);
 
   return (
-  <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#001a33]/60 p-4 backdrop-blur-sm">
+  <div className="partner-selection-overlay fixed inset-0 z-50 flex items-center justify-center bg-[#001a33]/60 p-4 backdrop-blur-sm">
     <div
       ref={dialogRef}
       role="dialog"
@@ -86,7 +87,7 @@ const ParceiroSelectionModal: React.FC<ParceiroSelectionModalProps> = ({
       aria-labelledby="parceiro-selection-title"
       aria-describedby="parceiro-selection-description"
       tabIndex={-1}
-      className="relative max-h-[calc(100dvh-2rem)] w-full max-w-4xl overflow-y-auto overscroll-contain rounded-[2.5rem] border border-slate-100 bg-white p-5 shadow-2xl sm:p-8"
+      className="partner-selection-dialog relative max-h-[calc(100dvh-2rem)] w-full max-w-4xl overflow-y-auto overscroll-contain rounded-[2.5rem] border border-slate-100 bg-white p-5 shadow-2xl sm:p-8"
     >
       <button
         ref={closeButtonRef}
@@ -98,12 +99,12 @@ const ParceiroSelectionModal: React.FC<ParceiroSelectionModalProps> = ({
         <X size={24} />
       </button>
 
-      <div className="text-center mb-10 mt-2">
+      <div className="partner-selection-heading text-center mb-10 mt-2">
         <h3 id="parceiro-selection-title" className="text-2xl font-black text-[#001a33] uppercase tracking-tight">Novo Registro</h3>
         <p id="parceiro-selection-description" className="text-slate-500 font-medium">Selecione o tipo de cadastro que deseja realizar.</p>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4">
+      <div className="partner-selection-options grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4">
         <button
           onClick={() => onSelect('aluno')}
           className="group flex flex-col items-center justify-center p-6 rounded-3xl border-2 border-slate-100 hover:border-blue-500 hover:bg-blue-50 transition-all duration-300"

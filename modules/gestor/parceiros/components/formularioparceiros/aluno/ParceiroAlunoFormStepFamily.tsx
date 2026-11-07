@@ -1,3 +1,5 @@
+import InstitutionalSelect from '../../../../../shared/components/InstitutionalSelect';
+import { partnerSelectChange } from '../partner-select-change';
 import type React from 'react';
 import { AlertCircle, Heart, Shield } from 'lucide-react';
 
@@ -62,16 +64,16 @@ const ParceiroAlunoFormStepFamily: React.FC<FamilyStepProps> = ({ formData, isMi
 
           <div>
             <label className={LABEL_CLS}>Parentesco</label>
-            <select name="responsavelParentesco" value={formData.responsavelParentesco} onChange={onChange} className={INPUT_CLS}>
-              <option value="">Selecione...</option>
-              <option value="MÃE">MÃE</option>
-              <option value="PAI">PAI</option>
-              <option value="AVÓ/AVÔ">AVÓ/AVÔ</option>
-              <option value="TIO(A)">TIO(A)</option>
-              <option value="IRMÃO/IRMÃ">IRMÃO/IRMÃ</option>
-              <option value="TUTOR(A) LEGAL">TUTOR(A) LEGAL</option>
-              <option value="OUTRO">OUTRO</option>
-            </select>
+            <InstitutionalSelect value={formData.responsavelParentesco} onValueChange={partnerSelectChange("responsavelParentesco", onChange)}
+              ariaLabel="Parentesco do responsável" 
+              options={[{ value: "", label: "Selecione..." },
+                { value: "MÃE", label: "MÃE" },
+                { value: "PAI", label: "PAI" },
+                { value: "AVÓ/AVÔ", label: "AVÓ/AVÔ" },
+                { value: "TIO(A)", label: "TIO(A)" },
+                { value: "IRMÃO/IRMÃ", label: "IRMÃO/IRMÃ" },
+                { value: "TUTOR(A) LEGAL", label: "TUTOR(A) LEGAL" },
+                { value: "OUTRO", label: "OUTRO" }]} className="w-full" />
           </div>
 
           <div>
@@ -100,13 +102,13 @@ const ParceiroAlunoFormStepFamily: React.FC<FamilyStepProps> = ({ formData, isMi
           </div>
           <div>
             <label className={LABEL_CLS}>Parentesco</label>
-            <select name="responsavelParentesco" value={formData.responsavelParentesco} onChange={onChange} className={INPUT_CLS}>
-              <option value="">Selecione...</option>
-              <option value="CÔNJUGE">CÔNJUGE</option>
-              <option value="MÃE">MÃE</option>
-              <option value="PAI">PAI</option>
-              <option value="OUTRO">OUTRO</option>
-            </select>
+            <InstitutionalSelect value={formData.responsavelParentesco} onValueChange={partnerSelectChange("responsavelParentesco", onChange)}
+              ariaLabel="Parentesco do responsável" 
+              options={[{ value: "", label: "Selecione..." },
+                { value: "CÔNJUGE", label: "CÔNJUGE" },
+                { value: "MÃE", label: "MÃE" },
+                { value: "PAI", label: "PAI" },
+                { value: "OUTRO", label: "OUTRO" }]} className="w-full" />
           </div>
         </div>
       </div>

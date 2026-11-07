@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "retrieval": "lexical-bm25-with-source-citations",
-  "builtAt": "2026-11-07T03:18:44.433Z",
+  "builtAt": "2026-11-07T11:25:03.492Z",
   "manifestVersion": 2,
-  "sourceSignature": "8a86abe4882aa11f83d124c1c7437945adc38e121a1a778df218890670b747e3",
+  "sourceSignature": "05c3f5f4fe5f84267dacdf25edb5a533db2ed3316ef4b71e318c8cd76f971e8b",
   "sources": [
     {
       "path": "AGENTS.md",
@@ -11,7 +11,7 @@
     },
     {
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "hash": "3e7239fdfc7556df4668895a6a54969699c12af1d257939a3612ff3dfd97b5e4"
+      "hash": "320d2b6594de4327a970230972107ba10c1e1b3d69abe94bbc7ae903685746e1"
     },
     {
       "path": "ai/operacao/MEMORIA_CANONICA.md",
@@ -208,23 +208,33 @@
       "part": 1
     },
     {
-      "id": "2fa9710669d55c7f9fbc",
-      "hash": "2fa9710669d55c7f9fbc52d3c2d80caf80fb6f4a008925d8c3657e68163b237a",
+      "id": "fc2ed6c985a94eedf8d5",
+      "hash": "fc2ed6c985a94eedf8d51c30376b81c53c3150a2f2e4b046e1e135191a70013d",
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Lote: 2026-11-06-financeiro-tabelas-nitidas",
-      "text": "Padronização compacta de tabelas, modais, abas, ações e seletores das dez abas financeiras. Preservar informações operacionais, consultas, permissões e cálculos. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-06-financeiro-tabelas-nitidas.md`.",
-      "normalizedText": "padronizacao compacta de tabelas modais abas acoes e seletores das dez abas financeiras preservar informacoes operacionais consultas permissoes e calculos manifesto explicito ai operacao registros alteracoes 2026 11 06 financeiro tabelas nitidas md",
+      "section": "Lote: 2026-11-07-parceiros-cadastros-compactos",
+      "text": "Padronizar cadastros, seletores e cartões de Parceiros, preservando campos, valores, validações, escopo e quatro cartões por linha no desktop amplo. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-07-parceiros-cadastros-compactos.md`.",
+      "normalizedText": "padronizar cadastros seletores e cartoes de parceiros preservando campos valores validacoes escopo e quatro cartoes por linha no desktop amplo manifesto explicito ai operacao registros alteracoes 2026 11 07 parceiros cadastros compactos md",
       "tokenCount": 31,
       "part": 1
     },
     {
-      "id": "886ed8c1769fe395a8d6",
-      "hash": "886ed8c1769fe395a8d6d665c603088011e922d3929754cbafe73dfe3f343222",
+      "id": "160c15b1a8ae22973c88",
+      "hash": "160c15b1a8ae22973c888ed941106e16e2f01431a1940d2ae8f8f357c695b1a6",
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Lote: 2026-11-06-financeiro-tabelas-nitidas",
-      "text": "Três frentes independentes, integração e revisão proporcional. Conferência local com componentes reais/dados sintéticos; usuário autorizou Chrome para liberar o Safari. Comboboxes próprios, abas com linha inferior e buscas brancas. GitHub/Preview na PR #347, versão 4.8.251 sobre 4.8.250. Produção não solicitada.",
-      "normalizedText": "tres frentes independentes integracao e revisao proporcional conferencia local com componentes reais dados sinteticos usuario autorizou chrome para liberar o safari comboboxes proprios abas com linha inferior e buscas brancas github preview na pr 347 versao 4 8 251 sobre 4 8 250 producao nao solicitada",
-      "tokenCount": 39,
+      "section": "Lote: 2026-11-07-parceiros-cadastros-compactos",
+      "text": "Três frentes independentes: formulários; cartões/Responsáveis; auditoria de carregamento. Conferência local no Chrome a pedido do usuário. Análise de dados separa paginação local, filtro de polo e cache, com consultas remotas somente de leitura. A skill visual e sua especificação pertencem a manifesto operacional separado, solicitado expressamente pelo usuário.",
+      "normalizedText": "tres frentes independentes formularios cartoes responsaveis auditoria de carregamento conferencia local no chrome a pedido do usuario analise de dados separa paginacao local filtro de polo e cache com consultas remotas somente de leitura a skill visual e sua especificacao pertencem a manifesto operacional separado solicitado expressamente pelo usuario",
+      "tokenCount": 44,
+      "part": 1
+    },
+    {
+      "id": "146114016419de1d8787",
+      "hash": "146114016419de1d8787a10a7745ab8fe7af3903208762fc748eef9a81ecf615",
+      "path": "ai/operacao/LOTE_ATIVO.md",
+      "section": "Lote: 2026-11-07-parceiros-cadastros-compactos",
+      "text": "Base técnica: Financeiro PR #347, 4.8.251; entrega Parceiros depende desse código. A orientação mais recente do usuário autoriza produção AGORA somente para Financeiro 4.8.251 e Parceiros 4.8.252 implementados, para conferência posterior. Substitui a condição anterior de esperar todas as etapas; Caixa, Configurações, Comunicação e Biblioteca continuam pendentes, sem início nesta rodada. Parceiros verificado localmente; CSS móvel compartilhado aceito por PF real a 390 px e markup comum, com limites de cobertura documentados. Não alterar dados, RLS ou consultas operacionais como efeito de manutenção visual.",
+      "normalizedText": "base tecnica financeiro pr 347 4 8 251 entrega parceiros depende desse codigo a orientacao mais recente do usuario autoriza producao agora somente para financeiro 4 8 251 e parceiros 4 8 252 implementados para conferencia posterior substitui a condicao anterior de esperar todas as etapas caixa configuracoes comunicacao e biblioteca continuam pendentes sem inicio nesta rodada parceiros verificado localmente css movel compartilhado aceito por pf real a 390 px e markup comum com limites de cobertura documentados nao alterar dados rls ou consultas operacionais como efeito de manutencao visual",
+      "tokenCount": 78,
       "part": 1
     },
     {

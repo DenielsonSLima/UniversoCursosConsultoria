@@ -1,3 +1,5 @@
+import InstitutionalSelect from '../../../../../shared/components/InstitutionalSelect';
+import { partnerSelectChange } from '../partner-select-change';
 import type React from 'react';
 import { GraduationCap } from 'lucide-react';
 
@@ -18,12 +20,12 @@ const ParceiroAlunoFormStepEducation: React.FC<AlunoFormStepProps> = ({ formData
     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
       <div className="md:col-span-2">
         <label className={LABEL_CLS}>Situação do Ensino Médio</label>
-        <select name="situacaoEnsinoMedio" value={formData.situacaoEnsinoMedio} onChange={onChange} className={INPUT_CLS}>
-          <option value="">Selecione...</option>
-          <option value="CURSANDO">Cursando</option>
-          <option value="CONCLUIDO">Concluído</option>
-          <option value="EJA">EJA</option>
-        </select>
+        <InstitutionalSelect value={formData.situacaoEnsinoMedio} onValueChange={partnerSelectChange("situacaoEnsinoMedio", onChange)}
+          ariaLabel="Situação do Ensino Médio" 
+          options={[{ value: "", label: "Selecione..." },
+            { value: "CURSANDO", label: "Cursando" },
+            { value: "CONCLUIDO", label: "Concluído" },
+            { value: "EJA", label: "EJA" }]} className="w-full" />
       </div>
 
       <div className="md:col-span-2">
@@ -38,11 +40,11 @@ const ParceiroAlunoFormStepEducation: React.FC<AlunoFormStepProps> = ({ formData
         <>
           <div>
             <label className={LABEL_CLS}>Série atual</label>
-            <select name="serieEnsinoMedioAtual" value={formData.serieEnsinoMedioAtual} onChange={onChange} className={INPUT_CLS}>
-              <option value="">Selecione...</option>
-              <option value="2">2º ano</option>
-              <option value="3">3º ano</option>
-            </select>
+            <InstitutionalSelect value={formData.serieEnsinoMedioAtual} onValueChange={partnerSelectChange("serieEnsinoMedioAtual", onChange)}
+              ariaLabel="Série atual do Ensino Médio" 
+              options={[{ value: "", label: "Selecione..." },
+                { value: "2", label: "2º ano" },
+                { value: "3", label: "3º ano" }]} className="w-full" />
           </div>
           <div>
             <label className={LABEL_CLS}>Previsão de conclusão</label>
@@ -74,10 +76,10 @@ const ParceiroAlunoFormStepEducation: React.FC<AlunoFormStepProps> = ({ formData
       <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
         <div>
           <label className={LABEL_CLS}>Nível de escolaridade anterior</label>
-          <select name="escolaridadeAnterior" value={formData.escolaridadeAnterior} onChange={onChange} className={INPUT_CLS}>
-            <option value="">Selecione a escolaridade...</option>
-            {ESCOLARIDADES.map((escolaridade) => <option key={escolaridade} value={escolaridade}>{escolaridade}</option>)}
-          </select>
+          <InstitutionalSelect value={formData.escolaridadeAnterior} onValueChange={partnerSelectChange("escolaridadeAnterior", onChange)}
+            ariaLabel="Escolaridade anterior" 
+            options={[{ value: "", label: "Selecione a escolaridade..." },
+              ...ESCOLARIDADES.map((escolaridade) => ({ value: escolaridade, label: escolaridade }))]} className="w-full" />
         </div>
         <div>
           <label className={LABEL_CLS}>Instituição de ensino anterior</label>

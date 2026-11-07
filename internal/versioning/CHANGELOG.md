@@ -14,6 +14,12 @@ Histórico arquivado: [05/10/2026 — versões 4.8.169 a 4.8.170](./changelog/20
 
 Histórico arquivado: [05/10/2026 — versões 4.8.171 a 4.8.174](./changelog/2026-10-05-versoes-4-8-171-a-174.md).
 
+## [4.8.252] - 2026-11-07
+
+### Alterado
+- Cadastros Aluno, Professor, Pessoa Física e Pessoa Jurídica com campos, etapas e seções compactos; seletores próprios pesquisáveis preservam valores e validações.
+- Cartões e Responsáveis seguem o padrão compacto, mantendo informações, permissões e quatro colunas no desktop amplo; análise de carregamento separada de alterações de dados.
+
 ## [4.8.251] - 2026-11-07
 
 ### Alterado

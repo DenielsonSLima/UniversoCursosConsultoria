@@ -1,3 +1,5 @@
+import InstitutionalSelect from '../../../../../shared/components/InstitutionalSelect';
+import { partnerSelectChange } from '../partner-select-change';
 import React from 'react';
 import { AlertCircle, FileText, Mail, MapPin, Phone } from 'lucide-react';
 import { UFS, type ProfessorFormData } from './professor-form.model';
@@ -49,10 +51,10 @@ const ProfessorContactStep: React.FC<ProfessorContactStepProps> = ({
       </div>
       <div>
         <label className={labelCls}>UF</label>
-        <select name="uf" value={formData.uf} onChange={onChange} className={inputCls}>
-          <option value="">UF</option>
-          {UFS.map((item) => <option key={item} value={item}>{item}</option>)}
-        </select>
+        <InstitutionalSelect value={formData.uf} onValueChange={partnerSelectChange("uf", onChange)}
+          ariaLabel="UF" 
+          options={[{ value: "", label: "UF" },
+            ...UFS.map((item) => ({ value: item, label: item }))]} className="w-full" />
       </div>
     </div>
 

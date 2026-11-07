@@ -1,3 +1,4 @@
+import '../partner-registration.css';
 // Cadastro inicial de aluno, sem iniciar matrícula neste módulo.
 
 import React, { useEffect, useRef, useState } from 'react';
@@ -250,7 +251,7 @@ const ParceiroAlunoForm: React.FC<ParceiroAlunoFormProps> = ({
   };
 
   return (
-    <div className="">
+    <div className="partner-registration">
       {pendingPhotoFile && (
         <ProfilePhotoAdjustModal
           file={pendingPhotoFile}
@@ -262,7 +263,7 @@ const ParceiroAlunoForm: React.FC<ParceiroAlunoFormProps> = ({
         />
       )}
 
-      <div className="flex justify-between items-center border-b border-slate-100 pb-5 mb-6">
+      <div className="partner-registration-header flex justify-between items-center border-b border-slate-100 pb-5 mb-6">
         <div>
           <h3 className="text-xl font-black text-[#001a33] uppercase tracking-tight">Novo Aluno</h3>
           <p className="text-slate-500 text-sm font-medium mt-0.5">Cadastro inicial do aluno</p>
@@ -278,7 +279,7 @@ const ParceiroAlunoForm: React.FC<ParceiroAlunoFormProps> = ({
         Para concluir o cadastro inicial, informe os dados pessoais, endereço e contato. Documentação, filiação e Ensino Médio podem ser preenchidos depois. Na matrícula técnica, a filiação e os dados pessoais e de endereço devem estar completos; o Ensino Médio permanece opcional e não bloqueia a ativação.
       </div>
 
-      <div className="flex items-center justify-between mb-8 relative">
+      <div className="partner-registration-steps flex items-center justify-between mb-8 relative">
         <div className="absolute top-5 left-0 right-0 h-0.5 bg-slate-100 z-0" />
         {STEPS.map((step) => {
           const Icon = step.icon;
@@ -326,7 +327,7 @@ const ParceiroAlunoForm: React.FC<ParceiroAlunoFormProps> = ({
         {currentStep === 4 && <ParceiroAlunoFormStepEducation formData={formData} onChange={handleChange} />}
         {currentStep === 5 && <ParceiroAlunoFormStepContact formData={formData} onChange={handleChange} onCepBlur={handleCepBlur} />}
 
-        <div className="flex justify-between gap-3 pt-6 mt-6 border-t border-slate-100">
+        <div className="partner-registration-footer flex justify-between gap-3 pt-6 mt-6 border-t border-slate-100">
           <button
             type="button"
             onClick={currentStep === 1 ? onCancel : () => setCurrentStep((step) => step - 1)}
@@ -339,6 +340,7 @@ const ParceiroAlunoForm: React.FC<ParceiroAlunoFormProps> = ({
 
           {currentStep < 5 ? (
             <button
+              key="next-step"
               type="button"
               onClick={handleNext}
               disabled={isSaving || !stepValid()}
@@ -348,6 +350,7 @@ const ParceiroAlunoForm: React.FC<ParceiroAlunoFormProps> = ({
             </button>
           ) : (
             <button
+              key="submit-aluno"
               type="submit"
               disabled={isSaving}
               className="flex items-center gap-2 px-8 py-3 rounded-xl bg-[#001a33] text-white font-bold text-xs uppercase tracking-wider hover:bg-blue-900 shadow-lg shadow-blue-900/20 transition-all disabled:cursor-not-allowed disabled:opacity-60"

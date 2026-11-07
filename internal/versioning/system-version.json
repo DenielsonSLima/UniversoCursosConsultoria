@@ -1,8 +1,8 @@
 {
-  "version": "4.8.251",
+  "version": "4.8.252",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 260,
+  "revision": 261,
   "releasedAt": "2026-11-07",
-  "summary": "Financeiro com tabelas, modais, abas e seletores compactos e padronizados"
+  "summary": "Parceiros com cadastros, cartões, Responsáveis e seletores próprios compactos"
 }

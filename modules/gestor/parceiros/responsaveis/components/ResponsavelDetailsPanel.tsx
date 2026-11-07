@@ -51,7 +51,7 @@ const ResponsavelDetailsPanel: React.FC<ResponsavelDetailsPanelProps> = ({
   actions,
   toast,
 }) => (
-  <aside className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+  <aside className="partner-responsaveis-detail rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
     {!selectedId ? (
       <div className="flex min-h-60 flex-col items-center justify-center text-center">
         <UserRound size={27} className="text-slate-400" />

@@ -1,3 +1,5 @@
+import InstitutionalSelect from '../../../../../shared/components/InstitutionalSelect';
+import { partnerSelectChange } from '../partner-select-change';
 import type React from 'react';
 import { AlertCircle, FileText, Mail, MapPin, Phone } from 'lucide-react';
 
@@ -54,10 +56,10 @@ const ParceiroAlunoFormStepContact: React.FC<ContactStepProps> = ({ formData, on
 
       <div>
         <label className={LABEL_CLS}>UF <span className="text-red-500">*</span></label>
-        <select name="uf" value={formData.uf} onChange={onChange} className={INPUT_CLS} required>
-          <option value="">UF</option>
-          {UFS.map((uf) => <option key={uf} value={uf}>{uf}</option>)}
-        </select>
+        <InstitutionalSelect value={formData.uf} onValueChange={partnerSelectChange("uf", onChange)}
+          ariaLabel="UF" required
+          options={[{ value: "", label: "UF" },
+            ...UFS.map((uf) => ({ value: uf, label: uf }))]} className="w-full" />
       </div>
     </div>
 
