@@ -12,6 +12,8 @@ export type { PortalContext, PortalRole } from './portal-context.contract';
 
 export interface PortalAuthProfile {
   id: string;
+  /** Identidade autenticada, obtida de getUser; nunca restaurada do storage. */
+  authUserId?: string;
   nome: string;
   email: string;
   tipo: PortalRole;
@@ -95,6 +97,7 @@ export const profileFromPortalContext = (
   authenticatedUser: User,
 ): PortalAuthProfile => ({
   id: context.contextId,
+  authUserId: authenticatedUser.id,
   nome: context.label,
   email: authenticatedUser.email?.trim().toLowerCase() || '',
   tipo: context.role,

@@ -1,8 +1,8 @@
 {
-  "version": "4.8.255",
+  "version": "4.8.256",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 264,
+  "revision": 265,
   "releasedAt": "2026-11-07",
-  "summary": "Carteirinhas em ordem alfabética na emissão em lote, por turma e personalizada"
+  "summary": "Estrutura do Emissor NFS-e com acesso individual restrito, configurações por polo e operações fiscais ainda desabilitadas"
 }

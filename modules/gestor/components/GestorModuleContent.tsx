@@ -29,6 +29,7 @@ const NotificacoesPushPage = lazy(() => import('../comunicacao/notificacoes-push
 const ConfiguracoesPage = lazy(() => import('../configuracoes/ConfiguracoesPage'));
 const DashboardPage = lazy(() => import('../dashboard/DashboardPage'));
 const FinanceiroPage = lazy(() => import('../financeiro/FinanceiroPage'));
+const EmissorNfsePage = lazy(() => import('../emissor-nfse/EmissorNfsePage'));
 const PatrimonioPage = lazy(() => import('../patrimonio/PatrimonioPage'));
 const GestaoPage = lazy(() => import('../gestao/GestaoPage'));
 const MeuPerfilPage = lazy(() => import('../meu-perfil/MeuPerfilPage'));
@@ -40,6 +41,7 @@ const CaixaPage = lazy(loadCaixaPage);
 interface GestorModuleContentProps {
   activeModule: string;
   canOpenModule: (moduleId: string) => boolean;
+  isNfseAccessChecking?: boolean;
   isMatrizSelected: boolean;
   allowedCadastroTabs: string[];
   setActiveModule: (moduleId: string) => void;
@@ -159,6 +161,7 @@ class ModuleErrorBoundary extends React.Component<ModuleErrorBoundaryProps, Modu
 const GestorModuleContentView: React.FC<GestorModuleContentProps> = ({
   activeModule,
   canOpenModule,
+  isNfseAccessChecking = false,
   isMatrizSelected,
   allowedCadastroTabs,
   setActiveModule,
@@ -176,6 +179,7 @@ const GestorModuleContentView: React.FC<GestorModuleContentProps> = ({
   onGlobalSearchTargetCleared,
   onProfileUpdated,
 }) => {
+  if (activeModule === 'emissor-nfse' && isNfseAccessChecking) return <ModuleLoading />;
   if (!canOpenModule(activeModule)) return <AccessDenied />;
   if (!isMatrizSelected && activeModule.startsWith('cadastros-') && !POLO_CADASTROS_ALLOWED.has(activeModule)) {
     return <CadastrosPage onNavigate={setActiveModule} readOnly allowedTabs={allowedCadastroTabs} />;
@@ -237,6 +241,15 @@ const GestorModuleContentView: React.FC<GestorModuleContentProps> = ({
     );
     case 'caixa': return <CaixaPage poloId={scopedPoloId} poloName={currentPoloName} isGlobal={isGlobal} isMatriz={isMatrizSelected} />;
     case 'financeiro': return <FinanceiroPage poloId={scopedPoloId} poloName={currentPoloName} isMatriz={isMatrizSelected} allowedTabs={getEffectiveFinanceiroTabs(permissions)} />;
+    case 'emissor-nfse': return (
+      <EmissorNfsePage
+        key={`${profile.contextId || 'sem-contexto'}:${scopedPoloId || 'sem-polo'}`}
+        poloId={scopedPoloId}
+        poloName={currentPoloName}
+        isMatriz={isMatrizSelected}
+        contextKey={profile.contextId || ''}
+      />
+    );
     case 'patrimonio': return (
       <PatrimonioPage
         poloId={scopedPoloId}
@@ -291,6 +304,11 @@ const GestorModuleContentView: React.FC<GestorModuleContentProps> = ({
       return (
         <ConfiguracoesPage
           poloId={currentPoloId}
+          isMatriz={isMatrizSelected}
+          contextKey={profile.contextId || ''}
+          authUserId={profile.authUserId}
+          canAccessNfse={canOpenModule('emissor-nfse')}
+          isNfseAccessChecking={isNfseAccessChecking}
           canManageProductTypes={isGlobal && canAccessGestorModule(permissions, 'configuracoes')}
         />
       );

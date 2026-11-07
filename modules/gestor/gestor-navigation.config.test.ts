@@ -14,7 +14,7 @@ describe('configuração da navegação do gestor', () => {
       [
         'inicio', 'parceiros',
         'gestao', 'secretaria',
-        'calendario', 'comunicacao', 'caixa', 'financeiro', 'patrimonio',
+        'calendario', 'comunicacao', 'caixa', 'financeiro', 'emissor-nfse', 'patrimonio',
         'cadastros', 'biblioteca',
         'relatorios',
         'configuracoes',
@@ -26,7 +26,7 @@ describe('configuração da navegação do gestor', () => {
       GESTOR_MAIN_NAVIGATION.map(item => item.label),
       [
         'Início', 'Parceiros', 'Gestão', 'Secretaria',
-        'Calendário', 'Comunicação', 'Caixa', 'Financeiro', 'Patrimônio',
+        'Calendário', 'Comunicação', 'Caixa', 'Financeiro', 'Emissor NFS-e', 'Patrimônio',
         'Formações', 'Biblioteca', 'Relatórios', 'Configurações',
       ],
     );
@@ -35,7 +35,7 @@ describe('configuração da navegação do gestor', () => {
       [
         'visao-geral', 'relacionamento',
         'operacao-academica', 'operacao-academica',
-        'operacao-academica', 'relacionamento', 'financeiro', 'financeiro', 'financeiro',
+        'operacao-academica', 'relacionamento', 'financeiro', 'financeiro', 'financeiro', 'financeiro',
         'estrutura-apoio', 'estrutura-apoio',
         'inteligencia',
         'administracao',
