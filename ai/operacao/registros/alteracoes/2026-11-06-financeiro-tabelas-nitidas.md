@@ -6,6 +6,7 @@ Padronização visual compacta das dez abas financeiras e seus submódulos, conf
 
 ## Manifesto explícito
 
+- `.github/workflows/document-identity-history.yml`
 - `ai/operacao/LOTE_ATIVO.md`
 - `ai/operacao/qualidade/limite-linhas-manifestos.json`
 - `ai/operacao/rag/index.json`
@@ -109,7 +110,7 @@ Padronização visual compacta das dez abas financeiras e seus submódulos, conf
 - `modules/gestor/relatorios/pdf/ReportPdfPreviewModal.tsx`
 - `modules/gestor/secretaria/shared/CanonicalDocumentPreviewModal.tsx`
 
-Total: 102 arquivos.
+Total: 103 arquivos.
 
 ## Escopo e fronteiras
 
@@ -132,3 +133,5 @@ Prévia local usa os componentes reais com dados sintéticos e escritas bloquead
 ## Entrega
 
 Versão 4.8.251 na PR #347, branch release/financeiro-tabelas-4.8.251, sobre 4.8.250. Atualização do mesmo lote após revisão do usuário; manifesto consolidado e alterações locais paralelas preservadas. Artefatos de teste, dados sintéticos e saídas de build não integram o commit. Produção não solicitada neste lote.
+
+Ajuste de suporte à validação: document-identity-history usava ubuntu-latest, que passou a Ubuntu 26.04; Playwright 1.58.2 abortou a instalação antes dos testes. O único job afetado fica fixado em ubuntu-24.04, preservando comandos, dependências, permissões e asserções.
