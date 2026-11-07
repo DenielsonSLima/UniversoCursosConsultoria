@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "retrieval": "lexical-bm25-with-source-citations",
-  "builtAt": "2026-11-07T11:31:20.374Z",
+  "builtAt": "2026-11-07T11:59:43.248Z",
   "manifestVersion": 2,
-  "sourceSignature": "dd4926c6794ede6d542e9b3f33b2095f7a0ad6a5ee65c627ec58916dbfbbcb9e",
+  "sourceSignature": "92f5b6447e54eaa6bed527d1199194c41788170523c6a952f8b6ab566cdc88c3",
   "sources": [
     {
       "path": "AGENTS.md",
@@ -11,7 +11,7 @@
     },
     {
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "hash": "3ccab19b0d5110a8cd5beb34dd086d3f66291f9b4ada36bfdf9cb587d3833a2d"
+      "hash": "27efc969e188c97cd2ad1b50e865a2cbdf4359a19f7b3c9c2867a89a88a7041f"
     },
     {
       "path": "ai/operacao/MEMORIA_CANONICA.md",
@@ -208,23 +208,23 @@
       "part": 1
     },
     {
-      "id": "4851ab6c5dfab8b37ce1",
-      "hash": "4851ab6c5dfab8b37ce112c392314aa7b1760732cd78047b260513f983c60ef7",
+      "id": "e604fdf1f262d372699d",
+      "hash": "e604fdf1f262d372699d751c00ad28d824ad14a5aa4d4f6da33e5852acd7c177",
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Lote: 2026-11-07-parceiros-cadastros-compactos",
-      "text": "Padronizar cadastros, seletores e cartões de Parceiros, preservando campos, valores, validações, escopo e quatro cartões por linha no desktop amplo. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-07-parceiros-cadastros-compactos.md`. Três frentes independentes: formulários; cartões/Responsáveis; auditoria de carregamento. Conferência local no Chrome a pedido do usuário. Análise de dados separa paginação local, filtro de polo e cache, com consultas remotas somente de leitura. A skill visual e sua especificação pertencem a manifesto operacional separado, solicitado expressamente pelo usuário.",
-      "normalizedText": "padronizar cadastros seletores e cartoes de parceiros preservando campos valores validacoes escopo e quatro cartoes por linha no desktop amplo manifesto explicito ai operacao registros alteracoes 2026 11 07 parceiros cadastros compactos md tres frentes independentes formularios cartoes responsaveis auditoria de carregamento conferencia local no chrome a pedido do usuario analise de dados separa paginacao local filtro de polo e cache com consultas remotas somente de leitura a skill visual e sua especificacao pertencem a manifesto operacional separado solicitado expressamente pelo usuario",
-      "tokenCount": 75,
+      "section": "Lote: 2026-11-07-caixa-prioridade-carregamento",
+      "text": "Priorizar a prestação mensal no Caixa ativo e manter a linha de corte coerente no Realtime, preservando valores canônicos, escopo, fila serial, cancelamento e operações. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-07-caixa-prioridade-carregamento.md`. Frentes independentes de ordem da tela, invalidação e documentação; sem RPC/schema/cálculo financeiro no frontend nem redesign principal. O diagnóstico distingue médias SQL históricas, simulação e tempo real de produção ainda não medido.",
+      "normalizedText": "priorizar a prestacao mensal no caixa ativo e manter a linha de corte coerente no realtime preservando valores canonicos escopo fila serial cancelamento e operacoes manifesto explicito ai operacao registros alteracoes 2026 11 07 caixa prioridade carregamento md frentes independentes de ordem da tela invalidacao e documentacao sem rpc schema calculo financeiro no frontend nem redesign principal o diagnostico distingue medias sql historicas simulacao e tempo real de producao ainda nao medido",
+      "tokenCount": 65,
       "part": 1
     },
     {
-      "id": "146114016419de1d8787",
-      "hash": "146114016419de1d8787a10a7745ab8fe7af3903208762fc748eef9a81ecf615",
+      "id": "e22d9f91808d6d23ee1f",
+      "hash": "e22d9f91808d6d23ee1f27f468fed04d69930776d582870405de030d3098f18d",
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Lote: 2026-11-07-parceiros-cadastros-compactos",
-      "text": "Base técnica: Financeiro PR #347, 4.8.251; entrega Parceiros depende desse código. A orientação mais recente do usuário autoriza produção AGORA somente para Financeiro 4.8.251 e Parceiros 4.8.252 implementados, para conferência posterior. Substitui a condição anterior de esperar todas as etapas; Caixa, Configurações, Comunicação e Biblioteca continuam pendentes, sem início nesta rodada. Parceiros verificado localmente; CSS móvel compartilhado aceito por PF real a 390 px e markup comum, com limites de cobertura documentados. Não alterar dados, RLS ou consultas operacionais como efeito de manutenção visual.",
-      "normalizedText": "base tecnica financeiro pr 347 4 8 251 entrega parceiros depende desse codigo a orientacao mais recente do usuario autoriza producao agora somente para financeiro 4 8 251 e parceiros 4 8 252 implementados para conferencia posterior substitui a condicao anterior de esperar todas as etapas caixa configuracoes comunicacao e biblioteca continuam pendentes sem inicio nesta rodada parceiros verificado localmente css movel compartilhado aceito por pf real a 390 px e markup comum com limites de cobertura documentados nao alterar dados rls ou consultas operacionais como efeito de manutencao visual",
-      "tokenCount": 78,
+      "section": "Lote: 2026-11-07-caixa-prioridade-carregamento",
+      "text": "Base Parceiros 4.8.252 integrada na PR #347; produção READY confirmada pelo responsável com HTTP público 200 e asset 4.8.252, sem acesso autenticado ou dados. Caixa 4.8.253 tem validação local concluída para ordem de leitura e frescor; manifesto consolidado de 14 arquivos e CI dedicado. Chrome conferiu AFTER e troca de mês sob fixture, sem medição autenticada de produção. O usuário autorizou entregar o pronto e continuar; publicação exige os checks e o gate técnico desta etapa, sem nova confirmação. Configurações, Comunicação e Biblioteca aguardam. O fechamento inclui um único RAG e gates de integração; sync de workspace e publicação seguem comando do responsável. Cobertura móvel de Parceiros não comprova Caixa.",
+      "normalizedText": "base parceiros 4 8 252 integrada na pr 347 producao ready confirmada pelo responsavel com http publico 200 e asset 4 8 252 sem acesso autenticado ou dados caixa 4 8 253 tem validacao local concluida para ordem de leitura e frescor manifesto consolidado de 14 arquivos e ci dedicado chrome conferiu after e troca de mes sob fixture sem medicao autenticada de producao o usuario autorizou entregar o pronto e continuar publicacao exige os checks e o gate tecnico desta etapa sem nova confirmacao configuracoes comunicacao e biblioteca aguardam o fechamento inclui um unico rag e gates de integracao sync de workspace e publicacao seguem comando do responsavel cobertura movel de parceiros nao comprova caixa",
+      "tokenCount": 97,
       "part": 1
     },
     {

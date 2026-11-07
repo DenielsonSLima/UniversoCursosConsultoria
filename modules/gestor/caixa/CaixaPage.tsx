@@ -73,10 +73,6 @@ const CaixaScopePage: React.FC<CaixaScopePageProps> = ({
   const [review, setReview] = useState<{ scope: string; context: CaixaReviewContext } | null>(null);
   const reviewScope = `${selectedPolo}:${competencia}`;
   useEffect(() => { setReview(null); }, [reviewScope]);
-  const positionQuery = useQuery({
-    ...caixaReceivablesPositionQueryOptions(normalizeReviewPolo(selectedPolo), competencia),
-    enabled: Boolean(selectedPolo),
-  });
 
   const { data: polos = [] } = useQuery({
     ...caixaPolosQueryOptions(),
@@ -100,6 +96,10 @@ const CaixaScopePage: React.FC<CaixaScopePageProps> = ({
 
   const { data: statement, isLoading, error, refetch: refetchStatement } = useQuery({
     ...caixaDashboardQueryOptions(selectedPolo, competencia),
+    enabled: Boolean(selectedPolo),
+  });
+  const positionQuery = useQuery({
+    ...caixaReceivablesPositionQueryOptions(normalizeReviewPolo(selectedPolo), competencia),
     enabled: Boolean(selectedPolo),
   });
   const positionCutMismatch = Boolean(positionQuery.data && statement

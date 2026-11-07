@@ -1,0 +1,65 @@
+name: Regressões do Caixa
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/caixa-regressions.yml'
+      - 'scripts/test-caixa-report.mjs'
+      - 'scripts/check-node-security.mjs'
+      - 'modules/gestor/caixa/**'
+      - 'modules/gestor/components/GestorModuleContent.tsx'
+      - 'modules/gestor/secretaria/shared/**'
+      - 'modules/shared/**'
+      - 'lib/**'
+      - 'package*.json'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/caixa-regressions.yml'
+      - 'scripts/test-caixa-report.mjs'
+      - 'scripts/check-node-security.mjs'
+      - 'modules/gestor/caixa/**'
+      - 'modules/gestor/components/GestorModuleContent.tsx'
+      - 'modules/gestor/secretaria/shared/**'
+      - 'modules/shared/**'
+      - 'lib/**'
+      - 'package*.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: caixa-regressions-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  caixa-ui:
+    name: Primeiro resumo e Realtime por escopo
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Baixar o repositório
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Preparar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '>=24.22.1 <25'
+          cache: npm
+
+      - name: Validar versão segura do Node
+        run: node scripts/check-node-security.mjs
+
+      - name: Instalar dependências do projeto
+        run: npm ci
+
+      - name: Preparar DOM temporário
+        run: npm install --prefix "$RUNNER_TEMP/universo-caixa-tests" --no-save --package-lock=false --ignore-scripts jsdom@26.1.0
+
+      - name: Conferir primeiro resumo e invalidação financeira
+        env:
+          CAIXA_JSDOM_PATH: ${{ runner.temp }}/universo-caixa-tests/node_modules/jsdom
+        run: node scripts/test-caixa-report.mjs --performance
