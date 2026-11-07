@@ -1,0 +1,261 @@
+@media screen {
+  .biblioteca-explorer.biblioteca-explorer {
+    min-width: 0;
+    color: #243b53;
+    font-size: 13px;
+    line-height: 1.55;
+  }
+
+  .biblioteca-explorer > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 18px;
+  }
+
+  .biblioteca-explorer-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    background: #fff;
+  }
+
+  .biblioteca-explorer-breadcrumbs,
+  .biblioteca-explorer-search-state {
+    display: flex;
+    min-width: 0;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    color: #64748b;
+    font-size: 12px;
+  }
+
+  .biblioteca-explorer-breadcrumbs button {
+    min-height: 38px;
+    padding: 4px;
+    text-align: left;
+    overflow-wrap: anywhere;
+  }
+
+  .biblioteca-explorer-breadcrumbs button[aria-current] {
+    color: #122b42;
+    font-weight: 600;
+  }
+
+  .biblioteca-explorer-search-term,
+  .biblioteca-explorer-search-type {
+    padding: 2px 6px;
+    border-radius: 5px;
+    background: #eff6ff;
+    color: #305fd5;
+    overflow-wrap: anywhere;
+  }
+
+  .biblioteca-explorer-controls {
+    display: flex;
+    min-width: 0;
+    flex: 1 1 640px;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+  }
+
+  .biblioteca-explorer-search {
+    position: relative;
+    min-width: 170px;
+    flex: 1 1 220px;
+  }
+
+  .biblioteca-explorer-search > svg {
+    position: absolute;
+    top: 50%;
+    left: 11px;
+    color: #7b8da0;
+    transform: translateY(-50%);
+    pointer-events: none;
+  }
+
+  .biblioteca-explorer-search > input {
+    width: 100%;
+    height: 38px;
+    padding: 8px 10px 8px 35px;
+    border: 1px solid #dce3ec;
+    border-radius: 8px;
+    background: #fff;
+    color: #243b53;
+    font-size: 13px;
+    font-weight: 400;
+  }
+
+  .biblioteca-explorer-search > input:focus {
+    outline: 2px solid #bfdbfe;
+    outline-offset: 1px;
+    border-color: #4169e1;
+  }
+
+  .biblioteca-explorer-type-filter,
+  .biblioteca-explorer-actions {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .biblioteca-explorer-type-filter > .institutional-select {
+    width: 174px;
+  }
+
+  .biblioteca-explorer-controls button {
+    display: inline-flex;
+    min-height: 38px;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px 12px;
+    border: 1px solid #dce3ec;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  .biblioteca-explorer-controls .biblioteca-explorer-primary {
+    border-color: #2563eb;
+    background: #2563eb;
+    color: #fff;
+  }
+
+  .biblioteca-explorer-secondary {
+    background: #fff;
+    color: #526175;
+  }
+
+  .biblioteca-explorer-clear {
+    background: #fff;
+    color: #be123c;
+  }
+
+  .biblioteca-explorer-items {
+    display: grid;
+    gap: 22px;
+  }
+
+  .biblioteca-explorer-items :is(.font-black, .font-bold, .font-extrabold) {
+    font-weight: 500;
+  }
+
+  .biblioteca-explorer-items .uppercase {
+    letter-spacing: normal;
+    text-transform: none;
+  }
+
+  .biblioteca-explorer-items :is([class~="text-[8px]"], [class~="text-[9px]"], [class~="text-[10px]"]) {
+    color: #64748b;
+    font-size: 12px;
+    line-height: 1.5;
+  }
+
+  .biblioteca-explorer-files > div:first-child {
+    margin-bottom: 12px;
+  }
+
+  .biblioteca-explorer-file-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(156px, 184px));
+    gap: 12px;
+  }
+
+  .biblioteca-explorer-file.biblioteca-explorer-file {
+    width: 100%;
+    min-width: 0;
+    border-color: #e2e8f0;
+    border-radius: 10px;
+    background: #fff;
+    box-shadow: none;
+  }
+
+  .biblioteca-explorer-file h4 {
+    color: #122b42;
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+  .biblioteca-explorer-file [aria-pressed="true"] {
+    color: #fff;
+  }
+
+  .biblioteca-explorer-empty.biblioteca-explorer-empty {
+    padding: 32px 18px;
+    border-radius: 10px;
+    background: #fff;
+  }
+
+  .biblioteca-explorer-dialog.biblioteca-explorer-dialog {
+    overflow-y: auto;
+  }
+
+  .biblioteca-explorer-dialog input:not([role="combobox"]) {
+    height: 38px;
+    padding: 8px 12px;
+  }
+
+  .biblioteca-explorer-dialog label {
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: normal;
+    text-transform: none;
+  }
+}
+
+@media screen and (max-width: 767px) {
+  .biblioteca-explorer-toolbar {
+    align-items: stretch;
+    gap: 8px;
+    padding: 10px;
+  }
+
+  .biblioteca-explorer-controls {
+    flex-basis: 100%;
+  }
+
+  .biblioteca-explorer-search,
+  .biblioteca-explorer-type-filter,
+  .biblioteca-explorer-actions {
+    width: 100%;
+    flex-basis: 100%;
+  }
+
+  .biblioteca-explorer-type-filter > .institutional-select {
+    width: auto;
+    flex: 1;
+  }
+
+  .biblioteca-explorer-actions > button {
+    flex: 1;
+    white-space: normal;
+  }
+
+  .biblioteca-explorer-breadcrumbs button,
+  .biblioteca-explorer-controls button {
+    min-height: 44px;
+  }
+
+  .biblioteca-explorer-search > input,
+  .biblioteca-explorer-dialog input:not([role="combobox"]) {
+    height: 44px;
+    font-size: 16px;
+  }
+
+  .biblioteca-explorer-file-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .biblioteca-explorer-file > div:last-child :is(button, a) {
+    min-height: 44px;
+  }
+}

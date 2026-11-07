@@ -1,0 +1,313 @@
+@media screen {
+  .biblioteca-workspace.biblioteca-workspace {
+    min-width: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 13px;
+    line-height: 1.55;
+  }
+
+  .biblioteca-workspace > .biblioteca-heading {
+    align-items: center;
+    padding-bottom: 0;
+    border-bottom: 0;
+  }
+
+  .biblioteca-workspace > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 18px;
+  }
+
+  .biblioteca-workspace .biblioteca-rules-panel > div:first-child > div:has(> input) {
+    min-height: 38px;
+    border-radius: 8px;
+    background: #fff;
+  }
+
+  .biblioteca-heading h2 {
+    font-size: 23px;
+    line-height: 1.4;
+    font-weight: 600;
+    letter-spacing: -.025em;
+    text-transform: none;
+  }
+
+  .biblioteca-heading p {
+    margin-top: 5px;
+    color: #64748b;
+    font-size: 13px;
+    line-height: 1.65;
+    font-weight: 400;
+  }
+
+  .biblioteca-heading > div > div {
+    margin-bottom: 5px;
+  }
+
+  .biblioteca-heading > div > div span {
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: normal;
+    text-transform: none;
+  }
+
+  .biblioteca-workspace .biblioteca-tabs {
+    gap: 22px;
+  }
+
+  .biblioteca-tabs > button {
+    min-height: 42px;
+    align-items: center;
+    padding: 9px 0;
+    color: #64748b;
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: normal;
+    text-transform: none;
+  }
+
+  .biblioteca-tabs > button[data-active="true"] {
+    color: #122b42;
+    font-weight: 600;
+  }
+
+  .biblioteca-tabs > button:focus-visible {
+    outline: 2px solid #4169e1;
+    outline-offset: -2px;
+  }
+
+  .biblioteca-workspace .biblioteca-highlights {
+    gap: 18px;
+  }
+
+  .biblioteca-workspace :is(.biblioteca-highlight-panel, .biblioteca-rules-panel, .biblioteca-quota-panel) {
+    min-width: 0;
+    padding: 18px;
+    border-color: #e2e8f0;
+    border-radius: 12px;
+    box-shadow: none;
+  }
+
+  .biblioteca-workspace :is(.biblioteca-highlight-panel, .biblioteca-rules-panel) h3 {
+    font-size: 14px;
+    line-height: 1.5;
+    font-weight: 600;
+    letter-spacing: normal;
+    text-transform: none;
+  }
+
+  .biblioteca-workspace :is(.biblioteca-highlight-panel, .biblioteca-rules-panel) :is(.text-xs, .text-sm) {
+    font-size: 13px;
+    line-height: 1.55;
+  }
+
+  .biblioteca-workspace :is(.biblioteca-highlight-panel, .biblioteca-rules-panel) :is([class~="text-[9px]"], [class~="text-[10px]"], [class~="text-[11px]"]) {
+    font-size: 12px;
+    line-height: 1.5;
+  }
+
+  .biblioteca-workspace :is(.biblioteca-highlight-panel, .biblioteca-rules-panel) :is(.font-black, .font-extrabold, .font-bold) {
+    font-weight: 500;
+  }
+
+  .biblioteca-workspace :is(.biblioteca-highlight-panel, .biblioteca-rules-panel) h3:is(.font-black, .font-extrabold, .font-bold) {
+    font-weight: 600;
+  }
+
+  .biblioteca-workspace :is(.biblioteca-highlight-panel, .biblioteca-rules-panel) .uppercase {
+    letter-spacing: normal;
+    text-transform: none;
+  }
+
+  .biblioteca-workspace :is(.biblioteca-highlight-panel, .biblioteca-rules-panel) .text-slate-400 {
+    color: #64748b;
+  }
+
+  .biblioteca-workspace .biblioteca-highlight-row {
+    min-width: 0;
+    padding: 10px 12px;
+    border-radius: 8px;
+    box-shadow: none;
+  }
+
+  .biblioteca-highlight-row > div:first-child {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .biblioteca-highlight-row button {
+    display: inline-flex;
+    width: 34px;
+    height: 34px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    box-shadow: none;
+  }
+
+  .biblioteca-rules-table :is(th, td) {
+    padding: 11px 12px;
+    font-size: 13px;
+    vertical-align: middle;
+  }
+
+  .biblioteca-rules-table th {
+    color: #526175;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: normal;
+    text-transform: none;
+  }
+
+  body:has(.biblioteca-workspace) .biblioteca-dialog {
+    max-height: calc(100dvh - 32px);
+    padding: 20px;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    background: #fff;
+    color: #243b53;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 13px;
+    line-height: 1.55;
+  }
+
+  body:has(.biblioteca-workspace) .biblioteca-dialog-header {
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 16px;
+    padding-bottom: 14px;
+  }
+
+  body:has(.biblioteca-workspace) .biblioteca-dialog-header > div {
+    min-width: 0;
+  }
+
+  body:has(.biblioteca-workspace) .biblioteca-dialog-header > button {
+    flex-shrink: 0;
+  }
+
+  body:has(.biblioteca-workspace) .biblioteca-dialog-header h3 {
+    overflow-wrap: anywhere;
+    font-size: 18px;
+    line-height: 1.4;
+    font-weight: 600;
+    letter-spacing: normal;
+    text-transform: none;
+  }
+
+  body:has(.biblioteca-workspace) .biblioteca-dialog :is(.font-black, .font-extrabold, .font-bold, .font-semibold) {
+    font-weight: 500;
+  }
+
+  body:has(.biblioteca-workspace) .biblioteca-dialog :is(h3, h4):is(.font-black, .font-extrabold, .font-bold, .font-semibold) {
+    font-weight: 600;
+  }
+
+  body:has(.biblioteca-workspace) .biblioteca-dialog .uppercase {
+    letter-spacing: normal;
+    text-transform: none;
+  }
+
+  body:has(.biblioteca-workspace) .biblioteca-dialog :is(.text-xs, [class~="text-[9px]"], [class~="text-[10px]"]) {
+    font-size: 12px;
+    line-height: 1.55;
+  }
+
+  body:has(.biblioteca-workspace) .biblioteca-dialog input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not([role="combobox"]) {
+    min-width: 0;
+    min-height: 38px;
+    border-radius: 8px;
+    background: #fff;
+    color: #243b53;
+    font-size: 13px;
+    font-weight: 400;
+  }
+
+  body:has(.biblioteca-workspace) .biblioteca-dialog input:disabled {
+    background: #f1f5f9;
+    color: #7b8da0;
+  }
+
+  body:has(.biblioteca-workspace) .biblioteca-permissions-schedule {
+    padding: 16px;
+    border-radius: 10px;
+  }
+
+  body:has(.biblioteca-workspace) .biblioteca-dialog-body > .grid {
+    gap: 16px;
+  }
+
+  body:has(.biblioteca-workspace) .biblioteca-dialog-footer {
+    gap: 10px;
+    padding-top: 14px;
+  }
+
+  body:has(.biblioteca-workspace) .biblioteca-dialog-footer button {
+    min-height: 38px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: normal;
+    text-transform: none;
+    box-shadow: none;
+  }
+}
+
+@media screen and (max-width: 767px) {
+  .biblioteca-workspace .biblioteca-tabs {
+    gap: 18px;
+  }
+
+  .biblioteca-workspace .biblioteca-rules-panel > div:first-child > div:has(> input) {
+    min-height: 44px;
+  }
+
+  .biblioteca-rules-panel input {
+    font-size: 16px;
+  }
+
+  .biblioteca-tabs > button,
+  .biblioteca-highlight-row button {
+    min-height: 44px;
+  }
+
+  .biblioteca-highlight-row button {
+    width: 44px;
+    height: 44px;
+  }
+
+  .biblioteca-workspace :is(.biblioteca-highlight-panel, .biblioteca-rules-panel, .biblioteca-quota-panel) {
+    padding: 14px;
+  }
+
+  .biblioteca-workspace .biblioteca-highlight-row {
+    padding: 10px;
+  }
+
+  body:has(.biblioteca-workspace) .biblioteca-dialog-overlay {
+    padding: 10px;
+  }
+
+  body:has(.biblioteca-workspace) .biblioteca-dialog {
+    max-height: calc(100dvh - 20px);
+    padding: 16px;
+  }
+
+  body:has(.biblioteca-workspace) .biblioteca-dialog input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not([role="combobox"]) {
+    min-height: 44px;
+    font-size: 16px;
+  }
+
+  body:has(.biblioteca-workspace) .biblioteca-permissions-release-grid > .col-span-2 {
+    grid-column: span 1 / span 1;
+  }
+
+  body:has(.biblioteca-workspace) .biblioteca-dialog-footer {
+    flex-wrap: wrap;
+  }
+
+  body:has(.biblioteca-workspace) .biblioteca-dialog-footer button {
+    min-height: 44px;
+    flex: 1;
+    white-space: normal;
+  }
+}

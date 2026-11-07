@@ -6,6 +6,7 @@ import { Users, Folder, ChevronRight, User, ArrowLeft } from 'lucide-react';
 import { bibliotecaService } from '../biblioteca.service';
 import { TeacherRepository, LibraryDocument } from '../biblioteca.types';
 import FileExplorer from './FileExplorer';
+import './biblioteca-teachers.css';
 
 interface TeacherRepositoryListProps {
   onPreviewClick: (doc: LibraryDocument) => void;
@@ -29,7 +30,7 @@ const TeacherRepositoryList: React.FC<TeacherRepositoryListProps> = ({
   // If a teacher is selected, render their FileExplorer
   if (selectedTeacher) {
     return (
-      <div className="space-y-6 animate-fadeIn">
+      <div className="biblioteca-teachers space-y-6 animate-fadeIn">
         <div className="flex items-center gap-3">
           <button 
             onClick={() => setSelectedTeacher(null)}
@@ -53,9 +54,9 @@ const TeacherRepositoryList: React.FC<TeacherRepositoryListProps> = ({
   }
 
   return (
-    <div className="animate-fadeIn">
+    <div className="biblioteca-teachers animate-fadeIn">
       {/* Information Banner */}
-      <div className="mb-6 bg-purple-50 border border-purple-100 p-6 rounded-[2rem] flex items-center gap-4 shadow-sm">
+      <div className="biblioteca-teachers-heading mb-6 bg-purple-50 border border-purple-100 p-6 rounded-[2rem] flex items-center gap-4 shadow-sm">
         <div className="p-3.5 bg-purple-100 text-purple-700 rounded-2xl">
             <Users size={24} />
         </div>
@@ -73,7 +74,7 @@ const TeacherRepositoryList: React.FC<TeacherRepositoryListProps> = ({
             <div 
               key={teacher.teacherId} 
               onClick={() => setSelectedTeacher(teacher)}
-              className="bg-white p-6 rounded-3xl border border-slate-150 hover:shadow-xl hover:border-purple-200 transition-all cursor-pointer group relative overflow-hidden flex flex-col justify-between"
+              className="biblioteca-teacher-card bg-white p-6 rounded-3xl border border-slate-150 hover:shadow-xl hover:border-purple-200 transition-all cursor-pointer group relative overflow-hidden flex flex-col justify-between"
             >
                 <div className="flex items-center gap-4 mb-6">
                     <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center border-2 border-white shadow-sm text-slate-400 group-hover:bg-purple-100 group-hover:text-purple-600 transition-colors shrink-0">

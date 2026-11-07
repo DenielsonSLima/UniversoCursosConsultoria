@@ -1,6 +1,7 @@
 // File: modules/gestor/biblioteca/components/DocumentPermissionsModal.tsx
 
 import React, { useState, useEffect } from 'react';
+import InstitutionalSelect from '../../../shared/components/InstitutionalSelect';
 import { createPortal } from 'react-dom';
 import { X, Lock, Check, Search, Calendar, Layers, Users } from 'lucide-react';
 import { LibraryDocument } from '../biblioteca.types';
@@ -187,13 +188,13 @@ const DocumentPermissionsModal: React.FC<DocumentPermissionsModalProps> = ({
   };
 
   return createPortal(
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+    <div className="biblioteca-dialog-overlay fixed inset-0 z-[100] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-[#001a33]/60 backdrop-blur-sm transition-opacity" onClick={onClose}></div>
       
-      <div className="relative bg-white rounded-[2rem] w-full max-w-4xl p-8 shadow-2xl animate-fadeIn border border-slate-100 max-h-[90vh] overflow-y-auto custom-scrollbar flex flex-col justify-between">
+      <div className="biblioteca-dialog biblioteca-permissions-dialog relative bg-white rounded-[2rem] w-full max-w-4xl p-8 shadow-2xl animate-fadeIn border border-slate-100 max-h-[90vh] overflow-y-auto custom-scrollbar flex flex-col justify-between">
         
         {/* Header */}
-        <div className="flex justify-between items-center mb-6 pb-4 border-b border-slate-100 shrink-0">
+        <div className="biblioteca-dialog-header flex justify-between items-center mb-6 pb-4 border-b border-slate-100 shrink-0">
           <div>
             <div className="flex items-center gap-2 mb-1">
               <span className="text-[9px] font-black uppercase tracking-widest bg-blue-50 text-blue-600 px-2.5 py-0.5 rounded-full border border-blue-100 flex items-center gap-1">
@@ -213,7 +214,7 @@ const DocumentPermissionsModal: React.FC<DocumentPermissionsModalProps> = ({
             Carregando estruturas acadêmicas...
           </div>
         ) : (
-          <form onSubmit={handleSave} className="space-y-6 flex-1">
+          <form onSubmit={handleSave} className="biblioteca-dialog-body space-y-6 flex-1">
             
             {/* 1. SELEÇÃO DE CURSOS E TURMAS (GRID) */}
             {teacherScopeOnly && (
@@ -311,26 +312,27 @@ const DocumentPermissionsModal: React.FC<DocumentPermissionsModalProps> = ({
             </div>
 
             {/* 2. REGRAS DE LIBERAÇÃO CRONOMETRADA / GATILHO */}
-            <div className="bg-slate-50 p-6 rounded-[2rem] border border-slate-150 space-y-6">
+            <div className="biblioteca-permissions-schedule bg-slate-50 p-6 rounded-[2rem] border border-slate-150 space-y-6">
               <div className="flex items-center gap-2 text-[#001a33] mb-2 border-b border-slate-200 pb-3">
                 <Calendar size={18} className="text-blue-600" />
                 <h4 className="text-xs font-black uppercase tracking-wider">Agendamento de Liberação de Conteúdo</h4>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="biblioteca-permissions-release-grid grid grid-cols-1 md:grid-cols-3 gap-6">
                 
                 {/* Tipo de Regra */}
                 <div className="space-y-2">
                   <label className="text-[10px] font-bold text-slate-500 uppercase">Regra de Liberação</label>
-                  <select
-                    className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-xs outline-none focus:border-blue-500 cursor-pointer font-bold uppercase text-slate-650"
+                  <InstitutionalSelect
+                    ariaLabel="Regra de Liberação"
                     value={liberacaoTipo}
-                    onChange={(e) => setLiberacaoTipo(e.target.value as any)}
-                  >
-                    <option value="IMEDIATO">Disponibilidade Imediata</option>
-                    <option value="POR_DATA">Liberar em Data Específica</option>
-                    {!teacherScopeOnly && <option value="DISCIPLINA_INICIO">Ao Iniciar uma Disciplina</option>}
-                  </select>
+                    onValueChange={(value) => setLiberacaoTipo(value as typeof liberacaoTipo)}
+                    options={[
+                      { value: 'IMEDIATO', label: 'Disponibilidade Imediata' },
+                      { value: 'POR_DATA', label: 'Liberar em Data Específica' },
+                      ...(!teacherScopeOnly ? [{ value: 'DISCIPLINA_INICIO', label: 'Ao Iniciar uma Disciplina' }] : []),
+                    ]}
+                  />
                 </div>
 
                 {/* Condicional POR_DATA */}
@@ -352,17 +354,16 @@ const DocumentPermissionsModal: React.FC<DocumentPermissionsModalProps> = ({
                   <>
                     <div className="space-y-2 animate-fadeIn">
                       <label className="text-[10px] font-bold text-slate-500 uppercase">Disciplina Gatilho</label>
-                      <select
-                        className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-xs outline-none focus:border-blue-500 cursor-pointer font-bold text-slate-650"
+                      <InstitutionalSelect
+                        ariaLabel="Disciplina Gatilho"
                         value={liberacaoDisciplinaId}
-                        onChange={(e) => setLiberacaoDisciplinaId(e.target.value)}
+                        onValueChange={setLiberacaoDisciplinaId}
                         required
-                      >
-                        <option value="">-- Selecione a Disciplina --</option>
-                        {filteredDisciplinas.map(d => (
-                          <option key={d.id} value={d.id}>{d.nome}</option>
-                        ))}
-                      </select>
+                        options={[
+                          { value: '', label: '-- Selecione a Disciplina --' },
+                          ...filteredDisciplinas.map(d => ({ value: d.id, label: d.nome })),
+                        ]}
+                      />
                     </div>
 
                     <div className="space-y-2 animate-fadeIn">
@@ -382,7 +383,7 @@ const DocumentPermissionsModal: React.FC<DocumentPermissionsModalProps> = ({
             </div>
 
             {/* Footer Actions */}
-            <div className="flex justify-end gap-3 pt-4 border-t border-slate-100 shrink-0">
+            <div className="biblioteca-dialog-footer flex justify-end gap-3 pt-4 border-t border-slate-100 shrink-0">
               <button 
                 type="button" 
                 onClick={onClose}

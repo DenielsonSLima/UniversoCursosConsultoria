@@ -1,0 +1,61 @@
+name: Regressões da interface da Biblioteca
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/biblioteca-ui-regressions.yml'
+      - 'scripts/test-biblioteca-ui.mjs'
+      - 'scripts/check-node-security.mjs'
+      - 'modules/gestor/biblioteca/**'
+      - 'modules/shared/library/**'
+      - 'modules/shared/components/InstitutionalSelect*'
+      - 'modules/shared/components/ConfirmModal*'
+      - 'package*.json'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/biblioteca-ui-regressions.yml'
+      - 'scripts/test-biblioteca-ui.mjs'
+      - 'scripts/check-node-security.mjs'
+      - 'modules/gestor/biblioteca/**'
+      - 'modules/shared/library/**'
+      - 'modules/shared/components/InstitutionalSelect*'
+      - 'modules/shared/components/ConfirmModal*'
+      - 'package*.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: biblioteca-ui-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  biblioteca-ui:
+    name: Navegação, permissões e publicação sem I/O real
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '>=24.22.1 <25'
+          cache: npm
+
+      - name: Validar versão segura do Node
+        run: node scripts/check-node-security.mjs
+
+      - name: Instalar dependências do produto
+        run: npm ci
+
+      - name: Preparar DOM temporário
+        run: npm install --prefix "$RUNNER_TEMP/universo-biblioteca-tests" --no-save --package-lock=false --ignore-scripts jsdom@26.1.0
+
+      - name: Conferir Biblioteca, explorador e upload com transportes bloqueados
+        env:
+          BIBLIOTECA_JSDOM_PATH: ${{ runner.temp }}/universo-biblioteca-tests/node_modules/jsdom
+        run: node scripts/test-biblioteca-ui.mjs

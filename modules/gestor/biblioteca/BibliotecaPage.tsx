@@ -2,11 +2,13 @@
 
 import React, { useState } from 'react';
 import { 
-  BookOpen, LayoutGrid, Users, Award, Eye, 
-  Clock, Calendar, Sparkles, Lock, Search, Trash2, Settings2
+  BookOpen, LayoutGrid, Users, Eye,
+  Sparkles, Lock, Search, Trash2, Settings2
 } from 'lucide-react';
 
 import FileExplorer from './components/FileExplorer';
+import LibraryHighlights from './components/LibraryHighlights';
+import './biblioteca-workspace.css';
 import TeacherRepositoryList from './components/TeacherRepository';
 import UploadModal from './components/UploadModal';
 import QuickPreviewModal from './components/QuickPreviewModal';
@@ -114,10 +116,10 @@ const BibliotecaPage: React.FC = () => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto animate-fadeIn min-h-screen pb-12 space-y-8">
+    <div className="biblioteca-workspace max-w-7xl mx-auto animate-fadeIn min-h-screen pb-12 space-y-8">
       
       {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-end gap-4 border-b border-slate-100 pb-6">
+      <div className="biblioteca-heading flex flex-col md:flex-row justify-between items-end gap-4 border-b border-slate-100 pb-6">
         <div>
           <div className="flex items-center gap-2 mb-2 text-blue-600">
             <BookOpen size={20} />
@@ -134,7 +136,7 @@ const BibliotecaPage: React.FC = () => {
 
       {/* Tabs Navigation */}
       <div className="border-b border-slate-200 mb-5 mt-2">
-        <div className="flex gap-6 overflow-x-auto pb-px">
+        <div className="biblioteca-tabs flex gap-6 overflow-x-auto pb-px">
           {[
             { id: 'destaques', label: 'Destaques', icon: Sparkles },
             { id: 'gerenciador', label: 'Gerenciador de Arquivos', icon: LayoutGrid },
@@ -147,6 +149,7 @@ const BibliotecaPage: React.FC = () => {
               <button
                 key={id}
                 onClick={() => setActiveTab(id as LibraryTab)}
+                data-active={isActive}
                 className={`flex items-center gap-2 pb-3 text-xs font-bold uppercase tracking-wider transition-all relative shrink-0 ${
                   isActive
                     ? 'text-[#001a33] font-extrabold'
@@ -165,113 +168,18 @@ const BibliotecaPage: React.FC = () => {
       </div>
 
       {/* Content Area */}
-      <div className="min-h-[500px]">
+      <div className="biblioteca-content min-h-[500px]">
         
         {/* TAB 1: DESTAQUES (DASHBOARD) */}
         {activeTab === 'destaques' && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 animate-fadeIn">
-            
-            {/* Top 10 Mais Acessados */}
-            <div className="bg-white p-6 rounded-[2.5rem] border border-slate-150 shadow-sm space-y-6">
-              <div>
-                <h3 className="text-lg font-black text-[#001a33] uppercase tracking-tight flex items-center gap-2">
-                  <Award size={18} className="text-amber-500" /> Mais Acessados (Top 10)
-                </h3>
-                <p className="text-slate-500 text-[10px] font-bold uppercase mt-1">Materiais mais consultados pelos estudantes e docentes.</p>
-              </div>
-
-              <div className="space-y-3">
-                {isTopLoading ? (
-                  <div className="py-10 text-center text-slate-400 text-xs font-bold uppercase animate-pulse">Carregando acessos...</div>
-                ) : topAccessed.length > 0 ? (
-                  topAccessed.map((doc, idx) => (
-                    <div 
-                      key={doc.id}
-                      className="p-3.5 bg-slate-50 border border-slate-100 rounded-2xl hover:bg-white hover:shadow-xl hover:shadow-blue-900/5 transition-all duration-300 flex items-center justify-between group"
-                    >
-                      <div className="flex items-center gap-3 truncate mr-4">
-                        <span className="text-xs font-black text-slate-350 w-4">{idx + 1}</span>
-                        {getFileIcon(doc.fileType)}
-                        <div className="truncate">
-                          <p className="text-xs font-bold text-[#001a33] truncate">{doc.title}</p>
-                          <p className="text-[9px] text-slate-400 font-bold uppercase mt-0.5">{doc.size} • Autor: {doc.authorName}</p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-3 shrink-0">
-                        <span className="text-[10px] font-black text-slate-550 text-slate-400 bg-white border border-slate-200 px-2 py-0.5 rounded-full flex items-center gap-1">
-                          <Eye size={10} className="text-blue-500" /> {doc.acessos} views
-                        </span>
-                        <button 
-                          onClick={() => handleOpenPreview(doc)}
-                          className="p-2 text-slate-450 hover:text-blue-650 bg-white border border-slate-200 rounded-xl hover:shadow-md transition-all shrink-0"
-                          title="Visualização Rápida"
-                        >
-                          <Eye size={12} />
-                        </button>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="py-12 text-center text-slate-400 text-xs font-bold uppercase border border-dashed border-slate-200 rounded-[2.5rem]">
-                    Nenhum documento acessado ainda.
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Top 10 Últimos Enviados */}
-            <div className="bg-white p-6 rounded-[2.5rem] border border-slate-150 shadow-sm space-y-6">
-              <div>
-                <h3 className="text-lg font-black text-[#001a33] uppercase tracking-tight flex items-center gap-2">
-                  <Clock size={18} className="text-blue-500" /> Últimos Enviados (Top 10)
-                </h3>
-                <p className="text-slate-500 text-[10px] font-bold uppercase mt-1">Materiais publicados recentemente no acervo.</p>
-              </div>
-
-              <div className="space-y-3">
-                {isRecentLoading ? (
-                  <div className="py-10 text-center text-slate-400 text-xs font-bold uppercase animate-pulse">Carregando recentes...</div>
-                ) : topRecent.length > 0 ? (
-                  topRecent.map((doc, idx) => (
-                    <div 
-                      key={doc.id}
-                      className="p-3.5 bg-slate-50 border border-slate-100 rounded-2xl hover:bg-white hover:shadow-xl hover:shadow-blue-900/5 transition-all duration-300 flex items-center justify-between group"
-                    >
-                      <div className="flex items-center gap-3 truncate mr-4">
-                        <span className="text-xs font-black text-slate-350 w-4">{idx + 1}</span>
-                        {getFileIcon(doc.fileType)}
-                        <div className="truncate">
-                          <p className="text-xs font-bold text-[#001a33] truncate">{doc.title}</p>
-                          <p className="text-[9px] text-slate-400 font-bold uppercase mt-0.5">
-                            {doc.size} • Enviado em: {new Date(doc.createdAt).toLocaleDateString('pt-BR')}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-3 shrink-0">
-                        <span className="text-[10px] font-black text-slate-400 bg-white border border-slate-200 px-2 py-0.5 rounded-full flex items-center gap-1">
-                          <Calendar size={10} className="text-emerald-500" /> Recente
-                        </span>
-                        <button 
-                          onClick={() => handleOpenPreview(doc)}
-                          className="p-2 text-slate-450 hover:text-blue-650 bg-white border border-slate-200 rounded-xl hover:shadow-md transition-all shrink-0"
-                          title="Visualização Rápida"
-                        >
-                          <Eye size={12} />
-                        </button>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="py-12 text-center text-slate-400 text-xs font-bold uppercase border border-dashed border-slate-200 rounded-[2.5rem]">
-                    Nenhum documento recente publicado.
-                  </div>
-                )}
-              </div>
-            </div>
-
-          </div>
+          <LibraryHighlights
+            topAccessed={topAccessed}
+            topRecent={topRecent}
+            isTopLoading={isTopLoading}
+            isRecentLoading={isRecentLoading}
+            getFileIcon={getFileIcon}
+            handleOpenPreview={handleOpenPreview}
+          />
         )}
 
         {/* TAB 2: GERENCIADOR INSTITUCIONAL */}
@@ -293,7 +201,7 @@ const BibliotecaPage: React.FC = () => {
 
         {/* TAB 4: REGRAS DE LIBERAÇÃO */}
         {activeTab === 'regras' && (
-          <div className="bg-white p-6 rounded-[2.5rem] border border-slate-150 shadow-sm space-y-6 animate-fadeIn">
+          <div className="biblioteca-rules-panel bg-white p-6 rounded-[2.5rem] border border-slate-150 shadow-sm space-y-6 animate-fadeIn">
             {/* Header tab */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <div>
@@ -319,7 +227,7 @@ const BibliotecaPage: React.FC = () => {
               <div className="py-20 text-center text-slate-400 text-xs font-bold uppercase animate-pulse">Carregando documentos...</div>
             ) : filteredAllDocs.length > 0 ? (
               <div className="overflow-x-auto rounded-2xl border border-slate-100">
-                <table className="w-full text-left text-xs border-collapse">
+                <table className="biblioteca-rules-table w-full text-left text-xs border-collapse">
                   <thead>
                     <tr className="bg-slate-50 text-slate-400 font-black uppercase tracking-wider text-[9px] border-b border-slate-100">
                       <th className="p-4">Documento</th>
@@ -453,7 +361,7 @@ const BibliotecaPage: React.FC = () => {
 
         {/* TAB 5: CONFIGURAÇÃO DE QUOTA */}
         {activeTab === 'configuracao' && (
-          <div className="bg-white p-6 rounded-[2.5rem] border border-slate-150 shadow-sm space-y-6 animate-fadeIn">
+          <div className="biblioteca-quota-panel bg-white p-6 rounded-[2.5rem] border border-slate-150 shadow-sm space-y-6 animate-fadeIn">
             <TeacherStorageConfig />
           </div>
           )}

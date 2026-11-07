@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "retrieval": "lexical-bm25-with-source-citations",
-  "builtAt": "2026-11-07T20:22:56.068Z",
+  "builtAt": "2026-11-07T20:47:04.512Z",
   "manifestVersion": 2,
-  "sourceSignature": "a8ee3e0f3d810d93625c35b045c9d4d0bb892dca0080875bcb6a84e62270c6f9",
+  "sourceSignature": "9bd9812f55197690b5dcad0206c7ab73261d4509eb37a5777117a3dbec83a9cd",
   "sources": [
     {
       "path": "AGENTS.md",
@@ -11,7 +11,7 @@
     },
     {
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "hash": "fd7399c2eef63e681a95941f27a5b48850243c0a4296af7c868908b91d4d87da"
+      "hash": "096d889877af93f95827b6e63d4d7226722cd91d354b6046e72e12c976e19865"
     },
     {
       "path": "ai/operacao/MEMORIA_CANONICA.md",
@@ -208,23 +208,23 @@
       "part": 1
     },
     {
-      "id": "10ad63f1d57784871972",
-      "hash": "10ad63f1d577848719722aca3309a6ce0be1a7ca12ea9d54952ffcdeaec77599",
+      "id": "9fe703535cefe8e515ed",
+      "hash": "9fe703535cefe8e515ed63745eb318f910a5aa898ca9f5bcd34854e0e6547eff",
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Lote: 2026-11-07-hotfix-foto-cadastro-individual",
-      "text": "Corrigir fotos de Parceiros: MIME individual, avatar completo e recuperação privada única, com frescor da lista por remontagem/foco. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-07-hotfix-foto-cadastro-individual.md`; arquivos enumerados no registro. Candidato 4.8.258/revisão 267 sobre main257/035025ed8cc55e9e660312f72c6691b2500656eb; base isolada comprovada pelo responsável em 107/107 blobs. Preservar integralmente Carteirinhas 255, NFS-e 256 e Secretaria 257, RLS, ACL, sessão, bucket, TTL 300, origem/path, escopo polo/global e Realtime; sem polling nem cache persistente de autorização.",
-      "normalizedText": "corrigir fotos de parceiros mime individual avatar completo e recuperacao privada unica com frescor da lista por remontagem foco manifesto explicito ai operacao registros alteracoes 2026 11 07 hotfix foto cadastro individual md arquivos enumerados no registro candidato 4 8 258 revisao 267 sobre main257 035025ed8cc55e9e660312f72c6691b2500656eb base isolada comprovada pelo responsavel em 107 107 blobs preservar integralmente carteirinhas 255 nfs e 256 e secretaria 257 rls acl sessao bucket ttl 300 origem path escopo polo global e realtime sem polling nem cache persistente de autorizacao",
-      "tokenCount": 79,
+      "section": "Lote: 2026-11-07-biblioteca-interface-compacta",
+      "text": "Padronizar Biblioteca no padrão compacto aprovado sem remover conteúdo nem alterar permissões, IDs, público, escopo docente, serviços, upload, download, Storage ou prévia documental. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-07-biblioteca-interface-compacta.md`, 30 arquivos (23 fontes/CI, sete operacionais). Candidato 4.8.260/revisão 269 sobre main259/37eb81b3c97ec62b006ab31a933421df86ff5df1. Os 16 blobs do delta remoto foram verificados antes de incorporar. Preservar 255/256/257/258 e Histórico259 integralmente. Comunicação permanece adiada pelo usuário.",
+      "normalizedText": "padronizar biblioteca no padrao compacto aprovado sem remover conteudo nem alterar permissoes ids publico escopo docente servicos upload download storage ou previa documental manifesto explicito ai operacao registros alteracoes 2026 11 07 biblioteca interface compacta md 30 arquivos 23 fontes ci sete operacionais candidato 4 8 260 revisao 269 sobre main259 37eb81b3c97ec62b006ab31a933421df86ff5df1 os 16 blobs do delta remoto foram verificados antes de incorporar preservar 255 256 257 258 e historico259 integralmente comunicacao permanece adiada pelo usuario",
+      "tokenCount": 73,
       "part": 1
     },
     {
-      "id": "b06a597cd461df3c32af",
-      "hash": "b06a597cd461df3c32af4821f0b200c4bb1807d3d9b3d62e078f2ef7b2eba46f",
+      "id": "2e3a3567a309297cb772",
+      "hash": "2e3a3567a309297cb7727d5fe75f5da31efeb0b73c29d78b68215b684d073637",
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Lote: 2026-11-07-hotfix-foto-cadastro-individual",
-      "text": "Chrome 3054 antes/depois comprovou card correto/cadastro quebrado e mesma foto sintética após correção, zero produção. Validação integrada: 22/22 testes, TypeScript, lint, teto de linhas e build 4531 módulos/13,89 s aprovados. Mudança de base exige um novo índice RAG final após congelar metadados, até 80 trechos. Comunicação adiada pelo usuário; Biblioteca é a próxima etapa após foto 258. Não sobrescrever metadados NFS-e paralelos no workspace; nenhuma sincronização ou operação remota nesta preparação.",
-      "normalizedText": "chrome 3054 antes depois comprovou card correto cadastro quebrado e mesma foto sintetica apos correcao zero producao validacao integrada 22 22 testes typescript lint teto de linhas e build 4531 modulos 13 89 s aprovados mudanca de base exige um novo indice rag final apos congelar metadados ate 80 trechos comunicacao adiada pelo usuario biblioteca e a proxima etapa apos foto 258 nao sobrescrever metadados nfs e paralelos no workspace nenhuma sincronizacao ou operacao remota nesta preparacao",
-      "tokenCount": 71,
+      "section": "Lote: 2026-11-07-biblioteca-interface-compacta",
+      "text": "Runner Biblioteca 15/15 testes de componentes reais aprovado com transportes bloqueados. Gate visual representativo Chrome aprovado em Destaques/Gerenciador, comboboxes, Nova Pasta sem escrita, Permissões390px e Upload sintético até Revisão sem publicar. Revisão independente sem bloqueio; prévia PDF intocada e sem novo aceite visual. As 23 fontes/CI da Biblioteca são idênticas às validadas com 15/15 testes e lint. Nova base aprovada em TypeScript, versão, linhas e build de 4544 módulos/13,72 s/26 páginas. Uma geração RAG encerra esta mudança de base. Nenhuma sincronização no workspace nem operação remota nesta preparação.",
+      "normalizedText": "runner biblioteca 15 15 testes de componentes reais aprovado com transportes bloqueados gate visual representativo chrome aprovado em destaques gerenciador comboboxes nova pasta sem escrita permissoes390px e upload sintetico ate revisao sem publicar revisao independente sem bloqueio previa pdf intocada e sem novo aceite visual as 23 fontes ci da biblioteca sao identicas as validadas com 15 15 testes e lint nova base aprovada em typescript versao linhas e build de 4544 modulos 13 72 s 26 paginas uma geracao rag encerra esta mudanca de base nenhuma sincronizacao no workspace nem operacao remota nesta preparacao",
+      "tokenCount": 90,
       "part": 1
     },
     {
