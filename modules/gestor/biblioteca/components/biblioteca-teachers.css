@@ -1,0 +1,122 @@
+@media screen {
+  .biblioteca-workspace :is(.biblioteca-teachers, .biblioteca-teacher-storage) {
+    color: #334155;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  .biblioteca-workspace :is(.biblioteca-teachers, .biblioteca-teacher-storage) .uppercase {
+    text-transform: none;
+    letter-spacing: normal;
+  }
+
+  .biblioteca-workspace :is(.biblioteca-teachers, .biblioteca-teacher-storage) :is(.font-black, .font-bold) {
+    font-weight: 500;
+  }
+
+  .biblioteca-workspace :is(.biblioteca-teachers, .biblioteca-teacher-storage) :is(h3, h4) {
+    color: #122b42;
+    font-weight: 600;
+  }
+
+  .biblioteca-workspace :is(.biblioteca-teachers, .biblioteca-teacher-storage) h3 {
+    font-size: 16px;
+    line-height: 1.45;
+  }
+
+  .biblioteca-workspace :is(.biblioteca-teachers, .biblioteca-teacher-storage) :is(.text-xs, [class~="text-[9px]"], [class~="text-[10px]"]) {
+    font-size: 12px;
+    line-height: 1.5;
+  }
+
+  .biblioteca-workspace :is(.biblioteca-teachers, .biblioteca-teacher-storage) .text-slate-400 {
+    color: #64748b;
+  }
+
+  .biblioteca-workspace .biblioteca-teachers-heading {
+    margin-bottom: 16px;
+    padding: 16px;
+    gap: 12px;
+    border-radius: 10px;
+    box-shadow: none;
+  }
+
+  .biblioteca-teachers-heading > div:first-child {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 9px;
+    border-radius: 8px;
+  }
+
+  .biblioteca-workspace .biblioteca-teacher-card {
+    min-width: 0;
+    padding: 16px;
+    border-radius: 10px;
+    border-color: #dbe3ec;
+    box-shadow: none;
+  }
+
+  .biblioteca-teacher-card > div:first-child {
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .biblioteca-teacher-card > div:last-child {
+    padding: 10px;
+    border-radius: 8px;
+  }
+
+  .biblioteca-workspace .biblioteca-teacher-search {
+    min-height: 38px;
+    padding: 0 12px;
+    border-radius: 8px;
+    background: #fff;
+  }
+
+  .biblioteca-teacher-search input {
+    height: 36px;
+    background: #fff;
+    font-size: 13px;
+    font-weight: 400;
+  }
+
+  .biblioteca-teacher-storage :is(th, td) {
+    padding: 12px;
+    vertical-align: middle;
+    font-size: 13px;
+  }
+
+  .biblioteca-teacher-storage th {
+    color: #526175;
+    font-size: 12px;
+    font-weight: 500;
+  }
+
+  .biblioteca-teacher-storage tbody {
+    background: #fff;
+  }
+
+  .biblioteca-teacher-storage :is(button, input[type="number"]) {
+    min-height: 38px;
+    border-radius: 8px;
+    background: #fff;
+    font-size: 13px;
+    font-weight: 500;
+  }
+}
+
+@media screen and (max-width: 767px) {
+  .biblioteca-workspace :is(.biblioteca-teachers-heading, .biblioteca-teacher-card) {
+    padding: 14px;
+  }
+
+  .biblioteca-workspace .biblioteca-teacher-search,
+  .biblioteca-teacher-storage :is(button, input) {
+    min-height: 44px;
+  }
+
+  .biblioteca-teacher-storage input {
+    font-size: 16px;
+  }
+}

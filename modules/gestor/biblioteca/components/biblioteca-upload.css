@@ -1,0 +1,115 @@
+@media screen {
+  body:has(#root .biblioteca-workspace) .biblioteca-upload-overlay {
+    padding: 12px;
+  }
+
+  body:has(#root .biblioteca-workspace) .biblioteca-dialog.biblioteca-upload-dialog {
+    padding: 0;
+    border-radius: 12px;
+    max-height: calc(100dvh - 24px);
+    font-size: 13px;
+    animation: none;
+  }
+
+  .biblioteca-upload-dialog .biblioteca-upload-header {
+    padding: 14px 16px;
+    align-items: center;
+  }
+
+  .biblioteca-upload-header h3 {
+    font-size: 18px;
+    font-weight: 600;
+    text-transform: none;
+    letter-spacing: normal;
+  }
+
+  .biblioteca-upload-header > div > p {
+    margin-top: 3px;
+    font-size: 12px;
+    color: #526175;
+  }
+
+  .biblioteca-upload-dialog .biblioteca-upload-navigation {
+    padding: 12px 16px;
+  }
+
+  .biblioteca-upload-navigation .biblioteca-upload-stepper {
+    gap: 8px;
+  }
+
+  .biblioteca-upload-stepper .biblioteca-upload-step {
+    height: 42px;
+    border-radius: 8px;
+  }
+
+  .biblioteca-upload-step > span:last-child {
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: none;
+    letter-spacing: normal;
+  }
+
+  .biblioteca-upload-dialog .biblioteca-upload-content {
+    padding: 16px;
+  }
+
+  .biblioteca-upload-content > div {
+    animation: none;
+  }
+
+  .biblioteca-upload-content .biblioteca-upload-access-option {
+    padding: 12px;
+    min-height: 96px;
+    border-radius: 8px;
+  }
+
+  .biblioteca-upload-access-option > p:first-of-type {
+    margin-top: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: none;
+    letter-spacing: normal;
+  }
+
+  .biblioteca-upload-access-option > p:last-of-type {
+    font-size: 12px;
+    color: #526175;
+  }
+
+  .biblioteca-upload-dialog .biblioteca-upload-footer {
+    padding: 12px 16px;
+  }
+
+  .biblioteca-upload-footer > button {
+    min-height: 38px;
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: normal;
+    text-transform: none;
+    box-shadow: none;
+  }
+}
+
+@media screen and (max-width: 639px) {
+  .biblioteca-upload-dialog .biblioteca-upload-navigation {
+    overflow-x: auto;
+  }
+
+  .biblioteca-upload-navigation .biblioteca-upload-stepper {
+    grid-template-columns: repeat(4, minmax(112px, 1fr));
+  }
+
+  .biblioteca-upload-step > span:last-child {
+    overflow: visible;
+    white-space: nowrap;
+    text-overflow: clip;
+  }
+
+  .biblioteca-upload-footer > button,
+  .biblioteca-upload-header > button {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}

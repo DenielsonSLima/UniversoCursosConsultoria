@@ -85,7 +85,7 @@ const TeacherStorageConfig: React.FC = () => {
   const canSave = !saveMutation.isPending;
 
   return (
-    <div className="space-y-6">
+    <div className="biblioteca-teacher-storage space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h3 className="text-lg font-black text-[#001a33] uppercase tracking-tight flex items-center gap-2">
@@ -110,7 +110,7 @@ const TeacherStorageConfig: React.FC = () => {
         </div>
       </div>
 
-      <div className="flex items-center gap-2 px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs max-w-md">
+      <div className="biblioteca-teacher-search flex items-center gap-2 px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs max-w-md">
         <Search size={14} className="text-slate-400" />
         <input
           type="text"
