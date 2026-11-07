@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "retrieval": "lexical-bm25-with-source-citations",
-  "builtAt": "2026-11-07T14:12:46.910Z",
+  "builtAt": "2026-11-07T18:33:59.520Z",
   "manifestVersion": 2,
-  "sourceSignature": "6e4b05fac2377452dcfd1eca065403a3be613d609cdb0efe29274a9642573992",
+  "sourceSignature": "b781d8e0a83692eafe4a0491000da1de32608db26b82fe866cad75690507d869",
   "sources": [
     {
       "path": "AGENTS.md",
@@ -11,7 +11,7 @@
     },
     {
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "hash": "43deaaeb9d81e7c805f10fa1b1ba9cf9265165a6a362940f2120faec9d23aff8"
+      "hash": "c06c26eddffedd4cce6d03868407dd8773d63c545da1ed6bab1a9617b2180813"
     },
     {
       "path": "ai/operacao/MEMORIA_CANONICA.md",
@@ -51,7 +51,7 @@
     },
     {
       "path": "docs/decisions/ciclos-tecnicos-cobrancas.md",
-      "hash": "e141a27efb4afeb4f39b32a9477553318fe00dae6f72a75455c9efede8e97e5d"
+      "hash": "19037d367621f81a8c3dd5846b59c8d9ed9b158d837cd67e56561ddda9ed4b80"
     },
     {
       "path": "docs/decisions/patrimonio-contas-a-pagar-emprestimos.md",
@@ -208,23 +208,23 @@
       "part": 1
     },
     {
-      "id": "6fcb36f2beaa5058e55d",
-      "hash": "6fcb36f2beaa5058e55de2e3df06026dd47265b4ad32196f46a578fd7d7e7ea5",
+      "id": "4a934f37c3c0cc25977b",
+      "hash": "4a934f37c3c0cc25977ba0cd0c370df3bc2b3ff969f91256507140e79d0e0e4c",
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Lote: 2026-11-07-configuracoes-cadastros-compactos",
-      "text": "Padronizar Configurações no padrão compacto aprovado, com seletores pesquisáveis, preservando IDs, multisseleção, campos, acesso, serviços, documentos e operações. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-07-configuracoes-cadastros-compactos.md`, 76 arquivos. Base Caixa 4.8.253 publicada pela PR #348, sete checks verdes e Vercel READY com HTTP público e asset 253 confirmados pelo responsável. O lote não altera backend, Auth, tokens, modelos/PDF nem executa operações remotas; harnesses sintéticos bloqueiam rede e gravações. Histórico do changelog arquivado integralmente, sem perda de conteúdo.",
-      "normalizedText": "padronizar configuracoes no padrao compacto aprovado com seletores pesquisaveis preservando ids multisselecao campos acesso servicos documentos e operacoes manifesto explicito ai operacao registros alteracoes 2026 11 07 configuracoes cadastros compactos md 76 arquivos base caixa 4 8 253 publicada pela pr 348 sete checks verdes e vercel ready com http publico e asset 253 confirmados pelo responsavel o lote nao altera backend auth tokens modelos pdf nem executa operacoes remotas harnesses sinteticos bloqueiam rede e gravacoes historico do changelog arquivado integralmente sem perda de conteudo",
-      "tokenCount": 78,
+      "section": "Lote: 2026-11-07-nfse-producao-restrita",
+      "text": "Publicar a fundação NFS-e com acesso restrito ao único gestor designado pelo usuário. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-07-nfse-producao-restrita.md`, 65 arquivos. Base publicada: Carteirinhas 4.8.255, commit 2617628b2c92012b82aa2ab76148d7449dfcecb0, Vercel READY. O histórico desse lote permanece no registro próprio. Operações fiscais, credenciais e emissão continuam desabilitadas.",
+      "normalizedText": "publicar a fundacao nfs e com acesso restrito ao unico gestor designado pelo usuario manifesto explicito ai operacao registros alteracoes 2026 11 07 nfse producao restrita md 65 arquivos base publicada carteirinhas 4 8 255 commit 2617628b2c92012b82aa2ab76148d7449dfcecb0 vercel ready o historico desse lote permanece no registro proprio operacoes fiscais credenciais e emissao continuam desabilitadas",
+      "tokenCount": 48,
       "part": 1
     },
     {
-      "id": "7212c4677016c7459db6",
-      "hash": "7212c4677016c7459db66c32021460061366cd19765790d55efadb5e0cf5ffb6",
+      "id": "8f9e54f6313015a773ee",
+      "hash": "8f9e54f6313015a773eeeb1ab7fa01d9499c00fb05ab9bf4c58c4032251446f7",
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Lote: 2026-11-07-configuracoes-cadastros-compactos",
-      "text": "Candidato 4.8.254/revisão 263: build Node 24.22.1 aprovado (4481 módulos, 9,00 s, 26 páginas sociais), runner 18/18, TypeScript e teto de linhas aprovados nos limites registrados. Após recuperar o Chrome, o responsável conferiu os cenários desktop e Site Público móvel a 390 px descritos no registro; isso não comprova todos os formulários/perfis, editor eletrônico carregado ou operações reais. A sincronização anterior de 75 caminhos teve 72 cópias, três preservados e hashes com backup; o fechamento atual tem 76 e aguarda sync final autorizado. O índice RAG é gerado uma única vez no fechamento. Não há PR nem publicação desta etapa. O usuário já autorizou entregar o pronto e continuar; aceite final e passagem são gates técnicos do responsável, sem nova confirmação. Comunicação e Biblioteca aguardam sem início.",
-      "normalizedText": "candidato 4 8 254 revisao 263 build node 24 22 1 aprovado 4481 modulos 9 00 s 26 paginas sociais runner 18 18 typescript e teto de linhas aprovados nos limites registrados apos recuperar o chrome o responsavel conferiu os cenarios desktop e site publico movel a 390 px descritos no registro isso nao comprova todos os formularios perfis editor eletronico carregado ou operacoes reais a sincronizacao anterior de 75 caminhos teve 72 copias tres preservados e hashes com backup o fechamento atual tem 76 e aguarda sync final autorizado o indice rag e gerado uma unica vez no fechamento nao ha pr nem publicacao desta etapa o usuario ja autorizou entregar o pronto e continuar aceite final e passagem sao gates tecnicos do responsavel sem nova confirmacao comunicacao e biblioteca aguardam sem inicio",
-      "tokenCount": 113,
+      "section": "Lote: 2026-11-07-nfse-producao-restrita",
+      "text": "Candidato 4.8.256/revisão 265. Migration 20261107182011 aplicada via MCP com tabela privada de concessões e RPC booleana; liberação individual por operação administrativa, sem alterar perfil compartilhado. Contrato SQL real aprovado com identidade autorizada, outro gestor, contexto forjado, ausência de identidade e negação de acesso direto à tabela. 47 testes focados e TypeScript focado aprovados. Smoke Safari sintético desktop e 390 px aprovado nos limites do registro. Build e TypeScript globais do workspace encontram alterações financeiras paralelas fora do manifesto; a validação integral usa o checkout isolado do candidato na Preview/CI. Produção foi explicitamente autorizada pelo usuário e exige CI/Preview aprovados, merge do manifesto e verificação do deployment final. Não incluir alterações financeiras paralelas.",
+      "normalizedText": "candidato 4 8 256 revisao 265 migration 20261107182011 aplicada via mcp com tabela privada de concessoes e rpc booleana liberacao individual por operacao administrativa sem alterar perfil compartilhado contrato sql real aprovado com identidade autorizada outro gestor contexto forjado ausencia de identidade e negacao de acesso direto a tabela 47 testes focados e typescript focado aprovados smoke safari sintetico desktop e 390 px aprovado nos limites do registro build e typescript globais do workspace encontram alteracoes financeiras paralelas fora do manifesto a validacao integral usa o checkout isolado do candidato na preview ci producao foi explicitamente autorizada pelo usuario e exige ci preview aprovados merge do manifesto e verificacao do deployment final nao incluir alteracoes financeiras paralelas",
+      "tokenCount": 105,
       "part": 1
     },
     {
@@ -688,90 +688,90 @@
       "part": 2
     },
     {
-      "id": "3d531edd800148d1f13c",
-      "hash": "3d531edd800148d1f13c404b0da9ac450695b576228fc7bede5fb9694b578d18",
+      "id": "1cc3f17d27219dff9f44",
+      "hash": "1cc3f17d27219dff9f443d5b1646c10715cbf49f3475db06f26cb7e1e86a1f3d",
       "path": "docs/decisions/ciclos-tecnicos-cobrancas.md",
-      "section": "Contrato dos ciclos financeiros técnicos — atualizado em 27/10/2026",
+      "section": "Contrato dos ciclos financeiros técnicos — 24/09/2026",
       "text": "Elegibilidade é individual, calculada no banco a partir de recebíveis, ciclos, evidências importadas/vinculadas Banese/Proesc e cobertura de períodos. Abrir o modal não consulta todas as cobranças nas APIs; consultas e conciliações externas pertencem aos fluxos específicos. Aluno novo sem cobrança pode iniciar C1 em turma em andamento ou após transferência; matrícula recente ou status ativo não bastam. Histórico importado, períodos cobertos e regras legadas permanecem protegidos. Cadastro, matrícula acadêmica, documentos e situação financeira são distintos; emitir não deve ativá-los silenciosamente.",
       "normalizedText": "elegibilidade e individual calculada no banco a partir de recebiveis ciclos evidencias importadas vinculadas banese proesc e cobertura de periodos abrir o modal nao consulta todas as cobrancas nas apis consultas e conciliacoes externas pertencem aos fluxos especificos aluno novo sem cobranca pode iniciar c1 em turma em andamento ou apos transferencia matricula recente ou status ativo nao bastam historico importado periodos cobertos e regras legadas permanecem protegidos cadastro matricula academica documentos e situacao financeira sao distintos emitir nao deve ativa los silenciosamente",
       "tokenCount": 76,
       "part": 1
     },
     {
-      "id": "db1d78cc4bfb9c6d681c",
-      "hash": "db1d78cc4bfb9c6d681ca1d1d511bca597b68b6e5c5f8cfed9509f0746ab7177",
+      "id": "9e5f7c54f99f75d8a1f6",
+      "hash": "9e5f7c54f99f75d8a1f65e30516f86db52f693a206efb228d85d44b4fa9d8527",
       "path": "docs/decisions/ciclos-tecnicos-cobrancas.md",
-      "section": "Contrato dos ciclos financeiros técnicos — atualizado em 27/10/2026",
+      "section": "Contrato dos ciclos financeiros técnicos — 24/09/2026",
       "text": "No C1 regular, a escolha da matrícula é explícita; a regra vigente tem 12 mensalidades. A entrada por transferência pode usar quantidade parcial no ciclo inicial, conforme [contrato de transferências](transferencias-tecnicas.md). “Sem boleto” nunca significa “paga”. Compatibilidade: `emitirMatricula=false` sem modo explícito significa `OMITIR`; `REGISTRO_SEM_BOLETO` exige modo explícito; o booleano é opcional e, se informado, deve ser false.",
       "normalizedText": "no c1 regular a escolha da matricula e explicita a regra vigente tem 12 mensalidades a entrada por transferencia pode usar quantidade parcial no ciclo inicial conforme contrato de transferencias transferencias tecnicas md sem boleto nunca significa paga compatibilidade emitirmatricula false sem modo explicito significa omitir registro sem boleto exige modo explicito o booleano e opcional e se informado deve ser false",
       "tokenCount": 55,
       "part": 1
     },
     {
-      "id": "10fce2e6ecefeb87c81c",
-      "hash": "10fce2e6ecefeb87c81c17c18d0da8350c1c3bc7f92991f34a17fa599f3a0fec",
+      "id": "6388bd07b5f59412d224",
+      "hash": "6388bd07b5f59412d22460270565dd83bb1c6ee984b1aabcc0f531b9f898f5ec",
       "path": "docs/decisions/ciclos-tecnicos-cobrancas.md",
-      "section": "Contrato dos ciclos financeiros técnicos — atualizado em 27/10/2026",
+      "section": "Contrato dos ciclos financeiros técnicos — 24/09/2026",
       "text": "| modoMatricula | Recebíveis | Bancários | LOCAL | Matrícula | |---|---:|---:|---:|---| | BOLETO | 13 | 13 | 0 | Obrigação com boleto | | REGISTRO_SEM_BOLETO | 13 | 12 | 1 | Obrigação local pendente | | OMITIR | 12 | 12 | 0 | Não criar obrigação |",
       "normalizedText": "modomatricula recebiveis bancarios local matricula boleto 13 13 0 obrigacao com boleto registro sem boleto 13 12 1 obrigacao local pendente omitir 12 12 0 nao criar obrigacao",
       "tokenCount": 25,
       "part": 1
     },
     {
-      "id": "16826c5512f60a3354d0",
-      "hash": "16826c5512f60a3354d0cf7654c6866727ef8a085364b0cb5c48d29cd276cf98",
+      "id": "f22fc70c4d4cf1bfc652",
+      "hash": "f22fc70c4d4cf1bfc652381c0cab4bececa91a5957e6e8edfc70e5360b1c1331",
       "path": "docs/decisions/ciclos-tecnicos-cobrancas.md",
-      "section": "Contrato dos ciclos financeiros técnicos — atualizado em 27/10/2026",
+      "section": "Contrato dos ciclos financeiros técnicos — 24/09/2026",
       "text": "LOCAL é destino imutável da matrícula C1, item zero, comprovado pelo snapshot/run: `destinoCobranca=LOCAL`, `emissaoBanese=NAO_APLICAVEL` e `localSemBoletoComprovado=true`. Nunca entra no emissor nem conta como boleto emitido. `quantidadeItens=quantidadeBancaria+quantidadeLocal`; progresso e carnê usam a quantidade bancária. `cicloManual.matriculaLocal` permite recebimento mesmo após C2. Pagamento/estorno não convertem LOCAL em bancário.",
       "normalizedText": "local e destino imutavel da matricula c1 item zero comprovado pelo snapshot run destinocobranca local emissaobanese nao aplicavel e localsemboletocomprovado true nunca entra no emissor nem conta como boleto emitido quantidadeitens quantidadebancaria quantidadelocal progresso e carne usam a quantidade bancaria ciclomanual matriculalocal permite recebimento mesmo apos c2 pagamento estorno nao convertem local em bancario",
       "tokenCount": 50,
       "part": 1
     },
     {
-      "id": "c9157791f9e70b4247c0",
-      "hash": "c9157791f9e70b4247c06e02dd8f35a3ced9d0a2746c83c4bea28d44a197a997",
+      "id": "722029f7aa8cfcebd843",
+      "hash": "722029f7aa8cfcebd843a6d196636d3fa50b926d10adbc49d2e6303e48447462",
       "path": "docs/decisions/ciclos-tecnicos-cobrancas.md",
-      "section": "Contrato dos ciclos financeiros técnicos — atualizado em 27/10/2026",
+      "section": "Contrato dos ciclos financeiros técnicos — 24/09/2026",
       "text": "O backend calcula a prévia e os termos por item; a interface permite revisar valor, desconto, multa, juros e vencimento. Toda edição exige nova prévia canônica; item incluído com valor zero bloqueia confirmação. No `REGISTRO_SEM_BOLETO`, alterar o vencimento da matrícula recalcula a Mensalidade 1 para o mês-calendário seguinte e as demais a partir dela; nos outros modos, alterar a Mensalidade 1 recalcula as seguintes sem mudar a matrícula. `OMITIR` ancora a Mensalidade 1 na data de origem; ao reincluir matrícula com boleto ou registro local, a Mensalidade 1 volta para o mês seguinte. Trocas diretas entre boleto e registro local preservam ajustes manuais. Exibir data inicial e primeira mensalidade calculadas pela RPC. Rascunho e fingerprints pertencem à matrícula, ciclo e origem/data escolhidas; troca ociosa reinicia a revisão, emissão em curso preserva o snapshot. Erro, recálculo pendente ou revisão não confirmada bloqueiam emissão.",
       "normalizedText": "o backend calcula a previa e os termos por item a interface permite revisar valor desconto multa juros e vencimento toda edicao exige nova previa canonica item incluido com valor zero bloqueia confirmacao no registro sem boleto alterar o vencimento da matricula recalcula a mensalidade 1 para o mes calendario seguinte e as demais a partir dela nos outros modos alterar a mensalidade 1 recalcula as seguintes sem mudar a matricula omitir ancora a mensalidade 1 na data de origem ao reincluir matricula com boleto ou registro local a mensalidade 1 volta para o mes seguinte trocas diretas entre boleto e registro local preservam ajustes manuais exibir data inicial e primeira mensalidade calculadas pela rpc rascunho e fingerprints pertencem a matricula ciclo e origem data escolhidas troca ociosa reinicia a revisao emissao em curso preserva o snapshot erro recalculo pendente ou revisao nao confirmada bloqueiam emissao",
       "tokenCount": 120,
       "part": 1
     },
     {
-      "id": "f654ae9414ac7b01b94d",
-      "hash": "f654ae9414ac7b01b94d30f9eaf854c2d2fd2b732b5b5d9fb7dd9fc6b0193249",
+      "id": "5c4918931c7684c737a1",
+      "hash": "5c4918931c7684c737a1a458fbce8a3d521fd0799b6b08ca2dbcfbc6fef8a930",
       "path": "docs/decisions/ciclos-tecnicos-cobrancas.md",
-      "section": "Contrato dos ciclos financeiros técnicos — atualizado em 27/10/2026",
-      "text": "C2 regular segue a regra de rematrícula e 12 mensalidades; C2 inicial por transferência segue o plano recebido, com primeiro vencimento individual confirmado. A escolha comercial de C1, C2 ou não emitir pertence ao gestor por matrícula; não exige formação/emissão prévia ou quitação de C1. Operações e obrigações existentes não são duplicadas; retomam-se por ciclo e identidade. LOCAL pendente, pago ou estornado exige a prova canônica correspondente; estorno auditado não exige quitação para C2. Continuidade importada e trancamento seguem o [contrato de passagem e proveniência](../contracts/ciclos-tecnicos-passagem-e-proveniencia.md): a decisão não exige quitação do C1, confirmação online ou cache Proesc atual; cobertura existente e identidades conflitantes continuam protegidas. Competência de entrada e datas de transferência vêm da análise canônica, sem duplicar períodos.",
-      "normalizedText": "c2 regular segue a regra de rematricula e 12 mensalidades c2 inicial por transferencia segue o plano recebido com primeiro vencimento individual confirmado a escolha comercial de c1 c2 ou nao emitir pertence ao gestor por matricula nao exige formacao emissao previa ou quitacao de c1 operacoes e obrigacoes existentes nao sao duplicadas retomam se por ciclo e identidade local pendente pago ou estornado exige a prova canonica correspondente estorno auditado nao exige quitacao para c2 continuidade importada e trancamento seguem o contrato de passagem e proveniencia contracts ciclos tecnicos passagem e proveniencia md a decisao nao exige quitacao do c1 confirmacao online ou cache proesc atual cobertura existente e identidades conflitantes continuam protegidas competencia de entrada e datas de transferencia vem da analise canonica sem duplicar periodos",
-      "tokenCount": 114,
+      "section": "Contrato dos ciclos financeiros técnicos — 24/09/2026",
+      "text": "C2 regular segue a regra de rematrícula e 12 mensalidades; C2 inicial por transferência segue o plano recebido, com primeiro vencimento individual confirmado. Na nova modalidade individual, C1 constituído e com sua parte bancária emitida permite C2, independentemente de quitação. LOCAL pendente, pago ou estornado exige a prova canônica correspondente; estorno auditado não exige quitação para C2. Continuidade importada e trancamento seguem o [contrato de passagem e proveniência](../contracts/ciclos-tecnicos-passagem-e-proveniencia.md): passagem individual comprovada não exige quitação do C1 nem cache Proesc atual; cobertura existente e identidades conflitantes continuam protegidas. Competência de entrada e datas de transferência vêm da análise canônica, sem duplicar períodos.",
+      "normalizedText": "c2 regular segue a regra de rematricula e 12 mensalidades c2 inicial por transferencia segue o plano recebido com primeiro vencimento individual confirmado na nova modalidade individual c1 constituido e com sua parte bancaria emitida permite c2 independentemente de quitacao local pendente pago ou estornado exige a prova canonica correspondente estorno auditado nao exige quitacao para c2 continuidade importada e trancamento seguem o contrato de passagem e proveniencia contracts ciclos tecnicos passagem e proveniencia md passagem individual comprovada nao exige quitacao do c1 nem cache proesc atual cobertura existente e identidades conflitantes continuam protegidas competencia de entrada e datas de transferencia vem da analise canonica sem duplicar periodos",
+      "tokenCount": 97,
       "part": 1
     },
     {
-      "id": "17e879ba5aed6a715351",
-      "hash": "17e879ba5aed6a71535167e50ee970f0da96e27db18575f214019b0788f3cb07",
+      "id": "8f924c618809f8df3e3f",
+      "hash": "8f924c618809f8df3e3f38e4e883d27d5ce6719185480f4a2c88b2618a8d9703",
       "path": "docs/decisions/ciclos-tecnicos-cobrancas.md",
-      "section": "Contrato dos ciclos financeiros técnicos — atualizado em 27/10/2026",
+      "section": "Contrato dos ciclos financeiros técnicos — 24/09/2026",
       "text": "“Abrir recebimento após gerar” apenas abre a baixa manual. Usuário confirma data, conta, forma e valor; não há baixa automática. A autorização cruza poder baixar e consultar contas, com validação no servidor/polo. Conta ativa deve pertencer fisicamente ao polo ou ser global, além de disponível para uso nele; compartilhamento sozinho não autoriza baixa. Erro na consulta bloqueia confirmação mesmo com cache e deve permanecer visível. Baixa auditada não gera parcelas nem ativa matrícula por efeito colateral.",
       "normalizedText": "abrir recebimento apos gerar apenas abre a baixa manual usuario confirma data conta forma e valor nao ha baixa automatica a autorizacao cruza poder baixar e consultar contas com validacao no servidor polo conta ativa deve pertencer fisicamente ao polo ou ser global alem de disponivel para uso nele compartilhamento sozinho nao autoriza baixa erro na consulta bloqueia confirmacao mesmo com cache e deve permanecer visivel baixa auditada nao gera parcelas nem ativa matricula por efeito colateral",
       "tokenCount": 72,
       "part": 1
     },
     {
-      "id": "ac8edb5bb38cee3cc0f9",
-      "hash": "ac8edb5bb38cee3cc0f9478435619d1d9646bf37c944cc6fdc73030d7b861c60",
+      "id": "969d170b1c9ce7f90e0a",
+      "hash": "969d170b1c9ce7f90e0a0fe5423eb544e0e8bcd03a2e6f231b368cccd1a35dd7",
       "path": "docs/decisions/ciclos-tecnicos-cobrancas.md",
-      "section": "Contrato dos ciclos financeiros técnicos — atualizado em 27/10/2026",
+      "section": "Contrato dos ciclos financeiros técnicos — 24/09/2026",
       "text": "Duplo clique, emissão parcial e resposta ambígua exigem retomar a mesma operação, preservando parâmetros e a chave da operação: `requestId` do ciclo ou `idempotencyKey` da baixa. Falha após commit pode significar baixa registrada: reconciliar recebível/ledger e repetir com a mesma chave; a projeção posterior pode ser concluída sem outra movimentação. Nunca presumir ausência de pagamento. Não repetir POST bancário sem resolução canônica. PAGO só conta como emissão bancária concluída com prova histórica completa; baixa LOCAL não fornece essa prova.",
       "normalizedText": "duplo clique emissao parcial e resposta ambigua exigem retomar a mesma operacao preservando parametros e a chave da operacao requestid do ciclo ou idempotencykey da baixa falha apos commit pode significar baixa registrada reconciliar recebivel ledger e repetir com a mesma chave a projecao posterior pode ser concluida sem outra movimentacao nunca presumir ausencia de pagamento nao repetir post bancario sem resolucao canonica pago so conta como emissao bancaria concluida com prova historica completa baixa local nao fornece essa prova",
       "tokenCount": 73,
       "part": 1
     },
     {
-      "id": "ec5fad226a33ad4b377e",
-      "hash": "ec5fad226a33ad4b377e9fd0e66f45a09c2524cb44485dc22c29028152fe88e7",
+      "id": "11191d473a4a6fdbe51e",
+      "hash": "11191d473a4a6fdbe51ee1358c5eacdb047e18c2353dfdeea719d8adef66dc3e",
       "path": "docs/decisions/ciclos-tecnicos-cobrancas.md",
-      "section": "Contrato dos ciclos financeiros técnicos — atualizado em 27/10/2026",
+      "section": "Contrato dos ciclos financeiros técnicos — 24/09/2026",
       "text": "Estorno LOCAL usa RPC autenticada e CAS com `p_expected_settlement_id`, congelado ao abrir a ação. Exige baixa comprovada, permissão financeira e polo autorizado; atomiza ledger/evento e retorno a PENDENTE, preserva auditoria e não recria boleto. Replay exige mesma baixa, ator e motivo; divergência ou baixa posterior exige atualizar a tela. Guardas impedem contorno por UPDATE. Provas e arquivos: [registro da revisão](../../ai/operacao/registros/alteracoes/2026-09-24-revisao-baixa-matricula-local.md); regressões em `supabase/tests/local_enrollment_reversal.rollback.sql`, `local_enrollment_cycle_state.transaction.sql` e no CI “Testar geração manual dos ciclos técnicos”.",
       "normalizedText": "estorno local usa rpc autenticada e cas com p expected settlement id congelado ao abrir a acao exige baixa comprovada permissao financeira e polo autorizado atomiza ledger evento e retorno a pendente preserva auditoria e nao recria boleto replay exige mesma baixa ator e motivo divergencia ou baixa posterior exige atualizar a tela guardas impedem contorno por update provas e arquivos registro da revisao ai operacao registros alteracoes 2026 09 24 revisao baixa matricula local md regressoes em supabase tests local enrollment reversal rollback sql local enrollment cycle state transaction sql e no ci testar geracao manual dos ciclos tecnicos",
       "tokenCount": 89,

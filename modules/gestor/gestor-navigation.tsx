@@ -74,6 +74,7 @@ export const buildGestorNavigation = ({
     comunicacao: <MessageSquare size={20} />,
     parceiros: <Handshake size={20} />,
     financeiro: <TrendingUp size={20} />,
+    'emissor-nfse': <FileText size={20} />,
     patrimonio: <Archive size={20} />,
     caixa: <ShoppingCart size={20} />,
     cadastros: <UserPlus size={20} />,

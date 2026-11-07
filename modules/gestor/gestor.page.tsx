@@ -12,9 +12,7 @@ import { loginService } from '../login/login.service';
 import {
   buildDashboardAccessKey,
   canAccessGestorModule,
-  canAccessCommunicationRoute,
   normalizeGestorPermissions,
-  canAccessTab,
   getAllowedDashboardWidgets,
 } from './access-control';
 import { useGestorOperationalRealtime } from './hooks/useGestorOperationalRealtime';
@@ -23,7 +21,7 @@ import GestorPortalShell from './components/GestorPortalShell';
 import { NoAccessScreen, ScheduleBlockedScreen } from './components/GestorAccessStates';
 import { usePendingCommunicationCount } from './hooks/usePendingCommunicationCount';
 import GestorModuleContent, { loadCaixaPage, loadSecretariaPage } from './components/GestorModuleContent';
-import { buildGestorNavigation, GESTOR_MODULE_ORDER, POLO_CADASTROS_ALLOWED } from './gestor-navigation';
+import { buildGestorNavigation, GESTOR_MODULE_ORDER } from './gestor-navigation';
 import { useGestorPoloTransition } from './hooks/useGestorPoloTransition';
 import { useGestorPolos } from './hooks/useGestorPolos';
 import { useGestorSearch } from './hooks/useGestorSearch';
@@ -32,6 +30,8 @@ import { useGestorGlobalSearchNavigation } from './global-search/useGestorGlobal
 import { meuPerfilService } from './meu-perfil/meu-perfil.service';
 import type { MeuPerfilGestorData } from './meu-perfil/meu-perfil.types';
 import { initialGestorFinancialModule, leaveFinancialSection } from './financeiro/financeiro-sections';
+import { canOpenGestorModule } from './gestor-module-access';
+import { useNfsePilotAccess } from './emissor-nfse/access/useNfsePilotAccess';
 
 const GestorPage: React.FC = () => {
   const contentScrollRef = useRef<HTMLDivElement>(null);
@@ -245,43 +245,10 @@ const GestorPage: React.FC = () => {
     poloId: scopedPoloId,
     includeGlobalPartners: gestorScope.isGlobal,
   });
-  const canOpenModule = useCallback((moduleId: string) => {
-    if (moduleId === 'meu-perfil') return true;
-    const rootModule = moduleId.startsWith('parceiros-novo-')
-      ? 'parceiros'
-      : moduleId.startsWith('cadastros-')
-      ? 'cadastros'
-      : moduleId.startsWith('comunicacao-')
-        ? 'comunicacao'
-        : moduleId;
-    if (!canAccessGestorModule(gestorPermissions, rootModule)) return false;
-    if (moduleId.startsWith('cadastros-') && !canAccessTab(gestorPermissions, 'cadastros', moduleId)) {
-      return false;
-    }
-    if (moduleId.startsWith('comunicacao-') && !canAccessCommunicationRoute(gestorPermissions, moduleId)) {
-      return false;
-    }
-    if (moduleId === 'comunicacao-automacoes' && (!gestorPermissions.allPolos || !isMatrizSelected)) {
-      return false;
-    }
-    if (
-      moduleId === 'comunicacao'
-      && !canAccessTab(gestorPermissions, 'comunicacao', 'comunicacao-mensagem')
-      && !canAccessTab(gestorPermissions, 'comunicacao', 'comunicacao-whatsapp')
-      && !(
-        gestorPermissions.allPolos
-        && isMatrizSelected
-        && canAccessTab(gestorPermissions, 'comunicacao', 'comunicacao-automacoes')
-      )
-    ) {
-      return false;
-    }
-    if (rootModule === 'configuracoes' && !isMatrizSelected) return false;
-    if (!isMatrizSelected && moduleId.startsWith('cadastros-') && !POLO_CADASTROS_ALLOWED.has(moduleId)) {
-      return false;
-    }
-    return true;
-  }, [gestorPermissions, isMatrizSelected]);
+  const nfseAccess = useNfsePilotAccess(profile, canUsePortal);
+  const canOpenModule = useCallback((moduleId: string) =>
+    canOpenGestorModule(moduleId, gestorPermissions, isMatrizSelected, nfseAccess.allowed),
+  [gestorPermissions, isMatrizSelected, nfseAccess.allowed]);
   const firstAllowedModule = useMemo(
     () => GESTOR_MODULE_ORDER.find(canOpenModule) || null,
     [canOpenModule],
@@ -301,12 +268,12 @@ const GestorPage: React.FC = () => {
   }, [visiblePolos, currentPoloId]);
 
   useEffect(() => {
-    if (isAuthLoading || !profile) return;
+    if (isAuthLoading || isAccessRefreshing || !profile || (activeModule === 'emissor-nfse' && nfseAccess.isChecking)) return;
     if (!canOpenModule(activeModule) && firstAllowedModule) {
       setHasUnsavedAutomationDraft(false);
       setActiveModuleState(firstAllowedModule);
     }
-  }, [activeModule, canOpenModule, firstAllowedModule, isAuthLoading, profile]);
+  }, [activeModule, canOpenModule, firstAllowedModule, isAccessRefreshing, isAuthLoading, nfseAccess.isChecking, profile]);
 
   useInactivityLogout({
     isEnabled: !!profile && !isAuthLoading,
@@ -411,6 +378,7 @@ const GestorPage: React.FC = () => {
     <GestorModuleContent
       activeModule={activeModule}
       canOpenModule={canOpenModule}
+      isNfseAccessChecking={nfseAccess.isChecking}
       isMatrizSelected={isMatrizSelected}
       allowedCadastroTabs={visibleCadastroSubItems.map(item => item.id)}
       setActiveModule={setActiveModule}

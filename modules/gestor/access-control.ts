@@ -8,6 +8,7 @@ export const GESTOR_MODULE_IDS = [
   'secretaria',
   'caixa',
   'financeiro',
+  'emissor-nfse',
   'patrimonio',
   'biblioteca',
   'calendario',
@@ -68,7 +69,10 @@ export interface GestorPermissions {
   tabs?: Record<string, string[]>;
 }
 
-export const DEFAULT_GESTOR_MODULES = [...GESTOR_MODULE_IDS] as GestorModuleId[];
+// O novo domínio fiscal exige inclusão explícita na permissão do contexto.
+export const DEFAULT_GESTOR_MODULES = GESTOR_MODULE_IDS.filter(
+  (moduleId) => moduleId !== 'emissor-nfse',
+) as GestorModuleId[];
 export const DEFAULT_FINANCEIRO_TABS = [...FINANCEIRO_TAB_IDS] as FinanceiroTabId[];
 export const DEFAULT_GESTAO_TURMA_TABS = [...GESTAO_TURMA_TAB_IDS] as GestaoTurmaTabId[];
 

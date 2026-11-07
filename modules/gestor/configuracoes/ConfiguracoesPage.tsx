@@ -60,6 +60,7 @@ const TiposProdutosConfig = React.lazy(() => import('./tipos-produtos/TiposProdu
 const ProescConfig = React.lazy(() => import('./proesc/ProescConfig'));
 const ConsultaApiProescConfig = React.lazy(() => import('./consulta-api-proesc/ConsultaApiProescConfig'));
 const ImpressorasConfig = React.lazy(() => import('./impressoras/ImpressorasConfig'));
+const NfsePortalContribuinteConfig = React.lazy(() => import('./nfse-portal-contribuinte/NfsePortalContribuinteConfig'));
 import {
   banesePollingQueryKey,
   consultaApiBaneseService,
@@ -68,11 +69,21 @@ import {
 interface ConfiguracoesPageProps {
   poloId?: string | null;
   canManageProductTypes?: boolean;
+  isMatriz?: boolean;
+  contextKey?: string;
+  authUserId?: string;
+  canAccessNfse?: boolean;
+  isNfseAccessChecking?: boolean;
 }
 
 const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({
   poloId,
   canManageProductTypes = false,
+  isMatriz = false,
+  contextKey = '',
+  authUserId = '',
+  canAccessNfse = false,
+  isNfseAccessChecking = false,
 }) => {
   const [activeSection, setActiveSection] = useState<string | null>(null);
   const sectionTopRef = useRef<HTMLDivElement>(null);
@@ -86,6 +97,7 @@ const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({
   const menuItems = [
     { id: 'empresas', title: 'Dados da Empresa', desc: 'CNPJ, Endereço e Logo', icon: <Building2 size={24} />, color: 'bg-blue-500' },
     { id: 'polos', title: 'Polos e Filiais', desc: 'Gestão das unidades', icon: <Building2 size={24} />, color: 'bg-sky-500' },
+    ...(canAccessNfse && authUserId && isMatriz && contextKey ? [{ id: 'nfse-portal-contribuinte', title: 'NFS-e Portal Contribuinte', desc: 'Acesso fiscal da matriz e filiais', icon: <FileText size={24} />, color: 'bg-blue-700' }] : []),
     { id: 'academicos', title: 'Matrícula e Validação', desc: 'Configurações de registros, carteirinhas e certificados', icon: <GraduationCap size={24} />, color: 'bg-purple-500' },
     { id: 'site-publico', title: 'Site Público', desc: 'Faixa de avisos e turmas abertas', icon: <Megaphone size={24} />, color: 'bg-blue-700' },
     { id: 'categorias', title: 'Categorias de Cadastros', desc: 'Segmentos de alunos, professores, PF e PJ', icon: <Tags size={24} />, color: 'bg-orange-500' },
@@ -123,6 +135,7 @@ const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({
     switch (activeSection) {
       case 'empresas': return <EmpresasConfig />;
       case 'polos': return <PolosConfig />;
+      case 'nfse-portal-contribuinte': return canAccessNfse ? <NfsePortalContribuinteConfig key={`${authUserId}:${contextKey}:${poloId || ''}`} isMatriz={isMatriz} poloId={poloId} contextKey={contextKey} authUserId={authUserId} canAccessNfse={canAccessNfse} /> : <p role="status">{isNfseAccessChecking ? 'Verificando acesso à NFS-e…' : 'Acesso NFS-e indisponível para este usuário.'}</p>;
       case 'academicos': return <AcademicosConfig />;
       case 'site-publico': return <SitePublicoConfig />;
       case 'categorias': return <CategoriasConfig />;

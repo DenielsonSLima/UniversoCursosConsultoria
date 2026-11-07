@@ -32,6 +32,7 @@ const USER_FORM_MODULE_ICONS: Record<string, React.ReactNode> = {
   comunicacao: <MessageSquare size={18} />,
   parceiros: <Handshake size={18} />,
   financeiro: <TrendingUp size={18} />,
+  'emissor-nfse': <FileText size={18} />,
   patrimonio: <Archive size={18} />,
   caixa: <ShoppingCart size={18} />,
   cadastros: <UserPlus size={18} />,

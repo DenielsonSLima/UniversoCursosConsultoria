@@ -1,0 +1,112 @@
+.nfse-portal-config {
+  min-width: 0;
+  color: #243b53;
+  font-size: 13px;
+  line-height: 1.55;
+}
+.nfse-portal-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.nfse-portal-heading h2 { margin: 0; font-size: 18px; font-weight: 600; }
+.nfse-portal-heading p { margin: 4px 0 0; color: #526579; }
+.nfse-portal-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border: 1px solid #dbe3ed;
+  border-radius: 8px;
+  font-size: 12px;
+  color: #526579;
+  background: #fff;
+}
+.nfse-portal-section {
+  margin-top: 16px;
+  padding: 18px;
+  border: 1px solid #e3e9ee;
+  border-radius: 12px;
+  background: #fff;
+}
+.nfse-portal-section h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.nfse-portal-identity,
+.nfse-portal-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 18px;
+  margin: 0;
+}
+.nfse-portal-identity dt,
+.nfse-portal-fields label > span {
+  display: block;
+  color: #526579;
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+.nfse-portal-identity dd { margin: 0; overflow-wrap: anywhere; }
+.nfse-portal-fields input { width: 100%; }
+.nfse-portal-fields label { min-width: 0; }
+.nfse-portal-fields .institutional-select input { font-size: 13px; }
+.nfse-portal-info,
+.nfse-portal-state {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid #dce7f7;
+  background: #f5f8ff;
+  color: #334e68;
+}
+.nfse-portal-info svg,
+.nfse-portal-state svg { flex-shrink: 0; margin-top: 2px; }
+.nfse-portal-info p,
+.nfse-portal-state p { margin: 0; }
+.nfse-portal-state[data-tone="error"] { background: #fff7f7; border-color: #fecaca; color: #991b1b; }
+.nfse-portal-state strong { display: block; font-weight: 500; }
+.nfse-portal-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+}
+.nfse-portal-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 38px;
+  padding: 8px 12px;
+  border: 1px solid #dbe3ed;
+  border-radius: 8px;
+  background: #fff;
+  font-size: 13px;
+  font-weight: 500;
+  color: #243b53;
+}
+.nfse-portal-button[data-primary="true"] { background: #001a33; border-color: #001a33; color: #fff; }
+.nfse-portal-button:disabled { opacity: .5; cursor: not-allowed; }
+.nfse-portal-button:focus-visible { outline: 2px solid #4169e1; outline-offset: 2px; }
+.nfse-portal-note { margin: 12px 0 0; color: #526579; font-size: 12px; }
+.nfse-portal-config fieldset { margin: 0; padding: 0; border: 0; min-width: 0; }
+@media (max-width: 639px) {
+  .nfse-portal-identity,
+  .nfse-portal-fields { grid-template-columns: minmax(0, 1fr); }
+  .nfse-portal-section { padding: 14px; }
+  .nfse-portal-fields .institutional-select input { font-size: 16px; min-height: 44px; }
+  .nfse-portal-button { min-height: 44px; }
+}

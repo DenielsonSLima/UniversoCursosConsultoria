@@ -16,6 +16,15 @@ Histórico arquivado: [05/10/2026 — versões 4.8.171 a 4.8.174](./changelog/20
 
 Histórico arquivado: [06/10/2026 a 09/10/2026 — versões 4.8.175 a 4.8.195](./changelog/2026-10-06-a-09-versoes-4-8-175-a-195.md).
 
+## [4.8.256] - 2026-11-07
+
+### Adicionado
+- Emissor NFS-e após Financeiro, com Preparar emissão, Pendentes, Emitidas, Erros e Modelos.
+- NFS-e Portal Contribuinte na matriz, organizado pelos estabelecimentos de Polos e Filiais.
+- Liberação inicial individual, confirmada no servidor e isolada dos perfis compartilhados.
+- Contratos RPC, TanStack Query, Realtime e API interna separados; cálculo financeiro reservado ao backend.
+- Emissão, gravações fiscais e cadastro de credenciais permanecem indisponíveis nesta etapa.
+
 ## [4.8.255] - 2026-11-07
 
 ### Corrigido

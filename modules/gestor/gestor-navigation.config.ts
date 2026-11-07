@@ -26,6 +26,7 @@ export const GESTOR_MAIN_NAVIGATION = [
   { id: 'comunicacao', label: 'Comunicação', group: 'relacionamento' },
   { id: 'caixa', label: 'Caixa', group: 'financeiro' },
   { id: 'financeiro', label: 'Financeiro', group: 'financeiro' },
+  { id: 'emissor-nfse', label: 'Emissor NFS-e', group: 'financeiro' },
   { id: 'patrimonio', label: 'Patrimônio', group: 'financeiro' },
   { id: 'cadastros', label: 'Formações', group: 'estrutura-apoio', dividerBefore: true },
   { id: 'biblioteca', label: 'Biblioteca', group: 'estrutura-apoio' },
