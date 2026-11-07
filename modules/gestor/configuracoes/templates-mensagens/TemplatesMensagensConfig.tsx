@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import InstitutionalSelect from '../../../shared/components/InstitutionalSelect';
 import { Save, Plus, MessageSquare, Variable, Trash2, RefreshCw } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { mensageriaService, TemplateMensagem } from '../mensageria/mensageria.service';
@@ -111,7 +112,7 @@ const TemplatesMensagensConfig: React.FC = () => {
   }
 
   return (
-    <div className="max-w-5xl animate-fadeIn">
+    <div className="config-templates-mensagens max-w-5xl animate-fadeIn">
        <div className="mb-6 flex justify-between items-end">
         <div>
           <h3 className="text-2xl font-black text-[#001a33] uppercase tracking-tight">Templates de Mensagens</h3>
@@ -184,17 +185,18 @@ const TemplatesMensagensConfig: React.FC = () => {
                 </div>
                 <div className="space-y-2">
                   <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Gatilho de Disparo</label>
-                  <select
+                  <InstitutionalSelect
+                    ariaLabel="Gatilho de Disparo"
                     value={editingTemplate.gatilho || 'Manual'}
-                    onChange={e => setEditingTemplate({...editingTemplate, gatilho: e.target.value})}
-                    className="w-full appearance-none bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:border-blue-500 focus:bg-white font-bold text-slate-700 text-sm transition-all"
-                  >
-                    <option value="Manual">Envio Manual</option>
-                    <option value="1 dia antes do vencimento">1 dia antes do vencimento</option>
-                    <option value="No dia do vencimento">No dia do vencimento</option>
-                    <option value="Post-vencido (3 dias)">3 dias após o vencimento (Atraso)</option>
-                    <option value="Matrícula confirmada">Confirmação de Matrícula</option>
-                  </select>
+                    onValueChange={value => setEditingTemplate({...editingTemplate, gatilho: value})}
+                    options={[
+                      { value: 'Manual', label: 'Envio Manual' },
+                      { value: '1 dia antes do vencimento', label: '1 dia antes do vencimento' },
+                      { value: 'No dia do vencimento', label: 'No dia do vencimento' },
+                      { value: 'Post-vencido (3 dias)', label: '3 dias após o vencimento (Atraso)' },
+                      { value: 'Matrícula confirmada', label: 'Confirmação de Matrícula' },
+                    ]}
+                  />
                 </div>
               </div>
 

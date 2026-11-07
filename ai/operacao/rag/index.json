@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "retrieval": "lexical-bm25-with-source-citations",
-  "builtAt": "2026-11-07T11:59:43.248Z",
+  "builtAt": "2026-11-07T14:12:46.910Z",
   "manifestVersion": 2,
-  "sourceSignature": "92f5b6447e54eaa6bed527d1199194c41788170523c6a952f8b6ab566cdc88c3",
+  "sourceSignature": "6e4b05fac2377452dcfd1eca065403a3be613d609cdb0efe29274a9642573992",
   "sources": [
     {
       "path": "AGENTS.md",
@@ -11,7 +11,7 @@
     },
     {
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "hash": "27efc969e188c97cd2ad1b50e865a2cbdf4359a19f7b3c9c2867a89a88a7041f"
+      "hash": "43deaaeb9d81e7c805f10fa1b1ba9cf9265165a6a362940f2120faec9d23aff8"
     },
     {
       "path": "ai/operacao/MEMORIA_CANONICA.md",
@@ -208,23 +208,23 @@
       "part": 1
     },
     {
-      "id": "e604fdf1f262d372699d",
-      "hash": "e604fdf1f262d372699d751c00ad28d824ad14a5aa4d4f6da33e5852acd7c177",
+      "id": "6fcb36f2beaa5058e55d",
+      "hash": "6fcb36f2beaa5058e55de2e3df06026dd47265b4ad32196f46a578fd7d7e7ea5",
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Lote: 2026-11-07-caixa-prioridade-carregamento",
-      "text": "Priorizar a prestação mensal no Caixa ativo e manter a linha de corte coerente no Realtime, preservando valores canônicos, escopo, fila serial, cancelamento e operações. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-07-caixa-prioridade-carregamento.md`. Frentes independentes de ordem da tela, invalidação e documentação; sem RPC/schema/cálculo financeiro no frontend nem redesign principal. O diagnóstico distingue médias SQL históricas, simulação e tempo real de produção ainda não medido.",
-      "normalizedText": "priorizar a prestacao mensal no caixa ativo e manter a linha de corte coerente no realtime preservando valores canonicos escopo fila serial cancelamento e operacoes manifesto explicito ai operacao registros alteracoes 2026 11 07 caixa prioridade carregamento md frentes independentes de ordem da tela invalidacao e documentacao sem rpc schema calculo financeiro no frontend nem redesign principal o diagnostico distingue medias sql historicas simulacao e tempo real de producao ainda nao medido",
-      "tokenCount": 65,
+      "section": "Lote: 2026-11-07-configuracoes-cadastros-compactos",
+      "text": "Padronizar Configurações no padrão compacto aprovado, com seletores pesquisáveis, preservando IDs, multisseleção, campos, acesso, serviços, documentos e operações. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-07-configuracoes-cadastros-compactos.md`, 76 arquivos. Base Caixa 4.8.253 publicada pela PR #348, sete checks verdes e Vercel READY com HTTP público e asset 253 confirmados pelo responsável. O lote não altera backend, Auth, tokens, modelos/PDF nem executa operações remotas; harnesses sintéticos bloqueiam rede e gravações. Histórico do changelog arquivado integralmente, sem perda de conteúdo.",
+      "normalizedText": "padronizar configuracoes no padrao compacto aprovado com seletores pesquisaveis preservando ids multisselecao campos acesso servicos documentos e operacoes manifesto explicito ai operacao registros alteracoes 2026 11 07 configuracoes cadastros compactos md 76 arquivos base caixa 4 8 253 publicada pela pr 348 sete checks verdes e vercel ready com http publico e asset 253 confirmados pelo responsavel o lote nao altera backend auth tokens modelos pdf nem executa operacoes remotas harnesses sinteticos bloqueiam rede e gravacoes historico do changelog arquivado integralmente sem perda de conteudo",
+      "tokenCount": 78,
       "part": 1
     },
     {
-      "id": "e22d9f91808d6d23ee1f",
-      "hash": "e22d9f91808d6d23ee1f27f468fed04d69930776d582870405de030d3098f18d",
+      "id": "7212c4677016c7459db6",
+      "hash": "7212c4677016c7459db66c32021460061366cd19765790d55efadb5e0cf5ffb6",
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Lote: 2026-11-07-caixa-prioridade-carregamento",
-      "text": "Base Parceiros 4.8.252 integrada na PR #347; produção READY confirmada pelo responsável com HTTP público 200 e asset 4.8.252, sem acesso autenticado ou dados. Caixa 4.8.253 tem validação local concluída para ordem de leitura e frescor; manifesto consolidado de 14 arquivos e CI dedicado. Chrome conferiu AFTER e troca de mês sob fixture, sem medição autenticada de produção. O usuário autorizou entregar o pronto e continuar; publicação exige os checks e o gate técnico desta etapa, sem nova confirmação. Configurações, Comunicação e Biblioteca aguardam. O fechamento inclui um único RAG e gates de integração; sync de workspace e publicação seguem comando do responsável. Cobertura móvel de Parceiros não comprova Caixa.",
-      "normalizedText": "base parceiros 4 8 252 integrada na pr 347 producao ready confirmada pelo responsavel com http publico 200 e asset 4 8 252 sem acesso autenticado ou dados caixa 4 8 253 tem validacao local concluida para ordem de leitura e frescor manifesto consolidado de 14 arquivos e ci dedicado chrome conferiu after e troca de mes sob fixture sem medicao autenticada de producao o usuario autorizou entregar o pronto e continuar publicacao exige os checks e o gate tecnico desta etapa sem nova confirmacao configuracoes comunicacao e biblioteca aguardam o fechamento inclui um unico rag e gates de integracao sync de workspace e publicacao seguem comando do responsavel cobertura movel de parceiros nao comprova caixa",
-      "tokenCount": 97,
+      "section": "Lote: 2026-11-07-configuracoes-cadastros-compactos",
+      "text": "Candidato 4.8.254/revisão 263: build Node 24.22.1 aprovado (4481 módulos, 9,00 s, 26 páginas sociais), runner 18/18, TypeScript e teto de linhas aprovados nos limites registrados. Após recuperar o Chrome, o responsável conferiu os cenários desktop e Site Público móvel a 390 px descritos no registro; isso não comprova todos os formulários/perfis, editor eletrônico carregado ou operações reais. A sincronização anterior de 75 caminhos teve 72 cópias, três preservados e hashes com backup; o fechamento atual tem 76 e aguarda sync final autorizado. O índice RAG é gerado uma única vez no fechamento. Não há PR nem publicação desta etapa. O usuário já autorizou entregar o pronto e continuar; aceite final e passagem são gates técnicos do responsável, sem nova confirmação. Comunicação e Biblioteca aguardam sem início.",
+      "normalizedText": "candidato 4 8 254 revisao 263 build node 24 22 1 aprovado 4481 modulos 9 00 s 26 paginas sociais runner 18 18 typescript e teto de linhas aprovados nos limites registrados apos recuperar o chrome o responsavel conferiu os cenarios desktop e site publico movel a 390 px descritos no registro isso nao comprova todos os formularios perfis editor eletronico carregado ou operacoes reais a sincronizacao anterior de 75 caminhos teve 72 copias tres preservados e hashes com backup o fechamento atual tem 76 e aguarda sync final autorizado o indice rag e gerado uma unica vez no fechamento nao ha pr nem publicacao desta etapa o usuario ja autorizou entregar o pronto e continuar aceite final e passagem sao gates tecnicos do responsavel sem nova confirmacao comunicacao e biblioteca aguardam sem inicio",
+      "tokenCount": 113,
       "part": 1
     },
     {

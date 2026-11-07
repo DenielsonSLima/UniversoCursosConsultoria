@@ -76,13 +76,14 @@ const IntegracaoBancariaHeader: React.FC<IntegracaoBancariaHeaderProps> = ({
         </div>
       </div>
 
-      <div className="mb-5 overflow-x-auto rounded-lg border border-slate-200 bg-slate-50 p-1">
-        <div className="grid min-w-[1080px] grid-cols-7 gap-1">
+      <div className="mb-5 overflow-x-auto">
+        <div className="config-tabs flex min-w-max">
           <button
             type="button"
             onClick={() => onChangeTab('resumo')}
-            className={`inline-flex min-h-[48px] items-center justify-center gap-2 rounded-md px-4 text-xs font-black uppercase tracking-wider ${
-              activeTab === 'resumo' ? 'bg-white text-[#001a33] shadow-sm' : 'text-slate-500 hover:bg-white'
+            aria-pressed={activeTab === 'resumo'} data-active={activeTab === 'resumo'}
+            className={`inline-flex min-h-[38px] items-center justify-center gap-2 border-b-2 border-transparent px-3 text-[13px] font-medium ${
+              activeTab === 'resumo' ? 'border-blue-600 text-blue-700' : 'text-slate-500 hover:text-blue-700'
             }`}
           >
             <LayoutDashboard size={15} />
@@ -92,12 +93,13 @@ const IntegracaoBancariaHeader: React.FC<IntegracaoBancariaHeaderProps> = ({
             <button
               key={item.value}
               type="button"
+              aria-pressed={activeTab === item.value} data-active={activeTab === item.value}
               onClick={() => {
                 onChangeTab(item.value);
                 onChangeModalidade(item.value);
               }}
-              className={`inline-flex min-h-[48px] items-center justify-center rounded-md px-4 text-xs font-black uppercase tracking-wider ${
-                activeTab === item.value ? 'bg-white text-[#001a33] shadow-sm' : 'text-slate-500 hover:bg-white'
+              className={`inline-flex min-h-[38px] items-center justify-center border-b-2 border-transparent px-3 text-[13px] font-medium ${
+                activeTab === item.value ? 'border-blue-600 text-blue-700' : 'text-slate-500 hover:text-blue-700'
               }`}
             >
               {item.label}
@@ -106,8 +108,9 @@ const IntegracaoBancariaHeader: React.FC<IntegracaoBancariaHeaderProps> = ({
           <button
             type="button"
             onClick={() => onChangeTab('parametrizacao')}
-            className={`inline-flex min-h-[48px] items-center justify-center gap-2 rounded-md px-4 text-xs font-black uppercase tracking-wider ${
-              activeTab === 'parametrizacao' ? 'bg-white text-[#001a33] shadow-sm' : 'text-slate-500 hover:bg-white'
+            aria-pressed={activeTab === 'parametrizacao'} data-active={activeTab === 'parametrizacao'}
+            className={`inline-flex min-h-[38px] items-center justify-center gap-2 border-b-2 border-transparent px-3 text-[13px] font-medium ${
+              activeTab === 'parametrizacao' ? 'border-blue-600 text-blue-700' : 'text-slate-500 hover:text-blue-700'
             }`}
           >
             <Key size={15} />

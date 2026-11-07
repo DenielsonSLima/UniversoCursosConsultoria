@@ -1,8 +1,8 @@
+import { useIntegracaoBancariaRealtime } from './useIntegracaoBancariaRealtime';
+import IntegracaoBancariaState from './IntegracaoBancariaState';
 import React, { useEffect, useMemo, useState } from 'react';
-import { RefreshCw } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import ToastNotification, { useToast } from '../../components/ToastNotification';
-import { supabase } from '../../../../lib/supabase';
 import ChavesTokensPanel from './ChavesTokensPanel';
 import EmissorFinanceiroPanel from './EmissorFinanceiroPanel';
 import IntegracaoBancariaHeader from './IntegracaoBancariaHeader';
@@ -118,22 +118,7 @@ const IntegracaoBancariaConfig: React.FC = () => {
     }
   }, [activeTab, overview?.activeEnvironment]);
 
-  useEffect(() => {
-    const invalidateOverview = () => {
-      queryClient.invalidateQueries({ queryKey: ['integracao_bancaria'] });
-    };
-    const channel = supabase
-      .channel('integracao_bancaria_realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'payment_gateway_runtime_config' }, invalidateOverview)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'payment_gateway_routes' }, invalidateOverview)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'payment_gateway_credentials' }, invalidateOverview)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'payment_gateway_issuer_config' }, invalidateOverview)
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [queryClient]);
+  useIntegracaoBancariaRealtime(queryClient);
 
   useEffect(() => {
     const issuerId = overview?.issuerConfig?.issuerPoloId
@@ -407,25 +392,8 @@ const IntegracaoBancariaConfig: React.FC = () => {
     });
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex flex-col items-center justify-center py-12">
-        <ToastNotification toasts={toasts} onRemove={removeToast} />
-        <RefreshCw className="mb-4 animate-spin text-blue-500" size={32} />
-        <p className="text-sm font-bold text-slate-500">Carregando integração bancária...</p>
-      </div>
-    );
-  }
-
-  if (isError) {
-    return (
-      <div className="rounded-lg border border-red-100 bg-red-50 p-6 text-center">
-        <ToastNotification toasts={toasts} onRemove={removeToast} />
-        <p className="font-bold text-red-700">Erro ao carregar integração bancária</p>
-        <p className="mt-1 text-sm text-red-500">{(error as Error)?.message || 'Erro desconhecido'}</p>
-      </div>
-    );
-  }
+  if (isLoading) return <IntegracaoBancariaState loading toasts={toasts} onRemove={removeToast} />;
+  if (isError) return <IntegracaoBancariaState toasts={toasts} onRemove={removeToast} message={(error as Error)?.message || 'Erro desconhecido'} />;
 
   return (
     <div className="mx-auto max-w-7xl animate-fadeIn">

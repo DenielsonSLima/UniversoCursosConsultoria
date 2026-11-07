@@ -64,7 +64,7 @@ const eventPresentation = (event: AppDeviceAuditEvent) => {
 const DeviceCard = ({ device, index }: { device: AppDeviceDetail; index: number }) => {
   const notificationsActive = isNotificationActive(device);
   return (
-    <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+    <article className="config-card config-access-card rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">
           <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-700"><Smartphone size={21} /></div>
@@ -104,10 +104,10 @@ const AlunoAppDeviceDetail = ({ alunoId, onBack }: AlunoAppDeviceDetailProps) =>
 
   const activeNotifications = detail.dispositivos.filter(isNotificationActive).length;
   return (
-    <div className="mx-auto max-w-6xl">
+    <div className="config-section mx-auto max-w-6xl">
       <button type="button" onClick={onBack} className="mb-4 inline-flex min-h-11 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-xs font-bold uppercase tracking-[0.06em] text-slate-600 shadow-sm transition hover:border-blue-300 hover:text-blue-700"><ArrowLeft size={17} /> Voltar para dispositivos</button>
 
-      <header className="relative overflow-hidden rounded-[2rem] bg-[#001a33] p-6 text-white shadow-xl shadow-blue-950/10 sm:p-8">
+      <header className="config-access-heading relative overflow-hidden rounded-[2rem] bg-[#001a33] p-6 text-white shadow-xl shadow-blue-950/10 sm:p-8">
         <div aria-hidden="true" className="absolute -right-12 -top-12 h-44 w-44 rounded-full border-[28px] border-blue-500/15" />
         <div className="relative flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
           <div>

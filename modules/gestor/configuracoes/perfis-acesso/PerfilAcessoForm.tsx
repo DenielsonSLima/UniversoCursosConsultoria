@@ -1,3 +1,4 @@
+import InstitutionalSelect from '../../../shared/components/InstitutionalSelect';
 import React from 'react';
 import { Building2, Check, Clock, Headphones, Loader2, ShieldAlert } from 'lucide-react';
 import { PerfilSetorComunicacao } from './perfis-acesso.service';
@@ -99,7 +100,7 @@ const PerfilAcessoForm: React.FC<PerfilAcessoFormProps> = ({
   onClose: handleCloseForm,
   onSubmit: handleSave,
 }) => (
-<form onSubmit={handleSave} className="space-y-8 animate-fadeIn">
+<form onSubmit={handleSave} className="config-section config-access-form space-y-8 animate-fadeIn">
           <div className="bg-slate-50/60 p-6 rounded-[2rem] border border-slate-100 space-y-6">
             <h4 className="text-base font-bold text-[#001a33]">
               {editingId ? 'Editar Perfil de Acesso' : 'Criar Novo Perfil de Acesso'}
@@ -284,36 +285,34 @@ const PerfilAcessoForm: React.FC<PerfilAcessoFormProps> = ({
                       <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-slate-500">
                         <Headphones size={14} /> Setor permitido
                       </span>
-                      <select
-                        value={setorComunicacao}
-                        onChange={(event) => setSetorComunicacao(event.target.value as PerfilSetorComunicacao)}
-                        className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-[#001a33] outline-none focus:border-emerald-500"
-                      >
-                        <option value="todos">Todos os setores do polo</option>
-                        <option value="comercial_matriculas">Comercial / Matrículas</option>
-                        <option value="secretaria">Secretaria</option>
-                        <option value="financeiro">Financeiro</option>
-                        <option value="pedagogico_coordenacao">Coordenação / Pedagógico</option>
-                        <option value="atendimento_geral">Atendimento geral</option>
-                      </select>
+                      <InstitutionalSelect
+  value={String(setorComunicacao)}
+  onValueChange={(value) => ((event) => setSetorComunicacao(event.target.value as PerfilSetorComunicacao))({ target: { value, name: "", type: 'select-one', tagName: 'SELECT' }, currentTarget: { value, name: "", type: 'select-one', tagName: 'SELECT' } } as React.ChangeEvent<HTMLSelectElement>)}
+  ariaLabel="Setor de comunicação"
+  options={[({ value: String("todos"), label: "Todos os setores do polo" }),
+({ value: String("comercial_matriculas"), label: "Comercial / Matrículas" }),
+({ value: String("secretaria"), label: "Secretaria" }),
+({ value: String("financeiro"), label: "Financeiro" }),
+({ value: String("pedagogico_coordenacao"), label: "Coordenação / Pedagógico" }),
+({ value: String("atendimento_geral"), label: "Atendimento geral" }) ]}
+  className="w-full"
+/>
                     </label>
 
                     <label className="space-y-2">
                       <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-slate-500">
                         <Building2 size={14} /> Polo do atendimento
                       </span>
-                      <select
-                        value={poloComunicacaoId || ''}
-                        onChange={(event) => setPoloComunicacaoId(event.target.value || null)}
-                        className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-[#001a33] outline-none focus:border-emerald-500"
-                      >
-                        <option value="">Selecione o polo</option>
-                        {polos.map((polo) => (
-                          <option key={polo.id} value={polo.id}>
-                            {polo.nomeFantasia} — {polo.cidade}/{polo.uf}
-                          </option>
-                        ))}
-                      </select>
+                      <InstitutionalSelect
+  value={String(poloComunicacaoId || '')}
+  onValueChange={(value) => ((event) => setPoloComunicacaoId(event.target.value || null))({ target: { value, name: "", type: 'select-one', tagName: 'SELECT' }, currentTarget: { value, name: "", type: 'select-one', tagName: 'SELECT' } } as React.ChangeEvent<HTMLSelectElement>)}
+  ariaLabel="Polo de comunicação"
+  options={[({ value: String(""), label: "Selecione o polo" }),
+...polos.map((polo) => (
+                          ({ value: String(polo.id), label: String(polo.nomeFantasia) + " — " + String(polo.cidade) + "/" + String(polo.uf) })
+                        )) ]}
+  className="w-full"
+/>
                     </label>
 
                     <p className="text-xs font-medium leading-relaxed text-slate-500 md:col-span-2">

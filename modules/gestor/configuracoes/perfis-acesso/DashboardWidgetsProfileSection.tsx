@@ -92,7 +92,7 @@ const DashboardWidgetsProfileSection = ({
   const eligibleSet = new Set(eligible);
 
   return (
-    <section className="overflow-hidden rounded-[2rem] border border-blue-100 bg-[#f7faff]">
+    <section className="config-section overflow-hidden rounded-[2rem] border border-blue-100 bg-[#f7faff]">
       <div className="flex flex-col gap-4 border-b border-blue-100 bg-[#001a33] px-6 py-5 text-white md:flex-row md:items-center md:justify-between">
         <div className="flex items-start gap-3">
           <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white/10 text-blue-200">
@@ -126,7 +126,7 @@ const DashboardWidgetsProfileSection = ({
               aria-pressed={checked}
               disabled={!available}
               onClick={() => onToggle(option.id)}
-              className={`group flex min-h-36 items-start gap-3 rounded-2xl border p-4 text-left transition-all ${
+              className={`config-access-choice group flex min-h-[96px] items-center gap-3 rounded-2xl border p-4 text-left transition-all ${
                 checked
                   ? 'border-blue-400 bg-white shadow-lg shadow-blue-950/5'
                   : available

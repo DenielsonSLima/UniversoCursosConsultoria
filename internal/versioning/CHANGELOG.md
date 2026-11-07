@@ -14,6 +14,16 @@ Histórico arquivado: [05/10/2026 — versões 4.8.169 a 4.8.170](./changelog/20
 
 Histórico arquivado: [05/10/2026 — versões 4.8.171 a 4.8.174](./changelog/2026-10-05-versoes-4-8-171-a-174.md).
 
+Histórico arquivado: [06/10/2026 a 09/10/2026 — versões 4.8.175 a 4.8.195](./changelog/2026-10-06-a-09-versoes-4-8-175-a-195.md).
+
+## [4.8.254] - 2026-11-07
+
+### Alterado
+- Configurações: cadastros compactos, campos brancos e navegação com linha inferior.
+- Seletores pesquisáveis preservam IDs, escolhas múltiplas, herança de acesso e bloqueios existentes.
+- Mensageria e integração bancária divididas por responsabilidade, mantendo operações, documentos e modelos.
+- CI focado cobre IDs dos seletores, limites de acesso e impressoras, sem serviços remotos.
+
 ## [4.8.253] - 2026-11-07
 
 ### Alterado
@@ -362,131 +372,3 @@ Histórico arquivado: [05/10/2026 — versões 4.8.171 a 4.8.174](./changelog/20
 - Emissão e recebimento aparecem separados; boleto pendente conserva o status até a confirmação do pagamento.
 - Descontos seguem a leitura de Contas a Receber, e alterações financeiras atualizam o extrato da matrícula.
 
-## [4.8.195] - 2026-10-09
-
-- Card, cadastro e área de acesso exibem a mesma matrícula acadêmica principal do aluno.
-- A matrícula principal serve para login; o identificador antigo continua aceito por compatibilidade.
-- Alterações de matrícula atualizam a lista e o cadastro sem criar códigos a partir do cadastro pessoal.
-
-## [4.8.194] - 2026-10-09
-
-- Declaração de matrícula no portal do aluno utiliza o modelo salvo, incluindo parágrafos, assinatura, QR e marca institucional.
-- Data de nascimento e identificação vêm da emissão autorizada, sem variáveis literais ou substituição por modelo genérico.
-- Prévia, Baixar PDF e Imprimir usam o mesmo arquivo; reabrir consulta a configuração atual e preserva a identidade da emissão.
-
-## [4.8.193] - 2026-10-09
-
-- Contratos identificam CIN ou CPF e RG conforme o cadastro, com formatação e omissão de campos ausentes.
-- Reabertura de contratos antigos corrige a apresentação da identidade, preservando condições, registros e arquivos de assinatura.
-- Segunda via de matrícula e cursando usa PDF vetorial do modelo configurado, sem falha na preparação da camada de texto.
-
-## [4.8.192] - 2026-10-09
-
-- Crachá de identificação tem download em PDF separado da impressão e preserva o fundo do modelo cadastrado.
-- Consulta pública da carteirinha respeita a configuração de campos salva, inclusive em códigos já emitidos.
-- Grade curricular permite expandir disciplinas para consultar os dias de aula cadastrados.
-
-## [4.8.191] - 2026-10-09
-
-- Declarações de matrícula e cursando exibem a identificação cadastrada, formatam CPF/CIN e omitem campos ausentes sem inserir “Não informado”.
-- Histórico recebe tipo, órgão e UF corretos; novas declarações preservam a identidade da emissão.
-- Segunda via do certificado EAD usa o mesmo PDF na prévia, download e impressão, com linha do diretor e duas páginas completas.
-
-## [4.8.190] - 2026-10-09
-
-- Login do aluno reconhece a matrícula acadêmica exibida no cadastro, mesmo sem e-mail pessoal.
-- Preserva a matrícula de acesso anterior e resolve a mesma conta no backend, recusando identificadores ambíguos.
-- Testes cobrem senha sem transformação, Turnstile, acesso restrito à RPC e colisões entre matrículas.
-
-## [4.8.189] - 2026-10-09
-
-- Carteirinha do aluno mantém no PDF o modelo cadastrado, com fontes, quebras de linha, fotos, fundos e posições da prévia.
-- Prévia, download e impressão reutilizam o mesmo arquivo por formato; Secretaria preserva os lotes A4 em dobra e espelhado.
-- Aguarda fundos, assinatura e QR Code, apresenta falhas com nova tentativa e elimina consultas repetidas de assinatura no lote.
-- A validade exibida ao aluno vem da emissão no backend, sem cálculo de prazo no frontend.
-
-## [4.8.188] - 2026-10-08
-
-- Certificados EAD identificam CPF/RG ou CIN conforme o cadastro individual, formatam CPF/CIN e preservam a identidade congelada da emissão.
-- Prévia, Baixar PDF e Imprimir reutilizam o mesmo arquivo, com fundo do modelo incorporado e texto/tabela vetoriais.
-- Corrigida a omissão do tipo de documento nos acessos do aluno e do histórico, sem reclassificar cadastros legados nem alterar outras modalidades.
-
-## [4.8.187] - 2026-10-08
-
-- Certificado EAD reutiliza o renderizador do editor, preservando tabela, fontes, imagens e coordenadas do modelo salvo.
-- Backend fornece linhas de componente, carga coerente e status de conclusão sem inventar notas por módulo; certificados existentes preservam sua identidade.
-- Validação compara editor e emissão com os mesmos dados e modelo, incluindo o fluxo de prévia e PDF renderizado.
-
-## [4.8.186] - 2026-10-08
-
-- Inclui no verso do certificado EAD os módulos cadastrados, com conteúdo, ordem e paginação fornecidos pelo backend.
-- Unifica a grade da Secretaria, do aluno e da reimpressão pelo snapshot da emissão, preservando o modelo configurado.
-- Completa a grade ausente dos certificados EAD já emitidos sem trocar códigos, datas ou contadores de emissão.
-
-## [4.8.185] - 2026-10-08
-
-- Libera automaticamente o certificado EAD após aprovação acadêmica validada no backend, com código de validação e proteção contra emissão duplicada.
-- Retira do EAD a preparação manual de número, livro e página, preservando o fluxo das demais modalidades.
-- Abre a prévia EAD no nível da tela, sem ficar presa ao contêiner da Secretaria.
-- Inclui revisão e regularização controlada dos certificados EAD pendentes elegíveis.
-
-## [4.8.184] - 2026-10-08
-
-- Corrige a identificação do aluno por conta autenticada na abertura do BolePix, PDF do boleto e carnê, preservando titularidade e autorização do gestor.
-- Exibe no financeiro do aluno o desconto bancário confirmado e o valor pagável dentro da validade, calculados exclusivamente no backend/RPC.
-- Acrescenta testes de identidade, isolamento de cobranças e condições financeiras bancárias.
-
-## [4.8.183] - 2026-10-07
-
-- Permite arrastar e ajustar posição e tamanho do QR Code e largura dos campos de assinatura na última página do contrato.
-- Salva as coordenadas no modelo e preserva o mesmo posicionamento na prévia, no PDF nativo e na reimpressão do histórico.
-- Corrige os números sobre as linhas das testemunhas e impede sobreposição entre campos e textos do encerramento.
-
-## [4.8.182] - 2026-10-07
-
-- Registra a restauração já aplicada do primeiro ciclo das três matrículas da turma 46 e a reversão do lançamento local incorreto, sem repetir a operação financeira.
-
-- O botão de gerar o segundo ciclo abre primeiro o aviso com as parcelas em aberto, antes da tela de datas e valores.
-- Continuar abre a revisão padrão; Cancelar fecha o aviso. A emissão permanece na confirmação final do fluxo existente.
-- Mantém a releitura das parcelas, bloqueio por erro e proteção contra clique duplo; o primeiro ciclo conserva seu fluxo normal.
-
-## [4.8.181] - 2026-10-07
-
-- Prepara correção financeira limitada, mantendo recebíveis e ciclos históricos com confirmação bancária antes do ajuste interno.
-- Exige revisão dos termos e novo consentimento do usuário para retomar a emissão, sem reemissão automática.
-- Distingue matrícula local dispensada, histórico pago preservado e totais ativos; registra as 14 migrations e os sete grants aprovados já instalados, com cópias canônicas imutáveis e sem confundir instalação com conclusão financeira.
-
-## [4.8.180] - 2026-10-07
-
-- Adiciona aviso antes de emitir o segundo ciclo, mostrando as cobranças em aberto da matrícula.
-- Exige confirmação explícita e nova consulta das parcelas; alterações, erros e revisões invalidam a confirmação anterior.
-- Preserva a elegibilidade do segundo ciclo, permissões, idempotência e recuperação existentes, sem cancelar ou substituir títulos.
-
-## [4.8.179] - 2026-10-07
-
-- O Portal do Gestor passa a ter um único contêiner de rolagem, evitando a segunda barra e o deslocamento para uma área vazia no financeiro da turma.
-- Reset de navegação, cabeçalho fixo mobile e foco por teclado acompanham o contêiner correto, sem alterar regras financeiras.
-- Seis contratos de fonte e revisão independente; smoke interativo autenticado permanece pendente.
-
-## [4.8.178] - 2026-10-07
-
-- Boleto e carnê preservam a logo oficial Banese quando o carregamento remoto falha, usando os mesmos bytes do recurso oficial já existente no projeto.
-- Removida a marca genérica de contingência; logo Universo, três títulos por A4, valores, linha digitável, código de barras e QR Pix permanecem inalterados.
-
-## [4.8.177] - 2026-10-07
-
-- Contrato técnico: paginação canônica considera linhas, largura e área reservada para assinaturas e QR.
-- Prévia de emissão preparada e histórico usam projeção segura do conteúdo congelado, sem nova emissão, mudança de aprovação ou reescrita de registros.
-- Regressões sintéticas cobrem idempotência, autorização, texto integral, quebras de linha e limites do PDF vetorial.
-
-## [4.8.176] - 2026-10-07
-
-- Índices ordenados para consultar a evidência mais recente da composição do Caixa e a última execução completa do histórico.
-- Aplicação concorrente preserva registros financeiros, cálculos, permissões e evidências; testes sintéticos protegem prioridade e desempates.
-- Definições e planos de acesso verificados; smoke autenticado completo do Caixa permanece pendente.
-
-## [4.8.175] - 2026-10-06
-
-- Filiação exige somente nome da mãe para matrícula técnica; nome do pai passa a opcional no cadastro e no perfil do aluno.
-- Ausência do pai deixa de gerar pendência ou bloquear o ingresso técnico; mãe, dados pessoais e endereço mantêm as exigências existentes.
-- Regra alinhada entre frontend e RPC canônica, com regressões sintéticas; CI, Preview e publicação acompanham o registro do lote. Smoke autenticado Safari pendente.

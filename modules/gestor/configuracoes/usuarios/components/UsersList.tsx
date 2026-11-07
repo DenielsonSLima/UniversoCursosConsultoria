@@ -224,7 +224,7 @@ const UsersList: React.FC<UsersListProps> = ({ contextId, contextTitle, onBack }
   }
 
   return (
-    <div className="animate-fadeIn">
+    <div className="config-section animate-fadeIn">
       <ToastNotification toasts={toasts} onRemove={removeToast} />
 
       {/* Header da Lista */}
@@ -253,7 +253,7 @@ const UsersList: React.FC<UsersListProps> = ({ contextId, contextTitle, onBack }
       </div>
 
       {/* Barra de Busca */}
-      <div className="bg-white p-4 rounded-2xl mb-8 flex items-center gap-3 border border-slate-100 shadow-sm">
+      <div className="config-card config-access-card bg-white p-4 rounded-2xl mb-8 flex items-center gap-3 border border-slate-100 shadow-sm">
         <Search size={20} className="text-slate-400" />
         <input 
           type="text" 
@@ -288,7 +288,7 @@ const UsersList: React.FC<UsersListProps> = ({ contextId, contextTitle, onBack }
             return (
             <div 
               key={user.id} 
-              className="bg-white rounded-[2rem] border border-slate-100 p-6 hover:shadow-xl hover:shadow-blue-900/5 hover:border-blue-200 transition-all duration-300 group flex flex-col items-center relative overflow-hidden"
+              className="config-card config-access-card bg-white rounded-[2rem] border border-slate-100 p-6 hover:shadow-xl hover:shadow-blue-900/5 hover:border-blue-200 transition-all duration-300 group flex flex-col items-center relative overflow-hidden"
             >
                {/* Decoração Hover */}
                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-blue-500 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>

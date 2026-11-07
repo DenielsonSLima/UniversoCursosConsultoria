@@ -1,3 +1,4 @@
+import InstitutionalSelect from '../../../shared/components/InstitutionalSelect';
 import React, { useRef, useState } from 'react';
 import { AlertCircle, Check, Laptop, Loader2, Pencil, Plus, Printer, RefreshCw } from 'lucide-react';
 import ToastNotification, { useToast } from '../../components/ToastNotification';
@@ -65,9 +66,10 @@ export default function ImpressorasConfig({ poloId }: { poloId?: string | null }
         <div className="flex flex-wrap items-center gap-4">
           <Laptop size={22} className="shrink-0 text-slate-500" aria-hidden="true" />
           <label className="min-w-0 flex-1 text-xs font-semibold text-slate-600">Estação neste navegador
-            <select value={station?.id || ''} disabled={busy || Boolean(editor)} onChange={event => model.selectStation(event.target.value)} className="mt-2 min-h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-normal outline-none focus:ring-2 focus:ring-blue-600 disabled:opacity-50">
-              <option value="" disabled>Selecione uma estação</option>{stations.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
-            </select>
+            <InstitutionalSelect value={station?.id || ''} disabled={busy || Boolean(editor)} onValueChange={stationId => model.selectStation(stationId)}
+              ariaLabel="Estação neste navegador" className="mt-2 w-full" options={[
+                { value: '', label: 'Selecione uma estação', disabled: true }, ...stations.map(item => ({ value: item.id, label: item.name })),
+              ]} />
           </label>
           {data.canManage && !editor && <button type="button" disabled={busy} onClick={() => setRegisterOpen(current => !current)} aria-expanded={registerOpen} className={`mt-5 inline-flex min-h-11 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-xs font-semibold disabled:opacity-40 ${buttonFocus}`}><Plus size={16} aria-hidden="true" />Registrar estação</button>}
         </div>

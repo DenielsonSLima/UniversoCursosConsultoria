@@ -1,3 +1,4 @@
+import InstitutionalSelect from '../../../shared/components/InstitutionalSelect';
 import React from 'react';
 import {
   AlertTriangle,
@@ -236,16 +237,14 @@ const ResumoBancarioPanel: React.FC<ResumoBancarioPanelProps> = ({
             <label htmlFor="banking-control-modalidade" className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
               Escopo que será configurado
             </label>
-            <select
+            <InstitutionalSelect
               id="banking-control-modalidade"
               value={controlModalidade}
-              onChange={(event) => onChangeControlModalidade(event.target.value as GatewayModalidade)}
-              className="mt-3 min-h-[58px] w-full rounded-lg border border-slate-200 bg-white px-4 text-sm font-black uppercase text-[#001a33] outline-none focus:border-blue-400"
-            >
-              {MODALIDADES.filter((item) => item.value === 'EAD').map((item) => (
-                <option key={item.value} value={item.value}>{item.label}</option>
-              ))}
-            </select>
+              onValueChange={(value) => onChangeControlModalidade(value as GatewayModalidade)}
+              ariaLabel="Escopo que será configurado"
+              className="mt-3 w-full"
+              options={MODALIDADES.filter((item) => item.value === 'EAD').map((item) => ({ value: item.value, label: item.label }))}
+            />
             <p className="mt-2 text-xs font-semibold text-slate-500">
               Primeiro teste: Cursos EAD em sandbox, somente boleto Banese.
             </p>

@@ -41,9 +41,9 @@ const CategoriaForm: React.FC<CategoriaFormProps> = ({
   };
 
   return (
-    <div className="partner-registration-auxiliary fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-fadeIn">
-      <form role="dialog" aria-modal="true" aria-labelledby={titleId} onSubmit={handleSubmit} className="bg-white rounded-3xl w-full max-w-xl overflow-hidden shadow-2xl">
-        <div className="flex items-center justify-between p-6 border-b border-slate-100 bg-slate-50/50">
+    <div className="config-dialog-overlay partner-registration-auxiliary fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-fadeIn">
+      <form role="dialog" aria-modal="true" aria-labelledby={titleId} onSubmit={handleSubmit} className="config-dialog bg-white rounded-3xl w-full max-w-xl overflow-hidden shadow-2xl">
+        <div className="config-dialog-header flex items-center justify-between p-6 border-b border-slate-100 bg-slate-50/50">
           <div>
             <h2 id={titleId} className="text-xl font-bold text-[#001a33]">
               {categoria ? 'Editar Categoria' : 'Nova Categoria'}
@@ -62,7 +62,7 @@ const CategoriaForm: React.FC<CategoriaFormProps> = ({
           </button>
         </div>
 
-        <div className="p-6 space-y-5">
+        <div className="config-dialog-body p-6 space-y-5">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div className="md:col-span-2">
               <label className="block text-sm font-bold text-slate-700 mb-2">
@@ -120,7 +120,7 @@ const CategoriaForm: React.FC<CategoriaFormProps> = ({
           </div>
         </div>
 
-        <div className="p-6 border-t border-slate-100 bg-slate-50 flex items-center justify-end gap-3">
+        <div className="config-dialog-footer p-6 border-t border-slate-100 bg-slate-50 flex items-center justify-end gap-3">
           <button 
             type="button"
             onClick={onClose}

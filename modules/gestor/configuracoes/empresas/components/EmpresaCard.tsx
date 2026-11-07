@@ -11,7 +11,7 @@ interface EmpresaCardProps {
 
 const EmpresaCard: React.FC<EmpresaCardProps> = ({ data, onEdit, onDelete, onToggleStatus }) => {
   return (
-    <div className={`bg-white rounded-[2rem] border transition-all duration-300 overflow-hidden group flex flex-col h-full ${
+    <div className={`config-section config-card config-access-card bg-white rounded-[2rem] border transition-all duration-300 overflow-hidden group flex flex-col h-full ${
       data.ativo 
         ? 'border-slate-100 hover:border-blue-200 hover:shadow-xl hover:shadow-blue-900/10' 
         : 'border-slate-100 opacity-75 grayscale hover:grayscale-0'

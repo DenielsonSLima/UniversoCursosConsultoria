@@ -1,3 +1,4 @@
+import InstitutionalSelect from '../../../../shared/components/InstitutionalSelect';
 import React from 'react';
 import { AlertTriangle, Building2, Check, Clock, Headphones, Layers, Lock, TrendingUp } from 'lucide-react';
 import { PerfilAcesso } from '../../perfis-acesso/perfis-acesso.service';
@@ -41,7 +42,7 @@ const UserAccessSections: React.FC<UserAccessSectionsProps> = ({
   onToggleModuleTab,
   onToggleScheduleDay,
 }) => (
-  <section className="mb-6">
+  <section className="config-section mb-6">
     <div className="flex items-center gap-2 mb-6 text-blue-600 border-t border-slate-100 pt-8">
       <Lock size={20} />
       <h4 className="text-sm font-black uppercase tracking-wider">Permissões e Acessos</h4>
@@ -49,10 +50,9 @@ const UserAccessSections: React.FC<UserAccessSectionsProps> = ({
 
     <div className="mb-8 space-y-2">
       <label className="text-xs font-bold text-slate-500 uppercase ml-1">Perfil de Acesso</label>
-      <select
-        name="perfil_acesso_id"
-        value={formData.perfil_acesso_id || ''}
-        onChange={event => {
+      <InstitutionalSelect
+  value={String(formData.perfil_acesso_id || '')}
+  onValueChange={(value) => (event => {
           const profileId = event.target.value;
           const nextProfile = perfis.find(perfil => perfil.id === profileId);
           const profileAllowsAllPolos = contextId === 'global'
@@ -102,12 +102,12 @@ const UserAccessSections: React.FC<UserAccessSectionsProps> = ({
             podeVisualizarTodosSetores: communicationScope?.canViewAll
               ?? previous.podeVisualizarTodosSetores,
           }));
-        }}
-        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[#001a33] font-bold focus:border-blue-500 outline-none transition-all text-sm"
-      >
-        <option value="">Personalizado (Definir permissões manuais abaixo)</option>
-        {perfis.map(perfil => <option key={perfil.id} value={perfil.id}>{perfil.nome}</option>)}
-      </select>
+        })({ target: { value, name: "perfil_acesso_id", type: 'select-one', tagName: 'SELECT' }, currentTarget: { value, name: "perfil_acesso_id", type: 'select-one', tagName: 'SELECT' } } as React.ChangeEvent<HTMLSelectElement>)}
+  ariaLabel="Perfil de acesso"
+  options={[({ value: String(""), label: "Personalizado (Definir permissões manuais abaixo)" }),
+...perfis.map(perfil => ({ value: String(perfil.id), label: String(perfil.nome) })) ]}
+  className="w-full"
+/>
       {formData.perfil_acesso_id && (
         <div className="mt-1 space-y-1 text-[11px] text-blue-600 font-semibold">
           <p>✓ Módulos, polos, setor do WhatsApp e horário foram herdados do perfil. Você ainda pode ajustar este usuário.</p>
@@ -144,7 +144,7 @@ const UserAccessSections: React.FC<UserAccessSectionsProps> = ({
         </div>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {USER_FORM_MODULES.map(module => (
-            <div key={module.id} onClick={() => onTogglePermission(module.id)} className={`cursor-pointer rounded-xl border p-4 flex flex-col items-center justify-center text-center gap-2 transition-all duration-200 h-32 ${formData.permissoes.includes(module.id) ? 'bg-[#001a33] border-[#001a33] text-white shadow-lg' : 'bg-white border-slate-200 hover:border-slate-300 text-slate-400 hover:bg-slate-50'}`}>
+            <div key={module.id} onClick={() => onTogglePermission(module.id)} className={`config-card config-access-card cursor-pointer rounded-xl border p-4 flex flex-col items-center justify-center text-center gap-2 transition-all duration-200 h-32 ${formData.permissoes.includes(module.id) ? 'bg-[#001a33] border-[#001a33] text-white shadow-lg' : 'bg-white border-slate-200 hover:border-slate-300 text-slate-400 hover:bg-slate-50'}`}>
               <div className={formData.permissoes.includes(module.id) ? 'text-blue-400' : 'text-slate-300'}>{module.icon}</div>
               <p className="text-xs font-bold uppercase tracking-widest">{module.label}</p>
               {formData.permissoes.includes(module.id) && <span className="text-[9px] bg-blue-500/20 text-blue-200 px-2 py-0.5 rounded-full font-medium">Liberado</span>}
@@ -228,46 +228,44 @@ const UserAccessSections: React.FC<UserAccessSectionsProps> = ({
                 <span className="flex items-center gap-2 text-[10px] font-black uppercase tracking-wider text-slate-500">
                   <Headphones size={14} /> Setor permitido
                 </span>
-                <select
-                  value={formData.setorComunicacao}
-                  onChange={event => setFormData(previous => ({
+                <InstitutionalSelect
+  value={String(formData.setorComunicacao)}
+  onValueChange={(value) => (event => setFormData(previous => ({
                     ...previous,
                     setorComunicacao: event.target.value as NovoUsuarioFormData['setorComunicacao'],
-                  }))}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-[#001a33] outline-none focus:border-emerald-500"
-                >
-                  <option value="todos">Todos os setores do polo</option>
-                  <option value="comercial_matriculas">Comercial / Matrículas</option>
-                  <option value="secretaria">Secretaria</option>
-                  <option value="financeiro">Financeiro</option>
-                  <option value="pedagogico_coordenacao">Coordenação / Pedagógico</option>
-                  <option value="atendimento_geral">Atendimento geral</option>
-                </select>
+                  })))({ target: { value, name: "", type: 'select-one', tagName: 'SELECT' }, currentTarget: { value, name: "", type: 'select-one', tagName: 'SELECT' } } as React.ChangeEvent<HTMLSelectElement>)}
+  ariaLabel="Setor de comunicação"
+  options={[({ value: String("todos"), label: "Todos os setores do polo" }),
+({ value: String("comercial_matriculas"), label: "Comercial / Matrículas" }),
+({ value: String("secretaria"), label: "Secretaria" }),
+({ value: String("financeiro"), label: "Financeiro" }),
+({ value: String("pedagogico_coordenacao"), label: "Coordenação / Pedagógico" }),
+({ value: String("atendimento_geral"), label: "Atendimento geral" }) ]}
+  className="w-full"
+/>
               </label>
 
               <label className="space-y-2">
                 <span className="flex items-center gap-2 text-[10px] font-black uppercase tracking-wider text-slate-500">
                   <Building2 size={14} /> Polo permitido
                 </span>
-                <select
-                  value={formData.podeVisualizarTodosPolos ? '__all__' : formData.poloComunicacaoId || ''}
-                  onChange={event => setFormData(previous => ({
+                <InstitutionalSelect
+  value={String(formData.podeVisualizarTodosPolos ? '__all__' : formData.poloComunicacaoId || '')}
+  onValueChange={(value) => (event => setFormData(previous => ({
                     ...previous,
                     podeVisualizarTodosPolos: event.target.value === '__all__',
                     poloComunicacaoId: event.target.value === '__all__'
                       ? null
                       : event.target.value || null,
-                  }))}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-[#001a33] outline-none focus:border-emerald-500"
-                >
-                  <option value="">Selecione o polo</option>
-                  <option value="__all__">Todos os polos</option>
-                  {companies.map(company => (
-                    <option key={company.id} value={company.id}>
-                      {company.nomeFantasia} — {company.cidade}/{company.uf}
-                    </option>
-                  ))}
-                </select>
+                  })))({ target: { value, name: "", type: 'select-one', tagName: 'SELECT' }, currentTarget: { value, name: "", type: 'select-one', tagName: 'SELECT' } } as React.ChangeEvent<HTMLSelectElement>)}
+  ariaLabel="Polo de comunicação"
+  options={[({ value: String(""), label: "Selecione o polo" }),
+({ value: String("__all__"), label: "Todos os polos" }),
+...companies.map(company => (
+                    ({ value: String(company.id), label: String(company.nomeFantasia) + " — " + String(company.cidade) + "/" + String(company.uf) })
+                  )) ]}
+  className="w-full"
+/>
               </label>
 
               <p className="md:col-span-2 text-[11px] font-semibold leading-relaxed text-slate-500">

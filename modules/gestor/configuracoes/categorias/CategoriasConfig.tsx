@@ -121,7 +121,7 @@ const CategoriasConfig: React.FC = () => {
   }
 
   return (
-    <div className="animate-fadeIn">
+    <div className="config-categorias animate-fadeIn">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 border-b border-slate-200 pb-6">
         <div className="flex items-center gap-3">
           <div className="p-3 bg-orange-50 text-orange-600 rounded-xl">

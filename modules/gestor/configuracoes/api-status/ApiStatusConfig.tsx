@@ -93,7 +93,7 @@ const ApiStatusConfig: React.FC = () => {
   ];
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="config-api-status max-w-4xl mx-auto">
       <div className="border-b border-slate-100 pb-4 mb-8">
         <h3 className="text-2xl font-bold text-[#001a33]">Status do Sistema</h3>
         <p className="text-slate-500 text-sm">Monitoramento em tempo real dos serviços conectados.</p>

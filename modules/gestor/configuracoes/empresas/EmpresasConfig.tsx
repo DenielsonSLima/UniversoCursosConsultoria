@@ -1,3 +1,4 @@
+import '../usuarios/config-access.css';
 import React, { useState, useEffect } from 'react';
 import { Edit2, Building2, RefreshCw, MapPin, Phone, Mail, Shield } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -85,7 +86,7 @@ const EmpresasConfig: React.FC = () => {
   }
 
   return (
-    <div className="max-w-6xl mx-auto animate-fadeIn">
+    <div className="config-section max-w-6xl mx-auto animate-fadeIn">
       {/* Cabeçalho da Página */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 border-b border-slate-100 pb-6 gap-4">
         <div>
@@ -106,7 +107,7 @@ const EmpresasConfig: React.FC = () => {
         
         {/* Coluna Lateral - Logo & Resumo */}
         <div className="lg:col-span-1 space-y-6">
-          <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-xl shadow-slate-100/50 flex flex-col items-center text-center">
+          <div className="config-card config-access-card bg-white p-6 rounded-[2rem] border border-slate-100 shadow-xl shadow-slate-100/50 flex flex-col items-center text-center">
             <div className="w-40 h-40 bg-slate-50 rounded-3xl border border-slate-100 flex items-center justify-center overflow-hidden mb-6 shadow-inner">
               {company.logoUrl ? (
                 <img src={company.logoUrl} alt="Logo" className="w-full h-full object-contain p-4" />
@@ -135,7 +136,7 @@ const EmpresasConfig: React.FC = () => {
 
         {/* Coluna Central - Ficha Completa */}
         <div className="lg:col-span-2 space-y-6">
-          <div className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-xl shadow-slate-100/50 space-y-8">
+          <div className="config-card config-access-card bg-white p-8 rounded-[2rem] border border-slate-100 shadow-xl shadow-slate-100/50 space-y-8">
             
             {/* Bloco 1: Identificação */}
             <div>

@@ -372,7 +372,7 @@ const UserFormAdd: React.FC<UserFormAddProps> = ({
   };
 
   return (
-    <div className="bg-white rounded-[2.5rem] shadow-xl border border-slate-100 overflow-hidden flex flex-col h-full animate-fadeIn">
+    <div className="config-section config-card config-access-card bg-white rounded-[2.5rem] shadow-xl border border-slate-100 overflow-hidden flex flex-col h-full animate-fadeIn">
       <ToastNotification toasts={toasts} onRemove={removeToast} />
       
       {/* Header */}
@@ -398,7 +398,7 @@ const UserFormAdd: React.FC<UserFormAddProps> = ({
         </button>
       </div>
 
-      <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+      <form onSubmit={handleSubmit} className="config-access-form flex-1 overflow-y-auto p-8 custom-scrollbar">
         <UserIdentitySections
           formData={formData}
           isEditing={isEditing}

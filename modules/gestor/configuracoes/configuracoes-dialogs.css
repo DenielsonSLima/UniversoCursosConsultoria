@@ -1,0 +1,178 @@
+@media screen {
+  body:has(.configuracoes-workspace) .config-dialog-overlay {
+    padding: 16px;
+    background: rgb(9 25 42 / 38%);
+    backdrop-filter: blur(2px);
+  }
+
+  body:has(.configuracoes-workspace) .config-dialog {
+    max-height: calc(100dvh - 32px);
+    padding: 20px;
+    overflow-y: auto;
+    border: 1px solid #e3e9ee;
+    border-radius: 14px;
+    background: #fff;
+    box-shadow: 0 20px 65px rgb(9 25 42 / 18%);
+    font-size: 13px;
+    line-height: 1.55;
+  }
+
+  body:has(.configuracoes-workspace) .config-dialog-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+    margin-bottom: 16px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid #e3e9ee;
+  }
+
+  body:has(.configuracoes-workspace) .config-dialog-header :where(h1, h2, h3) {
+    font-size: 18px;
+    line-height: 1.4;
+    font-weight: 600;
+    letter-spacing: -.02em;
+    text-transform: none;
+  }
+
+  body:has(.configuracoes-workspace) .config-dialog-header :where(p) {
+    margin-top: 4px;
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 400;
+  }
+
+  body:has(.configuracoes-workspace) .config-dialog-body {
+    min-width: 0;
+    min-height: 0;
+  }
+
+  body:has(.configuracoes-workspace) .config-dialog :where(label, legend) {
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: normal;
+    text-transform: none;
+  }
+
+  body:has(.configuracoes-workspace) .config-dialog :is(.font-black, .font-extrabold, .font-bold, .font-semibold) {
+    font-weight: 500;
+  }
+
+  body:has(.configuracoes-workspace) .config-dialog :is(h1, h2, h3, h4, strong):is(.font-black, .font-extrabold, .font-bold, .font-semibold) {
+    font-weight: 600;
+  }
+
+  body:has(.configuracoes-workspace) .config-dialog .uppercase {
+    text-transform: none;
+  }
+
+  body:has(.configuracoes-workspace) .config-dialog :where(.tracking-wider, .tracking-wide, .tracking-widest) {
+    letter-spacing: normal;
+  }
+
+  body:has(.configuracoes-workspace) .config-dialog :where(button):not(.institutional-select-clear) {
+    min-height: 38px;
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: normal;
+    text-transform: none;
+  }
+
+  body:has(.configuracoes-workspace) .config-dialog-footer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 18px;
+    padding-top: 14px;
+    border-top: 1px solid #e3e9ee;
+  }
+
+  body:has(.configuracoes-workspace) .config-dialog:has(> .config-dialog-header) {
+    padding: 0;
+  }
+
+  body:has(.configuracoes-workspace) .config-dialog:has(> .config-dialog-header) > .config-dialog-header {
+    margin-bottom: 0;
+    padding: 16px 20px;
+  }
+
+  body:has(.configuracoes-workspace) .config-dialog:has(> .config-dialog-header) > .config-dialog-body {
+    padding: 20px;
+  }
+
+  body:has(.configuracoes-workspace) .config-dialog:has(> .config-dialog-header) > .config-dialog-footer {
+    margin-top: 0;
+    padding: 14px 20px;
+  }
+
+  body:has(.configuracoes-workspace) .partner-responsavel-confirm-dialog {
+    max-height: calc(100dvh - 32px);
+    padding: 22px;
+    overflow-y: auto;
+    border-radius: 14px;
+  }
+
+  body:has(.configuracoes-workspace) .partner-responsavel-confirm-icon {
+    width: 42px;
+    height: 42px;
+    margin-bottom: 14px;
+    border-radius: 10px;
+  }
+
+  body:has(.configuracoes-workspace) .partner-responsavel-confirm-icon svg {
+    width: 22px;
+    height: 22px;
+  }
+
+  body:has(.configuracoes-workspace) .partner-responsavel-confirm-title {
+    font-size: 18px;
+    line-height: 1.4;
+    font-weight: 600;
+    text-transform: none;
+  }
+
+  body:has(.configuracoes-workspace) .partner-responsavel-confirm-message {
+    margin-bottom: 18px;
+    font-size: 13px;
+    line-height: 1.55;
+  }
+
+  body:has(.configuracoes-workspace) .partner-responsavel-confirm-footer button {
+    min-height: 38px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    text-transform: none;
+    letter-spacing: normal;
+  }
+
+  @media (max-width: 639px) {
+    body:has(.configuracoes-workspace) .config-dialog-overlay {
+      padding: 10px;
+    }
+
+    body:has(.configuracoes-workspace) .config-dialog {
+      max-height: calc(100dvh - 20px);
+      padding: 16px;
+    }
+
+    body:has(.configuracoes-workspace) .config-dialog:has(> .config-dialog-header) > :is(.config-dialog-header, .config-dialog-body, .config-dialog-footer) {
+      padding: 16px;
+    }
+
+    body:has(.configuracoes-workspace) .config-dialog :where(button):not(.institutional-select-clear) {
+      min-height: 44px;
+    }
+
+    body:has(.configuracoes-workspace) .config-dialog-footer:is(.flex-col, .flex-col-reverse) {
+      align-items: stretch;
+    }
+
+    body:has(.configuracoes-workspace) .partner-responsavel-confirm-footer button {
+      min-height: 44px;
+    }
+  }
+}

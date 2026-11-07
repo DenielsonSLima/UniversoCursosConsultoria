@@ -1,3 +1,4 @@
+import InstitutionalSelect from '../../../shared/components/InstitutionalSelect';
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import ProescConsoleOverview, {
@@ -93,17 +94,18 @@ export default function ConsultaApiProescConfig() {
         </p>
       ) : (
         <>
-          <nav className="flex gap-2 overflow-x-auto pb-1" aria-label="Seções da consulta Proesc">
+          <nav className="config-tabs flex overflow-x-auto" aria-label="Seções da consulta Proesc">
             {proescConsoleTabs.map((item) => (
               <button
                 key={item.id}
                 type="button"
                 aria-pressed={tab === item.id}
+                data-active={tab === item.id}
                 onClick={() => changeTab(item.id)}
-                className={`min-h-11 shrink-0 rounded-xl px-4 text-[10px] font-black uppercase tracking-wider ${
+                className={`min-h-11 shrink-0 border-b-2 border-transparent px-3 text-[13px] font-medium ${
                   tab === item.id
-                    ? 'bg-blue-600 text-white shadow-md'
-                    : 'border border-slate-200 text-slate-500 hover:text-blue-700'
+                    ? 'border-blue-600 text-blue-700'
+                    : 'text-slate-500 hover:text-blue-700'
                 }`}
               >
                 {item.label}
@@ -116,16 +118,13 @@ export default function ConsultaApiProescConfig() {
           >
             <label className="min-w-0 text-xs font-bold text-slate-600">
               Polo
-              <select
+              <InstitutionalSelect
                 value={filters.poloId || ''}
-                onChange={(event) => changeFilters({ ...filters, poloId: event.target.value || null })}
-                className="mt-2 min-h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-normal"
-              >
-                <option value="">Todos os polos</option>
-                {dashboard.data.polos.map((polo) => (
-                  <option key={polo.id} value={polo.id}>{polo.name}</option>
-                ))}
-              </select>
+                onValueChange={(value) => changeFilters({ ...filters, poloId: value || null })}
+                ariaLabel="Filtrar por polo"
+                className="mt-2 w-full"
+                options={[{ value: '', label: 'Todos os polos' }, ...dashboard.data.polos.map((polo) => ({ value: polo.id, label: polo.name }))]}
+              />
             </label>
             <label className="min-w-0 text-xs font-bold text-slate-600">
               Início do período

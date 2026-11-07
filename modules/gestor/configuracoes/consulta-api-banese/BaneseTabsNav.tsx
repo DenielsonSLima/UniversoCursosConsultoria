@@ -23,17 +23,18 @@ interface BaneseTabsNavProps {
 }
 
 const BaneseTabsNav = ({ activeTab, onChange }: BaneseTabsNavProps) => (
-  <nav className="flex gap-2 overflow-x-auto pb-1" aria-label="Seções da consulta Banese">
+  <nav className="config-tabs flex overflow-x-auto" aria-label="Seções da consulta Banese">
     {tabs.map((tab) => (
       <button
         key={tab.id}
         type="button"
         onClick={() => onChange(tab.id)}
         aria-pressed={activeTab === tab.id}
-        className={`min-h-11 shrink-0 rounded-xl px-4 text-[10px] font-black uppercase tracking-wider transition ${
+        data-active={activeTab === tab.id}
+        className={`min-h-11 shrink-0 border-b-2 border-transparent px-3 text-[13px] font-medium transition ${
           activeTab === tab.id
-            ? 'bg-blue-600 text-white shadow-md'
-            : 'border border-slate-200 bg-white text-slate-500 hover:border-blue-200 hover:text-blue-700'
+            ? 'border-blue-600 text-blue-700'
+            : 'text-slate-500 hover:text-blue-700'
         }`}
       >
         {tab.label}

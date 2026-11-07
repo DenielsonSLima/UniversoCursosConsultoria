@@ -99,7 +99,7 @@ const MarcaDaguaConfig: React.FC = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto animate-fadeIn">
+    <div className="config-marca-dagua max-w-7xl mx-auto animate-fadeIn">
       <ToastNotification toasts={toasts} onRemove={removeToast} />
       <div className="border-b border-slate-100 pb-4 mb-8">
         <h3 className="text-2xl font-bold text-[#001a33]">Marca D'água por Unidade</h3>

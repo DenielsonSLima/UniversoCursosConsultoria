@@ -1,3 +1,4 @@
+import InstitutionalSelect from '../../../shared/components/InstitutionalSelect';
 import React from 'react';
 import { FileText, LockKeyhole } from 'lucide-react';
 import type { PdvPrinterTemplate } from './printer.types';
@@ -18,9 +19,8 @@ export function ReceiptTemplateEditor({ value, onChange, onPreview, previewPendi
       </div>
       <div className="grid gap-4 sm:grid-cols-3">
         <label className="text-xs font-semibold text-slate-600">Largura do papel
-          <select value={value.widthMm} onChange={event => onChange({ ...value, widthMm: Number(event.target.value) as 58 | 80 })} className={input}>
-            <option value={58}>58 mm</option><option value={80}>80 mm</option>
-          </select>
+          <InstitutionalSelect value={String(value.widthMm)} onValueChange={width => onChange({ ...value, widthMm: Number(width) as 58 | 80 })}
+            ariaLabel="Largura do papel" className="mt-2" options={[{ value: '58', label: '58 mm' }, { value: '80', label: '80 mm' }]} />
         </label>
         <label className="text-xs font-semibold text-slate-600">Margem (mm)
           <input type="number" min={2} max={6} step={1} required value={value.marginMm} onChange={event => onChange({ ...value, marginMm: Number(event.target.value) })} className={input} />

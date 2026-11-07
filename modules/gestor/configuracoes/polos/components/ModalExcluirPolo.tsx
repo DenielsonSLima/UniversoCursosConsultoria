@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useId } from 'react';
+import { createPortal } from 'react-dom';
 import { AlertTriangle, X } from 'lucide-react';
 
 interface ModalExcluirPoloProps {
@@ -14,20 +15,22 @@ const ModalExcluirPolo: React.FC<ModalExcluirPoloProps> = ({
   onConfirm,
   poloNome
 }) => {
-  if (!isOpen) return null;
+  const titleId = useId();
+  if (!isOpen || typeof document === 'undefined') return null;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+  return createPortal(
+    <div className="config-dialog-overlay fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop com Blur */}
       <div 
-        className="absolute inset-0 bg-[#001a33]/60 backdrop-blur-sm transition-opacity animate-fadeIn" 
+        className="config-polo-backdrop absolute inset-0 bg-[#001a33]/60 backdrop-blur-sm transition-opacity animate-fadeIn" 
         onClick={onClose}
       ></div>
 
       {/* Modal Content */}
-      <div className="relative bg-white rounded-[2rem] w-full max-w-md p-8 shadow-2xl transform transition-all animate-scaleIn border border-slate-100">
+      <div role="dialog" aria-modal="true" aria-labelledby={titleId} className="config-dialog config-polo-confirm relative bg-white rounded-[2rem] w-full max-w-md p-8 shadow-2xl transform transition-all animate-scaleIn border border-slate-100">
         <button 
           onClick={onClose}
+          aria-label="Fechar confirmação do polo"
           className="absolute top-6 right-6 p-2 rounded-full text-slate-400 hover:bg-slate-50 hover:text-slate-600 transition-colors"
         >
           <X size={20} />
@@ -38,7 +41,7 @@ const ModalExcluirPolo: React.FC<ModalExcluirPoloProps> = ({
             <AlertTriangle size={32} />
           </div>
 
-          <h3 className="text-xl font-black text-[#001a33] mb-2 uppercase tracking-tight">
+          <h3 id={titleId} className="text-xl font-black text-[#001a33] mb-2 uppercase tracking-tight">
             Excluir Polo?
           </h3>
           
@@ -46,7 +49,7 @@ const ModalExcluirPolo: React.FC<ModalExcluirPoloProps> = ({
             Esta ação é permanente. Todos os dados vinculados ao polo <strong className="text-slate-700">{poloNome}</strong> serão perdidos e não poderão ser recuperados.
           </p>
 
-          <div className="flex gap-3 w-full">
+          <div className="config-dialog-footer flex gap-3 w-full">
             <button
               onClick={onClose}
               className="flex-1 py-3.5 rounded-xl border border-slate-200 text-slate-600 font-bold text-xs uppercase tracking-wider hover:bg-slate-50 transition-colors"
@@ -66,7 +69,7 @@ const ModalExcluirPolo: React.FC<ModalExcluirPoloProps> = ({
         </div>
       </div>
     </div>
-  );
+  , document.body);
 };
 
 export default ModalExcluirPolo;

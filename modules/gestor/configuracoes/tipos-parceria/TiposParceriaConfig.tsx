@@ -76,7 +76,7 @@ const TiposParceriaConfig: React.FC = () => {
   }
 
   return (
-    <div className="animate-fadeIn">
+    <div className="config-tipos-parceria animate-fadeIn">
       <div className="mb-8 flex flex-col justify-between gap-4 border-b border-slate-200 pb-6 md:flex-row md:items-center">
         <div className="flex items-center gap-3">
           <div className="rounded-xl bg-blue-50 p-3 text-blue-700">
