@@ -1,7 +1,7 @@
 # Lote ativo
 
-## Lote: 2026-11-07-campos-monetarios-centavos
+## Lote: 2026-11-07-nfse-modal-cabecalho-compacto
 
-Publicar máscara monetária automática solicitada pelo usuário: dígitos deslocam centavos e exibem duas casas, seguindo Contas a Receber, com vírgula extra sem limpar o campo. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-07-campos-monetarios-centavos.md`. Candidato 4.8.261/revisão 270 sobre main 55b8bdc8e12b2192e8c1592d76c0dfb2147fe44d (Biblioteca 4.8.260), preservando integralmente as entregas anteriores e alterações paralelas do workspace.
+Corrigir avisos redundantes e abertura inline dos modelos NFS-e. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-07-nfse-modal-cabecalho-compacto.md`, 10 arquivos. Base publicada 4.8.261/a9a4ca4e8acc45728bb93514f06de36c908c993e, incluindo a atualização paralela dos campos monetários. Candidato 4.8.262/revisão 271.
 
-Três agentes implementaram e revisaram. 78 testes focados, smoke DOM de pagamentos, TypeScript e lint globais, teto global de linhas e build completo aprovados; Safari desktop/390px confirmou digitação e conversão com dados sintéticos. Base259 passou nos 12 workflows e Preview, mas Biblioteca 260 entrou durante a CI: incorporar seu delta remoto e repetir a validação integrada/CI na base 260. Baixa de despesas conserva wrapper FinancialPaymentModal; máscara integrada no editor ativo. Produção explicitamente solicitada; aceite: digitação contínua, separadores sem apagar, exclusão e colagem, percentuais/quantidades preservados. Sem migration ou transação financeira real.
+Quatro componentes alterados, sem mudanças fiscais ou de acesso. Cabeçalho compacto e modal com lista preservada, foco, teclado e cancelamento conferidos no Safari desktop/390 px. Lint e TypeScript focados aprovados. Limitações locais e evidências estão no registro. Continuação corretiva da entrega autorizada: publicar apenas o manifesto após Preview/CI verdes e conferir produção.

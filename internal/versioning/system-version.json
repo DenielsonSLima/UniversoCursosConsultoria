@@ -1,8 +1,8 @@
 {
-  "version": "4.8.261",
+  "version": "4.8.262",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 270,
+  "revision": 271,
   "releasedAt": "2026-11-07",
-  "summary": "Campos monetários com centavos automáticos em despesas, financeiro, turmas e cadastros, seguindo Contas a Receber"
+  "summary": "Emissor NFS-e com cabeçalho compacto e cadastro de modelos em modal"
 }

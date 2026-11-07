@@ -50,13 +50,17 @@ const NfseWorkspace: React.FC<EmissorNfsePageProps> = ({ poloId, poloName, isMat
 
   return (
     <div className="nfse-workspace">
-      <header className="nfse-header"><div><h1>Emissor NFS-e</h1><p>{poloName || (selectedPolo ? 'Polo selecionado' : 'Selecione um polo para acompanhar as notas')}{isMatriz && selectedPolo ? ' · Matriz' : ''}</p></div><span className="nfse-environment"><ShieldCheck size={14} />Homologação</span></header>
+      <header className="nfse-header">
+        <div><h1>Emissor NFS-e</h1><p>{poloName || (selectedPolo ? 'Polo selecionado' : 'Selecione um polo para acompanhar as notas')}{isMatriz && selectedPolo ? ' · Matriz' : ''}</p></div>
+        <div className="grid max-w-full grid-cols-[minmax(0,170px)_auto] items-center gap-3">
+          <label className="nfse-field nfse-field-month"><input type="month" value={month} onChange={(event) => setMonth(event.target.value)} aria-label="Mês dos recebimentos" /></label>
+          <span className="nfse-environment"><ShieldCheck size={14} />Homologação</span>
+        </div>
+      </header>
       {!selectedPolo ? <div className="nfse-notice"><Building2 size={18} /><div><strong>Selecione um polo</strong><p>Use o seletor de unidade no cabeçalho para preparar e acompanhar as notas do estabelecimento.</p></div></div>
         : !scope ? <div className="nfse-notice"><AlertCircle size={18} /><div><strong>{!month ? 'Escolha o mês dos recebimentos' : 'Contexto de acesso indisponível'}</strong><p>{!month ? 'Informe um mês válido para consultar os recebimentos e as notas deste polo.' : 'Selecione novamente a unidade no cabeçalho antes de consultar os registros fiscais.'}</p></div></div>
-        : unavailable ? <div className="nfse-notice"><ShieldCheck size={18} /><div><strong>Integração fiscal em preparação</strong><p>A preparação e a emissão serão liberadas após a configuração e validação deste estabelecimento.</p></div></div>
         : workspace?.readiness.status === 'BLOCKED' ? <div className="nfse-notice"><AlertCircle size={18} /><div><strong>Este estabelecimento precisa de configuração</strong><p>{workspace.readiness.message}</p></div></div>
-        : query.error ? <NfseDataState error={query.error} onRetry={() => void query.refetch()} /> : null}
-      <div className="nfse-toolbar" style={{ padding: '0 0 14px', borderBottom: 0 }}><label className="nfse-field nfse-field-month"><span>Mês dos recebimentos</span><input type="month" value={month} onChange={(event) => setMonth(event.target.value)} aria-label="Mês dos recebimentos" /></label><p className="nfse-inline-help">Cada nota utiliza o CNPJ cadastrado para o polo emissor.</p></div>
+        : query.error && !unavailable ? <NfseDataState error={query.error} onRetry={() => void query.refetch()} /> : null}
       <div className="nfse-summary" aria-label="Resumo fiscal do período">
         <div className="nfse-metric"><span>Recebido no mês</span><strong>{formatNfseMoney(summary?.receivedAmount)}</strong></div>
         <div className="nfse-metric"><span>Pendentes</span><strong>{summary?.pendingCount ?? '—'}</strong></div>

@@ -16,6 +16,12 @@ Histórico arquivado: [05/10/2026 — versões 4.8.171 a 4.8.174](./changelog/20
 
 Histórico arquivado: [06/10/2026 a 09/10/2026 — versões 4.8.175 a 4.8.195](./changelog/2026-10-06-a-09-versoes-4-8-175-a-195.md).
 
+## [4.8.262] - 2026-11-07
+
+### Corrigido
+- Emissor NFS-e: remoção dos avisos duplicados e do texto sobre CNPJ; filtro de mês integrado ao cabeçalho.
+- Novo modelo e edição abrem em modal, preservando a lista, foco, navegação por teclado e fechamento.
+
 ## [4.8.261] - 2026-11-07
 
 ### Corrigido
