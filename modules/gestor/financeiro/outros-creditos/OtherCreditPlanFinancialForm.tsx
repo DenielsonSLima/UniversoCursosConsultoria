@@ -1,5 +1,6 @@
+import { sanitizeCurrencyInput } from '../../../shared/utils/currency-input';
 import React from 'react';
-import { formatCurrencyInput, normalizeCurrencyInput } from './outros-creditos.presentation';
+import { formatCurrencyInput } from './outros-creditos.presentation';
 import { initialOtherCreditPlanTerms, type OtherCreditPlanFeeForm, type OtherCreditPlanForm as Form } from './other-credit-plan.model';
 import { OtherCreditPlanTermsFields } from './OtherCreditPlanTermsFields';
 
@@ -10,7 +11,7 @@ function MoneyField({ label, value, onChange }: { label: string; value: string; 
   return <label className="space-y-1">
     <span className={labelClass}>{label}</span>
     <input type="text" inputMode="decimal" value={value} placeholder="0,00"
-      onChange={event => onChange(normalizeCurrencyInput(event.target.value))}
+      onChange={event => onChange(sanitizeCurrencyInput(event.target.value, value))}
       onBlur={() => onChange(formatCurrencyInput(value))} className={inputClass} />
   </label>;
 }

@@ -1,3 +1,4 @@
+import { sanitizeCurrencyInput } from '../../../shared/utils/currency-input';
 import React from 'react';
 import { Calendar, Clock, Layers, Loader2, Plus, Receipt } from 'lucide-react';
 import { Curso } from '../cadastros.types';
@@ -98,7 +99,7 @@ const CursoPublicoTab: React.FC<CursoPublicoTabProps> = ({ curso, publication })
                 placeholder="Ex: 299,90 (Deixe em branco para 'Sob Consulta')"
                 className="w-full bg-transparent border-none outline-none text-sm font-bold text-slate-800 placeholder-slate-400 py-2.5"
                 value={valorCurso}
-                onChange={(event) => setValorCurso(event.target.value)}
+                onChange={(event) => setValorCurso(sanitizeCurrencyInput(event.target.value, valorCurso))}
                 onBlur={() => {
                   const parsed = parseBRLPrice(valorCurso);
                   setValorCurso(parsed !== null && !isNaN(parsed) ? parsed.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : '');
@@ -109,7 +110,7 @@ const CursoPublicoTab: React.FC<CursoPublicoTabProps> = ({ curso, publication })
                 {isSavingValor ? <><Loader2 className="animate-spin" size={12} /><span>Salvando...</span></> : 'Salvar'}
               </button>
             </div>
-            <p className="text-[9px] text-slate-400 font-medium leading-normal">Insira o preço comercial para divulgação pública no site. Digite o valor com duas casas decimais e clique em Salvar (ex: 299,90).</p>
+            <p className="text-[9px] text-slate-400 font-medium leading-normal">Insira o preço comercial para divulgação pública no site. Digite apenas os números; os centavos são formatados automaticamente. Depois clique em Salvar.</p>
           </div>
         )}
 

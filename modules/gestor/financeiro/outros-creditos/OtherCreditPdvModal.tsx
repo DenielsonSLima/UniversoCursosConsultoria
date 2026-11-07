@@ -135,7 +135,7 @@ export function PdvForm({ model }: { model: OutrosCreditosModel }) {
                 <div className="financial-dialog-field flex h-[88px] items-center gap-3 rounded-2xl border border-slate-200 bg-[#f7f9fc] px-5 transition-all group-focus-within:-translate-y-0.5 group-focus-within:border-blue-500 group-focus-within:bg-white group-focus-within:shadow-[0_14px_34px_-18px_rgba(37,99,235,0.55)] group-focus-within:ring-4 group-focus-within:ring-blue-500/10">
                   <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white text-sm font-black text-blue-800 shadow-sm">R$</span>
                   <input ref={amountRef} type="text" inputMode="decimal" required aria-label="Valor da cobrança" placeholder="0,00" value={model.value}
-                    onChange={event => model.setValue(formatPdvCurrencyInput(event.target.value))}
+                    onChange={event => model.setValue(formatPdvCurrencyInput(event.target.value, model.value))}
                     className="w-full min-w-0 bg-transparent text-3xl font-black tracking-[-0.04em] text-[#071b3f] outline-none placeholder:text-slate-300 sm:text-[34px]" />
                 </div>
               </label>

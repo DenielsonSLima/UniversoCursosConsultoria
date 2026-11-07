@@ -99,8 +99,8 @@ test('etapa financeira cobre regra flexível e matrícula inicial opcional', () 
   assert.match(financialStepSource, /2º ciclo ainda pode gerar/);
   assert.match(financialStepSource, /1ª mensalidade/);
   assert.match(financialPreviewServiceSource, /totalCurso: totalCronograma/);
-  assert.match(financialStepSource, /inputMode="numeric"/);
-  assert.match(financialStepSource, /parseCurrencyBRLInput/);
+  assert.match(financialStepSource, /SharedCurrencyInput/);
+  assert.match(financialStepSource, /prefix="R\$ "/);
   assert.match(financialStepSource, /Array\.from\(\{ length: 31 \}/);
   assert.match(formSource, /showEnrollmentPaymentRule=\{false\}/);
   assert.match(enrollmentSettingsSource, /showEnrollmentPaymentRule/);

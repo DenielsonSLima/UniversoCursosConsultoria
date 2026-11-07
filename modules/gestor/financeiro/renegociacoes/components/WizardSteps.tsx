@@ -1,11 +1,10 @@
+import { sanitizeCurrencyInput } from '../../../../shared/utils/currency-input';
 import React from 'react';
 import {
   formatCents,
   formatCandidateAmount,
-  formatCentsInput,
   formatRenegociacaoDate,
   formatPolicyPercentage,
-  parseCurrencyToCents,
 } from '../renegociacoes.model';
 import type { RenegociacaoCandidateItem, RenegociacaoPolicyDefaults } from '../renegociacoes.types';
 
@@ -36,7 +35,7 @@ const MoneyField: React.FC<{
       <input
         inputMode="numeric"
         value={value}
-        onChange={(event) => onChange(formatCentsInput(parseCurrencyToCents(event.target.value)))}
+        onChange={(event) => onChange(sanitizeCurrencyInput(event.target.value, value))}
         className={`${inputClass} pl-9 ${compact ? 'bg-white' : ''}`}
       />
     </div>

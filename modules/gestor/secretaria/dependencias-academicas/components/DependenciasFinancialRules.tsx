@@ -1,3 +1,4 @@
+import CurrencyInput from '../../../../shared/components/CurrencyInput';
 import InstitutionalSelect from '../../../../shared/components/InstitutionalSelect';
 import {
   BadgePercent,
@@ -243,12 +244,9 @@ const DependenciasFinancialRules = ({
         </label>
         <label className="block lg:w-36">
           <span className="text-[9px] font-black uppercase tracking-wider text-slate-500">Desconto R$</span>
-          <input
-            type="number"
-            min="0"
-            step="0.01"
-            value={discount}
-            onChange={(event) => setDiscount(event.target.value)}
+          <CurrencyInput
+            value={Number(discount)}
+            onValueChange={(value) => setDiscount(value.toFixed(2))}
             className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700"
           />
         </label>

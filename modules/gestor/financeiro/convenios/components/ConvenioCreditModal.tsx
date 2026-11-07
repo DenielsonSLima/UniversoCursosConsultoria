@@ -1,3 +1,4 @@
+import { sanitizeCurrencyInput } from '../../../../shared/utils/currency-input';
 import React, { useRef, useState } from 'react';
 import { CircleDollarSign, Loader2 } from 'lucide-react';
 import type { ContaBancaria } from '../../financeiro.service';
@@ -80,7 +81,7 @@ const ConvenioCreditModal: React.FC<ConvenioCreditModalProps> = ({
               <input
                 inputMode="decimal"
                 value={valor}
-                onChange={(event) => setValor(event.target.value)}
+                onChange={(event) => setValor(sanitizeCurrencyInput(event.target.value, valor))}
                 onBlur={() => {
                   if (parsedValue > 0) setValor(formatConvenioCurrency(parsedValue));
                 }}

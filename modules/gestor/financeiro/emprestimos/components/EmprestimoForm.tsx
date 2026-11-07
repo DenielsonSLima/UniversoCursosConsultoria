@@ -1,3 +1,4 @@
+import { sanitizeCurrencyInput } from '../../../../shared/utils/currency-input';
 import React, { useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
@@ -243,7 +244,7 @@ const EmprestimoForm: React.FC<EmprestimoFormProps> = ({
               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">R$</span>
               <input
                 value={valorLiberado}
-                onChange={(event) => setValorLiberado(event.target.value.replace(/[^\d.,]/g, ''))}
+                onChange={(event) => setValorLiberado(sanitizeCurrencyInput(event.target.value, valorLiberado))}
                 onBlur={(event) => setValorLiberado(formatCurrencyInput(event.target.value))}
                 inputMode="decimal"
                 placeholder="0,00"
@@ -260,7 +261,7 @@ const EmprestimoForm: React.FC<EmprestimoFormProps> = ({
               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">R$</span>
               <input
                 value={valorTotalDivida}
-                onChange={(event) => setValorTotalDivida(event.target.value.replace(/[^\d.,]/g, ''))}
+                onChange={(event) => setValorTotalDivida(sanitizeCurrencyInput(event.target.value, valorTotalDivida))}
                 onBlur={(event) => setValorTotalDivida(formatCurrencyInput(event.target.value))}
                 inputMode="decimal"
                 placeholder="0,00"

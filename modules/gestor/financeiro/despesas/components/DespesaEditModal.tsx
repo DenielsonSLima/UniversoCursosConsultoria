@@ -1,3 +1,4 @@
+import { sanitizeCurrencyInput } from '../../../../shared/utils/currency-input';
 import FinancialSelect from '../../components/FinancialSelect';
 import React, { useMemo, useRef, useState } from 'react';
 import { Pencil, RefreshCw, X } from 'lucide-react';
@@ -158,7 +159,7 @@ const DespesaEditModal: React.FC<DespesaEditModalProps> = ({
               <input
                 value={valorBase}
                 inputMode="decimal"
-                onChange={(event) => setValorBase(event.target.value)}
+                onChange={(event) => setValorBase(sanitizeCurrencyInput(event.target.value, valorBase))}
                 onBlur={(event) => setValorBase(normalizeCurrency(event.target.value))}
                 className={`w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-9 pr-3 text-sm font-semibold text-slate-700 outline-none transition-colors focus:ring-2 ${accent.ring}`}
               />
@@ -215,7 +216,7 @@ const DespesaEditModal: React.FC<DespesaEditModalProps> = ({
                 <input
                   value={field.value}
                   inputMode="decimal"
-                  onChange={(event) => field.setValue(event.target.value)}
+                  onChange={(event) => field.setValue(sanitizeCurrencyInput(event.target.value, field.value))}
                   onBlur={(event) => field.setValue(normalizeCurrency(event.target.value))}
                   className={`w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-9 pr-3 text-sm font-semibold text-slate-700 outline-none transition-colors focus:ring-2 ${accent.ring}`}
                 />

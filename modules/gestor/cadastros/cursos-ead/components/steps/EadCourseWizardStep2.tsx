@@ -1,3 +1,4 @@
+import { sanitizeCurrencyInput } from '../../../../../shared/utils/currency-input';
 import { CheckCircle2, CreditCard, Info, Link2 } from "lucide-react";
 import { useEadCourseWizardContext } from "../EadCourseWizardContext";
 import { parseBRLPrice } from "../eadCourseWizard.helpers";
@@ -36,7 +37,7 @@ const EadCourseWizardStep2 = () => {
             placeholder="Ex: 299,90"
             className="w-full border-none bg-transparent text-sm font-semibold text-slate-800 outline-none placeholder-slate-400"
             value={valorText}
-            onChange={(event) => setValorText(event.target.value)}
+            onChange={(event) => setValorText(sanitizeCurrencyInput(event.target.value, valorText))}
             onBlur={() => {
               const parsed = parseBRLPrice(valorText);
               setValorText(

@@ -1,3 +1,4 @@
+import CurrencyInput from '../../../../shared/components/CurrencyInput';
 import React, { useMemo, useRef, useState } from 'react';
 import {
   AlertCircle,
@@ -206,10 +207,10 @@ const CondicaoPlanoFinanceiroUnicoModal: React.FC<CondicaoPlanoFinanceiroUnicoMo
                 <label><span className={labelClass}>Quantidade de boletos</span><input className={inputClass} type="number" min="1" max="60" value={adjustment.qtdParcelas || ''} onChange={(event) => updateAdjustment({ qtdParcelas: Number(event.target.value) })} /></label>
                 <label><span className={labelClass}>Primeiro vencimento</span><input className={inputClass} type="date" value={adjustment.primeiroVencimento || ''} onChange={(event) => updateAdjustment({ primeiroVencimento: event.target.value })} /></label>
                 <label><span className={labelClass}>Tipo de desconto</span><select className={inputClass} value={adjustment.descontoComercialTipo || 'NENHUM'} onChange={(event) => { const discountType = event.target.value as TipoDescontoComercialPlanoFinanceiroUnico; updateAdjustment({ descontoComercialTipo: discountType, ...(discountType === 'A_VISTA' ? { qtdParcelas: 1 } : {}) }); if (discountType === 'A_VISTA') setReason('A_VISTA'); }}><option value="NENHUM">Sem desconto</option><option value="A_VISTA">Pagamento à vista</option><option value="NEGOCIADO">Desconto negociado</option></select></label>
-                <label><span className={labelClass}>Desconto comercial</span><input className={inputClass} type="number" min="0" step="0.01" value={adjustment.descontoComercialValor ?? 0} onChange={(event) => updateAdjustment({ descontoComercialValor: Number(event.target.value) })} /></label>
-                <label><span className={labelClass}>Desconto pontualidade</span><input className={inputClass} type="number" min="0" step="0.01" value={adjustment.descontoPontualidade ?? 0} onChange={(event) => updateAdjustment({ descontoPontualidade: Number(event.target.value) })} /></label>
+                <label><span className={labelClass}>Desconto comercial</span><CurrencyInput className={inputClass} value={adjustment.descontoComercialValor ?? 0} onValueChange={(value) => updateAdjustment({ descontoComercialValor: value })} /></label>
+                <label><span className={labelClass}>Desconto pontualidade</span><CurrencyInput className={inputClass} value={adjustment.descontoPontualidade ?? 0} onValueChange={(value) => updateAdjustment({ descontoPontualidade: value })} /></label>
                 <label><span className={labelClass}>Juros ao mês (%)</span><input className={inputClass} type="number" min="0" max="100" step="0.01" value={adjustment.jurosAtrasoPercentual ?? 0} onChange={(event) => updateAdjustment({ jurosAtrasoPercentual: Number(event.target.value) })} /></label>
-                <label><span className={labelClass}>Multa fixa</span><input className={inputClass} type="number" min="0" step="0.01" value={adjustment.multaAtraso ?? 0} onChange={(event) => updateAdjustment({ multaAtraso: Number(event.target.value) })} /></label>
+                <label><span className={labelClass}>Multa fixa</span><CurrencyInput className={inputClass} value={adjustment.multaAtraso ?? 0} onValueChange={(value) => updateAdjustment({ multaAtraso: value })} /></label>
                 <button type="button" onClick={updatePreview} disabled={!previewOutdated || previewQuery.isFetching} className="mt-4 inline-flex items-center justify-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-[10px] font-black uppercase tracking-wider text-white disabled:opacity-40"><RefreshCw size={14} className={previewQuery.isFetching ? 'animate-spin' : ''} /> Atualizar prévia</button>
               </div>
             </section>

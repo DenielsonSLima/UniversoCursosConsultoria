@@ -1,3 +1,4 @@
+import CurrencyInput from '../../../../../../shared/components/CurrencyInput';
 import React from 'react';
 import { Calendar, FileText, RefreshCw, Save, Settings } from 'lucide-react';
 import FinanceiroCronogramaItem from './FinanceiroCronogramaItem';
@@ -44,13 +45,6 @@ const FinanceiroConfigEditor: React.FC<FinanceiroConfigEditorProps> = ({
   onUpdateDate,
   setFormData,
 }) => {
-  const handleCurrencyChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = event.target;
-    const digits = value.replace(/\D/g, '');
-    const numericValue = digits ? parseFloat(digits) / 100 : 0;
-    setFormData((previous) => ({ ...previous, [name]: numericValue }));
-  };
-
   const handleNumberChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;
     setFormData((previous) => ({ ...previous, [name]: parseFloat(value) || 0 }));
@@ -83,9 +77,9 @@ const FinanceiroConfigEditor: React.FC<FinanceiroConfigEditorProps> = ({
                   /> Cobrar
                 </span>
               </label>
-              <input
-                type="text" name="valorMatricula"
-                value={formatCurrencyBRL(formData.valorMatricula)} onChange={handleCurrencyChange}
+              <CurrencyInput
+                name="valorMatricula" prefix="R$ "
+                value={formData.valorMatricula} onValueChange={(value) => setFormData((previous) => ({ ...previous, valorMatricula: value }))}
                 disabled={somenteSegundoCiclo || !formData.cobrarMatricula}
                 className="w-full p-3 rounded-xl border border-slate-300 outline-none focus:border-blue-500 font-bold text-slate-700 bg-white"
               />
@@ -101,9 +95,9 @@ const FinanceiroConfigEditor: React.FC<FinanceiroConfigEditorProps> = ({
                   /> Cobrar
                 </span>
               </label>
-              <input
-                type="text" name="valorRematricula"
-                value={formatCurrencyBRL(formData.valorRematricula)} onChange={handleCurrencyChange}
+              <CurrencyInput
+                name="valorRematricula" prefix="R$ "
+                value={formData.valorRematricula} onValueChange={(value) => setFormData((previous) => ({ ...previous, valorRematricula: value }))}
                 disabled={!formData.cobrarRematricula}
                 className="w-full p-3 rounded-xl border border-slate-300 outline-none focus:border-blue-500 font-bold text-slate-700 bg-white"
               />
@@ -120,9 +114,9 @@ const FinanceiroConfigEditor: React.FC<FinanceiroConfigEditorProps> = ({
             </div>
             <div className="space-y-2">
               <label className="text-xs font-bold text-slate-500 uppercase">Valor Parcela (R$)</label>
-              <input
-                type="text" name="valorParcela"
-                value={formatCurrencyBRL(formData.valorParcela)} onChange={handleCurrencyChange}
+              <CurrencyInput
+                name="valorParcela" prefix="R$ "
+                value={formData.valorParcela} onValueChange={(value) => setFormData((previous) => ({ ...previous, valorParcela: value }))}
                 className="w-full p-3 rounded-xl border border-slate-300 outline-none focus:border-blue-500 font-bold text-slate-700 bg-white"
               />
             </div>
@@ -151,9 +145,9 @@ const FinanceiroConfigEditor: React.FC<FinanceiroConfigEditorProps> = ({
             <div className="grid grid-cols-3 gap-3">
               <div>
                 <label className="text-[10px] font-bold text-blue-600 uppercase">Desc. Pontualidade</label>
-                <input
-                  type="text" name="descontoPontualidade"
-                  value={formatCurrencyBRL(formData.descontoPontualidade)} onChange={handleCurrencyChange}
+                <CurrencyInput
+                  name="descontoPontualidade" prefix="R$ "
+                  value={formData.descontoPontualidade} onValueChange={(value) => setFormData((previous) => ({ ...previous, descontoPontualidade: value }))}
                   className="w-full p-2 rounded-lg border border-blue-200 text-xs bg-white text-slate-700 outline-none focus:border-blue-500"
                 />
               </div>

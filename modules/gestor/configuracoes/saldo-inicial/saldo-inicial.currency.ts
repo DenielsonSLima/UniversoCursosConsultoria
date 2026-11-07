@@ -1,3 +1,4 @@
+import { sanitizeCurrencyInput } from '../../../shared/utils/currency-input';
 const brlInputFormatter = new Intl.NumberFormat('pt-BR', {
   minimumFractionDigits: 2,
   maximumFractionDigits: 2,
@@ -52,4 +53,14 @@ export const parseBRLInput = (value: string): number | null => {
 export const normalizeBRLInput = (value: string): string => {
   const parsed = parseBRLInput(value);
   return parsed === null ? '' : formatBRLInput(parsed);
+};
+
+/** Uses the common centavo mask without dropping debit opening balances. */
+export const sanitizeBRLTyping = (value: string, previousValue = ''): string => {
+  if (value === '') return '';
+  const clean = value.replace(/R\$/gi, '').trim();
+  const negative = clean.startsWith('-');
+  if (clean === '-') return '-';
+  const unsigned = sanitizeCurrencyInput(clean.replace(/-/g, ''), previousValue.replace(/-/g, ''));
+  return unsigned ? `${negative ? '-' : ''}${unsigned}` : negative ? '-' : '';
 };

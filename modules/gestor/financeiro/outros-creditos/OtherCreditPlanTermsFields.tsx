@@ -1,3 +1,4 @@
+import { sanitizeCurrencyInput } from '../../../shared/utils/currency-input';
 import React from 'react';
 import { formatCurrencyInput, normalizeCurrencyInput } from './outros-creditos.presentation';
 import type { OtherCreditPlanTermsForm } from './other-credit-plan.model';
@@ -35,7 +36,9 @@ export function OtherCreditPlanTermsFields({ label, terms, onChange }: {
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="space-y-1"><span className={labelClass}>Desconto ({terms.discountType === 'FIXO' ? 'R$' : '%'})</span>
             <input aria-label={`Desconto de ${label} (${terms.discountType === 'FIXO' ? 'R$' : '%'})`} type="text" inputMode="decimal"
-              value={terms.discount} placeholder="0,00" onChange={event => onChange({ discount: normalizeCurrencyInput(event.target.value) })}
+              value={terms.discount} placeholder="0,00" onChange={event => onChange({ discount: terms.discountType === 'FIXO'
+                ? sanitizeCurrencyInput(event.target.value, terms.discount)
+                : normalizeCurrencyInput(event.target.value) })}
               onBlur={() => { if (terms.discountType === 'FIXO') onChange({ discount: formatCurrencyInput(terms.discount) }); }} className={inputClass} />
           </label>
           <label className="space-y-1"><span className={labelClass}>Dias antes do vencimento</span>

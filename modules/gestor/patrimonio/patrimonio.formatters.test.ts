@@ -12,17 +12,20 @@ import {
   PATRIMONIO_MAX_UNIT_CENTS,
 } from './patrimonio.formatters';
 
-test('formata a digitação monetária em reais e preserva decimais intermediários', () => {
+test('formata os dígitos como centavos e ignora separadores extras', () => {
   assert.equal(formatPatrimonioCurrencyInput('800'), '800,00');
   assert.equal(formatPatrimonioCurrencyInput('0'), '0,00');
   let typed = '';
-  for (const character of '800,5') {
+  for (const character of '80050') {
     typed = formatPatrimonioCurrencyTyping(`${typed}${character}`, typed);
   }
-  assert.equal(typed, '800,5');
+  assert.equal(typed, '800,50');
   assert.equal(formatPatrimonioCurrencyInput(typed), '800,50');
-  assert.equal(formatPatrimonioCurrencyTyping('1234', '123'), '1.234');
+  assert.equal(formatPatrimonioCurrencyTyping('800,50,', typed), typed);
+  assert.equal(formatPatrimonioCurrencyTyping('800,5', typed), '80,05');
+  assert.equal(formatPatrimonioCurrencyTyping('', typed), '');
   assert.equal(formatPatrimonioCurrencyTyping('1234.56', ''), '1.234,56');
+  assert.equal(formatPatrimonioCurrencyTyping('-1234,56', typed), typed);
 });
 
 test('aceita colagem brasileira e converte exatamente para centavos', () => {

@@ -120,6 +120,15 @@ test('React DOM: saldo do servidor, múltiplas formas, preview atual, dupla conf
     assert.equal(byLabel('Valor do pagamento 1').value, '100,00', 'saldo sugerido veio do histórico backend');
     await settle(300);
     assert.equal(button('Confirmar quitação').disabled, false);
+    await change('Valor do pagamento 1', '');
+    for (const digit of '123456') {
+      await change('Valor do pagamento 1', `${byLabel('Valor do pagamento 1').value}${digit}`);
+    }
+    assert.equal(byLabel('Valor do pagamento 1').value, '1.234,56');
+    await change('Valor do pagamento 1', '1.234,56,');
+    assert.equal(byLabel('Valor do pagamento 1').value, '1.234,56', 'vírgula extra preserva o valor');
+    await change('Valor do pagamento 1', '1.234,5');
+    assert.equal(byLabel('Valor do pagamento 1').value, '123,45', 'Backspace desloca centavos');
     await change('Valor do pagamento 1', '30,00');
     assert.equal(button('Confirmar baixa parcial').disabled, true, 'input alterado não pode confirmar preview anterior');
     await click(button('Adicionar forma de pagamento'));

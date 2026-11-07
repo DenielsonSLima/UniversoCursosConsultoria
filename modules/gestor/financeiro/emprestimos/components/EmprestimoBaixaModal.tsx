@@ -1,3 +1,4 @@
+import { sanitizeCurrencyInput } from '../../../../shared/utils/currency-input';
 import React, { useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
@@ -272,7 +273,7 @@ const EmprestimoBaixaModal: React.FC<EmprestimoBaixaModalProps> = ({
                           type="text"
                           inputMode="decimal"
                           value={field.value}
-                          onChange={(event) => field.setter(event.target.value)}
+                          onChange={(event) => field.setter(sanitizeCurrencyInput(event.target.value, field.value))}
                           onBlur={(event) => field.setter(normalizeCurrency(event.target.value))}
                           placeholder="0,00"
                           disabled={isPending}

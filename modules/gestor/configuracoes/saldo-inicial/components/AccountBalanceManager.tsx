@@ -10,6 +10,7 @@ import {
   formatBRLCurrency,
   formatBRLInput,
   normalizeBRLInput,
+  sanitizeBRLTyping,
   parseBRLInput,
 } from '../saldo-inicial.currency';
 
@@ -202,7 +203,7 @@ const AccountCard = ({ account, onSave, bankColor, isSaving }: any) => {
               type="text"
               inputMode="decimal"
               value={saldo}
-              onChange={(e) => setSaldo(e.target.value)}
+              onChange={(e) => setSaldo(sanitizeBRLTyping(e.target.value, saldo))}
               onBlur={() => setSaldo((current) => normalizeBRLInput(current))}
               disabled={isIntegrationManaged}
               className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-[#001a33] font-black focus:border-teal-500 focus:ring-2 focus:ring-teal-500/10 outline-none transition-all"
