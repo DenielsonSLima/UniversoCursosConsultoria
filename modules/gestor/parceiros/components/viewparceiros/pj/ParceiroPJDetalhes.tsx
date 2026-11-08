@@ -1,24 +1,20 @@
 // File: modules/gestor/parceiros/components/viewparceiros/pj/ParceiroPJDetalhes.tsx
 // Página de detalhes de Parceiro Pessoa Jurídica com dados reais, edição e abas adequadas ao tipo
 
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
   ArrowLeft, Building, Handshake, Edit3, Save, X, MapPin, Phone,
-  AlertCircle, Loader2, Trash2, Upload
+  AlertCircle, Loader2, Trash2
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { parceirosService } from '../../../parceiros.service';
 import { empresasService } from '../../../../configuracoes/empresas/empresas.service';
-import {
-  categoriasQueryKeys,
-  categoriasService,
-} from '../../../../configuracoes/categorias/categorias.service';
-import {
-  tiposParceriaQueryKeys,
-  tiposParceriaService,
-} from '../../../../configuracoes/tipos-parceria/tipos-parceria.service';
 import { useToast } from '../../shared/ToastNotification';
 import ToastNotification from '../../shared/ToastNotification';
+import InstitutionalSelect from '../../../../../shared/components/InstitutionalSelect';
+import PJIdentification from './PJIdentification';
+import { Field, PartnerLogo, inputCls, labelCls } from './pj-details.presentation';
+import './pj-details.css';
 import { formatCnpj, formatCpf } from '../../../../../../lib/documentFormatters';
 
 interface ParceiroPJDetalhesProps {
@@ -29,48 +25,6 @@ interface ParceiroPJDetalhesProps {
 type TabPJ = 'dados' | 'parceria';
 
 const UFS = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
-
-const Field: React.FC<{ label: string; value?: string | null; mono?: boolean }> = ({ label, value, mono }) => (
-  <div>
-    <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">{label}</p>
-    <p className={`text-sm font-semibold text-[#001a33] ${mono ? 'font-mono' : ''}`}>
-      {value || <span className="text-slate-300 italic font-normal">Não informado</span>}
-    </p>
-  </div>
-);
-
-const PartnerLogo: React.FC<{
-  src?: string | null;
-  alt: string;
-  className: string;
-  iconSize?: number;
-}> = ({ src, alt, className, iconSize = 24 }) => {
-  const [failed, setFailed] = useState(false);
-
-  useEffect(() => {
-    setFailed(false);
-  }, [src]);
-
-  if (src && !failed) {
-    return (
-      <img
-        src={src}
-        alt={alt}
-        className={className}
-        onError={() => setFailed(true)}
-      />
-    );
-  }
-
-  return (
-    <div className={`${className} flex items-center justify-center text-slate-400`}>
-      <Building size={iconSize} />
-    </div>
-  );
-};
-
-const inputCls = 'w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[#001a33] font-medium focus:border-blue-500 focus:bg-white outline-none transition-all placeholder:text-slate-400 text-sm';
-const labelCls = 'block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5';
 
 const ParceiroPJDetalhes: React.FC<ParceiroPJDetalhesProps> = ({ pjInicial, onBack }) => {
   const [activeTab, setActiveTab] = useState<TabPJ>('dados');
@@ -86,15 +40,6 @@ const ParceiroPJDetalhes: React.FC<ParceiroPJDetalhesProps> = ({ pjInicial, onBa
     queryFn: () => parceirosService.getById(pjInicial.id),
     initialData: pjInicial,
   });
-  const categoriasQuery = useQuery({
-    queryKey: categoriasQueryKeys.all,
-    queryFn: categoriasService.getAll,
-  });
-  const tiposParceriaQuery = useQuery({
-    queryKey: tiposParceriaQueryKeys.all,
-    queryFn: tiposParceriaService.getAll,
-  });
-
   const updateMutation = useMutation({
     mutationFn: (data: any) => parceirosService.update(pjInicial.id, { ...data, tipo: 'PJ' }),
     onSuccess: () => {
@@ -135,7 +80,7 @@ const ParceiroPJDetalhes: React.FC<ParceiroPJDetalhesProps> = ({ pjInicial, onBa
     const { name, value } = e.target;
     setEditData((prev: any) => {
       const next = { ...prev, [name]: value };
-      if (name === 'nomeCompleto') next.nome = value;
+      if (name === 'nomeCompleto') { next.nome = value; next.razaoSocial = value; }
       if (name === 'cnpj') {
         next.cpf = value;
         next.cpf_cnpj = value;
@@ -145,28 +90,11 @@ const ParceiroPJDetalhes: React.FC<ParceiroPJDetalhesProps> = ({ pjInicial, onBa
     });
   };
 
-  const handleCategoriaChange = (categoriaId: string) => {
-    const categoria = (categoriasQuery.data || []).find((item) => item.id === categoriaId);
-    setEditData((prev: any) => ({
-      ...prev,
-      categoriaId: categoria?.id || null,
-      categoriaNome: categoria?.nome || null,
-      tipoPj: categoria?.nome || null,
-    }));
-  };
-
-  const handleTipoParceriaChange = (tipoParceriaId: string) => {
-    const tipoParceria = (tiposParceriaQuery.data || []).find((item) => item.id === tipoParceriaId);
-    setEditData((prev: any) => ({
-      ...prev,
-      tipoParceriaId: tipoParceria?.id || null,
-      tipoParceriaNome: tipoParceria?.nome || null,
-      tipoConvenio: tipoParceria?.nome || null,
-    }));
-  };
-
   const handleSave = () => {
-    if (!editData) return;
+    if (!editData || !editData.nome?.trim()) {
+      toast.error('Informe a razão social', 'A razão social é obrigatória para salvar o parceiro.');
+      return;
+    }
     updateMutation.mutate(editData);
   };
 
@@ -207,13 +135,13 @@ const ParceiroPJDetalhes: React.FC<ParceiroPJDetalhesProps> = ({ pjInicial, onBa
   }
 
   return (
-    <div className="min-h-screen pb-20 ">
+    <div className="pj-details min-h-screen pb-20">
       <ToastNotification toasts={toasts} onRemove={removeToast} />
 
       {/* Header */}
-      <div className="bg-white border-b border-slate-100 px-8 py-5 shadow-sm -mx-8 -mt-8 mb-8">
+      <div className="pj-details-header bg-white border-b border-slate-100 px-8 py-5 shadow-sm -mx-8 -mt-8 mb-8">
         <div className="max-w-7xl mx-auto">
-          <div className="flex items-start justify-between gap-4 mb-6">
+          <div className="pj-details-heading flex items-start justify-between gap-4 mb-6">
             <div className="flex items-center gap-4">
               <button
                 onClick={onBack}
@@ -292,15 +220,14 @@ const ParceiroPJDetalhes: React.FC<ParceiroPJDetalhesProps> = ({ pjInicial, onBa
           </div>
 
           {/* Tabs */}
-          <div className="flex gap-2 overflow-x-auto pb-1">
+          <div className="pj-details-tabs flex gap-2 overflow-x-auto pb-1">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all whitespace-nowrap ${
-                  activeTab === tab.id
-                    ? 'bg-[#001a33] text-white shadow-lg shadow-slate-900/20'
-                    : 'bg-slate-50 text-slate-500 hover:bg-slate-100 hover:text-slate-800'
+                aria-current={activeTab === tab.id ? 'page' : undefined}
+                className={`flex items-center gap-2 border-b-2 px-3 py-2.5 text-sm whitespace-nowrap ${
+                  activeTab === tab.id ? 'border-blue-600 text-blue-700' : 'border-transparent text-slate-500 hover:text-slate-800'
                 }`}
               >
                 {tab.icon}
@@ -318,122 +245,9 @@ const ParceiroPJDetalhes: React.FC<ParceiroPJDetalhesProps> = ({ pjInicial, onBa
         {activeTab === 'dados' && (
           <div className="space-y-6 ">
 
-            {/* Identificação */}
-            <div className="bg-white p-7 rounded-[2rem] border border-slate-100 shadow-sm">
-              <div className="flex items-center gap-2 text-slate-700 border-b border-slate-100 pb-3 mb-6">
-                <Building size={16} />
-                <h4 className="text-xs font-black uppercase tracking-wider">Identificação da Empresa</h4>
-                {isEditing && <span className="ml-auto text-[10px] text-blue-500 font-bold uppercase bg-blue-50 px-2 py-0.5 rounded-full">Modo Edição</span>}
-              </div>
-
-              {!isEditing ? (
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
-                  <div className="md:col-span-2"><Field label="Razão Social" value={pjData.nome} /></div>
-                  <Field label="CNPJ" value={formatCnpj(pjData.cnpj)} mono />
-                  <Field label="Categoria da Empresa" value={pjData.categoriaNome} />
-                  <Field label="Tipo de Parceria / Convênio" value={pjData.tipoParceriaNome || pjData.tipoConvenio} />
-                  <Field label="Status" value={pjData.status} />
-                  <div className="md:col-span-3"><Field label="Polo Vinculado" value={pjData.poloNome} /></div>
-                  {/* Logo em modo leitura */}
-                  {pjData.foto && (
-                    <div className="md:col-span-3">
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-2">Logo / Imagem</p>
-                      <PartnerLogo
-                        src={pjData.foto}
-                        alt={`Logo de ${pjData.nome}`}
-                        className="h-16 w-28 rounded-xl border border-slate-200 bg-white object-contain p-2"
-                      />
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                  <div className="md:col-span-2">
-                    <label className={labelCls}>Razão Social <span className="text-red-500">*</span></label>
-                    <input name="nomeCompleto" value={d.nome || ''} onChange={handleEditChange} className={inputCls} placeholder="Razão social da empresa" />
-                  </div>
-                  <div>
-                    <label className={labelCls}>CNPJ</label>
-                    <input name="cnpj" value={d.cnpj || ''} onChange={handleEditChange} className={`${inputCls} font-mono`} placeholder="00.000.000/0000-00" maxLength={18} />
-                  </div>
-                  <div>
-                    <label className={labelCls}>Status</label>
-                    <select name="status" value={d.status || 'ATIVO'} onChange={handleEditChange} className={inputCls}>
-                      <option value="ATIVO">ATIVO</option>
-                      <option value="INATIVO">INATIVO</option>
-                      <option value="SUSPENSO">SUSPENSO</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className={labelCls}>Categoria da Empresa</label>
-                    <select
-                      value={d.categoriaId || ''}
-                      onChange={(event) => handleCategoriaChange(event.target.value)}
-                      className={inputCls}
-                    >
-                      <option value="">SEM CATEGORIA DEFINIDA</option>
-                      {(categoriasQuery.data || [])
-                        .filter((categoria) => categoria.tipo === 'pj')
-                        .map((categoria) => (
-                          <option key={categoria.id} value={categoria.id}>
-                            {categoria.nome}{categoria.status === 'inativo' ? ' (INATIVA)' : ''}
-                          </option>
-                        ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className={labelCls}>Tipo de Parceria / Convênio</label>
-                    <select
-                      value={d.tipoParceriaId || ''}
-                      onChange={(event) => handleTipoParceriaChange(event.target.value)}
-                      className={inputCls}
-                    >
-                      <option value="">SEM TIPO DEFINIDO</option>
-                      {(tiposParceriaQuery.data || []).map((tipoParceria) => (
-                        <option key={tipoParceria.id} value={tipoParceria.id}>
-                          {tipoParceria.nome}{tipoParceria.status === 'inativo' ? ' (INATIVO)' : ''}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  {/* LOGO UPLOAD */}
-                  <div className="md:col-span-3">
-                    <label className={labelCls}>Logo / Imagem da Empresa</label>
-                    <div className="flex items-center gap-4">
-                      <div className="w-20 h-20 rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 flex items-center justify-center overflow-hidden shrink-0">
-                        <PartnerLogo
-                          src={d.foto}
-                          alt={`Logo de ${d.nome || pjData.nome}`}
-                          className="h-full w-full bg-white object-contain p-2"
-                        />
-                      </div>
-                      <div className="flex-1 space-y-2">
-                        <label className="flex items-center justify-center gap-2 px-4 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold uppercase cursor-pointer transition-colors border border-slate-200 w-full">
-                          {isUploadingLogo ? (
-                            <><Loader2 size={14} className="animate-spin" /> Enviando...</>
-                          ) : (
-                            <><Upload size={14} /> Fazer Upload da Logo</>
-                          )}
-                          <input type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} disabled={isUploadingLogo} />
-                        </label>
-                        <input
-                          name="foto"
-                          value={d.foto || ''}
-                          onChange={handleEditChange}
-                          className={`${inputCls} text-xs font-mono`}
-                          placeholder="Ou cole a URL da imagem aqui..."
-                        />
-                        {d.foto && (
-                          <button type="button" onClick={() => setEditData((prev: any) => ({ ...prev, foto: '' }))} className="text-[10px] text-red-400 hover:text-red-600 font-bold uppercase tracking-wide">
-                            × Remover logo
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
+            <PJIdentification data={d} isEditing={isEditing} isUploadingLogo={isUploadingLogo}
+              onChange={handleEditChange} onLogoUpload={handleLogoUpload}
+              setEditData={setEditData} toast={toast} />
 
             {/* Endereço */}
             <div className="bg-white p-7 rounded-[2rem] border border-slate-100 shadow-sm">
@@ -480,10 +294,10 @@ const ParceiroPJDetalhes: React.FC<ParceiroPJDetalhesProps> = ({ pjInicial, onBa
                   </div>
                   <div>
                     <label className={labelCls}>UF</label>
-                    <select name="uf" value={d.uf || ''} onChange={handleEditChange} className={inputCls}>
-                      <option value="">UF</option>
-                      {UFS.map(u => <option key={u} value={u}>{u}</option>)}
-                    </select>
+                    <InstitutionalSelect value={d.uf || ''}
+                      onValueChange={(uf) => setEditData((previous: any) => ({ ...previous, uf }))}
+                      ariaLabel="UF" placeholder="UF" options={[{ value: '', label: 'UF' },
+                        ...UFS.map((uf) => ({ value: uf, label: uf }))]} />
                   </div>
                 </div>
               )}

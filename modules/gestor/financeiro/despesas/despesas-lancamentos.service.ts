@@ -2,6 +2,7 @@ import { supabase } from '../../../../lib/supabase';
 import { confirmFinancialPayment } from '../settlements/financial-payment.service';
 import type { DespesasFilters } from './despesas.queryKeys';
 import { mapLancamento } from './despesas.mapper';
+import { enrichDespesasFornecedorFantasia } from './despesas-fornecedores';
 import { validateConvenioExpenseMvp } from './despesas-convenios.model';
 import {
   cleanupDespesaAnexoIfRequestFailed,
@@ -67,11 +68,15 @@ export const getDespesas = async (
     }
     if (response.error) throw response.error;
     const rows = Array.isArray(response.data) ? response.data : [];
-    return (legacy ? await enrichLegacyRowsWithLaunchDate(rows) : rows).map(mapLancamento);
+    const datedRows = legacy ? await enrichLegacyRowsWithLaunchDate(rows) : rows;
+    const enrichedRows = await enrichDespesasFornecedorFantasia(datedRows, async (ids) => (
+      supabase.from('parceiros').select('id,nome_fantasia').eq('tipo', 'PJ').in('id', ids)
+    ));
+    return enrichedRows.map(mapLancamento);
   }
 
   let query = supabase.from('despesas_lancamentos').select(`
-    *, polos(nome), categorias_financeiras(nome), parceiros(nome), turmas(nome)
+    *, polos(nome), categorias_financeiras(nome), parceiros(nome,nome_fantasia), turmas(nome)
   `).is('excluido_em', null);
   if (filters.tipo) query = query.eq('tipo', filters.tipo);
   if (scopedPoloId) query = query.eq('polo_id', scopedPoloId);
@@ -95,7 +100,7 @@ export const getDespesas = async (
 const fetchCreatedExpense = async (id: string) => {
   const { data, error } = await supabase
     .from('despesas_lancamentos')
-    .select('*, polos(nome), categorias_financeiras(nome), parceiros(nome), turmas(nome)')
+    .select('*, polos(nome), categorias_financeiras(nome), parceiros(nome,nome_fantasia), turmas(nome)')
     .eq('id', id)
     .single();
   if (error) throw error;

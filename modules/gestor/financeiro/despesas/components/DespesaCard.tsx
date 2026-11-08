@@ -20,6 +20,7 @@ import {
   getDespesaContaLabel,
 } from './despesaPresentation';
 import DespesaConvenioBadge from './DespesaConvenioBadge';
+import { getDespesaFornecedorRotulo } from '../despesas-fornecedores';
 
 const statusConfig: Record<string, { label: string; bg: string; text: string; border: string; Icon: React.ElementType }> = {
   PAGO: { label: 'Pago', bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200', Icon: CheckCircle2 },
@@ -88,6 +89,7 @@ const DespesaCard: React.FC<DespesaCardProps> = ({
             ) : (
               <p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">Sem categoria</p>
             )}
+            <p className="mt-1 break-words text-[10px] font-medium leading-4 text-slate-500">{getDespesaFornecedorRotulo(item)}</p>
             <DespesaConvenioBadge item={item} />
             {item.isRateioDerived ? (
               <p className="mt-1 text-[10px] font-bold text-indigo-600">
@@ -136,10 +138,6 @@ const DespesaCard: React.FC<DespesaCardProps> = ({
           <div>
             <dt className="text-[9px] font-black uppercase tracking-wider text-slate-400">Vencimento</dt>
             <dd className="mt-0.5 font-bold text-slate-700">{formatDespesaDate(item.dataVencimento)}</dd>
-          </div>
-          <div className="col-span-2">
-            <dt className="text-[9px] font-black uppercase tracking-wider text-slate-400">Fornecedor</dt>
-            <dd className="mt-0.5 truncate font-semibold text-slate-700">{item.fornecedorNome || 'Fornecedor não informado'}</dd>
           </div>
           <div>
             <dt className="text-[9px] font-black uppercase tracking-wider text-slate-400">Parcela</dt>

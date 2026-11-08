@@ -30,6 +30,7 @@ export const filterParceiros = (items: any[], filters: ParceirosFilterInput) => 
 
   if (filters.searchTerm && !textMatchesSearch(filters.searchTerm, [
     item.nome,
+    item.tipo === 'PJ' ? item.nomeFantasia : null,
     item.cpf,
     item.cnpj,
     item.cidade,

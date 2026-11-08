@@ -34,6 +34,7 @@ interface Props {
   setFornecedorTipo: (value: DespesaCredorTipo | '') => void;
   fornecedorId: string;
   setFornecedorId: (value: string) => void;
+  onNovoCredor: () => void;
   jurosValor: string;
   setJurosValor: (value: string) => void;
   multaValor: string;
@@ -119,7 +120,8 @@ const DespesaFormCoreFields: React.FC<Props> = (props) => {
     </div>
 
     <DespesaCredorPicker parceiros={props.parceiros} tipo={props.fornecedorTipo}
-      value={props.fornecedorId} onTipoChange={props.setFornecedorTipo} onChange={props.setFornecedorId} />
+      value={props.fornecedorId} onTipoChange={props.setFornecedorTipo} onChange={props.setFornecedorId}
+      onNovo={props.onNovoCredor} />
 
     <div className="financial-dialog-section rounded-2xl border border-amber-100 bg-amber-50/70 p-4 md:col-span-2">
       <div className="mb-3 flex items-start justify-between gap-4">

@@ -8,6 +8,7 @@ import type { ContaBancaria } from '../../financeiro.service';
 import type { DespesaLancamento } from '../despesas.service';
 import { formatDespesaCurrency, formatDespesaDate, getDespesaContaLabel } from './despesaPresentation';
 import DespesaConvenioBadge from './DespesaConvenioBadge';
+import { getDespesaFornecedorRotulo } from '../despesas-fornecedores';
 
 const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
   const configs: Record<string, { label: string; className: string; Icon: React.ElementType }> = {
@@ -75,7 +76,8 @@ const DespesaTable: React.FC<DespesaTableProps> = ({
                   {selectable && <input type="checkbox" checked={selected} onChange={() => toggleSelection(item)} className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 accent-rose-600" aria-label={`Selecionar ${item.descricao}`} />}
                   <div className="min-w-0">
                     <p className="break-words text-sm font-black leading-5 text-[#001a33]">{item.descricao}</p>
-                    <p className="mt-1 text-[10px] font-semibold leading-4 text-slate-500"><span className="font-black text-rose-600">{item.categoriaNome || 'Sem categoria'}</span>{' · '}{item.fornecedorNome || 'Fornecedor não informado'}</p>
+                    <p className="mt-1 text-[10px] font-semibold leading-4 text-rose-600">{item.categoriaNome || 'Sem categoria'}</p>
+                    <p className="mt-1 break-words text-[10px] font-medium leading-4 text-slate-500">{getDespesaFornecedorRotulo(item)}</p>
                     <DespesaConvenioBadge item={item} />
                     {item.isRateioDerived && <p className="mt-1 text-[10px] font-bold text-indigo-600">Rateio da Matriz{item.poloMatrizNome ? ` · ${item.poloMatrizNome}` : ''}</p>}
                     {!item.isRateioDerived && item.rateioMode && item.rateioMode !== 'SEM_RATEIO' && <p className="mt-1 text-[10px] font-bold text-indigo-600">Custo rateado{item.rateioPolosQuantidade ? ` em ${item.rateioPolosQuantidade} polos` : ''}</p>}

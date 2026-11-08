@@ -1,0 +1,32 @@
+name: Nomes fantasia e credores
+
+on:
+  pull_request:
+    paths:
+      - 'modules/gestor/parceiros/**'
+      - 'modules/gestor/financeiro/despesas/**'
+      - '.github/workflows/parceiros-nomes-credores.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Instalar dependências
+        run: npm ci
+      - name: Preservar identidade PJ, busca e fornecedores financeiros
+        run: >-
+          node --test
+          modules/gestor/parceiros/utils/parceiro-trade-name.test.ts
+          modules/gestor/parceiros/utils/parceiro-mappers.test.ts
+          modules/gestor/parceiros/parceiros-filters.model.test.ts
+          modules/gestor/financeiro/despesas/despesas-fornecedores.test.ts
+          modules/gestor/parceiros/components/cards/PJIdentityPreview.test.mjs

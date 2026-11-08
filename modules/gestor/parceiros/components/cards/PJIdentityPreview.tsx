@@ -63,6 +63,12 @@ export function PJIdentityPreview({ data }: { data: Identity }) {
     };
   }, [open]);
 
+  const razaoSocial = (data.razaoSocial || data.nomeCompleto || data.nome || '').trim();
+  const nomeFantasia = data.nomeFantasia?.trim() || '';
+  const titulo = nomeFantasia || razaoSocial;
+  const mostrarRazaoSocial = Boolean(nomeFantasia && razaoSocial
+    && nomeFantasia.localeCompare(razaoSocial, 'pt-BR', { sensitivity: 'base' }) !== 0);
+
   const fields = [
     ['Razão social', data.razaoSocial || data.nomeCompleto || data.nome],
     ['Nome fantasia', data.nomeFantasia],
@@ -78,8 +84,11 @@ export function PJIdentityPreview({ data }: { data: Identity }) {
     <h3 ref={anchor} tabIndex={0} aria-describedby={open ? id : undefined}
       onMouseEnter={enterPointer} onMouseLeave={leavePointer} onFocus={show} onBlur={leave}
       className="line-clamp-1 rounded text-[12px] font-bold text-slate-800 transition-colors group-hover:text-slate-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500">
-      {data.nome}
+      {titulo}
     </h3>
+    {mostrarRazaoSocial && <p className="mt-0.5 break-words text-xs font-normal leading-5 text-slate-500">
+      {razaoSocial}
+    </p>}
     {open && createPortal(
       <div ref={card} id={id} role="tooltip" onMouseEnter={enterPointer} onMouseLeave={leavePointer}
         onClick={event => event.stopPropagation()} style={position}
