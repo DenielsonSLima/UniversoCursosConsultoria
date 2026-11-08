@@ -16,6 +16,12 @@ Histórico arquivado: [05/10/2026 — versões 4.8.171 a 4.8.174](./changelog/20
 
 Histórico arquivado: [06/10/2026 a 09/10/2026 — versões 4.8.175 a 4.8.195](./changelog/2026-10-06-a-09-versoes-4-8-175-a-195.md).
 
+## [4.8.264] - 2026-11-07
+
+### Adicionado
+- Emissor NFS-e: botão Adicionar alunos abre modal com mês atual, curso Técnico, busca e filtro de turma.
+- Turmas expansíveis e seleção múltipla com recebimentos efetivos do mês, incluindo atrasados e pagamentos parciais; totais calculados na RPC e acesso restrito por usuário/polo.
+
 ## [4.8.262] - 2026-11-07
 
 ### Corrigido

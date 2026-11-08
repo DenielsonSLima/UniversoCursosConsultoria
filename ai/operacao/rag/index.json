@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "retrieval": "lexical-bm25-with-source-citations",
-  "builtAt": "2026-11-07T21:09:26.719Z",
+  "builtAt": "2026-11-08T00:56:36.068Z",
   "manifestVersion": 2,
-  "sourceSignature": "8601c86b20d07878ad8168543e0a4b4d14d2ff0cc6a13214d95a1b7acc3198cf",
+  "sourceSignature": "39c386f2fe965bca3d17b319de485b25f870ec1348c63dcefb9918db74a4e062",
   "sources": [
     {
       "path": "AGENTS.md",
@@ -11,7 +11,7 @@
     },
     {
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "hash": "a1ad440df099165e6f7fdd1cd19b0ac1562877c3317a572055cff5994c6d88c1"
+      "hash": "ab990db590e33e32203e733a671ca9d66b4445c8f7f3dc93cfd62c6bc6c90339"
     },
     {
       "path": "ai/operacao/MEMORIA_CANONICA.md",
@@ -208,23 +208,23 @@
       "part": 1
     },
     {
-      "id": "7c8c9b9f85143624fd89",
-      "hash": "7c8c9b9f85143624fd8990ff1c3dd5caf0682353cbc84866e1e89bcd98298329",
+      "id": "aa2b54c07389aa58ca6c",
+      "hash": "aa2b54c07389aa58ca6cb5515f0102daa6497651aa15057867fecff6fd19ceb3",
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Lote: 2026-11-07-nfse-modal-cabecalho-compacto",
-      "text": "Corrigir avisos redundantes e abertura inline dos modelos NFS-e. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-07-nfse-modal-cabecalho-compacto.md`, 10 arquivos. Base publicada 4.8.261/a9a4ca4e8acc45728bb93514f06de36c908c993e, incluindo a atualização paralela dos campos monetários. Candidato 4.8.262/revisão 271.",
-      "normalizedText": "corrigir avisos redundantes e abertura inline dos modelos nfs e manifesto explicito ai operacao registros alteracoes 2026 11 07 nfse modal cabecalho compacto md 10 arquivos base publicada 4 8 261 a9a4ca4e8acc45728bb93514f06de36c908c993e incluindo a atualizacao paralela dos campos monetarios candidato 4 8 262 revisao 271",
-      "tokenCount": 38,
+      "section": "Lote: 2026-11-07-nfse-adicionar-alunos",
+      "text": "Implementar seleção de alunos em modal: mês atual, curso Técnico por padrão, busca, turma expansível e seleção múltipla. Considerar pagamentos efetivamente recebidos no mês, inclusive parcelas de outros meses. Consulta, agrupamento e totais por RPC, preservando polo e piloto Denielson. Não habilitar emissão fiscal.",
+      "normalizedText": "implementar selecao de alunos em modal mes atual curso tecnico por padrao busca turma expansivel e selecao multipla considerar pagamentos efetivamente recebidos no mes inclusive parcelas de outros meses consulta agrupamento e totais por rpc preservando polo e piloto denielson nao habilitar emissao fiscal",
+      "tokenCount": 41,
       "part": 1
     },
     {
-      "id": "46818e67b61e1b9fb184",
-      "hash": "46818e67b61e1b9fb1844ed88f4097b00cdda9cb0f86fc16f36dcef3327895b3",
+      "id": "9db50e1a973a1b7c0347",
+      "hash": "9db50e1a973a1b7c0347accce2c1fda6983bf0564709e295bad1e26cd11dfc87",
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Lote: 2026-11-07-nfse-modal-cabecalho-compacto",
-      "text": "Quatro componentes alterados, sem mudanças fiscais ou de acesso. Cabeçalho compacto e modal com lista preservada, foco, teclado e cancelamento conferidos no Safari desktop/390 px. Lint e TypeScript focados aprovados. Limitações locais e evidências estão no registro. Continuação corretiva da entrega autorizada: publicar apenas o manifesto após Preview/CI verdes e conferir produção.",
-      "normalizedText": "quatro componentes alterados sem mudancas fiscais ou de acesso cabecalho compacto e modal com lista preservada foco teclado e cancelamento conferidos no safari desktop 390 px lint e typescript focados aprovados limitacoes locais e evidencias estao no registro continuacao corretiva da entrega autorizada publicar apenas o manifesto apos preview ci verdes e conferir producao",
-      "tokenCount": 48,
+      "section": "Lote: 2026-11-07-nfse-adicionar-alunos",
+      "text": "Mudança crítica por valores financeiros e RPC somente leitura. Base 4.8.262/bbfa9b2c67681534c9a895769c2393425a226989. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-07-nfse-adicionar-alunos.md`. Contrato, testes e Safari desktop/390 px validados. Usuário autorizou explicitamente a RPC em produção; migration 20261108005455 aplicada e validada. Candidato 4.8.264, preservando o lote paralelo 4.8.263. Aguardam CI/Preview e conferência final da interface publicada.",
+      "normalizedText": "mudanca critica por valores financeiros e rpc somente leitura base 4 8 262 bbfa9b2c67681534c9a895769c2393425a226989 manifesto explicito ai operacao registros alteracoes 2026 11 07 nfse adicionar alunos md contrato testes e safari desktop 390 px validados usuario autorizou explicitamente a rpc em producao migration 20261108005455 aplicada e validada candidato 4 8 264 preservando o lote paralelo 4 8 263 aguardam ci preview e conferencia final da interface publicada",
+      "tokenCount": 55,
       "part": 1
     },
     {
