@@ -16,6 +16,12 @@ Histórico arquivado: [05/10/2026 — versões 4.8.171 a 4.8.174](./changelog/20
 
 Histórico arquivado: [06/10/2026 a 09/10/2026 — versões 4.8.175 a 4.8.195](./changelog/2026-10-06-a-09-versoes-4-8-175-a-195.md).
 
+## [4.8.265] - 2026-11-08
+
+### Corrigido
+- Mês de referência de Adicionar alunos exibe o nome em português e o ano, com seletor próprio de meses.
+- Escolher o mesmo mês preserva os alunos selecionados; teclado, foco e formato da consulta permanecem consistentes.
+
 ## [4.8.264] - 2026-11-07
 
 ### Adicionado

@@ -1,0 +1,24 @@
+.nfse-month-picker { position: relative; }
+.nfse-month-picker > input { background: #fff; border: 1px solid #dbe3ed; border-radius: 8px; color: #18334b; cursor: pointer; font: inherit; min-height: 38px; padding: 8px 28px 8px 10px; width: 100%; }
+.nfse-month-picker > svg { color: #64748b; pointer-events: none; position: absolute; right: 9px; top: 50%; transform: translateY(-50%); }
+.nfse-students-filters:has(.nfse-month-picker) { grid-template-columns: 185px minmax(145px, .8fr) minmax(170px, 1fr) minmax(175px, 1.2fr); }
+.nfse-month-panel { color: #18334b; max-height: calc(100dvh - 16px); overflow-y: auto; padding: 10px; width: min(308px, calc(100vw - 16px)); z-index: 10020; }
+.nfse-month-year { align-items: center; display: flex; gap: 8px; margin-bottom: 8px; }
+.nfse-month-year > input { background: white; border: 1px solid #dbe3ed; border-radius: 8px; color: #18334b; font: inherit; height: 38px; min-width: 0; text-align: center; width: 100%; }
+.nfse-month-panel button { align-items: center; background: white; border: 1px solid transparent; border-radius: 8px; color: #18334b; cursor: pointer; display: flex; font: inherit; justify-content: center; min-height: 38px; padding: 7px 6px; }
+.nfse-month-year > button { border-color: #dbe3ed; flex: 0 0 38px; }
+.nfse-month-options { display: grid; gap: 4px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.nfse-month-panel button:hover { background: #f1f5f9; }
+.nfse-month-panel button[aria-pressed='true'] { background: #edf2ff; border-color: #4169e1; color: #274dcc; }
+.nfse-month-panel button:focus-visible, .nfse-month-year > input:focus-visible { outline: 2px solid #4169e1; outline-offset: 1px; }
+.nfse-month-panel button:disabled { cursor: not-allowed; opacity: .5; }
+.nfse-month-panel p { color: #a33e3e; font-size: 12px; margin: 8px 0 0; }
+@media (max-width: 800px) {
+  .nfse-students-filters:has(.nfse-month-picker) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 520px) {
+  .nfse-students-filter-month:has(.nfse-month-picker) { grid-column: 1 / -1; }
+  .nfse-month-picker > input { font-size: 16px; min-height: 44px; }
+  .nfse-month-panel button, .nfse-month-year > input { min-height: 44px; }
+  .nfse-month-year > input { font-size: 16px; }
+}

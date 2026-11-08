@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "retrieval": "lexical-bm25-with-source-citations",
-  "builtAt": "2026-11-08T00:56:36.068Z",
+  "builtAt": "2026-11-08T12:42:28.724Z",
   "manifestVersion": 2,
-  "sourceSignature": "39c386f2fe965bca3d17b319de485b25f870ec1348c63dcefb9918db74a4e062",
+  "sourceSignature": "02ae3d8480b1152b5e1bda706b80cc049350c436ea006370d4408ceab3c7e403",
   "sources": [
     {
       "path": "AGENTS.md",
@@ -11,7 +11,7 @@
     },
     {
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "hash": "ab990db590e33e32203e733a671ca9d66b4445c8f7f3dc93cfd62c6bc6c90339"
+      "hash": "5660fb5889a0ffb597836113212170bdef3d128489f443ae2fbc521d1395e5bf"
     },
     {
       "path": "ai/operacao/MEMORIA_CANONICA.md",
@@ -208,23 +208,23 @@
       "part": 1
     },
     {
-      "id": "aa2b54c07389aa58ca6c",
-      "hash": "aa2b54c07389aa58ca6cb5515f0102daa6497651aa15057867fecff6fd19ceb3",
+      "id": "be32025f18a099e831fb",
+      "hash": "be32025f18a099e831fb7932e24f3d98e3c23037f34a1aeda15ed5c416e93595",
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Lote: 2026-11-07-nfse-adicionar-alunos",
-      "text": "Implementar seleção de alunos em modal: mês atual, curso Técnico por padrão, busca, turma expansível e seleção múltipla. Considerar pagamentos efetivamente recebidos no mês, inclusive parcelas de outros meses. Consulta, agrupamento e totais por RPC, preservando polo e piloto Denielson. Não habilitar emissão fiscal.",
-      "normalizedText": "implementar selecao de alunos em modal mes atual curso tecnico por padrao busca turma expansivel e selecao multipla considerar pagamentos efetivamente recebidos no mes inclusive parcelas de outros meses consulta agrupamento e totais por rpc preservando polo e piloto denielson nao habilitar emissao fiscal",
-      "tokenCount": 41,
+      "section": "Lote: 2026-11-08-nfse-mes-pt-br",
+      "text": "Corrigir somente o mês de referência do modal Adicionar alunos para exibir nome do mês e ano em pt-BR, como Novembro de 2026. Painel próprio com doze meses, navegação/edição de ano, teclado e retorno de foco. O contrato YYYY-MM, RPC, seleção por polo e acesso Denielson permanecem preservados.",
+      "normalizedText": "corrigir somente o mes de referencia do modal adicionar alunos para exibir nome do mes e ano em pt br como novembro de 2026 painel proprio com doze meses navegacao edicao de ano teclado e retorno de foco o contrato yyyy mm rpc selecao por polo e acesso denielson permanecem preservados",
+      "tokenCount": 46,
       "part": 1
     },
     {
-      "id": "9db50e1a973a1b7c0347",
-      "hash": "9db50e1a973a1b7c0347accce2c1fda6983bf0564709e295bad1e26cd11dfc87",
+      "id": "3b71a6efeb9e3a5a8055",
+      "hash": "3b71a6efeb9e3a5a8055f655fab4b93b7c234359ae36b8058646a9471ad934d2",
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Lote: 2026-11-07-nfse-adicionar-alunos",
-      "text": "Mudança crítica por valores financeiros e RPC somente leitura. Base 4.8.262/bbfa9b2c67681534c9a895769c2393425a226989. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-07-nfse-adicionar-alunos.md`. Contrato, testes e Safari desktop/390 px validados. Usuário autorizou explicitamente a RPC em produção; migration 20261108005455 aplicada e validada. Candidato 4.8.264, preservando o lote paralelo 4.8.263. Aguardam CI/Preview e conferência final da interface publicada.",
-      "normalizedText": "mudanca critica por valores financeiros e rpc somente leitura base 4 8 262 bbfa9b2c67681534c9a895769c2393425a226989 manifesto explicito ai operacao registros alteracoes 2026 11 07 nfse adicionar alunos md contrato testes e safari desktop 390 px validados usuario autorizou explicitamente a rpc em producao migration 20261108005455 aplicada e validada candidato 4 8 264 preservando o lote paralelo 4 8 263 aguardam ci preview e conferencia final da interface publicada",
-      "tokenCount": 55,
+      "section": "Lote: 2026-11-08-nfse-mes-pt-br",
+      "text": "Correção visual com fechamento para publicação autorizada nesta conversa. Base 4.8.264/c064202b8851a49d851ca740c69e778a87eab0af. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-08-nfse-mes-pt-br.md`. TypeScript/lint focados e Safari local desktop/390 px conferidos. Revisão independente corrigiu preservação dos alunos ao escolher o mesmo mês. Candidato 4.8.265; CI, Preview e conferência publicada são verificados antes do encerramento.",
+      "normalizedText": "correcao visual com fechamento para publicacao autorizada nesta conversa base 4 8 264 c064202b8851a49d851ca740c69e778a87eab0af manifesto explicito ai operacao registros alteracoes 2026 11 08 nfse mes pt br md typescript lint focados e safari local desktop 390 px conferidos revisao independente corrigiu preservacao dos alunos ao escolher o mesmo mes candidato 4 8 265 ci preview e conferencia publicada sao verificados antes do encerramento",
+      "tokenCount": 56,
       "part": 1
     },
     {

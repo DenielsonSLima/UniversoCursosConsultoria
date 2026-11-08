@@ -1,8 +1,8 @@
 {
-  "version": "4.8.264",
+  "version": "4.8.265",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 273,
-  "releasedAt": "2026-11-07",
-  "summary": "NFS-e com seleção de alunos em modal e totais por mês de recebimento"
+  "revision": 274,
+  "releasedAt": "2026-11-08",
+  "summary": "NFS-e com mês de referência por extenso em português"
 }
