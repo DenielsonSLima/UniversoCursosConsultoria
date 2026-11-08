@@ -1,4 +1,4 @@
-import type { NfseModel, NfseModelInput, NfseModelServiceFields } from '../../types/nfse.types';
+import type { NfseModel, NfseModelDescriptionPreview, NfseModelInput, NfseModelServiceFields } from '../../types/nfse.types';
 import { NfseContractError } from '../../services/nfse.errors';
 import { boolean, integer, oneOf, record, string } from '../../services/nfse.validation';
 
@@ -39,4 +39,13 @@ export function parseNfseStoredModel(value: unknown): NfseModel {
 
 export function nfseModelDefinition(input: NfseModelInput) {
   return { ...parseNfseModelFields(input), name: text(input.name, 120), active: boolean(input.active) };
+}
+
+export function parseNfseModelDescriptionPreview(value: unknown): NfseModelDescriptionPreview {
+  const row = record(value);
+  return {
+    description: text(row.description, 1000),
+    monthLabel: text(row.monthLabel, 30),
+    usesReferenceMonth: boolean(row.usesReferenceMonth),
+  };
 }

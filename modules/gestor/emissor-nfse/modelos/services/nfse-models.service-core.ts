@@ -1,9 +1,9 @@
 import type { NfseModelInput, NfseScope } from '../../types/nfse.types';
 import type { NfseRpcTransport } from '../../services/nfse.service-core';
 import { mapNfseMutation, mapNfsePage } from '../../services/nfse.mappers';
-import { assertScope, integer, unwrapNfseEnvelope } from '../../services/nfse.validation';
+import { assertScope, integer, string, unwrapNfseEnvelope } from '../../services/nfse.validation';
 import { NfseContractError } from '../../services/nfse.errors';
-import { nfseModelDefinition, parseNfseStoredModel } from './nfse-models.contract';
+import { nfseModelDefinition, parseNfseModelDescriptionPreview, parseNfseStoredModel } from './nfse-models.contract';
 
 const uuid = (value: string) => {
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)) throw new NfseContractError();
@@ -23,6 +23,11 @@ export function createNfseModelsService(transport: NfseRpcTransport) {
   return {
     async list(scope: NfseScope, signal?: AbortSignal) {
       return mapNfsePage(await call('get_nfse_models_secure', scope, {}, signal), parseNfseStoredModel, 1);
+    },
+    async previewDescription(scope: NfseScope, description: string, signal?: AbortSignal) {
+      return parseNfseModelDescriptionPreview(await call('preview_nfse_model_description_secure', scope, {
+        p_description: string(description),
+      }, signal));
     },
     async save(scope: NfseScope, input: NfseModelInput) {
       if ((input.id === undefined) !== (input.expectedVersion === undefined)) throw new NfseContractError();

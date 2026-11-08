@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "retrieval": "lexical-bm25-with-source-citations",
-  "builtAt": "2026-11-08T23:13:57.332Z",
+  "builtAt": "2026-11-08T23:41:23.665Z",
   "manifestVersion": 2,
-  "sourceSignature": "b996eae832c16b1679f202ee905d69556310f7eb89c16a2624196170f09ffe25",
+  "sourceSignature": "31d1ea2750f761f5feb265007fda9d1cb54f73177256f01af4d61faa993a87bc",
   "sources": [
     {
       "path": "AGENTS.md",
@@ -11,7 +11,7 @@
     },
     {
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "hash": "5031271d17ebf17e6f41f283907f540a8c7055dcee27a5d8dd2cec7be1f19458"
+      "hash": "f39d0d2adb74789ca3ea24dbe79089fc029252c6ebd40886b6c3b5f4b692e2ff"
     },
     {
       "path": "ai/operacao/MEMORIA_CANONICA.md",
@@ -208,23 +208,23 @@
       "part": 1
     },
     {
-      "id": "8c9751c582d08639cb14",
-      "hash": "8c9751c582d08639cb14a844ec497d6824bed6d0f64dfdb084592338eafb6e5a",
+      "id": "f26c440e814cf7163caa",
+      "hash": "f26c440e814cf7163caa42158560b6060d13a7e86ba2bf17bacdd182f8704958",
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Lote: 2026-11-08-nfse-preparacao-modelos",
-      "text": "Corrigir timeout dos recebimentos históricos; exibir mês por extenso no cabeçalho; preservar alunos adicionados em Preparar emissão; cadastrar e escolher modelos por polo com campos de serviço, NBS, ISSQN, informações complementares e seletores dos catálogos oficiais. Acesso piloto Denielson e totais via RPC preservados; emissão fiscal desabilitada.",
-      "normalizedText": "corrigir timeout dos recebimentos historicos exibir mes por extenso no cabecalho preservar alunos adicionados em preparar emissao cadastrar e escolher modelos por polo com campos de servico nbs issqn informacoes complementares e seletores dos catalogos oficiais acesso piloto denielson e totais via rpc preservados emissao fiscal desabilitada",
-      "tokenCount": 44,
+      "section": "Lote: 2026-11-08-nfse-modelo-tecnico-mes",
+      "text": "Cadastrar modelo de curso técnico autorizado e preencher `{{mes_referencia}}` com o mês dos recebimentos selecionados, por RPC, com prévia na edição e preparação. Conferir fontes oficiais; não converter recebimento em competência fiscal nem habilitar emissão. Acesso por polo e piloto Denielson preservados.",
+      "normalizedText": "cadastrar modelo de curso tecnico autorizado e preencher mes referencia com o mes dos recebimentos selecionados por rpc com previa na edicao e preparacao conferir fontes oficiais nao converter recebimento em competencia fiscal nem habilitar emissao acesso por polo e piloto denielson preservados",
+      "tokenCount": 39,
       "part": 1
     },
     {
-      "id": "9081e87a568c237e6eef",
-      "hash": "9081e87a568c237e6eefbf6f3d95aafebc58654959ddde50e37bfd889e9108a5",
+      "id": "4c98969f87fdbcf7d61a",
+      "hash": "4c98969f87fdbcf7d61a9d39cac0d0c6ea96b722eedefc58ade5b6071e5cb3cd",
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Lote: 2026-11-08-nfse-preparacao-modelos",
-      "text": "Mudança crítica autorizada, candidata 4.8.266 sobre 4.8.265. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-08-nfse-preparacao-modelos.md`. Três migrations aplicadas; outubro em 170,89 ms, sem divergência. Validados 65 testes frontend, 29 SQL e Safari local desktop/390 px. CI, Preview e produção conferidos no recibo `tmp/nfse-preparacao-production-receipt.json` antes do encerramento.",
-      "normalizedText": "mudanca critica autorizada candidata 4 8 266 sobre 4 8 265 manifesto explicito ai operacao registros alteracoes 2026 11 08 nfse preparacao modelos md tres migrations aplicadas outubro em 170 89 ms sem divergencia validados 65 testes frontend 29 sql e safari local desktop 390 px ci preview e producao conferidos no recibo tmp nfse preparacao production receipt json antes do encerramento",
-      "tokenCount": 56,
+      "section": "Lote: 2026-11-08-nfse-modelo-tecnico-mes",
+      "text": "Mudança crítica autorizada, após 4.8.266. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-08-nfse-modelo-tecnico-mes.md`. Aplicação da migration, cadastro real, testes e publicação são registrados no recibo `tmp/nfse-modelo-tecnico-production-receipt.json`.",
+      "normalizedText": "mudanca critica autorizada apos 4 8 266 manifesto explicito ai operacao registros alteracoes 2026 11 08 nfse modelo tecnico mes md aplicacao da migration cadastro real testes e publicacao sao registrados no recibo tmp nfse modelo tecnico production receipt json",
+      "tokenCount": 37,
       "part": 1
     },
     {

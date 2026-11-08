@@ -8,4 +8,7 @@ const scopeKey = (scope: NfseScope | null) => [
 export const nfseModelsKeys = {
   scope: scopeKey,
   list: (scope: NfseScope | null) => [...scopeKey(scope), scope?.month ?? 'no-month'] as const,
+  descriptionPreview: (scope: NfseScope | null, description: string) => [
+    ...scopeKey(scope), 'description-preview', scope?.month ?? 'no-month', description,
+  ] as const,
 };

@@ -7,6 +7,7 @@ import type { NfseModel } from '../types/nfse.types';
 import NfseModelServiceFields, { NfseRequiredMark, type NfseModelFormValues, type SetNfseModelField } from './NfseModelServiceFields';
 import NfseModelComplementaryFields from './NfseModelComplementaryFields';
 import { useNfseFiscalCatalogs } from './hooks/useNfseFiscalCatalogs';
+import { useNfseModelDescriptionPreview } from './hooks/useNfseModelDescriptionPreview';
 import './nfse-model-form.css';
 
 interface NfseModelFormProps {
@@ -36,8 +37,9 @@ const NfseModelForm: React.FC<NfseModelFormProps> = ({ model, onClose, onSaved }
   const request = useRef<{ fingerprint: string; id: string } | null>(null);
   const save = useSaveNfseModel(scope);
   const catalogQuery = useNfseFiscalCatalogs();
+  const descriptionPreview = useNfseModelDescriptionPreview(scope, fields.serviceDescription);
   const catalogs = catalogQuery.data;
-  const allowed = Boolean(scope && catalogs && !catalogQuery.isPending && !catalogQuery.error
+  const allowed = Boolean(scope && descriptionPreview.ready && catalogs && !catalogQuery.isPending && !catalogQuery.error
     && catalogs.nationalServices.some((option) => option.code === fields.nationalServiceCode)
     && catalogs.nbs.some((option) => option.code === fields.nbsCode)
     && (!fields.operationIndicatorCode || catalogs.operationIndicators.some((option) => option.code === fields.operationIndicatorCode)));
@@ -152,6 +154,7 @@ const NfseModelForm: React.FC<NfseModelFormProps> = ({ model, onClose, onSaved }
             <label className="nfse-model-active"><input type="checkbox" checked={fields.active} onChange={(event) => setField('active', event.target.checked)} />Modelo ativo</label>
           </div>
           <NfseModelServiceFields fields={fields} setField={setField} specialTreatment={specialTreatment}
+            descriptionPreview={descriptionPreview}
             catalogs={catalogs} catalogsLoading={catalogQuery.isPending} catalogsError={Boolean(catalogQuery.error)}
             onRetryCatalogs={() => { void catalogQuery.refetch(); }} onSpecialTreatmentChange={(value) => {
             setSpecialTreatment(value);

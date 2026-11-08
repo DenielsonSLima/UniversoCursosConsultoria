@@ -2,6 +2,8 @@ import React from 'react';
 import InstitutionalSelect from '../../../shared/components/InstitutionalSelect';
 import type { NfseModelInput } from '../types/nfse.types';
 import NfseFiscalCodeField, { type NfseFiscalCodeOption } from './NfseFiscalCodeField';
+import NfseModelDescriptionEditor from './NfseModelDescriptionEditor';
+import type { NfseDescriptionPreviewState } from './NfseDescriptionPreview';
 
 export interface NfseModelFormValues {
   name: string;
@@ -35,6 +37,7 @@ interface Props {
   catalogsLoading: boolean;
   catalogsError: boolean;
   onRetryCatalogs: () => void;
+  descriptionPreview: NfseDescriptionPreviewState;
 }
 
 const treatmentOptions = [
@@ -55,7 +58,7 @@ export const NfseRequiredMark = () => <span className="nfse-model-required" aria
 
 export default function NfseModelServiceFields({
   fields, setField, specialTreatment, onSpecialTreatmentChange,
-  catalogs, catalogsLoading, catalogsError, onRetryCatalogs,
+  catalogs, catalogsLoading, catalogsError, onRetryCatalogs, descriptionPreview,
 }: Props) {
   return (
     <section className="nfse-model-section" aria-labelledby="nfse-model-service-heading">
@@ -97,11 +100,7 @@ export default function NfseModelServiceFields({
         <NfseFiscalCodeField id="nfse-model-operation-code" label="Código indicador da operação"
           value={fields.operationIndicatorCode} onChange={(value) => setField('operationIndicatorCode', value)}
           options={catalogs?.operationIndicators} loading={catalogsLoading} error={catalogsError} />
-        <label className="nfse-field nfse-wide">
-          <span>Descrição do Serviço/Fornecimento<NfseRequiredMark /></span>
-          <textarea required maxLength={1000} value={fields.serviceDescription} onChange={(event) => setField('serviceDescription', event.target.value)} />
-          <small className="nfse-model-counter">{fields.serviceDescription.length}/1000</small>
-        </label>
+        <NfseModelDescriptionEditor value={fields.serviceDescription} onChange={(value) => setField('serviceDescription', value)} preview={descriptionPreview} />
       </div>
     </section>
   );
