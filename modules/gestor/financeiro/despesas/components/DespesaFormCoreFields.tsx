@@ -35,6 +35,7 @@ interface Props {
   fornecedorId: string;
   setFornecedorId: (value: string) => void;
   onNovoCredor: () => void;
+  sugestao: { message: string; failed: boolean; retry: () => void };
   jurosValor: string;
   setJurosValor: (value: string) => void;
   multaValor: string;
@@ -82,6 +83,15 @@ const DespesaFormCoreFields: React.FC<Props> = (props) => {
       </div>
     ))}
 
+    <DespesaCredorPicker parceiros={props.parceiros} tipo={props.fornecedorTipo}
+      value={props.fornecedorId} onTipoChange={props.setFornecedorTipo} onChange={props.setFornecedorId}
+      onNovo={props.onNovoCredor} />
+    {props.sugestao.message && <div role="status" className="-mt-2 text-xs leading-relaxed text-slate-500 md:col-span-2">
+      {props.sugestao.message}
+      {props.sugestao.failed && <button type="button" onClick={props.sugestao.retry}
+        className="ml-2 rounded font-semibold text-rose-600 underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500">Tentar novamente</button>}
+    </div>}
+
     <div>
       <label className="mb-1.5 block text-[10px] font-black uppercase tracking-wider text-slate-400">
         <Tag size={11} className="mr-1 inline" />Categoria
@@ -118,10 +128,6 @@ const DespesaFormCoreFields: React.FC<Props> = (props) => {
           className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-4 text-sm font-semibold outline-none placeholder:text-slate-300 focus:ring-2 focus:ring-rose-500" />
       </div>
     </div>
-
-    <DespesaCredorPicker parceiros={props.parceiros} tipo={props.fornecedorTipo}
-      value={props.fornecedorId} onTipoChange={props.setFornecedorTipo} onChange={props.setFornecedorId}
-      onNovo={props.onNovoCredor} />
 
     <div className="financial-dialog-section rounded-2xl border border-amber-100 bg-amber-50/70 p-4 md:col-span-2">
       <div className="mb-3 flex items-start justify-between gap-4">
