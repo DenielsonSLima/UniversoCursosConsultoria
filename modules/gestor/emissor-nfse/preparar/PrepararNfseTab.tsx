@@ -13,6 +13,8 @@ import { isNfseReceiptScopeValid } from './services/nfse-students.contract';
 import { defaultNfseReceiptFilters, NFSE_STUDENT_SELECTION_LIMIT, type NfseReceiptFilters } from './types/nfse-students.types';
 import NfseStudentsModal from './NfseStudentsModal';
 import NfseStudentGroups from './NfseStudentGroups';
+import { useNfseModelDescriptionPreview } from '../modelos/hooks/useNfseModelDescriptionPreview';
+import NfseDescriptionPreview from '../modelos/NfseDescriptionPreview';
 
 export default function PrepararNfseTab() {
   const { scope } = useNfseTabContext();
@@ -33,6 +35,9 @@ export default function PrepararNfseTab() {
   const validScope = isNfseReceiptScopeValid(receiptScope);
   const modelsQuery = useNfseModels(scope, draft.ids.length > 0);
   const models = modelsQuery.error ? [] : modelsQuery.data?.rows || [];
+  const selectedModel = models.find((model) => model.active && model.id === draft.modelId);
+  const descriptionScope = useMemo(() => scope ? { ...scope, month: draft.month } : null, [scope, draft.month]);
+  const descriptionPreview = useNfseModelDescriptionPreview(descriptionScope, draft.ids.length > 0 ? selectedModel?.serviceDescription || '' : '');
   const selectedIds = open ? ids : draft.ids;
   const draftScope = useMemo(() => scope ? { contextId: scope.contextKey, poloId: scope.poloId, paymentMonth: draft.month } : null, [scope, draft.month]);
   const draftQuery = useNfseReceiptSelection(draftScope, draft.ids, draft.ids.length > 0);
@@ -86,6 +91,7 @@ export default function PrepararNfseTab() {
           placeholder="Selecionar modelo" disabled={!validScope} loading={modelsQuery.isPending}
           error={modelsQuery.error ? 'Não foi possível consultar os modelos.' : undefined} />
       </div><button type="button" className="nfse-button nfse-button-secondary" onClick={() => { setLimitError(null); setDraft(current => ({ ...current, ids: [] })); }}>Limpar seleção</button></div>
+      {selectedModel && <div className="nfse-preparation-description"><NfseDescriptionPreview preview={descriptionPreview} label="Descrição para emissão" /></div>}
       {draftError ? <div className="nfse-footer" role="alert"><span>{draftError}</span>
         <button type="button" className="nfse-button nfse-button-secondary" onClick={() => void draftQuery.refetch()}>Atualizar</button>
       </div> : null}

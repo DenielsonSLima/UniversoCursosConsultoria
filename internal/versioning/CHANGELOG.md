@@ -16,6 +16,13 @@ Histórico arquivado: [05/10/2026 — versões 4.8.171 a 4.8.174](./changelog/20
 
 Histórico arquivado: [06/10/2026 a 09/10/2026 — versões 4.8.175 a 4.8.195](./changelog/2026-10-06-a-09-versoes-4-8-175-a-195.md).
 
+## [4.8.268] - 2026-11-08
+
+- Modelos NFS-e aceitam a variável `{{mes_referencia}}`, preenchida por RPC como mês por extenso e ano.
+- Editor e preparação exibem prévia da descrição; variáveis desconhecidas são rejeitadas.
+- Recebimento permanece distinto da competência fiscal. Acesso por polo e piloto preservados.
+- Validação: 67 testes frontend, 10 SQL isolados e smoke Safari local.
+
 ## [4.8.267] - 2026-11-08
 
 ### Corrigido

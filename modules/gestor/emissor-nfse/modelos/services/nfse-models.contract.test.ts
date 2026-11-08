@@ -59,3 +59,32 @@ test('model cache invalidation spans months only inside the same context, polo a
     assert.notDeepEqual(nfseModelsKeys.scope(scope), nfseModelsKeys.scope({ ...scope, ...changed }));
   }
 });
+
+test('description preview sends the literal template and receipt month to the RPC', async () => {
+  const monthScope = { ...scope, month: '2026-10' };
+  const template = 'Valores recebidos em {{mes_referencia}}.';
+  const signal = new AbortController().signal;
+  const canonical = { description: 'Valores recebidos em outubro de 2026.', monthLabel: 'outubro de 2026', usesReferenceMonth: true };
+  const service = createNfseModelsService(async (name, args, receivedSignal) => {
+    assert.equal(name, 'preview_nfse_model_description_secure');
+    assert.deepEqual(args, { p_context_key: scope.contextKey, p_polo_id: scope.poloId,
+      p_environment: scope.environment, p_month: '2026-10', p_description: template });
+    assert.equal(receivedSignal, signal);
+    return envelope(canonical, monthScope);
+  });
+  assert.deepEqual(await service.previewDescription(monthScope, template, signal), canonical);
+  assert.notDeepEqual(nfseModelsKeys.descriptionPreview(scope, template), nfseModelsKeys.descriptionPreview(monthScope, template));
+  assert.notDeepEqual(nfseModelsKeys.descriptionPreview(scope, template), nfseModelsKeys.descriptionPreview(scope, 'Outro texto'));
+});
+
+test('description preview accepts static text but rejects malformed or foreign-scope responses', async () => {
+  const canonical = { description: 'Descrição literal.', monthLabel: 'novembro de 2026', usesReferenceMonth: false };
+  const service = createNfseModelsService(async () => envelope(canonical));
+  assert.deepEqual(await service.previewDescription(scope, canonical.description), canonical);
+  for (const change of [{ description: '' }, { description: 'x'.repeat(1001) }, { monthLabel: null }, { usesReferenceMonth: 'true' }]) {
+    const invalid = createNfseModelsService(async () => envelope({ ...canonical, ...change }));
+    await assert.rejects(invalid.previewDescription(scope, 'Texto'), NfseContractError);
+  }
+  const otherMonth = createNfseModelsService(async () => envelope(canonical, { ...scope, month: '2026-10' }));
+  await assert.rejects(otherMonth.previewDescription(scope, 'Texto'), NfseContractError);
+});

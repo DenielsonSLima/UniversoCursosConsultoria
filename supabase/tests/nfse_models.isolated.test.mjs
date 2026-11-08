@@ -6,7 +6,8 @@ import { pathToFileURL } from 'node:url';
 
 const modulePath = process.env.NFSE_TEST_PGLITE_MODULE;
 const { PGlite } = await import(modulePath ? pathToFileURL(resolve(modulePath)).href : '@electric-sql/pglite');
-const migrations = await Promise.all(['20261108225453_nfse_models_private_store.sql','20261108225459_nfse_models_save_rpc.sql']
+const migrations = await Promise.all(['20261108225453_nfse_models_private_store.sql',
+  '20261108225459_nfse_models_save_rpc.sql','20261108233250_nfse_model_reference_month.sql']
   .map(name => readFile(new URL(`../migrations/${name}`, import.meta.url), 'utf8')));
 const id = value => `00000000-0000-0000-0000-${String(value).padStart(12,'0')}`;
 const definition = { name:'Modelo sintético', nationalServiceCode:'080102', nbsCode:'122040000',
@@ -20,6 +21,8 @@ test('NFS-e models persist service metadata without enabling fiscal operations',
     Object.values({...scope,...params}))).rows[0].value;
   const save = async (params={}) => (await db.query('SELECT public.save_nfse_model_secure($1,$2,$3,$4,$5,$6,$7,$8) value',
     Object.values({...scope,request:id(50),model:null,expected:null,definition,...params}))).rows[0].value;
+  const preview = async (params={}) => (await db.query('SELECT public.preview_nfse_model_description_secure($1,$2,$3,$4,$5) value',
+    Object.values({...scope,description:'Valores recebidos em {{mes_referencia}}.',...params}))).rows[0].value;
   let created;
   try {
     await db.exec(`
@@ -90,9 +93,46 @@ test('NFS-e models persist service metadata without enabling fiscal operations',
         await assert.rejects(save(params),err=>err.code==='22023');
       }
     });
+    await t.test('receipt-month preview stays literal, localized and does not write or change fiscal competence',async()=>{
+      const before=(await db.query('SELECT count(*)::integer n FROM private.nfse_model_requests')).rows[0].n;
+      for (const [month,label] of [['2026-10','outubro de 2026'],['2026-11','novembro de 2026'],
+        ['2027-01','janeiro de 2027'],['2026-03','março de 2026']]) {
+        const result=await preview({month});
+        assert.equal(result.scope.month,month);
+        assert.deepEqual(result.data,{description:`Valores recebidos em ${label}.`,monthLabel:label,usesReferenceMonth:true});
+        assert.equal('competence' in result.data,false);
+      }
+      assert.equal((await preview({description:'Descrição fixa.'})).data.usesReferenceMonth,false);
+      assert.equal((await preview({description:'{{mes_referencia}} / {{mes_referencia}}'})).data.description,
+        'novembro de 2026 / novembro de 2026');
+      const literal="Serviço '); SELECT 1; --";
+      assert.equal((await preview({description:literal})).data.description,literal);
+      assert.equal((await db.query('SELECT count(*)::integer n FROM private.nfse_model_requests')).rows[0].n,before);
+    });
+    await t.test('unknown or malformed template variables fail both preview and saved models',async()=>{
+      for (const description of ['', ' ', 'x'.repeat(1001), '{{aluno}}', '{{mes_referencia',
+        'mes_referencia}}', '{{ mes_referencia }}', '{{mes_referencia}}{{curso}}']) {
+        await assert.rejects(preview({description}),err=>err.code==='22023');
+        await assert.rejects(save({request:id(90),definition:{...definition,serviceDescription:description}}),err=>err.code==='22023');
+      }
+      const template='Valores recebidos em {{mes_referencia}}.';
+      await save({request:id(91),model:created.data.id,expected:2,
+        definition:{...definition,serviceDescription:template}});
+      assert.equal((await read()).data.rows[0].serviceDescription,template);
+      assert.equal((await read()).data.rows[0].version,3);
+    });
+    await t.test('preview reauthorizes pilot and polo before interpreting the supplied description',async()=>{
+      for (const params of [{context:id(99)},{polo:id(3)}]) {
+        await assert.rejects(preview({...params,description:'{{unknown}}'}),err=>err.code==='42501');
+      }
+      await db.exec('UPDATE public.test_context SET allowed=false');
+      await assert.rejects(preview(),err=>err.code==='42501');
+      await db.exec('UPDATE public.test_context SET allowed=true');
+    });
     await t.test('authenticated RPC only; private models and audit cannot be accessed directly',async()=>{
       const signatures=['public.get_nfse_models_secure(uuid,uuid,text,text)',
-        'public.save_nfse_model_secure(uuid,uuid,text,text,uuid,uuid,integer,jsonb)'];
+        'public.save_nfse_model_secure(uuid,uuid,text,text,uuid,uuid,integer,jsonb)',
+        'public.preview_nfse_model_description_secure(uuid,uuid,text,text,text)'];
       for(const signature of signatures) {
         const grants=(await db.query(`SELECT has_function_privilege('authenticated',$1,'EXECUTE') authenticated,
           has_function_privilege('anon',$1,'EXECUTE') anon,has_function_privilege('service_role',$1,'EXECUTE') service_role`,[signature])).rows[0];

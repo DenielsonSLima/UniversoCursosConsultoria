@@ -1,0 +1,12 @@
+.nfse-description-preview { color: #536579; font-size: 12px; line-height: 1.55; min-width: 0; overflow-wrap: anywhere; }
+.nfse-description-preview-label { color: #536579; display: block; font-size: 12px; font-weight: 500; }
+.nfse-description-preview p { color: #18334b; font-size: 13px; margin: 3px 0 0; white-space: pre-wrap; }
+.nfse-description-preview-error { align-items: center; color: #a33e3e; display: flex; flex-wrap: wrap; gap: 8px; }
+.nfse-description-preview-error .nfse-button { font-size: 12px; min-height: 32px; padding: 5px 9px; }
+.nfse-description-editor-heading { align-items: center; display: flex; flex-wrap: wrap; gap: 8px; justify-content: space-between; }
+.nfse-description-editor-heading label { color: #536579; font-size: 12px; font-weight: 500; }
+.nfse-description-insert { font-size: 12px; min-height: 32px; padding: 5px 9px; }
+.nfse-preparation-description { border-bottom: 1px solid #edf0f5; padding: 12px 16px; }
+@media (max-width: 760px) {
+  .nfse-description-insert, .nfse-description-preview-error .nfse-button { min-height: 44px; }
+}

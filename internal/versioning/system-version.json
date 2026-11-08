@@ -1,8 +1,8 @@
 {
-  "version": "4.8.267",
+  "version": "4.8.268",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 276,
+  "revision": 277,
   "releasedAt": "2026-11-08",
-  "summary": "Nome fantasia visível em cartões PJ, detalhes e despesas, com cadastro de credor no lançamento"
+  "summary": "Modelo de curso técnico com mês dos recebimentos e prévia da descrição via RPC"
 }

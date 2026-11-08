@@ -47,6 +47,12 @@ export interface NfseModel extends NfseModelServiceFields {
   version: number;
 }
 
+export interface NfseModelDescriptionPreview {
+  description: string;
+  monthLabel: string;
+  usesReferenceMonth: boolean;
+}
+
 export interface NfseWorkspace {
   capabilities: NfseCapabilities;
   readiness: NfseReadiness;
