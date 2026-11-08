@@ -3,8 +3,11 @@ import { ListPlus, UserPlus } from 'lucide-react';
 import InstitutionalSelect from '../../../shared/components/InstitutionalSelect';
 import { useNfseTabContext } from '../components/NfseTabContext';
 import { formatNfseMoney } from '../components/nfse.presentation';
+import { useNfseModels } from '../hooks/useNfseQueries';
 import { getNfseCurrentMonth } from '../types/nfse.scope';
 import { useNfseReceiptGroups, useNfseReceiptSelection } from './hooks/useNfseReceiptStudents';
+import { useNfsePreparationDraft } from './hooks/NfsePreparationDraft';
+import { formatNfseMonth } from './nfse-month.presentation';
 import { useNfseReceiptRealtime } from './realtime/useNfseReceiptRealtime';
 import { isNfseReceiptScopeValid } from './services/nfse-students.contract';
 import { defaultNfseReceiptFilters, NFSE_STUDENT_SELECTION_LIMIT, type NfseReceiptFilters } from './types/nfse-students.types';
@@ -12,14 +15,13 @@ import NfseStudentsModal from './NfseStudentsModal';
 import NfseStudentGroups from './NfseStudentGroups';
 
 export default function PrepararNfseTab() {
-  const { scope, workspace } = useNfseTabContext();
+  const { scope } = useNfseTabContext();
   const [open, setOpen] = useState(false);
-  const [draft, setDraft] = useState({ month: getNfseCurrentMonth(), ids: [] as string[] });
+  const { draft, setDraft } = useNfsePreparationDraft();
   const [month, setMonth] = useState(getNfseCurrentMonth);
   const [ids, setIds] = useState<string[]>([]);
   const [filters, setFilters] = useState(defaultNfseReceiptFilters);
   const [search, setSearch] = useState('');
-  const [modelId, setModelId] = useState('');
   const [limitError, setLimitError] = useState<string | null>(null);
   useEffect(() => {
     const timer = setTimeout(() => setFilters(current => ({ ...current, search: search.trim(), page: 1 })), 250);
@@ -29,6 +31,8 @@ export default function PrepararNfseTab() {
     contextId: scope.contextKey, poloId: scope.poloId, paymentMonth: open ? month : draft.month,
   } : null, [scope, open, month, draft.month]);
   const validScope = isNfseReceiptScopeValid(receiptScope);
+  const modelsQuery = useNfseModels(scope, draft.ids.length > 0);
+  const models = modelsQuery.error ? [] : modelsQuery.data?.rows || [];
   const selectedIds = open ? ids : draft.ids;
   const draftScope = useMemo(() => scope ? { contextId: scope.contextKey, poloId: scope.poloId, paymentMonth: draft.month } : null, [scope, draft.month]);
   const draftQuery = useNfseReceiptSelection(draftScope, draft.ids, draft.ids.length > 0);
@@ -72,14 +76,15 @@ export default function PrepararNfseTab() {
 
   return <section className="nfse-panel" aria-label="Preparar emissão de notas">
     <div className="nfse-section-heading">
-      <div><h2>Alunos selecionados</h2>{draft.ids.length > 0 && <p>Recebimentos de {draft.month.split('-').reverse().join('/')}</p>}</div>
+      <div><h2>Alunos selecionados</h2>{draft.ids.length > 0 && <p>Recebimentos de {formatNfseMonth(draft.month)}</p>}</div>
       <button type="button" className="nfse-button nfse-button-primary" onClick={openStudents} disabled={!validScope}><UserPlus size={16} />Adicionar alunos</button>
     </div>
     {draft.ids.length > 0 ? <>
       <div className="nfse-toolbar"><div className="nfse-field"><label htmlFor="nfse-model">Modelo de emissão</label>
-        <InstitutionalSelect id="nfse-model" ariaLabel="Modelo de emissão" value={modelId} onValueChange={setModelId}
-          options={(workspace?.models || []).filter(item => item.active).map(item => ({ value: item.id, label: item.name }))}
-          placeholder="Selecionar modelo" disabled={!workspace?.capabilities.prepare} />
+        <InstitutionalSelect id="nfse-model" ariaLabel="Modelo de emissão" value={draft.modelId} onValueChange={modelId => setDraft(current => ({ ...current, modelId }))}
+          options={models.filter(item => item.active).map(item => ({ value: item.id, label: item.name }))}
+          placeholder="Selecionar modelo" disabled={!validScope} loading={modelsQuery.isPending}
+          error={modelsQuery.error ? 'Não foi possível consultar os modelos.' : undefined} />
       </div><button type="button" className="nfse-button nfse-button-secondary" onClick={() => { setLimitError(null); setDraft(current => ({ ...current, ids: [] })); }}>Limpar seleção</button></div>
       {draftError ? <div className="nfse-footer" role="alert"><span>{draftError}</span>
         <button type="button" className="nfse-button nfse-button-secondary" onClick={() => void draftQuery.refetch()}>Atualizar</button>
@@ -111,7 +116,7 @@ export default function PrepararNfseTab() {
       onClearSelection={() => { setIds([]); setLimitError(null); }}
       onClose={() => { setOpen(false); setLimitError(null); }} onAdd={() => {
         if (!canAdd || !selection) return;
-        setDraft({ month, ids: selection.ids });
+        setDraft(current => ({ ...current, month, ids: selection.ids }));
         setOpen(false);
       }}
     />}

@@ -1,0 +1,32 @@
+.nfse-model-dialog { display: flex; flex-direction: column; max-height: calc(100dvh - 24px); }
+.nfse-model-dialog > .nfse-section-heading, .nfse-model-dialog > .nfse-footer { flex: 0 0 auto; }
+.nfse-model-dialog .nfse-section-heading h2 { font-size: 18px; font-weight: 600; }
+.nfse-model-body { min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.nfse-model-fields { border: 0; margin: 0; min-width: 0; padding: 0; }
+.nfse-model-section { border-top: 1px solid #edf0f5; padding: 16px; }
+.nfse-model-section:first-child { border-top: 0; }
+.nfse-model-section h3 { color: #18334b; font-size: 13px; font-weight: 600; margin: 0 0 14px; }
+.nfse-model-grid { align-items: end; display: grid; gap: 14px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.nfse-model-grid .nfse-wide { grid-column: 1 / -1; }
+.nfse-model-required { color: #a33e3e; }
+.nfse-model-choices { border: 0; margin: 0; min-width: 0; padding: 0; }
+.nfse-model-choices legend { color: #536579; font-size: 12px; font-weight: 500; line-height: 1.5; margin-bottom: 9px; }
+.nfse-model-radio-group { align-items: center; display: flex; flex-wrap: wrap; gap: 22px; }
+.nfse-model-radio-group label, .nfse-model-active { align-items: center; display: inline-flex; font-size: 13px; gap: 8px; }
+.nfse-model-radio-group input, .nfse-model-active input { accent-color: #4169e1; height: 16px; margin: 0; width: 16px; }
+.nfse-model-active { align-self: end; min-height: 38px; }
+.nfse-model-complementary summary { color: #36506b; cursor: pointer; font-size: 13px; font-weight: 500; }
+.nfse-model-complementary summary:focus-visible { outline: 2px solid #4169e1; outline-offset: 4px; }
+.nfse-model-complementary[open] summary { margin-bottom: 14px; }
+.nfse-model-counter { color: #64748b; font-size: 11px; text-align: right; }
+.nfse-model-dialog .nfse-notice { margin: 0 16px 16px; }
+.nfse-model-dialog .nfse-footer { gap: 8px; }
+.nfse-model-field-error { color: #a33e3e; font-size: 12px; line-height: 1.5; }
+.nfse-fiscal-code-invalid input[role='combobox'] { border-color: #c86b6b; }
+.nfse-model-catalog-retry { align-items: center; color: #a33e3e; display: flex; flex-wrap: wrap; font-size: 12px; gap: 10px; }
+@media (max-width: 760px) {
+  .nfse-model-grid { grid-template-columns: minmax(0, 1fr); }
+  .nfse-model-section { padding: 14px; }
+  .nfse-model-active { min-height: 44px; }
+  .nfse-model-dialog .nfse-footer { padding: 12px 14px; }
+}

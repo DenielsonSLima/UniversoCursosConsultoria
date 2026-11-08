@@ -50,4 +50,4 @@ jobs:
       - name: Validar recebimentos, seleção e autorização em banco isolado
         env:
           NFSE_TEST_PGLITE_MODULE: ${{ runner.temp }}/nfse-sql/node_modules/@electric-sql/pglite/dist/index.js
-        run: node --test supabase/tests/nfse_receipt_students.isolated.test.mjs
+        run: node --test supabase/tests/nfse_receipt_students.isolated.test.mjs supabase/tests/nfse_models.isolated.test.mjs

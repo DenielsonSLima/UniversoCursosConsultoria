@@ -1,13 +1,8 @@
 import React, { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
+import { formatNfseMonth, NFSE_MONTH_NAMES } from './nfse-month.presentation';
 import './nfse-month-picker.css';
-
-const MONTHS = Array.from({ length: 12 }, (_, index) => {
-  const name = new Intl.DateTimeFormat('pt-BR', { month: 'long', timeZone: 'UTC' })
-    .format(new Date(Date.UTC(2000, index, 1)));
-  return name[0].toLocaleUpperCase('pt-BR') + name.slice(1);
-});
 
 interface Props {
   id: string;
@@ -84,7 +79,7 @@ export default function NfseMonthPicker({ id, value, onChange, inputRef }: Props
   return <div ref={rootRef} className="nfse-month-picker">
     <input ref={inputRef} id={id} type="text" readOnly role="combobox" aria-haspopup="dialog" aria-expanded={open}
       aria-controls={open ? panelId : undefined} aria-label="Mês de referência"
-      value={MONTHS[monthIndex] ? `${MONTHS[monthIndex]} de ${value.slice(0, 4)}` : ''}
+      value={formatNfseMonth(value)}
       onClick={() => open ? close() : show()}
       onKeyDown={event => {
         if (['Enter', ' ', 'ArrowDown'].includes(event.key)) { event.preventDefault(); show(); }
@@ -102,7 +97,7 @@ export default function NfseMonthPicker({ id, value, onChange, inputRef }: Props
         <button type="button" aria-label="Próximo ano" disabled={!validYear || Number(year) >= 2199}
           onClick={() => setYear(String(Number(year) + 1))}><ChevronRight size={16} /></button>
       </div>
-      <div className="nfse-month-options">{MONTHS.map((name, index) => <button key={name} type="button"
+      <div className="nfse-month-options">{NFSE_MONTH_NAMES.map((name, index) => <button key={name} type="button"
         disabled={!validYear} aria-pressed={year === value.slice(0, 4) && index === monthIndex}
         onClick={() => choose(index)}>{name}</button>)}</div>
       {!validYear && <p role="status">Informe um ano entre 1900 e 2199.</p>}

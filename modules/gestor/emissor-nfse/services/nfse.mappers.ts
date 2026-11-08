@@ -3,6 +3,7 @@ import type {
   NfsePage, NfseReadiness, NfseWorkspace,
 } from '../types/nfse.types';
 import { NfseContractError } from './nfse.errors';
+import { parseNfseStoredModel } from '../modelos/services/nfse-models.contract';
 import {
   assertUniqueIds, boolean, integer, list, money, nullableInteger, nullableString,
   oneOf, record, string,
@@ -14,11 +15,7 @@ const readiness = (value: unknown): NfseReadiness => {
 };
 
 export function mapNfseModel(value: unknown): NfseModel {
-  const row = record(value);
-  return {
-    id: string(row.id), name: string(row.name), serviceDescription: string(row.serviceDescription),
-    nationalServiceCode: string(row.nationalServiceCode), active: boolean(row.active), version: integer(row.version, 1),
-  };
+  return parseNfseStoredModel(value);
 }
 
 export function mapNfseWorkspace(value: unknown): NfseWorkspace {

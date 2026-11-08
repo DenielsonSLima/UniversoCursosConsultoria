@@ -1,10 +1,10 @@
 import type {
   NfseCandidateFilters, NfseConfigurationInput, NfseDocumentFilters,
-  NfseModelInput, NfsePrepareInput, NfseScope,
+  NfsePrepareInput, NfseScope,
 } from '../types/nfse.types';
 import { NfseAccessError, NfseContractError, NfseUnavailableError } from './nfse.errors';
 import {
-  mapNfseCandidate, mapNfseConfiguration, mapNfseDocument, mapNfseModel,
+  mapNfseCandidate, mapNfseConfiguration, mapNfseDocument,
   mapNfseMutation, mapNfsePage, mapNfseWorkspace,
 } from './nfse.mappers';
 import { assertScope, integer, oneOf, string, unwrapNfseEnvelope } from './nfse.validation';
@@ -15,10 +15,8 @@ export const NFSE_RPC = {
   workspace: 'get_nfse_workspace_secure',
   candidates: 'get_nfse_candidates_secure',
   documents: 'get_nfse_documents_secure',
-  models: 'get_nfse_models_secure',
   configuration: 'get_nfse_configuration_secure',
   prepare: 'prepare_nfse_batch_secure',
-  saveModel: 'save_nfse_model_secure',
   saveConfiguration: 'save_nfse_configuration_secure',
 } as const;
 
@@ -69,9 +67,6 @@ export function createNfseService(
         p_search: optionalText(filters.search?.trim()), p_page: page, p_page_size: 25,
       }, signal), mapNfseDocument, page);
     },
-    async models(scope: NfseScope, signal?: AbortSignal) {
-      return mapNfsePage(await call(NFSE_RPC.models, scope, { p_page: 1, p_page_size: 100 }, signal), mapNfseModel, 1);
-    },
     async configuration(scope: NfseScope, signal?: AbortSignal) {
       const config = mapNfseConfiguration(await call(NFSE_RPC.configuration, scope, {}, signal));
       if (config.poloId !== scope.poloId || config.environment !== scope.environment) throw new NfseContractError();
@@ -84,15 +79,6 @@ export function createNfseService(
       return mapNfseMutation(await call(NFSE_RPC.prepare, scope, {
         p_request_id: requestId(input.requestId), p_candidate_ids: input.candidateIds.map((id) => string(id)),
         p_model_id: string(input.modelId),
-      }));
-    },
-    async saveModel(scope: NfseScope, input: NfseModelInput, allowed = false) {
-      assertWrite(allowed);
-      if (typeof input.active !== 'boolean') throw new NfseContractError();
-      return mapNfseMutation(await call(NFSE_RPC.saveModel, scope, {
-        p_request_id: requestId(input.requestId), p_id: optionalText(input.id), p_name: string(input.name),
-        p_service_description: string(input.serviceDescription), p_national_service_code: string(input.nationalServiceCode),
-        p_active: input.active, p_expected_version: input.expectedVersion === undefined ? null : integer(input.expectedVersion, 1),
       }));
     },
     async saveConfiguration(scope: NfseScope, input: NfseConfigurationInput, allowed = false) {

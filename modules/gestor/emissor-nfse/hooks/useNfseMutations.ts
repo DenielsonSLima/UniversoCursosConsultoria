@@ -1,9 +1,10 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { nfseQueryKeys } from '../queries/nfse.queryKeys';
 import { nfseService } from '../services/nfse.service';
+export { useSaveNfseModel } from '../modelos/hooks/useNfseModels';
 import { NfseAccessError } from '../services/nfse.errors';
 import type {
-  NfseCapabilities, NfseConfigurationInput, NfseModelInput, NfsePrepareInput, NfseScope,
+  NfseCapabilities, NfseConfigurationInput, NfsePrepareInput, NfseScope,
 } from '../types/nfse.types';
 
 function useNfseMutation<T>(scope: NfseScope | null, mutation: (captured: NfseScope, input: T) => Promise<unknown>) {
@@ -21,10 +22,6 @@ function useNfseMutation<T>(scope: NfseScope | null, mutation: (captured: NfseSc
 
 export function usePrepareNfseBatch(scope: NfseScope | null, capabilities?: NfseCapabilities) {
   return useNfseMutation<NfsePrepareInput>(scope, (captured, input) => nfseService.prepare(captured, input, capabilities?.prepare === true));
-}
-
-export function useSaveNfseModel(scope: NfseScope | null, capabilities?: NfseCapabilities) {
-  return useNfseMutation<NfseModelInput>(scope, (captured, input) => nfseService.saveModel(captured, input, capabilities?.manageModels === true));
 }
 
 export function useSaveNfseConfiguration(scope: NfseScope | null, canManage = false) {
