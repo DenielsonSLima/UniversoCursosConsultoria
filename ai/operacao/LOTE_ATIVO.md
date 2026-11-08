@@ -1,7 +1,7 @@
 # Lote ativo
 
-## Lote: 2026-11-07-nfse-modal-cabecalho-compacto
+## Lote: 2026-11-07-nfse-adicionar-alunos
 
-Corrigir avisos redundantes e abertura inline dos modelos NFS-e. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-07-nfse-modal-cabecalho-compacto.md`, 10 arquivos. Base publicada 4.8.261/a9a4ca4e8acc45728bb93514f06de36c908c993e, incluindo a atualização paralela dos campos monetários. Candidato 4.8.262/revisão 271.
+Implementar seleção de alunos em modal: mês atual, curso Técnico por padrão, busca, turma expansível e seleção múltipla. Considerar pagamentos efetivamente recebidos no mês, inclusive parcelas de outros meses. Consulta, agrupamento e totais por RPC, preservando polo e piloto Denielson. Não habilitar emissão fiscal.
 
-Quatro componentes alterados, sem mudanças fiscais ou de acesso. Cabeçalho compacto e modal com lista preservada, foco, teclado e cancelamento conferidos no Safari desktop/390 px. Lint e TypeScript focados aprovados. Limitações locais e evidências estão no registro. Continuação corretiva da entrega autorizada: publicar apenas o manifesto após Preview/CI verdes e conferir produção.
+Mudança crítica por valores financeiros e RPC somente leitura. Base 4.8.262/bbfa9b2c67681534c9a895769c2393425a226989. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-07-nfse-adicionar-alunos.md`. Contrato, testes e Safari desktop/390 px validados. Usuário autorizou explicitamente a RPC em produção; migration 20261108005455 aplicada e validada. Candidato 4.8.264, preservando o lote paralelo 4.8.263. Aguardam CI/Preview e conferência final da interface publicada.

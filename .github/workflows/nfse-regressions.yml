@@ -9,6 +9,8 @@ on:
       - 'modules/gestor/access-control*'
       - 'modules/gestor/gestor-navigation*'
       - 'scripts/test-nfse-local-stage1.mjs'
+      - 'supabase/migrations/*nfse*'
+      - 'supabase/tests/nfse*'
       - 'package*.json'
   push:
     branches: [main]
@@ -19,6 +21,8 @@ on:
       - 'modules/gestor/access-control*'
       - 'modules/gestor/gestor-navigation*'
       - 'scripts/test-nfse-local-stage1.mjs'
+      - 'supabase/migrations/*nfse*'
+      - 'supabase/tests/nfse*'
       - 'package*.json'
   workflow_dispatch:
 
@@ -41,3 +45,9 @@ jobs:
       - run: node scripts/check-node-security.mjs
       - run: npm ci
       - run: node scripts/test-nfse-local-stage1.mjs
+      - name: Instalar PostgreSQL isolado para o contrato de recebimentos
+        run: npm install --prefix "$RUNNER_TEMP/nfse-sql" --no-save --package-lock=false --ignore-scripts @electric-sql/pglite@0.3.14
+      - name: Validar recebimentos, seleção e autorização em banco isolado
+        env:
+          NFSE_TEST_PGLITE_MODULE: ${{ runner.temp }}/nfse-sql/node_modules/@electric-sql/pglite/dist/index.js
+        run: node --test supabase/tests/nfse_receipt_students.isolated.test.mjs
