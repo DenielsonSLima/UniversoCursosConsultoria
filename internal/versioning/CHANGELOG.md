@@ -16,6 +16,15 @@ Histórico arquivado: [05/10/2026 — versões 4.8.171 a 4.8.174](./changelog/20
 
 Histórico arquivado: [06/10/2026 a 09/10/2026 — versões 4.8.175 a 4.8.195](./changelog/2026-10-06-a-09-versoes-4-8-175-a-195.md).
 
+## [4.8.266] - 2026-11-08
+
+- NFS-e: seletores pesquisáveis de tributação nacional, NBS e indicador da operação com catálogos oficiais versionados.
+
+- NFS-e: mês por extenso também no cabeçalho; alunos e modelo selecionado permanecem na preparação entre abas.
+- Modelos de serviço por polo com tributação nacional, NBS, ISSQN, indicador da operação e informações complementares, cadastrados por RPC com auditoria e controle de versão.
+- Consulta histórica usa projeção do valor recebido e conserva pagamentos parciais e estornos; outubro validado em 171 ms, sem divergência de valores.
+- Acesso piloto preservado; emissão fiscal permanece desabilitada nesta etapa.
+
 ## [4.8.265] - 2026-11-08
 
 ### Corrigido

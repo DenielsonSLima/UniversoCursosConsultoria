@@ -1,4 +1,4 @@
-import React, { lazy, Suspense, useMemo, useState } from 'react';
+import React, { lazy, Suspense, useMemo, useRef, useState } from 'react';
 import { AlertCircle, Building2, CheckCheck, ClipboardList, FileText, Layers, ShieldCheck } from 'lucide-react';
 import FinancialUnderlineTabs from '../financeiro/components/FinancialUnderlineTabs';
 import { useNfseWorkspace } from './hooks/useNfseQueries';
@@ -9,6 +9,8 @@ import type { NfseScope, NfseTab } from './types/nfse.types';
 import { NfseTabContext } from './components/NfseTabContext';
 import NfseDataState from './components/NfseDataState';
 import { formatNfseMoney } from './components/nfse.presentation';
+import NfseMonthPicker from './preparar/NfseMonthPicker';
+import { NfsePreparationDraftProvider } from './preparar/hooks/NfsePreparationDraft';
 import './nfse.css';
 
 const PrepararNfseTab = lazy(() => import('./preparar/PrepararNfseTab'));
@@ -35,6 +37,7 @@ const tabs = [
 const NfseWorkspace: React.FC<EmissorNfsePageProps> = ({ poloId, poloName, isMatriz, contextKey }) => {
   const [tab, setTab] = useState<NfseTab>('preparar');
   const [month, setMonth] = useState(getNfseCurrentMonth);
+  const monthInputRef = useRef<HTMLInputElement>(null);
   const scope = useMemo<NfseScope | null>(() => {
     const candidate = { poloId: poloId || '', contextKey: contextKey || '', environment: 'HOMOLOGACAO' as const, month };
     return isNfseScopeValid(candidate) ? candidate : null;
@@ -52,8 +55,10 @@ const NfseWorkspace: React.FC<EmissorNfsePageProps> = ({ poloId, poloName, isMat
     <div className="nfse-workspace">
       <header className="nfse-header">
         <div><h1>Emissor NFS-e</h1><p>{poloName || (selectedPolo ? 'Polo selecionado' : 'Selecione um polo para acompanhar as notas')}{isMatriz && selectedPolo ? ' · Matriz' : ''}</p></div>
-        <div className="grid max-w-full grid-cols-[minmax(0,170px)_auto] items-center gap-3">
-          <label className="nfse-field nfse-field-month"><input type="month" value={month} onChange={(event) => setMonth(event.target.value)} aria-label="Mês dos recebimentos" /></label>
+        <div className="flex max-w-full flex-wrap items-center gap-3">
+          <div className="nfse-field min-w-[185px]">
+            <NfseMonthPicker id="nfse-workspace-month" value={month} onChange={setMonth} inputRef={monthInputRef} />
+          </div>
           <span className="nfse-environment"><ShieldCheck size={14} />Homologação</span>
         </div>
       </header>
@@ -70,6 +75,7 @@ const NfseWorkspace: React.FC<EmissorNfsePageProps> = ({ poloId, poloName, isMat
       <FinancialUnderlineTabs items={tabs} value={tab} onChange={setTab} ariaLabel="Abas do Emissor NFS-e" idPrefix="nfse" compact />
       <div role="tabpanel" id={`nfse-${tab}-panel`} aria-labelledby={`nfse-${tab}-tab`} tabIndex={0} className="nfse-tab-panel">
         <NfseTabContext.Provider key={`${poloId}:${contextKey}:${month}`} value={context}>
+          <NfsePreparationDraftProvider>
           <Suspense fallback={<NfseDataState loading />}>
             {tab === 'preparar' && <PrepararNfseTab />}
             {tab === 'pendentes' && <PendentesNfseTab />}
@@ -77,6 +83,7 @@ const NfseWorkspace: React.FC<EmissorNfsePageProps> = ({ poloId, poloName, isMat
             {tab === 'erros' && <ErrosNfseTab />}
             {tab === 'modelos' && <ModelosNfseTab />}
           </Suspense>
+          </NfsePreparationDraftProvider>
         </NfseTabContext.Provider>
       </div>
     </div>

@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "retrieval": "lexical-bm25-with-source-citations",
-  "builtAt": "2026-11-08T12:42:28.724Z",
+  "builtAt": "2026-11-08T23:13:57.332Z",
   "manifestVersion": 2,
-  "sourceSignature": "02ae3d8480b1152b5e1bda706b80cc049350c436ea006370d4408ceab3c7e403",
+  "sourceSignature": "b996eae832c16b1679f202ee905d69556310f7eb89c16a2624196170f09ffe25",
   "sources": [
     {
       "path": "AGENTS.md",
@@ -11,7 +11,7 @@
     },
     {
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "hash": "5660fb5889a0ffb597836113212170bdef3d128489f443ae2fbc521d1395e5bf"
+      "hash": "5031271d17ebf17e6f41f283907f540a8c7055dcee27a5d8dd2cec7be1f19458"
     },
     {
       "path": "ai/operacao/MEMORIA_CANONICA.md",
@@ -208,22 +208,22 @@
       "part": 1
     },
     {
-      "id": "be32025f18a099e831fb",
-      "hash": "be32025f18a099e831fb7932e24f3d98e3c23037f34a1aeda15ed5c416e93595",
+      "id": "8c9751c582d08639cb14",
+      "hash": "8c9751c582d08639cb14a844ec497d6824bed6d0f64dfdb084592338eafb6e5a",
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Lote: 2026-11-08-nfse-mes-pt-br",
-      "text": "Corrigir somente o mês de referência do modal Adicionar alunos para exibir nome do mês e ano em pt-BR, como Novembro de 2026. Painel próprio com doze meses, navegação/edição de ano, teclado e retorno de foco. O contrato YYYY-MM, RPC, seleção por polo e acesso Denielson permanecem preservados.",
-      "normalizedText": "corrigir somente o mes de referencia do modal adicionar alunos para exibir nome do mes e ano em pt br como novembro de 2026 painel proprio com doze meses navegacao edicao de ano teclado e retorno de foco o contrato yyyy mm rpc selecao por polo e acesso denielson permanecem preservados",
-      "tokenCount": 46,
+      "section": "Lote: 2026-11-08-nfse-preparacao-modelos",
+      "text": "Corrigir timeout dos recebimentos históricos; exibir mês por extenso no cabeçalho; preservar alunos adicionados em Preparar emissão; cadastrar e escolher modelos por polo com campos de serviço, NBS, ISSQN, informações complementares e seletores dos catálogos oficiais. Acesso piloto Denielson e totais via RPC preservados; emissão fiscal desabilitada.",
+      "normalizedText": "corrigir timeout dos recebimentos historicos exibir mes por extenso no cabecalho preservar alunos adicionados em preparar emissao cadastrar e escolher modelos por polo com campos de servico nbs issqn informacoes complementares e seletores dos catalogos oficiais acesso piloto denielson e totais via rpc preservados emissao fiscal desabilitada",
+      "tokenCount": 44,
       "part": 1
     },
     {
-      "id": "3b71a6efeb9e3a5a8055",
-      "hash": "3b71a6efeb9e3a5a8055f655fab4b93b7c234359ae36b8058646a9471ad934d2",
+      "id": "9081e87a568c237e6eef",
+      "hash": "9081e87a568c237e6eefbf6f3d95aafebc58654959ddde50e37bfd889e9108a5",
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Lote: 2026-11-08-nfse-mes-pt-br",
-      "text": "Correção visual com fechamento para publicação autorizada nesta conversa. Base 4.8.264/c064202b8851a49d851ca740c69e778a87eab0af. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-08-nfse-mes-pt-br.md`. TypeScript/lint focados e Safari local desktop/390 px conferidos. Revisão independente corrigiu preservação dos alunos ao escolher o mesmo mês. Candidato 4.8.265; CI, Preview e conferência publicada são verificados antes do encerramento.",
-      "normalizedText": "correcao visual com fechamento para publicacao autorizada nesta conversa base 4 8 264 c064202b8851a49d851ca740c69e778a87eab0af manifesto explicito ai operacao registros alteracoes 2026 11 08 nfse mes pt br md typescript lint focados e safari local desktop 390 px conferidos revisao independente corrigiu preservacao dos alunos ao escolher o mesmo mes candidato 4 8 265 ci preview e conferencia publicada sao verificados antes do encerramento",
+      "section": "Lote: 2026-11-08-nfse-preparacao-modelos",
+      "text": "Mudança crítica autorizada, candidata 4.8.266 sobre 4.8.265. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-08-nfse-preparacao-modelos.md`. Três migrations aplicadas; outubro em 170,89 ms, sem divergência. Validados 65 testes frontend, 29 SQL e Safari local desktop/390 px. CI, Preview e produção conferidos no recibo `tmp/nfse-preparacao-production-receipt.json` antes do encerramento.",
+      "normalizedText": "mudanca critica autorizada candidata 4 8 266 sobre 4 8 265 manifesto explicito ai operacao registros alteracoes 2026 11 08 nfse preparacao modelos md tres migrations aplicadas outubro em 170 89 ms sem divergencia validados 65 testes frontend 29 sql e safari local desktop 390 px ci preview e producao conferidos no recibo tmp nfse preparacao production receipt json antes do encerramento",
       "tokenCount": 56,
       "part": 1
     },

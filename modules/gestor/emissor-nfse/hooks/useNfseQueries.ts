@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { nfseQueryKeys } from '../queries/nfse.queryKeys';
 import { nfseService } from '../services/nfse.service';
+export { useNfseModels } from '../modelos/hooks/useNfseModels';
 import { NfseAccessError } from '../services/nfse.errors';
 import { isNfseScopeValid } from '../types/nfse.scope';
 import type { NfseCandidateFilters, NfseDocumentFilters, NfseScope } from '../types/nfse.types';
@@ -29,13 +30,6 @@ export function useNfseDocuments(scope: NfseScope | null, filters: NfseDocumentF
   return useQuery({
     ...options, queryKey: nfseQueryKeys.documents(scope, filters), enabled: enabled && isNfseScopeValid(scope),
     queryFn: ({ signal }) => nfseService.documents(required(scope), filters, signal),
-  });
-}
-
-export function useNfseModels(scope: NfseScope | null, enabled = true) {
-  return useQuery({
-    ...options, queryKey: nfseQueryKeys.models(scope), enabled: enabled && isNfseScopeValid(scope),
-    queryFn: ({ signal }) => nfseService.models(required(scope), signal),
   });
 }
 

@@ -8,10 +8,12 @@ import { pathToFileURL } from 'node:url';
 const modulePath = process.env.NFSE_TEST_PGLITE_MODULE;
 const { PGlite } = await import(modulePath ? pathToFileURL(resolve(modulePath)).href : '@electric-sql/pglite');
 const migration = await readFile(new URL('../migrations/20261108005455_nfse_receipt_students_read.sql', import.meta.url), 'utf8');
+const amountMigration = await readFile(new URL('../migrations/20261108225236_nfse_receipt_amount_projection.sql', import.meta.url), 'utf8');
 const id = value => `00000000-0000-0000-0000-${String(value).padStart(12, '0')}`;
 const candidate = (classId, studentId) => `${id(classId)}:${id(studentId)}`;
 
-test('NFS-e reads the complete authorized payment-month source without enabling fiscal writes', async t => {
+for (const optimized of [false, true]) {
+test(`NFS-e ${optimized ? 'optimized' : 'original'} reader preserves the authorized payment-month contract`, async t => {
   const db = new PGlite();
   const read = async (params = {}) => {
     const values = { context: id(100), polo: id(1), month: '2026-11-01', course: 'TECNICO',
@@ -22,7 +24,7 @@ test('NFS-e reads the complete authorized payment-month source without enabling 
   try {
     await db.exec(`
       CREATE ROLE anon; CREATE ROLE authenticated; CREATE ROLE service_role;
-      CREATE SCHEMA auth; CREATE SCHEMA internal_financial_payments;
+      CREATE SCHEMA auth; CREATE SCHEMA internal_financial_payments; CREATE SCHEMA private;
       CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS
         $$SELECT nullif(current_setting('test.actor',true),'')::uuid$$;
       CREATE TABLE public.test_context(id uuid PRIMARY KEY, actor uuid, allowed boolean, all_polos boolean, polos uuid[]);
@@ -41,13 +43,36 @@ test('NFS-e reads the complete authorized payment-month source without enabling 
       CREATE TABLE public.matriculas(id uuid PRIMARY KEY,aluno_id uuid,turma_id uuid);
       CREATE TABLE public.test_cash(id uuid PRIMARY KEY,polo_id uuid,matricula_id uuid,turma_id uuid,
         status text,data_pagamento date,data_vencimento date,valor_recebido numeric,reversed boolean DEFAULT false);
-      CREATE FUNCTION internal_financial_payments.cash_receivables() RETURNS SETOF public.test_cash
-        LANGUAGE sql STABLE AS $$SELECT * FROM public.test_cash WHERE NOT reversed$$;
+      CREATE TABLE public.contas_receber(id uuid PRIMARY KEY,polo_id uuid,matricula_id uuid,turma_id uuid,
+        status text,data_pagamento date,data_vencimento date,valor numeric,valor_pago numeric,
+        gateway_financial_terms jsonb,manual_settlement_id uuid,manual_settlement_reversed_at timestamptz,
+        manual_settlement_principal_cents bigint,manual_settlement_interest_cents bigint,
+        manual_settlement_penalty_cents bigint,manual_settlement_addition_cents bigint,
+        manual_settlement_discount_cents bigint,manual_settlement_received_cents bigint);
+      CREATE TABLE public.test_cash_details(id uuid PRIMARY KEY,details jsonb NOT NULL);
+      CREATE TABLE public.test_composition_results(id uuid PRIMARY KEY,amount numeric);
+      CREATE TABLE public.emprestimos_financeiros(conta_receber_id uuid PRIMARY KEY);
+      CREATE FUNCTION internal_financial_payments.cash_receivables() RETURNS SETOF public.contas_receber
+        LANGUAGE plpgsql STABLE AS $$BEGIN
+          IF current_setting('test.source_blocked',true)='true' THEN RAISE EXCEPTION 'SOURCE_READ'; END IF;
+          RETURN QUERY SELECT (jsonb_populate_record(NULL::public.contas_receber,
+            to_jsonb(c) || jsonb_build_object('valor',c.valor_recebido,'valor_pago',c.valor_recebido)
+              || coalesce(d.details,'{}'::jsonb))).*
+            FROM public.test_cash c LEFT JOIN public.test_cash_details d USING(id) WHERE NOT c.reversed;
+        END; $$;
+      -- An independent oracle for exceptional full-composition outcomes. It is
+      -- deliberately not the optimization's arithmetic copied into the test.
+      CREATE FUNCTION public.resolve_integrated_receivable_financial_composition(
+        uuid,numeric,numeric,date,date,jsonb,uuid,timestamptz,bigint,bigint,bigint,bigint,bigint,bigint)
+        RETURNS TABLE(valor_recebido numeric) LANGUAGE plpgsql STABLE AS $$BEGIN
+          IF current_setting('test.composition_blocked',true)='true' THEN RAISE EXCEPTION 'COMPOSITION_READ'; END IF;
+          RETURN QUERY SELECT result.amount FROM public.test_composition_results result WHERE result.id=$1;
+        END; $$;
       CREATE FUNCTION public.get_caixa_relatorio_recebimentos_core(uuid,date,date)
         RETURNS TABLE(id uuid,valor_recebido numeric) LANGUAGE plpgsql STABLE AS $$
         BEGIN
           IF current_setting('test.source_blocked',true)='true' THEN RAISE EXCEPTION 'SOURCE_READ'; END IF;
-          RETURN QUERY SELECT c.id,c.valor_recebido FROM internal_financial_payments.cash_receivables() c
+          RETURN QUERY SELECT c.id,c.valor_pago FROM internal_financial_payments.cash_receivables() c
             WHERE c.polo_id=$1 AND c.status='PAGO' AND c.data_pagamento >= $2 AND c.data_pagamento < $3;
         END; $$;
       INSERT INTO public.polos VALUES ('${id(1)}','ativo'),('${id(2)}','ativo'),('${id(3)}','inativo');
@@ -68,10 +93,12 @@ test('NFS-e reads the complete authorized payment-month source without enabling 
       SET test.actor='${id(101)}';
     `);
     await db.exec(migration);
+    if (optimized) await db.exec(amountMigration);
     const payments = [
       [200,40,20,'PAGO','2026-11-03','2026-09-10','100.00',false],
       [201,40,20,'PAGO','2026-11-04','2026-10-10','50.00',false],
-      // Effective component IDs: there is deliberately no contas_receber table to join.
+      // Effective component IDs: physical contas_receber stays empty, preventing
+      // an accidental physical-title join from discarding partial components.
       [202,45,20,'PAGO','2026-11-05','2026-11-10','12.34',false],
       [203,45,20,'PAGO','2026-11-06','2026-11-10','37.66',false],
       [204,41,20,'PAGO','2026-11-03','2026-11-10','80.00',false],
@@ -137,10 +164,63 @@ test('NFS-e reads the complete authorized payment-month source without enabling 
         [id(220),id(1),id(40),id(20),'PAGO','2026-11-07','2026-11-01','9007199254740993.12',false]);
       assert.equal((await read({selected:[candidate(20,30)]})).selection.selectedAmount,'9007199254741193.12');
       await db.exec(`UPDATE public.test_cash SET valor_recebido='NaN' WHERE id='${id(220)}'`);
+      await db.exec(`INSERT INTO public.test_composition_results VALUES ('${id(220)}','NaN')`);
       const invalid=await read(); assert.equal(invalid.excludedUnknownCount,2);
       assert.equal(invalid.groups[0].receivedAmount,'280.00');
       await db.exec(`DELETE FROM public.test_cash WHERE id='${id(220)}'`);
+      await db.exec(`DELETE FROM public.test_composition_results WHERE id='${id(220)}'`);
     });
+    if (optimized) {
+    await t.test('cent-exact and manual amounts do not read expensive component allocation', async () => {
+      await db.exec(`INSERT INTO public.test_cash_details VALUES
+        ('${id(202)}','{"manual_settlement_id":"${id(900)}","manual_settlement_received_cents":1234,"valor_pago":999}'),
+        ('${id(203)}','{"manual_settlement_id":"${id(901)}","manual_settlement_received_cents":3766,"valor_pago":999}');
+        SET test.composition_blocked='true';`);
+      // Remove the deliberately exceptional null row for this fast-path proof.
+      await db.exec(`UPDATE public.test_cash SET reversed=true WHERE id='${id(213)}'`);
+      try {
+        const result = await read({selected:[candidate(20,30)]});
+        assert.equal(result.selection.selectedAmount,'200.00');
+        assert.equal(result.groups[0].receivedAmount,'280.00');
+        assert.equal((await db.query('SELECT count(*)::integer count FROM public.contas_receber')).rows[0].count,0);
+      } finally {
+        await db.exec(`SET test.composition_blocked='false';
+          UPDATE public.test_cash SET reversed=false WHERE id='${id(213)}';
+          DELETE FROM public.test_cash_details WHERE id IN ('${id(202)}','${id(203)}');`);
+      }
+    });
+    await t.test('reversed manual metadata cannot override the current paid amount', async () => {
+      await db.exec(`INSERT INTO public.test_cash_details VALUES ('${id(200)}',
+        '{"manual_settlement_id":"${id(900)}","manual_settlement_reversed_at":"2026-11-04T12:00:00Z","manual_settlement_received_cents":999999}')`);
+      try { assert.equal((await read({selected:[candidate(20,30)]})).selection.selectedAmount,'200.00'); }
+      finally { await db.exec(`DELETE FROM public.test_cash_details WHERE id='${id(200)}'`); }
+    });
+    await t.test('sub-cent precision and missing paid amounts retain full-composition results', async () => {
+      await db.exec(`INSERT INTO public.test_cash_details VALUES
+        ('${id(200)}','{"valor_pago":100.005}'),('${id(201)}','{"valor_pago":null}');
+        INSERT INTO public.test_composition_results VALUES ('${id(200)}',100.01),('${id(201)}',60.00);`);
+      try {
+        assert.equal((await read({selected:[candidate(20,30)]})).selection.selectedAmount,'210.01');
+        await db.exec("SET test.composition_blocked='true'");
+        await assert.rejects(read(), /COMPOSITION_READ/);
+      } finally {
+        await db.exec(`SET test.composition_blocked='false';
+          DELETE FROM public.test_cash_details WHERE id IN ('${id(200)}','${id(201)}');
+          DELETE FROM public.test_composition_results WHERE id IN ('${id(200)}','${id(201)}');`);
+      }
+    });
+    await t.test('financing receipts are excluded from both groups and selected totals', async () => {
+      await db.exec(`INSERT INTO public.emprestimos_financeiros VALUES ('${id(200)}'),('${id(205)}'),('${id(213)}')`);
+      try {
+        const result = await read({selected:[candidate(20,30)]});
+        assert.equal(result.totalGroups,1);
+        assert.equal(result.selection.selectedAmount,'100.00');
+        assert.equal(result.groups[0].receivedAmount,'180.00');
+        assert.equal(result.excludedUnknownCount,0);
+        assert.equal((await read({selected:[candidate(21,32)]})).selection.valid,false);
+      } finally { await db.exec('DELETE FROM public.emprestimos_financeiros'); }
+    });
+    }
     await t.test('pilot/context/polo denial happens before the source is read', async () => {
       await db.exec("SET test.source_blocked='true'");
       await assert.rejects(read(), /SOURCE_READ/);
@@ -169,6 +249,11 @@ test('NFS-e reads the complete authorized payment-month source without enabling 
         has_function_privilege('anon',$1,'EXECUTE') anon,
         has_function_privilege('service_role',$1,'EXECUTE') service_role`,[signature])).rows[0];
       assert.deepEqual(grants,{authenticated:true,anon:false,service_role:false});
+      if (optimized) {
+      const helperGrants = (await db.query(`SELECT has_function_privilege('authenticated',
+        'private.nfse_receipt_amount(public.contas_receber)','EXECUTE') allowed`)).rows[0];
+      assert.equal(helperGrants.allowed,false);
+      }
       await db.exec('SET ROLE authenticated');
       assert.equal((await read()).totalStudents,3);
       await db.exec('RESET ROLE');
@@ -176,3 +261,4 @@ test('NFS-e reads the complete authorized payment-month source without enabling 
     });
   } finally { await db.close(); }
 });
+}

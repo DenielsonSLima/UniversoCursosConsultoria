@@ -25,11 +25,24 @@ export interface NfseReadiness {
 /** Money is a canonical decimal string. null means unknown, never zero. */
 export type NfseMoney = string | null;
 
-export interface NfseModel {
-  id: string;
-  name: string;
+export type NfseIssTreatment = 'TRIBUTAVEL' | 'IMUNIDADE' | 'EXPORTACAO' | 'NAO_INCIDENCIA';
+
+export interface NfseModelServiceFields {
   serviceDescription: string;
   nationalServiceCode: string;
+  nbsCode: string;
+  operationIndicatorCode: string;
+  issTreatment: NfseIssTreatment;
+  immunityType: '1' | '2' | '3' | '4' | '5' | null;
+  technicalResponsibilityDocument: string;
+  referenceDocument: string;
+  complementaryInfo: string;
+  orderReference: string;
+}
+
+export interface NfseModel extends NfseModelServiceFields {
+  id: string;
+  name: string;
   active: boolean;
   version: number;
 }
@@ -124,12 +137,10 @@ export interface NfsePrepareInput {
   modelId: string;
 }
 
-export interface NfseModelInput {
+export interface NfseModelInput extends NfseModelServiceFields {
   requestId: string;
   id?: string;
   name: string;
-  serviceDescription: string;
-  nationalServiceCode: string;
   active: boolean;
   expectedVersion?: number;
 }
