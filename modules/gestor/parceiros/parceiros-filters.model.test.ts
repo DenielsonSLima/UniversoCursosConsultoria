@@ -16,6 +16,13 @@ const baseFilters = {
   turmaFilter: 'todas',
 };
 
+test('busca PJ encontra fantasia com acentos e conserva razão social e escopo', () => {
+  const items = [{ id: 'pj', tipo: 'PJ', nome: 'EMPRESA TESTE LTDA', nomeFantasia: 'Conexão Teste', status: 'ATIVO' }];
+  assert.equal(filterParceiros(items, { ...baseFilters, activeTab: 'pj', searchTerm: 'conexao' })[0]?.id, 'pj');
+  assert.equal(filterParceiros(items, { ...baseFilters, activeTab: 'pj', searchTerm: 'empresa teste' })[0]?.id, 'pj');
+  assert.deepEqual(filterParceiros(items, { ...baseFilters, activeTab: 'alunos', searchTerm: 'conexao' }), []);
+});
+
 test('limpar o texto preserva status e restaura todos os resultados compatíveis', () => {
   const searched = filterParceiros(partners, { ...baseFilters, searchTerm: 'math' });
   assert.deepEqual(searched.map((item) => item.id), ['1']);

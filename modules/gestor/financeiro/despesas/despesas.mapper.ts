@@ -38,6 +38,7 @@ export const mapLancamento = (row: any): DespesaLancamento => ({
   categoriaNome: row.categoria_nome ?? row.categorias_financeiras?.nome ?? undefined,
   fornecedorId: row.fornecedor_id ?? undefined,
   fornecedorNome: row.fornecedor_nome ?? row.parceiros?.nome ?? undefined,
+  fornecedorNomeFantasia: (row.fornecedor_nome_fantasia ?? row.parceiros?.nome_fantasia)?.trim() || undefined,
   formaPagamento: row.forma_pagamento ?? undefined,
   contaBancariaId: row.conta_bancaria_id ?? undefined,
   contaBancariaNome: row.conta_bancaria_nome ?? undefined,

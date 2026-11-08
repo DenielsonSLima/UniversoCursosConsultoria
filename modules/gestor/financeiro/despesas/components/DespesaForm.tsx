@@ -19,6 +19,7 @@ import type { DespesaCredorTipo } from './DespesaCredorPicker';
 import DespesaFormAssociations from './DespesaFormAssociations';
 import DespesaFormCoreFields from './DespesaFormCoreFields';
 import DespesaFormSettlementFields from './DespesaFormSettlementFields';
+import DespesaNovoCredorModal from './DespesaNovoCredorModal';
 import {
   getTurmaModalidade,
   parseCurrencyInput,
@@ -59,6 +60,12 @@ const DespesaForm: React.FC<DespesaFormProps> = ({
   const [categoriaId, setCategoriaId] = useState('');
   const [fornecedorTipo, setFornecedorTipo] = useState<DespesaCredorTipo | ''>('');
   const [fornecedorId, setFornecedorId] = useState('');
+  const [showNovoCredor, setShowNovoCredor] = useState(false);
+  const [novosCredores, setNovosCredores] = useState<any[]>([]);
+  const credores = useMemo(() => [
+    ...parceiros,
+    ...novosCredores.filter((created) => !parceiros.some((item) => item.id === created.id)),
+  ], [parceiros, novosCredores]);
   const [jurosValor, setJurosValor] = useState('');
   const [multaValor, setMultaValor] = useState('');
   const [descontoValor, setDescontoValor] = useState('');
@@ -195,7 +202,8 @@ const DespesaForm: React.FC<DespesaFormProps> = ({
     setAnexo(file);
   };
 
-  const modal = <div className="financial-dialog-overlay fixed left-0 top-0 z-[200] flex h-screen h-[100dvh] w-screen items-center justify-center overflow-hidden bg-black/40 p-4 backdrop-blur-sm overscroll-contain">
+  const modal = <div inert={showNovoCredor || undefined} aria-hidden={showNovoCredor || undefined}
+    className="financial-dialog-overlay fixed left-0 top-0 z-[200] flex h-screen h-[100dvh] w-screen items-center justify-center overflow-hidden bg-black/40 p-4 backdrop-blur-sm overscroll-contain">
     <div className="financial-dialog max-h-[calc(100dvh-2rem)] w-full max-w-4xl overflow-y-auto rounded-[2rem] bg-white shadow-2xl">
       <div className="financial-dialog-header sticky top-0 z-10 flex items-center justify-between border-b border-slate-100 bg-white px-8 pb-4 pt-8">
         <div><h3 className="text-lg font-black uppercase tracking-tight text-[#001a33]">Novo Lançamento</h3>
@@ -206,10 +214,11 @@ const DespesaForm: React.FC<DespesaFormProps> = ({
         <DespesaFormCoreFields {...{
           mode, setMode, dataLancamento, setDataLancamento, dataVencimento, setDataVencimento,
           categoriaId, setCategoriaId, categorias, tipo, showCategoriaModal, setShowCategoriaModal,
-          categoriaSelectRef, descricao, setDescricao, valor, setValor, parceiros, fornecedorTipo,
+          categoriaSelectRef, descricao, setDescricao, valor, setValor, fornecedorTipo,
           setFornecedorTipo, fornecedorId, setFornecedorId, jurosValor, setJurosValor, multaValor,
           setMultaValor, descontoValor, setDescontoValor,
-        }} convenioVinculado={Boolean(convenioMesId)} />
+        }} parceiros={credores} onNovoCredor={() => setShowNovoCredor(true)}
+          convenioVinculado={Boolean(convenioMesId)} />
         <DespesaFormAssociations {...{
           mode, convenioMesId, convenios, isPoloMatriz, rateioSelection, polosRateio,
           polosSelecionados, togglePoloRateio, rateioSelecionadosInvalido, turmaModalidade,
@@ -239,7 +248,15 @@ const DespesaForm: React.FC<DespesaFormProps> = ({
     </div>
   </div>;
 
-  return typeof document === 'undefined' ? modal : createPortal(modal, document.body);
+  return <>
+    {typeof document === 'undefined' ? modal : createPortal(modal, document.body)}
+    {showNovoCredor && fornecedorTipo ? <DespesaNovoCredorModal tipo={fornecedorTipo} poloId={poloId}
+      onClose={() => setShowNovoCredor(false)} onCreated={(created) => {
+        setNovosCredores((current) => [...current.filter((item) => item.id !== created.id), created]);
+        setFornecedorId(created.id);
+        setShowNovoCredor(false);
+      }} /> : null}
+  </>;
 };
 
 export default DespesaForm;

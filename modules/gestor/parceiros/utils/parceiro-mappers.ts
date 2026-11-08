@@ -71,6 +71,7 @@ export function toCamel(s: any) {
     tipo: s.tipo,
     nome: s.nome,
     nomeCompleto: s.nome,
+    ...(s.tipo === 'PJ' ? { razaoSocial: s.nome, nomeFantasia: s.nome_fantasia || null } : {}),
     cpf: s.cpf_cnpj,
     cnpj: s.cpf_cnpj,
     email: s.email,
@@ -209,6 +210,9 @@ export function toSnake(c: any) {
   return {
     tipo: source.tipo,
     nome: source.nomeCompleto || source.nome,
+    ...(source.tipo === 'PJ' && (Object.hasOwn(source, 'nomeFantasia') || Object.hasOwn(source, 'nome_fantasia'))
+      ? { nome_fantasia: String(source.nomeFantasia ?? source.nome_fantasia ?? '').trim() || null }
+      : {}),
     cpf_cnpj: source.cpf || source.cnpj || source.cpf_cnpj || null,
     email: source.email || null,
     telefone: source.contato1 || source.telefone || null,

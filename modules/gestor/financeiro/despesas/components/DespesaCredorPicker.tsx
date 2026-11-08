@@ -5,6 +5,7 @@ import {
   Check,
   ChevronDown,
   GraduationCap,
+  Plus,
   Search,
   UserRound,
   UsersRound,
@@ -19,6 +20,7 @@ interface DespesaCredorPickerProps {
   value: string;
   onTipoChange: (tipo: DespesaCredorTipo | '') => void;
   onChange: (id: string) => void;
+  onNovo?: () => void;
   tipoLabel?: string;
   pessoaLabel?: string;
   emptyLabel?: string;
@@ -100,6 +102,7 @@ const DespesaCredorPicker: React.FC<DespesaCredorPickerProps> = ({
   value,
   onTipoChange,
   onChange,
+  onNovo,
   tipoLabel = 'Tipo de credor',
   pessoaLabel = 'Credor',
   emptyLabel = 'Nenhum credor',
@@ -191,31 +194,39 @@ const DespesaCredorPicker: React.FC<DespesaCredorPickerProps> = ({
         <label className="mb-1.5 block text-[10px] font-black uppercase tracking-wider text-slate-400">
           {tipoConfig ? tipoConfig.shortLabel : pessoaLabel}{required ? ' *' : ''}
         </label>
-        <button
-          ref={triggerRef}
-          type="button"
-          disabled={!tipo}
-          onClick={() => setOpen((current) => !current)}
-          className={`flex w-full items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-left text-sm font-semibold outline-none transition-all focus:ring-2 ${accentClasses.focus} disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-300`}
-        >
-          <span className="flex min-w-0 items-center gap-2.5">
-            {selected ? (
-              <CredorAvatar
-                key={selected.id}
-                parceiro={selected}
-                tipo={tipo}
-                Icon={tipoConfig?.Icon}
-                selected
-                compact
-                accent={accent}
-              />
-            ) : null}
-            <span className="truncate">
-              {selected?.nome || (tipo ? `Selecionar entre ${parceirosDoTipo.length}...` : 'Selecione o tipo primeiro...')}
+        <div className="flex items-stretch gap-2">
+          <button
+            ref={triggerRef}
+            type="button"
+            disabled={!tipo}
+            onClick={() => setOpen((current) => !current)}
+            className={`flex min-w-0 flex-1 items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-left text-sm font-semibold outline-none transition-all focus:ring-2 ${accentClasses.focus} disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-300`}
+          >
+            <span className="flex min-w-0 items-center gap-2.5">
+              {selected ? (
+                <CredorAvatar
+                  key={selected.id}
+                  parceiro={selected}
+                  tipo={tipo}
+                  Icon={tipoConfig?.Icon}
+                  selected
+                  compact
+                  accent={accent}
+                />
+              ) : null}
+              <span className="truncate">
+                {selected?.nome || (tipo ? `Selecionar entre ${parceirosDoTipo.length}...` : 'Selecione o tipo primeiro...')}
+              </span>
             </span>
-          </span>
-          <ChevronDown size={15} className="ml-2 shrink-0 text-slate-400" />
-        </button>
+            <ChevronDown size={15} className="ml-2 shrink-0 text-slate-400" />
+          </button>
+          {onNovo ? <button type="button" disabled={!tipo}
+            onClick={() => { setOpen(false); onNovo(); }}
+            aria-label="Cadastrar novo credor"
+            className="flex shrink-0 items-center gap-1 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-medium text-rose-600 hover:bg-rose-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 disabled:cursor-not-allowed disabled:opacity-50">
+            <Plus size={14} />Novo
+          </button> : null}
+        </div>
 
         {open && tipo ? (
           <div className="absolute z-30 mt-2 w-full overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-slate-900/15">

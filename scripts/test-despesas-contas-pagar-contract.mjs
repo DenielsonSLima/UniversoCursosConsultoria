@@ -122,7 +122,7 @@ test('tabela, cards e agrupamento exibem o contrato financeiro e ações correta
 
   for (const fragment of [
     'Data de lançamento',
-    'Fornecedor não informado',
+    'getDespesaFornecedorRotulo(item)',
     'Valor pago:',
     'Conta de saída',
     'Estornar e cancelar',

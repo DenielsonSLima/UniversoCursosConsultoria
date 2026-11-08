@@ -1,8 +1,8 @@
 {
-  "version": "4.8.266",
+  "version": "4.8.267",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 275,
+  "revision": 276,
   "releasedAt": "2026-11-08",
-  "summary": "NFS-e com preparação de alunos, modelos de serviço e consulta histórica otimizada"
+  "summary": "Nome fantasia visível em cartões PJ, detalhes e despesas, com cadastro de credor no lançamento"
 }

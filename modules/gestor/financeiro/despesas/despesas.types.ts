@@ -31,6 +31,7 @@ export interface DespesaLancamento {
   categoriaNome?: string;
   fornecedorId?: string;
   fornecedorNome?: string;
+  fornecedorNomeFantasia?: string;
   formaPagamento?: string;
   contaBancariaId?: string;
   contaBancariaNome?: string;

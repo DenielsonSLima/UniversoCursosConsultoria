@@ -16,6 +16,13 @@ Histórico arquivado: [05/10/2026 — versões 4.8.171 a 4.8.174](./changelog/20
 
 Histórico arquivado: [06/10/2026 a 09/10/2026 — versões 4.8.175 a 4.8.195](./changelog/2026-10-06-a-09-versoes-4-8-175-a-195.md).
 
+## [4.8.267] - 2026-11-08
+
+### Corrigido
+- Cartões PJ mostram fantasia como título e razão social em linha secundária, sem depender do tooltip.
+- Cadastro, edição e busca preservam ambos os nomes; detalhes usam seletores próprios e criação de categoria/parceria sem sair.
+- Despesas mostram fantasia abaixo da categoria e permitem cadastrar novo credor no lançamento, mantendo pagamentos parciais.
+
 ## [4.8.266] - 2026-11-08
 
 - NFS-e: seletores pesquisáveis de tributação nacional, NBS e indicador da operação com catálogos oficiais versionados.
