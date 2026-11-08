@@ -1,7 +1,7 @@
 # Lote ativo
 
-## Lote: 2026-11-07-nfse-adicionar-alunos
+## Lote: 2026-11-08-nfse-mes-pt-br
 
-Implementar seleção de alunos em modal: mês atual, curso Técnico por padrão, busca, turma expansível e seleção múltipla. Considerar pagamentos efetivamente recebidos no mês, inclusive parcelas de outros meses. Consulta, agrupamento e totais por RPC, preservando polo e piloto Denielson. Não habilitar emissão fiscal.
+Corrigir somente o mês de referência do modal Adicionar alunos para exibir nome do mês e ano em pt-BR, como Novembro de 2026. Painel próprio com doze meses, navegação/edição de ano, teclado e retorno de foco. O contrato YYYY-MM, RPC, seleção por polo e acesso Denielson permanecem preservados.
 
-Mudança crítica por valores financeiros e RPC somente leitura. Base 4.8.262/bbfa9b2c67681534c9a895769c2393425a226989. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-07-nfse-adicionar-alunos.md`. Contrato, testes e Safari desktop/390 px validados. Usuário autorizou explicitamente a RPC em produção; migration 20261108005455 aplicada e validada. Candidato 4.8.264, preservando o lote paralelo 4.8.263. Aguardam CI/Preview e conferência final da interface publicada.
+Correção visual com fechamento para publicação autorizada nesta conversa. Base 4.8.264/c064202b8851a49d851ca740c69e778a87eab0af. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-08-nfse-mes-pt-br.md`. TypeScript/lint focados e Safari local desktop/390 px conferidos. Revisão independente corrigiu preservação dos alunos ao escolher o mesmo mês. Candidato 4.8.265; CI, Preview e conferência publicada são verificados antes do encerramento.

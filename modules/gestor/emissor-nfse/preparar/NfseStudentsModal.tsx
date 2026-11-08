@@ -7,6 +7,7 @@ import type { NfseMoney } from '../types/nfse.types';
 import NfseStudentGroups, { NfseSelectionCheckbox } from './NfseStudentGroups';
 import type { NfseStudentGroup, NfseStudentOption } from './nfse-students.types';
 import { useNfseStudentsDialog } from './useNfseStudentsDialog';
+import NfseMonthPicker from './NfseMonthPicker';
 import './nfse-students.css';
 
 export interface NfseStudentsModalProps {
@@ -60,9 +61,9 @@ export default function NfseStudentsModal(props: NfseStudentsModalProps) {
       </header>
       <div className="nfse-students-body">
         <div className="nfse-students-filters">
-          <label className="nfse-field nfse-students-filter-month"><span>Mês de referência</span>
-            <input ref={initialFocusRef} type="month" value={props.month} onChange={event => props.onMonthChange(event.target.value)} />
-          </label>
+          <div className="nfse-field nfse-students-filter-month"><label htmlFor={`${titleId}-month`}>Mês de referência</label>
+            <NfseMonthPicker id={`${titleId}-month`} inputRef={initialFocusRef} value={props.month} onChange={props.onMonthChange} />
+          </div>
           <div className="nfse-field nfse-students-filter-course"><label htmlFor={`${titleId}-course`}>Tipo de curso</label>
             <InstitutionalSelect id={`${titleId}-course`} ariaLabel="Tipo de curso" value={props.courseTypeId}
               onValueChange={props.onCourseTypeChange} options={props.courseTypes} placeholder="Selecionar tipo" loading={props.loading && !props.courseTypes.length} />
