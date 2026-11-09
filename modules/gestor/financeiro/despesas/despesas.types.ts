@@ -77,6 +77,9 @@ export interface DespesaReciboSnapshot {
     dataPagamento?: string;
     valorPago?: number;
     fornecedorNome?: string;
+    parceiroVinculado?: boolean;
+    turmaNome?: string;
+    turmaCodigo?: string;
     fornecedorDocumento?: string;
     categoriaNome?: string;
     formaPagamento?: string;
@@ -205,4 +208,5 @@ export interface DespesaGroupSummary {
   paidValue: number;
   itemCount: number;
 }
+
 

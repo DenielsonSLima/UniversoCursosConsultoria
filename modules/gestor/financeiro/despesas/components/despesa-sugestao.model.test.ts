@@ -13,7 +13,7 @@ test('sugere somente descrição, valor-base e categoria ativa de uma despesa j�
     ...sugestao, status: 'PAGO', dataVencimento: '2020-01-01', valorPago: 135,
     jurosValor: 15, contaBancariaId: 'banco', anexoPath: 'comprovante.pdf',
   } as typeof sugestao);
-  assert.deepEqual(state.campos, { descricao: 'Internet mensal', valor: '120,00', categoriaId: 'internet' });
+  assert.deepEqual(state.campos, { descricao: 'INTERNET MENSAL', valor: '120,00', categoriaId: 'internet' });
   assert.equal(state.aplicados, 3);
   assert.deepEqual(Object.keys(state.campos).sort(), ['categoriaId', 'descricao', 'valor']);
 });
@@ -33,7 +33,7 @@ test('troca de credor limpa sugestões anteriores e conserva somente edições m
   state = reduce(state, { type: 'selecionar', scope: 'matriz:fixa:credor-b' });
   assert.deepEqual(state.campos, { descricao: '', valor: '140,00', categoriaId: '' });
   state = apply(state, { id: 'b', descricao: 'Água', valorBase: 50, categoriaId: 'agua' }, ['agua']);
-  assert.deepEqual(state.campos, { descricao: 'Água', valor: '140,00', categoriaId: 'agua' });
+  assert.deepEqual(state.campos, { descricao: 'ÁGUA', valor: '140,00', categoriaId: 'agua' });
 });
 
 test('ignora resposta atrasada de outro credor, polo ou tipo', () => {
@@ -76,5 +76,14 @@ test('remover credor descarta a sugestão e selecionar novamente permite nova co
   let state = reduce(apply(), { type: 'selecionar', scope: '' });
   assert.deepEqual(state.campos, initialSugestaoState.campos);
   state = reduce(state, { type: 'selecionar', scope: 'matriz:fixa:credor-a' });
-  assert.equal(apply(state).campos.descricao, sugestao.descricao);
+  assert.equal(apply(state).campos.descricao, sugestao.descricao.toLocaleUpperCase('pt-BR'));
+});
+
+test('digitação normaliza acentos e preserva espaços e demais campos', () => {
+  let state = reduce(select(), { type: 'editar', campo: 'descricao', value: ' água / gás ' });
+  assert.equal(state.campos.descricao, ' ÁGUA / GÁS ');
+  state = reduce(state, { type: 'editar', campo: 'valor', value: '1.234,56' });
+  state = reduce(state, { type: 'editar', campo: 'categoriaId', value: 'id-Misto' });
+  assert.equal(state.campos.valor, '1.234,56');
+  assert.equal(state.campos.categoriaId, 'id-Misto');
 });

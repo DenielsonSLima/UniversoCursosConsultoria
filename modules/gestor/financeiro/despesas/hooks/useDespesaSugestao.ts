@@ -1,3 +1,4 @@
+import { normalizeDespesaDescricao } from '../despesas-descricao';
 import { useEffect, useReducer } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { despesasQueryKeys, type DespesaTipo } from '../despesas.queryKeys';
@@ -17,7 +18,7 @@ export function useDespesaSugestao(
   const enabled = Boolean(poloId && poloId !== 'todos' && fornecedorId && tipo !== 'OUTRO_DEBITO');
   const scope = enabled ? `${poloId}:${tipo}:${fornecedorId}` : '';
   const [state, dispatch] = useReducer(despesaSugestaoReducer, initialCampos, (campos) => campos ? {
-    ...initialSugestaoState, campos: { descricao: campos.descricao, valor: campos.valor, categoriaId: campos.categoriaId },
+    ...initialSugestaoState, campos: { descricao: normalizeDespesaDescricao(campos.descricao), valor: campos.valor, categoriaId: campos.categoriaId },
     manuais: { descricao: true, valor: true, categoriaId: true },
   } : initialSugestaoState);
   const query = useQuery({
@@ -63,4 +64,5 @@ export function useDespesaSugestao(
     retry: () => { void query.refetch(); },
   };
 }
+
 

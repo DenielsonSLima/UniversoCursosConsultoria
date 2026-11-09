@@ -35,10 +35,13 @@ export interface ReciboData {
   dataPagamento?: string;
   valorPago?: number;
   fornecedorNome?: string;
+  parceiroVinculado?: boolean;
   /** Documento real do fornecedor; nunca o UUID interno do parceiro. */
   fornecedorDocumento?: string;
   fornecedorId?: string;
   categoriaNome?: string;
+  turmaNome?: string;
+  turmaCodigo?: string;
   formaPagamento?: string;
   contaBancariaNome?: string;
   poloId?: string;
@@ -66,7 +69,9 @@ export const despesaToReciboData = (item: DespesaLancamento, empresaInfo?: Parti
   valorPago: item.valorPago,
   fornecedorNome: item.fornecedorNome,
   fornecedorId: item.fornecedorId,
+  parceiroVinculado: Boolean(item.fornecedorId),
   categoriaNome: item.categoriaNome,
+  turmaNome: item.turmaNome,
   formaPagamento: item.formaPagamento,
   contaBancariaNome: item.contaBancariaNome,
   poloId: item.poloId,
@@ -77,6 +82,9 @@ export const despesaToReciboData = (item: DespesaLancamento, empresaInfo?: Parti
   status: item.status,
   ...empresaInfo,
 });
+
+export const formatReciboTurma = (data: Pick<ReciboData, 'turmaNome' | 'turmaCodigo'>) =>
+  [...new Set([data.turmaCodigo, data.turmaNome].map(value => String(value || '').trim()).filter(Boolean))].join(' · ');
 
 // ============================================================
 // Função de impressão HTML
@@ -180,6 +188,8 @@ export const printReciboDespesa = (data: ReciboData) => {
     ${data.categoriaNome ? `<p style="font-size:10px;color:#64748b;margin-top:3px;">Categoria: ${text(data.categoriaNome)}</p>` : ''}
   </div>
 
+  ${formatReciboTurma(data) ? `<div class="descricao-box"><label>Turma vinculada</label><p>${text(formatReciboTurma(data))}</p></div>` : ''}
+
   <div class="grid">
     <div class="field">
       <label>${text(data.contraparteLabel || 'Fornecedor / Credor')}</label>
@@ -220,6 +230,7 @@ export const printReciboDespesa = (data: ReciboData) => {
   </div>` : ''}
 
   <div class="footer">
+    ${data.parceiroVinculado === true ? `<div class="assinatura"><div class="linha"></div><p>${text(data.fornecedorNome || 'PARCEIRO VINCULADO')}</p><p style="font-size:9px;">ASSINATURA DO PARCEIRO</p></div>` : ''}
     <div style="font-size:10px;color:#94a3b8;">Documento gerado em ${new Date().toLocaleString('pt-BR')}</div>
     <div class="assinatura">
       <div class="linha"></div>
@@ -250,14 +261,17 @@ const ReciboDespesaPreview: React.FC<ReciboDespesaPreviewProps> = ({ data }) => 
     empresaNome: data?.empresaNome || 'Universo Cursos e Consultoria',
     empresaCnpj: data?.empresaCnpj || '00.000.000/0001-00',
     poloNome: data?.poloNome || 'Polo Matriz — Aracaju/SE',
-    descricao: data?.descricao || 'Aluguel de Outubro — Sede Principal',
+    descricao: (data?.descricao || 'Aluguel de Outubro — Sede Principal').toLocaleUpperCase('pt-BR'),
     valor: data?.valor ?? 2500,
     valorPago: data?.valorPago ?? 2500,
     dataVencimento: data?.dataVencimento || new Date().toISOString().slice(0, 10),
     dataPagamento: data?.dataPagamento || new Date().toISOString().slice(0, 10),
     fornecedorNome: data?.fornecedorNome || 'João Silva Imóveis',
     fornecedorId: data?.fornecedorId,
+    parceiroVinculado: data ? data.parceiroVinculado === true : true,
     categoriaNome: data?.categoriaNome || 'Aluguel',
+    turmaNome: data?.turmaNome,
+    turmaCodigo: data?.turmaCodigo,
     formaPagamento: data?.formaPagamento || 'PIX',
     status: data?.status || 'PAGO',
     parcelaNumero: data?.parcelaNumero ?? 1,
@@ -301,6 +315,11 @@ const ReciboDespesaPreview: React.FC<ReciboDespesaPreviewProps> = ({ data }) => 
         )}
       </div>
 
+      {formatReciboTurma(sample) && <div className="mb-4 rounded-xl bg-slate-50 p-4">
+        <p className="mb-1 text-[9px] font-black uppercase tracking-wider text-slate-400">Turma vinculada</p>
+        <p className="break-words font-semibold text-slate-800">{formatReciboTurma(sample)}</p>
+      </div>}
+
       {/* Grid de campos */}
       <div className="mb-5 grid grid-cols-1 gap-3 min-[390px]:grid-cols-2 md:gap-4">
         {[
@@ -330,6 +349,11 @@ const ReciboDespesaPreview: React.FC<ReciboDespesaPreviewProps> = ({ data }) => 
         <p className="break-words text-[10px] text-slate-400">
           Gerado em: {new Date().toLocaleString('pt-BR')}
         </p>
+        {sample.parceiroVinculado === true && <div className="w-full min-w-0 text-center md:max-w-52">
+          <div className="mx-auto mb-2 w-full max-w-40 border-t border-slate-800" />
+          <p className="break-words text-xs font-semibold text-slate-600">{sample.fornecedorNome || 'PARCEIRO VINCULADO'}</p>
+          <p className="text-[10px] text-slate-400">ASSINATURA DO PARCEIRO</p>
+        </div>}
         <div className="w-full min-w-0 text-center md:w-auto md:min-w-40">
           <div className="mx-auto mb-2 w-full max-w-40 border-t border-slate-800" />
           <p className="break-words text-xs font-semibold text-slate-600">{sample.empresaNome}</p>
@@ -341,3 +365,4 @@ const ReciboDespesaPreview: React.FC<ReciboDespesaPreviewProps> = ({ data }) => 
 };
 
 export default ReciboDespesaPreview;
+

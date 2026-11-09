@@ -17,7 +17,7 @@ import type {
   CanonicalDocumentPdfResult,
 } from '../../../secretaria/shared/canonical-document-pdf.types';
 import type { CanonicalDocumentPreviewItem } from '../../../secretaria/shared/canonical-document-render.types';
-import { formatCpfCnpj, type ReciboData } from '../../../cadastros/modelos-documentos/recibo/ReciboDespesaPreview';
+import { formatCpfCnpj, formatReciboTurma, type ReciboData } from '../../../cadastros/modelos-documentos/recibo/ReciboDespesaPreview';
 
 const PAGE_WIDTH = 210;
 const PAGE_HEIGHT = 297;
@@ -131,16 +131,15 @@ const drawField = (
   pdf.setFont('helvetica', 'bold');
   pdf.setTextColor(100, 116, 139);
   pdf.setFontSize(5.5);
-  drawCanonicalPdfText(pdf, label.toUpperCase(), x, y + 2.4, {
+  drawCanonicalPdfText(pdf, label.toUpperCase(), x, y + 1.8, {
     maxWidth: width - 5,
     maxLines: 1,
   });
   pdf.setFont('helvetica', 'bold');
   pdf.setTextColor(15, 23, 42);
   pdf.setFontSize(8.4);
-  drawCanonicalPdfText(pdf, value, x, y + 6.4, {
+  drawCanonicalPdfText(pdf, value, x, y + 5.4, {
     maxWidth: width - 5,
-    maxLines: 2,
     lineHeight: 1.12,
   });
 };
@@ -181,19 +180,38 @@ const drawReceiptDetails = (pdf: jsPDF, receipt: ReciboData, startY: number) => 
   ] as const;
   const gap = 5;
   const columnWidth = (CONTENT_WIDTH - gap) / 2;
-  const rowHeight = 16;
-
-  rows.forEach((row, rowIndex) => {
-    const y = startY + rowIndex * rowHeight;
+  const turma = formatReciboTurma(receipt);
+  const valueLineHeight = 8.4 * 25.4 / 72 * 1.12;
+  let y = startY;
+  const background = (height: number) => {
     pdf.setFillColor(248, 250, 252);
     pdf.setDrawColor(226, 232, 240);
     pdf.setLineWidth(0.2);
-    pdf.roundedRect(CONTENT_LEFT, y, CONTENT_WIDTH, rowHeight - 2, 1.8, 1.8, 'FD');
+    pdf.roundedRect(CONTENT_LEFT, y, CONTENT_WIDTH, height - 1, 1.8, 1.8, 'FD');
+  };
+  rows.forEach((row) => {
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(8.4);
+    const lines = Math.max(...row.map(field => pdf.splitTextToSize(normalizeCanonicalPdfText(field[1]), columnWidth - 5).length));
+    const height = Math.max(12, 7 + lines * valueLineHeight);
+    background(height);
     drawField(pdf, row[0][0], row[0][1], CONTENT_LEFT + 3, y, columnWidth);
     pdf.setDrawColor(226, 232, 240);
-    pdf.line(CONTENT_LEFT + columnWidth + (gap / 2), y + 2, CONTENT_LEFT + columnWidth + (gap / 2), y + rowHeight - 4);
+    pdf.line(CONTENT_LEFT + columnWidth + (gap / 2), y + 2, CONTENT_LEFT + columnWidth + (gap / 2), y + height - 3);
     drawField(pdf, row[1][0], row[1][1], CONTENT_LEFT + columnWidth + gap, y, columnWidth);
+    y += height;
   });
+  if (turma) {
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(8.4);
+    const lines = pdf.splitTextToSize(normalizeCanonicalPdfText(turma), CONTENT_WIDTH - 8).length;
+    const height = Math.max(12, 7 + lines * valueLineHeight);
+    background(height);
+    drawField(pdf, 'Turma vinculada', turma, CONTENT_LEFT + 3, y, CONTENT_WIDTH - 3);
+    y += height;
+  }
+  return y;
+
 };
 
 const drawReceiptPage = (
@@ -226,7 +244,7 @@ const drawReceiptPage = (
     },
   );
 
-  const titleY = header.contentTop + 4;
+  const titleY = header.contentTop + 2;
   pdf.setFont('helvetica', 'bold');
   pdf.setTextColor(0, 26, 51);
   pdf.setFontSize(14);
@@ -239,22 +257,22 @@ const drawReceiptPage = (
     baseline: 'top',
   });
 
-  const valueTop = titleY + 16;
+  const valueTop = titleY + 12;
   pdf.setFillColor(248, 250, 252);
   pdf.setDrawColor(paid ? 16 : 190, paid ? 185 : 24, paid ? 129 : 93);
   pdf.setLineWidth(0.5);
-  pdf.roundedRect(CONTENT_LEFT, valueTop, CONTENT_WIDTH, 23, 3, 3, 'FD');
+  pdf.roundedRect(CONTENT_LEFT, valueTop, CONTENT_WIDTH, 19, 3, 3, 'FD');
   pdf.setFont('helvetica', 'bold');
   pdf.setTextColor(100, 116, 139);
   pdf.setFontSize(5.8);
-  pdf.text(paid ? 'VALOR PAGO' : 'VALOR PREVISTO', PAGE_WIDTH / 2, valueTop + 4.3, {
+  pdf.text(paid ? 'VALOR PAGO' : 'VALOR PREVISTO', PAGE_WIDTH / 2, valueTop + 3, {
     align: 'center',
     baseline: 'top',
   });
   pdf.setFont('helvetica', 'bold');
   pdf.setTextColor(0, 26, 51);
   pdf.setFontSize(20);
-  pdf.text(formatCurrency(paid ? paidValue : receipt.valor), PAGE_WIDTH / 2, valueTop + 9.2, {
+  pdf.text(formatCurrency(paid ? paidValue : receipt.valor), PAGE_WIDTH / 2, valueTop + 7.2, {
     align: 'center',
     baseline: 'top',
   });
@@ -262,22 +280,22 @@ const drawReceiptPage = (
   const narrative = paid
     ? `Declaramos que foi efetuado o pagamento de ${formatCurrency(paidValue)} ao fornecedor ${receipt.fornecedorNome || 'não informado'}${supplierDocument ? `, CPF/CNPJ ${supplierDocument}` : ''}, referente a ${receipt.descricao || 'despesa sem descrição'}.`
     : `Este documento registra a despesa ${receipt.descricao || 'sem descrição'}, no valor previsto de ${formatCurrency(receipt.valor)}, ainda pendente de baixa financeira.`;
-  const narrativeTop = valueTop + 30;
+  const narrativeTop = valueTop + 24;
   pdf.setFont('times', 'normal');
   pdf.setTextColor(15, 23, 42);
   pdf.setFontSize(10.2);
-  drawCanonicalPdfText(pdf, normalizeCanonicalPdfText(narrative), CONTENT_LEFT, narrativeTop, {
+  const narrativeLines = drawCanonicalPdfText(pdf, normalizeCanonicalPdfText(narrative), CONTENT_LEFT, narrativeTop, {
     maxWidth: CONTENT_WIDTH,
-    maxLines: 4,
-    lineHeight: 1.42,
+    lineHeight: 1.2,
   });
 
-  const detailTop = narrativeTop + 29;
-  drawReceiptDetails(pdf, receipt, detailTop);
+  const detailTop = narrativeTop + narrativeLines * (10.2 * 25.4 / 72) * 1.2 + 6;
+  const detailsBottom = drawReceiptDetails(pdf, receipt, detailTop);
 
+  let contentBottom = detailsBottom;
   const observation = String(receipt.observacao || '').trim();
   if (observation) {
-    const observationTop = detailTop + 82;
+    const observationTop = detailsBottom + 2;
     pdf.setFont('helvetica', 'bold');
     pdf.setTextColor(100, 116, 139);
     pdf.setFontSize(5.8);
@@ -285,15 +303,20 @@ const drawReceiptPage = (
     pdf.setFont('helvetica', 'normal');
     pdf.setTextColor(51, 65, 85);
     pdf.setFontSize(7.6);
-    drawCanonicalPdfText(pdf, observation, CONTENT_LEFT, observationTop + 4.4, {
+    const lines = drawCanonicalPdfText(pdf, observation, CONTENT_LEFT, observationTop + 4.4, {
       maxWidth: CONTENT_WIDTH,
-      maxLines: 3,
       lineHeight: 1.2,
     });
+    contentBottom = observationTop + 4.4 + lines * (7.6 * 25.4 / 72) * 1.2;
   }
 
   const cityState = [polo.cidade, polo.estado || polo.uf].filter(Boolean).join('/');
-  const signatureTop = PAGE_HEIGHT - 42;
+  const signatureTop = contentBottom + 8;
+  if (signatureTop > PAGE_HEIGHT - 42) {
+    throw new Error('O conteúdo excede o espaço do recibo. Reduza o texto para emitir sem omitir informações.');
+  }
+  const partnerSignature = receipt.parceiroVinculado === true;
+  const signatureLineY = signatureTop + (partnerSignature ? 13 : 18);
   pdf.setFont('times', 'normal');
   pdf.setTextColor(15, 23, 42);
   pdf.setFontSize(8.8);
@@ -302,11 +325,11 @@ const drawReceiptPage = (
   });
   pdf.setDrawColor(15, 23, 42);
   pdf.setLineWidth(0.25);
-  pdf.line(PAGE_WIDTH - 98, signatureTop + 18, PAGE_WIDTH - CONTENT_RIGHT, signatureTop + 18);
+  pdf.line(PAGE_WIDTH - 98, signatureLineY, PAGE_WIDTH - CONTENT_RIGHT, signatureLineY);
   pdf.setFont('helvetica', 'bold');
   pdf.setTextColor(0, 26, 51);
   pdf.setFontSize(7.2);
-  pdf.text(polo.nome || 'Universo Cursos e Consultoria', PAGE_WIDTH - 59, signatureTop + 21, {
+  pdf.text(polo.nome || 'Universo Cursos e Consultoria', PAGE_WIDTH - 59, signatureLineY + 3, {
     align: 'center',
     baseline: 'top',
   });
@@ -317,6 +340,34 @@ const drawReceiptPage = (
     align: 'center',
     baseline: 'top',
   });
+
+  if (partnerSignature) {
+    const name = normalizeCanonicalPdfText(receipt.fornecedorNome || 'PARCEIRO VINCULADO');
+    const width = 78;
+    let size = 7.2;
+    pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(0, 26, 51);
+    pdf.setFontSize(size);
+    let lines = pdf.splitTextToSize(name, width) as string[];
+    while (lines.length > 3 && size > 5.6) {
+      size = Math.max(5.6, size - 0.4);
+      pdf.setFontSize(size);
+      lines = pdf.splitTextToSize(name, width) as string[];
+    }
+    if (lines.length > 3) throw new Error('O nome do parceiro excede o espaço de assinatura do recibo.');
+    pdf.setDrawColor(15, 23, 42);
+    pdf.setLineWidth(0.25);
+    pdf.line(CONTENT_LEFT, signatureLineY, CONTENT_LEFT + width, signatureLineY);
+    pdf.text(lines, CONTENT_LEFT + width / 2, signatureLineY + 3, {
+      align: 'center', baseline: 'top', lineHeightFactor: 1.1,
+    });
+    pdf.setFont('helvetica', 'normal');
+    pdf.setTextColor(100, 116, 139);
+    pdf.setFontSize(5.3);
+    pdf.text('ASSINATURA DO PARCEIRO', CONTENT_LEFT + width / 2, signatureTop + 25.5, {
+      align: 'center', baseline: 'top',
+    });
+  }
 
   const footerY = PAGE_HEIGHT - 10;
   pdf.setDrawColor(226, 232, 240);
@@ -385,3 +436,4 @@ export const createDespesaReciboPdf = async (
     fileName: `${isPaid(first.recibo) ? 'recibo-pagamento' : 'comprovante-lancamento'}-${identifier}.pdf`,
   };
 };
+

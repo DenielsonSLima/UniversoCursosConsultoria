@@ -1,3 +1,4 @@
+import { normalizeDespesaDescricao } from '../despesas-descricao.ts';
 import type { DespesaSugestao } from '../despesas-sugestoes.service';
 
 export interface SugestaoCampos {
@@ -34,7 +35,7 @@ type Action =
 export function despesaSugestaoReducer(state: SugestaoState, action: Action): SugestaoState {
   if (action.type === 'editar') return {
     ...state,
-    campos: { ...state.campos, [action.campo]: action.value },
+    campos: { ...state.campos, [action.campo]: action.campo === 'descricao' ? normalizeDespesaDescricao(action.value) : action.value },
     manuais: { ...state.manuais, [action.campo]: true },
   };
   if (action.type === 'selecionar') {
@@ -56,7 +57,7 @@ export function despesaSugestaoReducer(state: SugestaoState, action: Action): Su
   const categoriaIndisponivel = Boolean(sugestao.categoriaId)
     && !action.categoriasAtivas.includes(sugestao.categoriaId);
   const values: SugestaoCampos = {
-    descricao: sugestao.descricao,
+    descricao: normalizeDespesaDescricao(sugestao.descricao),
     valor: Number.isFinite(sugestao.valorBase) && sugestao.valorBase > 0
       ? sugestao.valorBase.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
       : '',
@@ -72,3 +73,4 @@ export function despesaSugestaoReducer(state: SugestaoState, action: Action): Su
   }
   return { ...state, campos, concluida: true, encontrada: true, aplicados, categoriaIndisponivel };
 }
+

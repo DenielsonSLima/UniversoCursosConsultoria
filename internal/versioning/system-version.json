@@ -1,8 +1,8 @@
 {
-  "version": "4.8.276",
+  "version": "4.8.277",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 285,
+  "revision": 286,
   "releasedAt": "2026-11-09",
-  "summary": "NFS-e com prévia por nota e downloads PDF/XML individuais e em ZIP"
+  "summary": "Descrições em maiúsculas e recibo compacto com turma e assinatura do parceiro"
 }
