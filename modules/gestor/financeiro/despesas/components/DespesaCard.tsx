@@ -5,6 +5,7 @@ import {
   AlertCircle,
   CheckCircle2,
   Clock,
+  Copy,
   Layers,
   Paperclip,
   Pencil,
@@ -35,6 +36,7 @@ interface DespesaCardProps {
   contas: ContaBancaria[];
   onPagar?: (item: DespesaLancamento) => void;
   onEditar?: (item: DespesaLancamento) => void;
+  onClonar?: (item: DespesaLancamento) => void;
   onCancelar?: (item: DespesaLancamento) => void;
   onExcluir?: (items: DespesaLancamento[]) => void;
   onImprimir?: (item: DespesaLancamento) => void;
@@ -50,6 +52,7 @@ const DespesaCard: React.FC<DespesaCardProps> = ({
   contas,
   onPagar,
   onEditar,
+  onClonar,
   onCancelar,
   onExcluir,
   onImprimir,
@@ -177,6 +180,9 @@ const DespesaCard: React.FC<DespesaCardProps> = ({
 
         {!item.isRateioDerived && !isCancelado && (
           <div className="mt-4 flex flex-wrap gap-2 border-t border-slate-100 pt-3">
+            {onClonar && <button type="button" onClick={() => onClonar(item)}
+              className={`${actionClass} border border-slate-200 text-slate-600 hover:bg-slate-50 focus-visible:ring-slate-500`}
+              aria-label={`Clonar lançamento ${item.descricao}`}><Copy size={13} /> Clonar</button>}
             {isAberto && !item.paymentSummary?.hasEvents && onEditar && (
               <button
                 type="button"

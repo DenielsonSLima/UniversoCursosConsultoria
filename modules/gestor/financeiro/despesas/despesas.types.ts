@@ -165,6 +165,7 @@ export interface CreateDespesaInput {
   descontoValor?: number;
   dataLancamento?: string;
   dataVencimento: string;
+  dataPagamento?: string | null;
   categoriaFinanceiraId?: string;
   fornecedorId?: string;
   observacao?: string;
@@ -204,3 +205,4 @@ export interface DespesaGroupSummary {
   paidValue: number;
   itemCount: number;
 }
+

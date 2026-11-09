@@ -13,7 +13,7 @@ interface DespesasTabProps {
 }
 
 const DespesasTab: React.FC<DespesasTabProps> = ({ poloId }) => {
-  const [activeExpenseTab, setActiveExpenseTab] = useState<ExpenseType>('fixas');
+  const [activeExpenseTab, setActiveExpenseTab] = useState<ExpenseType>('variaveis');
   const [actionsContainer, setActionsContainer] = useState<HTMLDivElement | null>(null);
 
   const subtabs = [

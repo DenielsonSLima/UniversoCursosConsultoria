@@ -1,8 +1,8 @@
 {
-  "version": "4.8.273",
+  "version": "4.8.274",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 282,
+  "revision": 283,
   "releasedAt": "2026-11-08",
-  "summary": "NFS-e com fila de preparação e cadastro seguro do certificado A1 no Supabase Vault"
+  "summary": "Clonagem de despesas com escolha pendente/pago, categorias em maiúsculas e abertura em variáveis"
 }

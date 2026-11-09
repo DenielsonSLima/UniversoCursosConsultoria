@@ -59,7 +59,7 @@ const DespesaFormSettlementFields: React.FC<Props> = (props) => <>
         <BankAccountPicker accounts={props.activeContas} value={props.contaBancariaId} onChange={props.setContaBancariaId} placeholder="Selecionar conta..." tone="emerald" />
       </div>
       <div><label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-emerald-600">Forma de Pagamento</label>
-        <div className="flex gap-2">{(['PIX', 'TED', 'BOLETO', 'DINHEIRO'] as const).map((forma) => (
+        <div className="flex gap-2">{([...new Set(['PIX', 'TED', 'BOLETO', 'DINHEIRO', props.formaPagamento].filter(Boolean))]).map((forma) => (
           <button key={forma} type="button" onClick={() => props.setFormaPagamento(forma)}
             className={`flex-1 rounded-lg border py-2 text-[10px] font-bold uppercase transition-all ${props.formaPagamento === forma ? 'border-emerald-600 bg-emerald-600 text-white' : 'border-slate-200 text-slate-500 hover:border-emerald-400'}`}>
             {forma}

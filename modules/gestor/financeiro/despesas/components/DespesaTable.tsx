@@ -2,7 +2,7 @@ import React from 'react';
 import DespesaRateioBadge from './DespesaRateioBadge';
 import { FinancialPaymentBalance, hasPartialPayment } from '../../settlements/financial-payment.presentation';
 import {
-  AlertCircle, Banknote, CheckCircle2, Clock, Paperclip, Pencil,
+  AlertCircle, Banknote, CheckCircle2, Clock, Copy, Paperclip, Pencil,
   Printer, RotateCcw, Trash2, XCircle,
 } from 'lucide-react';
 import type { ContaBancaria } from '../../financeiro.service';
@@ -28,6 +28,7 @@ interface DespesaTableProps {
   contas: ContaBancaria[];
   onPagar?: (item: DespesaLancamento) => void;
   onEditar?: (item: DespesaLancamento) => void;
+  onClonar?: (item: DespesaLancamento) => void;
   onCancelar?: (item: DespesaLancamento) => void;
   onExcluir?: (items: DespesaLancamento[]) => void;
   onImprimir?: (item: DespesaLancamento) => void;
@@ -39,7 +40,7 @@ interface DespesaTableProps {
 const actionClass = 'inline-flex items-center justify-center gap-1.5 rounded-lg border bg-white px-2.5 py-2 text-[9px] font-black uppercase tracking-wide shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1';
 
 const DespesaTable: React.FC<DespesaTableProps> = ({
-  items, contas, onPagar, onEditar, onCancelar, onExcluir, onImprimir, onAnexo,
+  items, contas, onPagar, onEditar, onClonar, onCancelar, onExcluir, onImprimir, onAnexo,
   selectedIds, onSelectionChange,
 }) => {
   if (items.length === 0) {
@@ -102,6 +103,7 @@ const DespesaTable: React.FC<DespesaTableProps> = ({
                 </td>
                 <td className="px-4 py-4"><StatusBadge status={hasPartialPayment(item.paymentSummary) ? 'PARCIAL' : item.status} />
                   {item.isRateioDerived ? <p className="mt-2 text-[10px] font-bold text-slate-400">Somente informativa</p> : <div className="mt-2 grid grid-cols-2 gap-1.5">
+                    {!isCancelado && onClonar && <button type="button" onClick={() => onClonar(item)} className={`${actionClass} border-slate-200 text-slate-600 hover:bg-slate-100 focus-visible:ring-slate-500`} aria-label={`Clonar lançamento ${item.descricao}`}><Copy size={13} /> Clonar</button>}
                     {isAberto && !item.paymentSummary?.hasEvents && onEditar && <button type="button" onClick={() => onEditar(item)} className={`${actionClass} border-blue-200 text-blue-700 hover:bg-blue-50 focus-visible:ring-blue-500`} aria-label={`Editar lançamento ${item.descricao}`}><Pencil size={13} /> Editar</button>}
                     {isAberto && onPagar && <button type="button" onClick={() => onPagar(item)} className={`${actionClass} border-emerald-200 text-emerald-700 hover:bg-emerald-50 focus-visible:ring-emerald-500`} aria-label={`Dar baixa em ${item.descricao}`}><CheckCircle2 size={13} /> {hasPartialPayment(item.paymentSummary) ? 'Pagar saldo' : 'Dar baixa'}</button>}
                     {item.paymentSummary?.hasEvents && onPagar && <button type="button" onClick={() => onPagar(item)} className={`${actionClass} border-emerald-200 text-emerald-700`}>Histórico</button>}

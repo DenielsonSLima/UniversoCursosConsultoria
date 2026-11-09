@@ -19,6 +19,8 @@ import { useDespesasQueries } from '../hooks/useDespesasQueries';
 import { useDespesasRealtime } from '../hooks/useDespesasRealtime';
 import { useCategoriasFinanceirasQuery } from '../hooks/useCategoriasFinanceirasQuery';
 import DespesaForm from '../components/DespesaForm';
+import DespesaCloneChoice from '../components/DespesaCloneChoice';
+import { buildDespesaCloneDraft, type DespesaCloneDraft } from '../components/despesa-clone.model';
 import DespesaViewControls, { type DespesaAgrupamentoSelection } from '../components/DespesaViewControls';
 import DespesaTable from '../components/DespesaTable';
 import DespesaCard from '../components/DespesaCard';
@@ -68,6 +70,9 @@ const DespesasVariaveisTab: React.FC<{ poloId?: string | null; actionsContainer?
   const agrupar = agrupamento !== 'nenhum';
   const groupBy = agrupamento === 'nenhum' ? 'mes' : agrupamento;
   const [showForm, setShowForm] = useState(false);
+  const [cloneDraft, setCloneDraft] = useState<DespesaCloneDraft | null>(null);
+  const clonar = (item: DespesaLancamento) => { setCloneDraft(buildDespesaCloneDraft(item)); };
+  const closeForm = () => { setShowForm(false); setCloneDraft(null); };
   const [baixaItem, setBaixaItem] = useState<DespesaLancamento | null>(null);
   const [editItem, setEditItem] = useState<DespesaLancamento | null>(null);
   const [cancelItem, setCancelItem] = useState<DespesaLancamento | null>(null);
@@ -387,6 +392,7 @@ const DespesasVariaveisTab: React.FC<{ poloId?: string | null; actionsContainer?
           contas={contas}
           onPagar={(item) => setBaixaItem(item)}
           onEditar={setEditItem}
+          onClonar={clonar}
           onCancelar={handleCancelar}
           onImprimir={handleImprimir}
           onAnexo={handleAnexo}
@@ -397,6 +403,7 @@ const DespesasVariaveisTab: React.FC<{ poloId?: string | null; actionsContainer?
           contas={contas}
           onPagar={(item) => setBaixaItem(item)}
           onEditar={setEditItem}
+          onClonar={clonar}
           onCancelar={handleCancelar}
           onImprimir={handleImprimir}
           onAnexo={handleAnexo}
@@ -410,6 +417,7 @@ const DespesasVariaveisTab: React.FC<{ poloId?: string | null; actionsContainer?
               contas={contas}
               onPagar={(i) => setBaixaItem(i)}
               onEditar={setEditItem}
+          onClonar={clonar}
               onCancelar={handleCancelar}
               onImprimir={handleImprimir}
               onAnexo={handleAnexo}
@@ -418,6 +426,8 @@ const DespesasVariaveisTab: React.FC<{ poloId?: string | null; actionsContainer?
         </div>
       )}
 
+      {cloneDraft && !showForm && <DespesaCloneChoice draft={cloneDraft} onClose={closeForm}
+        onChoose={(pago) => { setCloneDraft({ ...cloneDraft, pago }); setShowForm(true); }} />}
       {showForm && (
         <DespesaForm
           tipo="DESPESA_VARIAVEL"
@@ -426,9 +436,10 @@ const DespesasVariaveisTab: React.FC<{ poloId?: string | null; actionsContainer?
           contas={contas}
           parceiros={parceiros}
           turmas={turmas}
-          onClose={() => setShowForm(false)}
+          cloneDraft={cloneDraft}
+          onClose={closeForm}
           onSuccess={(created, mode) => {
-            setShowForm(false);
+            closeForm();
             toast.success(mode === 'parcelado' ? `${created.length} parcelas lançadas!` : mode === 'baixa' ? 'Lançado e baixado!' : 'Lançamento criado!', 'Despesa variável registrada com sucesso.');
           }}
         />

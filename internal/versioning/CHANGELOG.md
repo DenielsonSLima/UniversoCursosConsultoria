@@ -16,6 +16,15 @@ Histórico arquivado: [05/10/2026 — versões 4.8.171 a 4.8.174](./changelog/20
 
 Histórico arquivado: [06/10/2026 a 09/10/2026 — versões 4.8.175 a 4.8.195](./changelog/2026-10-06-a-09-versoes-4-8-175-a-195.md).
 
+Histórico arquivado: [10/10/2026 — versões 4.8.196 a 4.8.198](./changelog/2026-10-10-versoes-4-8-196-a-198.md).
+
+## [4.8.274] - 2026-11-08
+
+- Contas a pagar abre em Despesas variáveis.
+- Clonar pergunta Pendente/Pago e abre o formulário preenchido, com parceiro em branco e confirmação antes de salvar.
+- Datas de lançamento, vencimento e pagamento permanecem independentes; novas baixas preservam a data conferida.
+- Categorias financeiras existentes são padronizadas em maiúsculas; a regra passa a valer também para novos cadastros e edições.
+
 ## [4.8.273] - 2026-11-08
 
 - Preparação NFS-e salva na fila com snapshot, reserva atômica e recuperação sem duplicidade.
@@ -473,24 +482,3 @@ Histórico arquivado: [06/10/2026 a 09/10/2026 — versões 4.8.175 a 4.8.195](.
 - Recebimento seleciona nosso curso técnico antes da turma e usa suas disciplinas, sem campo de curso de origem.
 - Financeiro apresenta cobranças em lista, com ciclos independentes, valores formatados, edição, inclusão, remoção e movimentação de mensalidades.
 - Cronograma conserva datas e condições por item na emissão posterior; o segundo ciclo dispensa justificativa adicional de continuidade.
-
-## [4.8.198] - 2026-10-10
-
-- Secretaria recebe aluno de outra escola a partir do cadastro, com escolha da turma de destino e registro de notas aproveitadas por disciplina.
-- Condições individuais começam com o padrão da turma e permitem ajustar parcelas, valores, desconto, multa, juros, matrícula e rematrícula, com cobranças opcionais.
-- Conferência registra a entrada e o plano financeiro; a emissão continua no fluxo próprio, incluindo taxa isolada ou ausência de cobranças.
-
-## [4.8.197] - 2026-10-10
-
-- Extrato financeiro do aluno na turma ganha Receber com a mesma janela e baixa manual do Financeiro.
-- Confirmação atualiza extrato, totais da turma, Contas a Receber e saldos, respeitando permissões, origem e conta do polo.
-- Parcela paga após cancelamento bancário deixa de sugerir retomar emissão e mostra a forma registrada na baixa manual.
-
-## [4.8.196] - 2026-10-10
-
-- Extrato financeiro da turma reconhece boletos Banese já emitidos e permite abrir o documento existente.
-- Emissão e recebimento aparecem separados; boleto pendente conserva o status até a confirmação do pagamento.
-- Descontos seguem a leitura de Contas a Receber, e alterações financeiras atualizam o extrato da matrícula.
-
-
-
