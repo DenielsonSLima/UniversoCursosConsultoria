@@ -120,6 +120,8 @@ export const createDespesa = async (
     p_descricao: input.descricao,
     p_data_lancamento: input.dataLancamento || input.dataVencimento,
     p_data_vencimento: input.dataVencimento,
+    ...(input.dataPagamento !== undefined && !input.splitTotal
+      ? { p_data_pagamento: input.markAsPaid ? input.dataPagamento : null } : {}),
     p_categoria_financeira_id: input.categoriaFinanceiraId || null,
     p_fornecedor_id: input.fornecedorId || null,
     p_observacao: input.observacao || null,
@@ -271,3 +273,4 @@ export const getDespesaReciboSnapshot = async (
 };
 
 export { getDespesaAnexoUrl };
+

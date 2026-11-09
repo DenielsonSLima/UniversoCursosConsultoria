@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState, type ComponentRef } from 'react';
 import { createPortal } from 'react-dom';
 import { CheckCircle2, Loader2, X } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -21,6 +21,7 @@ import DespesaFormAssociations from './DespesaFormAssociations';
 import DespesaFormCoreFields from './DespesaFormCoreFields';
 import DespesaFormSettlementFields from './DespesaFormSettlementFields';
 import DespesaNovoCredorModal from './DespesaNovoCredorModal';
+import { resolveDespesaCloneCategoria, type DespesaCloneDraft } from './despesa-clone.model';
 import {
   getTurmaModalidade,
   parseCurrencyInput,
@@ -34,6 +35,7 @@ import {
 
 interface DespesaFormProps {
   tipo: DespesaTipo;
+  cloneDraft?: DespesaCloneDraft | null;
   poloId: string;
   polos: RateioPolo[];
   contas: ContaBancaria[];
@@ -50,12 +52,13 @@ const tipoLabel: Record<DespesaTipo, string> = {
 };
 
 const DespesaForm: React.FC<DespesaFormProps> = ({
-  tipo, poloId, polos, contas, parceiros, turmas, onClose, onSuccess,
+  tipo, poloId, polos, contas, parceiros, turmas, onClose, onSuccess, cloneDraft,
 }) => {
   const queryClient = useQueryClient();
-  const [mode, setMode] = useState<LancamentoMode>('pendente');
-  const [dataLancamento, setDataLancamento] = useState(today());
-  const [dataVencimento, setDataVencimento] = useState(today());
+  const [mode, setMode] = useState<LancamentoMode>(cloneDraft?.pago ? 'baixa' : 'pendente');
+  const [dataPagamento, setDataPagamento] = useState(cloneDraft?.dataPagamento || cloneDraft?.dataLancamento || today());
+  const [dataLancamento, setDataLancamento] = useState(cloneDraft?.dataLancamento || today());
+  const [dataVencimento, setDataVencimento] = useState(cloneDraft?.dataVencimento || today());
   const [fornecedorTipo, setFornecedorTipo] = useState<DespesaCredorTipo | ''>('');
   const [fornecedorId, setFornecedorId] = useState('');
   const [showNovoCredor, setShowNovoCredor] = useState(false);
@@ -64,9 +67,9 @@ const DespesaForm: React.FC<DespesaFormProps> = ({
     ...parceiros,
     ...novosCredores.filter((created) => !parceiros.some((item) => item.id === created.id)),
   ], [parceiros, novosCredores]);
-  const [jurosValor, setJurosValor] = useState('');
-  const [multaValor, setMultaValor] = useState('');
-  const [descontoValor, setDescontoValor] = useState('');
+  const [jurosValor, setJurosValor] = useState(cloneDraft?.jurosValor || '');
+  const [multaValor, setMultaValor] = useState(cloneDraft?.multaValor || '');
+  const [descontoValor, setDescontoValor] = useState(cloneDraft?.descontoValor || '');
   const [anexo, setAnexo] = useState<File | null>(null);
   const [anexoErro, setAnexoErro] = useState('');
   const [turmaModalidade, setTurmaModalidade] = useState<TurmaModalidade | ''>('');
@@ -76,21 +79,27 @@ const DespesaForm: React.FC<DespesaFormProps> = ({
   const [splitTotal, setSplitTotal] = useState(false);
   const [intervaloDias, setIntervaloDias] = useState(30);
   const [intervaloUnit, setIntervaloUnit] = useState<IntervaloUnit>('meses');
-  const [contaBancariaId, setContaBancariaId] = useState('');
-  const [formaPagamento, setFormaPagamento] = useState('PIX');
+  const [contaBancariaId, setContaBancariaId] = useState(cloneDraft?.contaBancariaId || '');
+  const [formaPagamento, setFormaPagamento] = useState(cloneDraft?.formaPagamento || 'PIX');
   const [rateioSelection, setRateioSelection] = useState<RateioSelection>('DESLIGADO');
   const [polosSelecionados, setPolosSelecionados] = useState<Set<string>>(() => new Set());
   const [convenioMesId, setConvenioMesId] = useState('');
   const [showCategoriaModal, setShowCategoriaModal] = useState(false);
+  const formRef = useRef<ComponentRef<'form'>>(null);
   const categoriaSelectRef = useRef<HTMLDivElement>(null);
   const anexoInputRef = useRef<HTMLInputElement>(null);
   const requestIdRef = useRef(createFinanceRequestId());
 
   const categoriasQuery = useCategoriasFinanceirasQuery(tipo);
   const sugestao = useDespesaSugestao(
-    poloId, tipo, fornecedorId, categoriasQuery.data, !categoriasQuery.isPending,
+    poloId, tipo, fornecedorId, categoriasQuery.data, !categoriasQuery.isPending, cloneDraft,
   );
-  const { descricao, setDescricao, valor, setValor, categoriaId, setCategoriaId } = sugestao;
+  const { descricao, setDescricao, valor, setValor, categoriaId: categoriaSelecionada, setCategoriaId } = sugestao;
+  const conferirCategoriaOriginal = Boolean(cloneDraft?.categoriaId && categoriaSelecionada === cloneDraft.categoriaId);
+  const categoriaId = conferirCategoriaOriginal && categoriasQuery.isSuccess
+    ? resolveDespesaCloneCategoria(categoriaSelecionada, categoriasQuery.data) : categoriaSelecionada;
+  const categoriaCloneIndisponivel = Boolean(cloneDraft && categoriaSelecionada && !categoriaId);
+  const conferirCategoria = conferirCategoriaOriginal && !categoriasQuery.isSuccess;
   const conveniosQuery = useConveniosListQuery(poloId, 'ABERTOS', '');
   const categorias = categoriasQuery.data || [];
   const convenios = conveniosQuery.data?.itens || [];
@@ -128,6 +137,7 @@ const DespesaForm: React.FC<DespesaFormProps> = ({
         ? intervaloUnit.toUpperCase() as 'DIAS' | 'SEMANAS' | 'MESES'
         : undefined,
       markAsPaid: mode === 'baixa',
+      dataPagamento: cloneDraft ? (mode === 'baixa' ? dataPagamento : null) : undefined,
       formaPagamento: mode === 'baixa' ? formaPagamento : undefined,
       contaBancariaId: mode === 'baixa' ? contaBancariaId : undefined,
       rateio: rateioSelection === 'DESLIGADO' ? undefined : {
@@ -178,9 +188,13 @@ const DespesaForm: React.FC<DespesaFormProps> = ({
     }
   }, [isPoloMatriz]);
 
+  useEffect(() => {
+    if (cloneDraft) formRef.current?.querySelector('input')?.focus();
+  }, [cloneDraft]);
+
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
-    if (!descricao.trim() || !parseCurrencyInput(valor)) return;
+    if (conferirCategoria || !descricao.trim() || !parseCurrencyInput(valor)) return;
     if (mode === 'baixa' && !contaBancariaId) return;
     if (rateioSelecionadosInvalido) return;
     createMutation.mutate();
@@ -208,11 +222,11 @@ const DespesaForm: React.FC<DespesaFormProps> = ({
     className="financial-dialog-overlay fixed left-0 top-0 z-[200] flex h-screen h-[100dvh] w-screen items-center justify-center overflow-hidden bg-black/40 p-4 backdrop-blur-sm overscroll-contain">
     <div className="financial-dialog max-h-[calc(100dvh-2rem)] w-full max-w-4xl overflow-y-auto rounded-[2rem] bg-white shadow-2xl">
       <div className="financial-dialog-header sticky top-0 z-10 flex items-center justify-between border-b border-slate-100 bg-white px-8 pb-4 pt-8">
-        <div><h3 className="text-lg font-black uppercase tracking-tight text-[#001a33]">Novo Lançamento</h3>
+        <div><h3 className="text-lg font-black uppercase tracking-tight text-[#001a33]">{cloneDraft ? 'Clonar Lançamento' : 'Novo Lançamento'}</h3>
           <p className="mt-0.5 text-xs font-bold uppercase tracking-wider text-rose-500">{tipoLabel[tipo]}</p></div>
         <button type="button" onClick={onClose} className="rounded-xl p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700"><X size={20} /></button>
       </div>
-      <form onSubmit={handleSubmit} className="financial-dialog-body grid grid-cols-1 gap-4 px-8 py-6 md:grid-cols-2">
+      <form ref={formRef} onSubmit={handleSubmit} className="financial-dialog-body grid grid-cols-1 gap-4 px-8 py-6 md:grid-cols-2">
         <DespesaFormCoreFields {...{
           mode, setMode, dataLancamento, setDataLancamento, dataVencimento, setDataVencimento,
           categoriaId, setCategoriaId, categorias, tipo, showCategoriaModal, setShowCategoriaModal,
@@ -221,6 +235,11 @@ const DespesaForm: React.FC<DespesaFormProps> = ({
           setMultaValor, descontoValor, setDescontoValor,
         }} parceiros={credores} sugestao={sugestao} onNovoCredor={() => setShowNovoCredor(true)}
           convenioVinculado={Boolean(convenioMesId)} />
+        {categoriaCloneIndisponivel && <p role="status" className="text-xs text-amber-700 md:col-span-2">A categoria original está indisponível. Selecione outra ou deixe sem categoria.</p>}
+        {conferirCategoria && <p role="status" className="text-xs text-slate-500 md:col-span-2">
+          {categoriasQuery.isError ? 'Não foi possível conferir a categoria copiada.' : 'Conferindo a categoria copiada…'}
+          {categoriasQuery.isError && <button type="button" onClick={() => { void categoriasQuery.refetch(); }} className="ml-2 font-semibold text-rose-600 underline">Tentar novamente</button>}
+        </p>}
         <DespesaFormAssociations {...{
           mode, convenioMesId, convenios, isPoloMatriz, rateioSelection, polosRateio,
           polosSelecionados, togglePoloRateio, rateioSelecionadosInvalido, turmaModalidade,
@@ -230,6 +249,11 @@ const DespesaForm: React.FC<DespesaFormProps> = ({
           conveniosLoading={conveniosQuery.isPending}
           conveniosError={conveniosQuery.isError && !conveniosQuery.data}
           clearAnexo={() => { setAnexo(null); setAnexoErro(''); if (anexoInputRef.current) anexoInputRef.current.value = ''; }} />
+        {cloneDraft && mode === 'baixa' && <div className="md:col-span-2">
+          <label htmlFor="clone-data-pagamento" className="mb-1 block text-xs font-semibold text-slate-500">Data do pagamento *</label>
+          <input id="clone-data-pagamento" type="date" required value={dataPagamento} onChange={(event) => setDataPagamento(event.target.value)}
+            className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-semibold outline-none focus:ring-2 focus:ring-rose-500" />
+        </div>}
         <DespesaFormSettlementFields {...{
           mode, totalParcelas, setTotalParcelas, intervaloDias, setIntervaloDias, intervaloUnit,
           setIntervaloUnit, splitTotal, setSplitTotal, activeContas, contaBancariaId,
@@ -240,7 +264,7 @@ const DespesaForm: React.FC<DespesaFormProps> = ({
         </div>}
         <div className="financial-dialog-footer flex gap-3 pt-2 md:col-span-2">
           <button type="button" onClick={onClose} className="flex-1 rounded-xl border border-slate-200 py-3 text-sm font-bold uppercase tracking-wide text-slate-500 hover:bg-slate-50">Cancelar</button>
-          <button type="submit" disabled={createMutation.isPending || rateioSelecionadosInvalido}
+          <button type="submit" disabled={createMutation.isPending || rateioSelecionadosInvalido || conferirCategoria}
             className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-rose-600 py-3 text-sm font-black uppercase tracking-wide text-white shadow-md shadow-rose-900/20 hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-60">
             {createMutation.isPending ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
             {mode === 'parcelado' ? `Lançar ${totalParcelas} Parcelas` : mode === 'baixa' ? 'Lançar e Dar Baixa' : 'Lançar'}
@@ -262,3 +286,4 @@ const DespesaForm: React.FC<DespesaFormProps> = ({
 };
 
 export default DespesaForm;
+

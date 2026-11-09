@@ -21,6 +21,7 @@ interface DespesaGroupedViewProps {
   contas: ContaBancaria[];
   onPagar?: (item: DespesaLancamento) => void;
   onEditar?: (item: DespesaLancamento) => void;
+  onClonar?: (item: DespesaLancamento) => void;
   onCancelar?: (item: DespesaLancamento) => void;
   onExcluir?: (items: DespesaLancamento[]) => void;
   onImprimir?: (item: DespesaLancamento) => void;
@@ -37,6 +38,7 @@ const DespesaGroupedView: React.FC<DespesaGroupedViewProps> = ({
   contas,
   onPagar,
   onEditar,
+  onClonar,
   onCancelar,
   onExcluir,
   onImprimir,
@@ -122,6 +124,7 @@ const DespesaGroupedView: React.FC<DespesaGroupedViewProps> = ({
                     contas={contas}
                     onPagar={onPagar}
                     onEditar={onEditar}
+                      onClonar={onClonar}
                     onCancelar={onCancelar}
                     onExcluir={onExcluir}
                     onImprimir={onImprimir}
@@ -138,6 +141,7 @@ const DespesaGroupedView: React.FC<DespesaGroupedViewProps> = ({
                         contas={contas}
                         onPagar={onPagar}
                         onEditar={onEditar}
+                      onClonar={onClonar}
                         onCancelar={onCancelar}
                         onExcluir={onExcluir}
                         onImprimir={onImprimir}
@@ -163,3 +167,4 @@ const DespesaGroupedView: React.FC<DespesaGroupedViewProps> = ({
 };
 
 export default DespesaGroupedView;
+

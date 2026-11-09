@@ -23,6 +23,7 @@ interface DespesaListWorkspaceProps {
   tipo: DespesaTipo;
   onPagar: (item: DespesaLancamento) => void;
   onEditar: (item: DespesaLancamento) => void;
+  onClonar?: (item: DespesaLancamento) => void;
   onCancelar: (item: DespesaLancamento) => void;
   onImprimir: (item: DespesaLancamento) => void;
   onAnexo: (item: DespesaLancamento) => void;
@@ -43,6 +44,7 @@ const DespesaListWorkspace: React.FC<DespesaListWorkspaceProps> = ({
   tipo,
   onPagar,
   onEditar,
+  onClonar,
   onCancelar,
   onImprimir,
   onAnexo,
@@ -67,6 +69,7 @@ const DespesaListWorkspace: React.FC<DespesaListWorkspaceProps> = ({
     contas,
     onPagar,
     onEditar,
+  onClonar,
     onCancelar,
     onExcluir: deletion.openConfirmation,
     onImprimir,
@@ -106,6 +109,7 @@ const DespesaListWorkspace: React.FC<DespesaListWorkspaceProps> = ({
               contas={contas}
               onPagar={onPagar}
               onEditar={onEditar}
+                      onClonar={onClonar}
               onCancelar={onCancelar}
               onExcluir={deletion.openConfirmation}
               onImprimir={onImprimir}
@@ -128,3 +132,4 @@ const DespesaListWorkspace: React.FC<DespesaListWorkspaceProps> = ({
 };
 
 export default DespesaListWorkspace;
+

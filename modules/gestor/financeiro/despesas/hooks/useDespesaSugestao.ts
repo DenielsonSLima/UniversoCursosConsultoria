@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { despesasQueryKeys, type DespesaTipo } from '../despesas.queryKeys';
 import { getUltimaDespesaDoCredor } from '../despesas-sugestoes.service';
 import type { CategoriaFinanceira } from '../despesas.types';
+import type { SugestaoCampos } from '../components/despesa-sugestao.model';
 import { despesaSugestaoReducer, initialSugestaoState } from '../components/despesa-sugestao.model';
 
 export function useDespesaSugestao(
@@ -11,10 +12,14 @@ export function useDespesaSugestao(
   fornecedorId: string,
   categorias: CategoriaFinanceira[] | undefined,
   categoriasResolvidas: boolean,
+  initialCampos?: SugestaoCampos | null,
 ) {
   const enabled = Boolean(poloId && poloId !== 'todos' && fornecedorId && tipo !== 'OUTRO_DEBITO');
   const scope = enabled ? `${poloId}:${tipo}:${fornecedorId}` : '';
-  const [state, dispatch] = useReducer(despesaSugestaoReducer, initialSugestaoState);
+  const [state, dispatch] = useReducer(despesaSugestaoReducer, initialCampos, (campos) => campos ? {
+    ...initialSugestaoState, campos: { descricao: campos.descricao, valor: campos.valor, categoriaId: campos.categoriaId },
+    manuais: { descricao: true, valor: true, categoriaId: true },
+  } : initialSugestaoState);
   const query = useQuery({
     queryKey: [...despesasQueryKeys.lancamentosRoot, 'ultima-do-credor', poloId, tipo, fornecedorId],
     queryFn: () => getUltimaDespesaDoCredor(poloId, tipo, fornecedorId),
@@ -58,3 +63,4 @@ export function useDespesaSugestao(
     retry: () => { void query.refetch(); },
   };
 }
+
