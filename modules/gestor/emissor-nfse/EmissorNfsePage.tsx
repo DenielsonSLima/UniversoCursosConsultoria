@@ -12,6 +12,8 @@ import { formatNfseMoney } from './components/nfse.presentation';
 import NfseMonthPicker from './preparar/NfseMonthPicker';
 import { NfsePreparationDraftProvider } from './preparar/hooks/NfsePreparationDraft';
 import './nfse.css';
+import ToastNotification, { useToast } from '../components/ToastNotification';
+import { useNfseQueue } from './fila/useNfseQueue';
 
 const PrepararNfseTab = lazy(() => import('./preparar/PrepararNfseTab'));
 const PendentesNfseTab = lazy(() => import('./pendentes/PendentesNfseTab'));
@@ -46,16 +48,23 @@ const NfseWorkspace: React.FC<EmissorNfsePageProps> = ({ poloId, poloName, isMat
     return isNfseScopeValid(candidate) ? candidate : null;
   }, [poloId, contextKey, month]);
   const query = useNfseWorkspace(scope);
+  const queue = useNfseQueue(scope);
+  const { toasts, removeToast, toast } = useToast();
   useNfseRealtime(scope);
   const workspace = query.error ? undefined : query.data;
   const unavailable = !scope || query.error instanceof NfseUnavailableError;
   const canRead = Boolean(scope && workspace && !query.error);
-  const context = { scope, workspace, unavailable, canRead, loading: Boolean(scope && query.isPending), onPrepared: () => setTab('pendentes') };
+  const context = { scope, workspace, unavailable, canRead, loading: Boolean(scope && query.isPending),
+    canPrepareQueue: Boolean(!queue.error && queue.data), onPrepared: (message?: string) => {
+    setTab('pendentes');
+    toast.success('Preparação confirmada', message || 'Os documentos foram adicionados aos pendentes.');
+  } };
   const summary = workspace?.summary;
   const selectedPolo = Boolean(poloId && poloId !== 'todos');
 
   return (
     <div className="nfse-workspace">
+      <ToastNotification toasts={toasts} onRemove={removeToast} />
       <header className="nfse-header">
         <div><h1>Emissor NFS-e</h1><p>{poloName || (selectedPolo ? 'Polo selecionado' : 'Selecione um polo para acompanhar as notas')}{isMatriz && selectedPolo ? ' · Matriz' : ''}</p></div>
         <div className="flex max-w-full flex-wrap items-center gap-3">
@@ -71,7 +80,7 @@ const NfseWorkspace: React.FC<EmissorNfsePageProps> = ({ poloId, poloName, isMat
         : query.error && !unavailable ? <NfseDataState error={query.error} onRetry={() => void query.refetch()} /> : null}
       <div className="nfse-summary" aria-label="Resumo fiscal do período">
         <div className="nfse-metric"><span>Recebido no mês</span><strong>{formatNfseMoney(summary?.receivedAmount)}</strong></div>
-        <div className="nfse-metric"><span>Pendentes</span><strong>{summary?.pendingCount ?? '—'}</strong></div>
+        <div className="nfse-metric"><span>Pendentes</span><strong>{!queue.error && queue.data ? queue.data.summary.preparedCount : summary?.pendingCount ?? '—'}</strong></div>
         <div className="nfse-metric"><span>Emitidas</span><strong>{summary?.issuedCount ?? '—'}</strong></div>
         <div className="nfse-metric"><span>Com erro</span><strong>{summary?.errorCount ?? '—'}</strong></div>
       </div>

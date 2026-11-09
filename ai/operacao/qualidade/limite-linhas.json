@@ -1,6 +1,7 @@
 {
   "version": 1,
   "maxLines": 500,
+  "thirdPartyRegistry": "ai/operacao/qualidade/fontes-terceiros-nfse.json",
   "manifestRegistry": "ai/operacao/qualidade/limite-linhas-manifestos.json",
   "exemptions": [
     {

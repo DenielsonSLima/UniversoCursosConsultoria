@@ -16,6 +16,13 @@ Histórico arquivado: [05/10/2026 — versões 4.8.171 a 4.8.174](./changelog/20
 
 Histórico arquivado: [06/10/2026 a 09/10/2026 — versões 4.8.175 a 4.8.195](./changelog/2026-10-06-a-09-versoes-4-8-175-a-195.md).
 
+## [4.8.273] - 2026-11-08
+
+- Preparação NFS-e salva na fila com snapshot, reserva atômica e recuperação sem duplicidade.
+- Configuração fiscal por estabelecimento e cadastro A1 protegido no Supabase Vault, sem senha ou chave devolvida à interface.
+- Cadastro confere arquivo, validade, CNPJ e cadeia ICP-Brasil; emissão e cancelamento continuam bloqueados até homologação.
+- DPS, assinatura e eventos nacionais têm contratos e validação offline com XSD por ambiente.
+
 ## [4.8.272] - 2026-11-08
 
 - Mês atual abre agrupado por categoria; Em aberto e Todos abrem por mês nas despesas fixas e variáveis.

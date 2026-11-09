@@ -7,7 +7,8 @@ export interface NfseTabContextValue {
   unavailable: boolean;
   canRead: boolean;
   loading: boolean;
-  onPrepared: () => void;
+  canPrepareQueue?: boolean;
+  onPrepared: (message?: string) => void;
 }
 
 export const NfseTabContext = createContext<NfseTabContextValue | null>(null);

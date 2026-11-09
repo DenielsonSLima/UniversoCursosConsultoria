@@ -2,13 +2,26 @@
 
 Status: CANÔNICO para a estrutura da etapa 1; contrato proposto para as RPCs fiscais futuras, sem autorização de emissão. A liberação restrita em produção acrescenta somente a confirmação de acesso descrita abaixo.
 
+## Continuidade em 08/11/2026
+
+Este documento descreve a fundação, não o inventário completo da versão atual. Recebimentos,
+modelos/prévia de descrição, serviços para parceiros e projeção DANFSe já possuem RPCs próprias,
+aplicadas e entregues até a versão 4.8.270. A produção observada em 08/11 é 4.8.271.
+As flags do serviço fiscal central não bloqueiam essas funcionalidades independentes.
+
+A continuidade local autorizada está no [contrato de preparação e fila](nfse-preparation-queue.md).
+Configuração e certificado têm contratos próprios em `services/configuration/` e
+`supabase/functions/nfse-certificate-upload/README.md`. DPS, assinatura e cancelamento estão
+documentados em `supabase/functions/_shared/nfse-national/README.md`. Sua existência local
+não comprova aplicação remota, representação fiscal, homologação ou transmissão.
+
 ## Limite operacional
 
 `services/nfse.runtime.ts` mantém leitura remota, escrita e provedor fiscal desabilitados. O serviço público lança `NfseUnavailableError` antes de importar o transporte Supabase ou realizar rede. O módulo não devolve sucesso, notas ou valores fictícios para contornar essa indisponibilidade. A interface apresenta o estado de preparação.
 
 As factories aceitam transporte injetado exclusivamente para testar os contratos isoladamente. Capabilities recebidas pela interface não removem o bloqueio local. As operações fiscais `dispatch` e `reconcile` no diretório `api/` não possuem transporte implementado e sempre informam indisponibilidade.
 
-Não há RPC fiscal implantada, certificado armazenado, upload de chave privada ou senha nesta etapa. Habilitar flags pressupõe uma entrega posterior com backend revisado e homologado; não constitui o processo de implantação por si só.
+Na fundação não havia RPC de emissão implantada, certificado armazenado ou canal de cadastro A1. As entregas posteriores estão identificadas acima. Habilitar flags pressupõe backend revisado e homologado; não constitui o processo de implantação por si só.
 
 ## Liberação individual em produção
 
@@ -54,7 +67,11 @@ O cliente rejeita versão, polo, contexto, ambiente ou mês divergentes antes de
 
 Valores monetários são strings decimais canônicas com duas casas. `null` significa desconhecido; ausência não vira zero. O cliente preserva a precisão sem conversão para Number e não soma valores da seleção. Quantidades e totais mostrados pela interface vêm do contrato canônico.
 
-## RPCs previstas, ainda não disponibilizadas
+## Desenho original das RPCs da fundação
+
+Os nomes desta tabela são o desenho original. Modelos já têm implementação própria com
+assinaturas versionadas nas migrations posteriores. Preparação e configuração locais também
+possuem contratos novos; não chamar suas RPCs usando esta tabela como assinatura atual.
 
 | RPC | Resultado/entrada |
 | --- | --- |

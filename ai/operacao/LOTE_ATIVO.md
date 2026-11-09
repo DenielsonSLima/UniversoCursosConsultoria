@@ -1,7 +1,7 @@
 # Lote ativo
 
-## Lote: 2026-11-08-nfse-parceiros-visualizador
+## Lote: 2026-11-08-nfse-fila-integracao-nacional
 
-Serviços para parceiros com preparação por polo, opção de criar/vincular conta e visualizador nacional DANFSe por XML. Revalidação de acesso preserva a tela durante consulta, mantendo bloqueio por erro/recusa/identidade. Financeiro e projeção fiscal via RPC; sem transmissão de nota.
+Continuidade autorizada: preparação acadêmica com snapshot e reserva atômica, fila de pendentes, configuração fiscal por estabelecimento, contratos DPS/assinatura e estudo de cancelamento nacional. Três frentes independentes solicitadas pelo usuário. A habilitação depende de certificado, contrato vigente e homologação comprovada.
 
-Mudança crítica. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-08-nfse-parceiros-visualizador.md`. Arquivos pessoais e artefatos não são publicados.
+Mudança crítica. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-08-nfse-fila-integracao-nacional.md`. Publicação em produção autorizada pelo usuário em 08/11/2026 para fila, configuração e cadastro A1 seguro no Supabase; emissão e cancelamento continuam bloqueados até homologação. Arquivos pessoais e artefatos não pertencem ao lote.
