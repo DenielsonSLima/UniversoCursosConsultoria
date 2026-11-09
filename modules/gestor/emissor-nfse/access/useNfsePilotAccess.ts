@@ -4,7 +4,7 @@ import { supabase } from '../../../../lib/supabase';
 import type { PortalAuthProfile } from '../../../login/portal-session';
 import { canAccessGestorModule } from '../../access-control';
 import { getNfseAccess } from './nfse-access.service';
-import { hasNfseAccessDecision, isNfseAccessIdentity, nfseAccessQueryKey } from './nfse-access.contract';
+import { isNfseAccessIdentity, nfseAccessQueryKey, resolveNfsePilotAccessState } from './nfse-access.contract';
 
 export function useNfsePilotAccess(profile: PortalAuthProfile | null, enabled: boolean) {
   const queryClient = useQueryClient();
@@ -34,9 +34,6 @@ export function useNfsePilotAccess(profile: PortalAuthProfile | null, enabled: b
     refetchOnMount: 'always',
     refetchOnWindowFocus: 'always',
   });
-  return {
-    allowed: eligible && !query.isFetching && !query.isError
-      && hasNfseAccessDecision(query.data, identity),
-    isChecking: eligible && query.isFetching,
-  };
+  // A background revalidation keeps only this identity's last successful decision.
+  return resolveNfsePilotAccessState(identity, eligible, query);
 }

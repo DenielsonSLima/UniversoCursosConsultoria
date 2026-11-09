@@ -1,0 +1,27 @@
+.nfse-partner-actions { align-items: center; display: flex; flex-wrap: wrap; gap: 8px; }
+.nfse-partner-table td { min-width: 110px; }
+.nfse-partner-table td:nth-child(1), .nfse-partner-table td:nth-child(2) { min-width: 180px; }
+.nfse-partner-table td small { max-width: 360px; overflow-wrap: anywhere; white-space: pre-wrap; }
+.nfse-partner-modal-overlay { align-items: center; backdrop-filter: blur(4px); background: rgb(0 26 51 / 60%); color: #18334b; display: flex; font-size: 13px; inset: 0; justify-content: center; padding: 12px; position: fixed; z-index: 10000; }
+.nfse-partner-modal { background: white; border: 1px solid #e2e8f0; border-radius: 12px; box-shadow: 0 20px 40px rgb(15 23 42 / 18%); display: flex; flex-direction: column; max-height: calc(100dvh - 24px); max-width: 760px; min-width: 0; width: 100%; }
+.nfse-partner-modal > header, .nfse-partner-modal > footer { flex: 0 0 auto; }
+.nfse-partner-modal .nfse-section-heading h2 { font-size: 18px; font-weight: 600; }
+.nfse-partner-modal-body { min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.nfse-partner-fieldset { border: 0; margin: 0; min-width: 0; padding: 0; }
+.nfse-partner-form-section { border-top: 1px solid #edf0f5; padding: 16px; }
+.nfse-partner-form-section:first-child { border-top: 0; }
+.nfse-partner-form-grid { align-items: end; display: grid; gap: 14px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.nfse-partner-form-grid .nfse-wide { grid-column: 1 / -1; }
+.nfse-partner-financial-choice { border: 0; margin: 0; padding: 0; }
+.nfse-partner-financial-choice legend { color: #536579; font-size: 12px; font-weight: 500; margin-bottom: 10px; }
+.nfse-partner-financial-choice > div { display: flex; gap: 24px; }
+.nfse-partner-financial-choice label { align-items: center; display: flex; gap: 8px; }
+.nfse-partner-financial-choice input { accent-color: #4169e1; height: 16px; margin: 0; width: 16px; }
+.nfse-partner-financial-choice + .nfse-partner-form-grid { margin-top: 14px; }
+.nfse-partner-error { align-items: center; color: #a33e3e; display: flex; flex-wrap: wrap; font-size: 12px; gap: 8px; line-height: 1.5; }
+@media (max-width: 760px) {
+  .nfse-partner-form-grid { grid-template-columns: minmax(0, 1fr); }
+  .nfse-partner-form-section { padding: 14px; }
+  .nfse-partner-modal .nfse-footer { gap: 8px; padding: 12px 14px; }
+  .nfse-partner-modal .nfse-footer button { flex: 1 1 auto; }
+}

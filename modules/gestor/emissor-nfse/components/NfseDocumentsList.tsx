@@ -1,4 +1,4 @@
-import { useDeferredValue, useState } from 'react';
+import { useDeferredValue, useState, type ReactNode } from 'react';
 import { Play, RotateCcw } from 'lucide-react';
 import { useNfseDocuments } from '../hooks/useNfseQueries';
 import type { NfseDocumentStatus } from '../types/nfse.types';
@@ -17,9 +17,10 @@ interface Props {
   description: string;
   emptyTitle: string;
   emptyDescription: string;
+  actions?: ReactNode;
 }
 
-export default function NfseDocumentsList({ status, title, description, emptyTitle, emptyDescription }: Props) {
+export default function NfseDocumentsList({ status, title, description, emptyTitle, emptyDescription, actions }: Props) {
   const { scope, unavailable, canRead, loading } = useNfseTabContext();
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
@@ -30,6 +31,7 @@ export default function NfseDocumentsList({ status, title, description, emptyTit
   return (
     <section className="nfse-panel" aria-label={title}>
       <div className="nfse-section-heading"><div><h2>{title}</h2><p>{description}</p></div>
+        {actions}
         {status !== 'EMITIDA' && <button type="button" className="nfse-button nfse-button-primary" disabled title="Disponível após a habilitação da emissão fiscal">{status === 'ERRO' ? <RotateCcw size={15} /> : <Play size={15} />}{status === 'ERRO' ? 'Reprocessar corrigidas' : 'Emitir lote'}</button>}
       </div>
       <div className="nfse-toolbar"><div className="nfse-field"><label htmlFor={`nfse-search-${status}`}>Buscar registros</label><input id={`nfse-search-${status}`} type="search" value={search} disabled={!canRead} placeholder="Buscar aluno ou nota…" onChange={(event) => { setSearch(event.target.value); setPage(1); }} /></div><span className="nfse-inline-help">{query.data ? `${query.data.totalItems} registro(s)` : 'Registros do polo e período selecionados'}</span></div>

@@ -1,5 +1,5 @@
 import React, { lazy, Suspense, useMemo, useRef, useState } from 'react';
-import { AlertCircle, Building2, CheckCheck, ClipboardList, FileText, Layers, ShieldCheck } from 'lucide-react';
+import { AlertCircle, BriefcaseBusiness, Building2, CheckCheck, ClipboardList, FileText, Layers, ShieldCheck } from 'lucide-react';
 import FinancialUnderlineTabs from '../financeiro/components/FinancialUnderlineTabs';
 import { useNfseWorkspace } from './hooks/useNfseQueries';
 import { useNfseRealtime } from './hooks/useNfseRealtime';
@@ -18,6 +18,8 @@ const PendentesNfseTab = lazy(() => import('./pendentes/PendentesNfseTab'));
 const EmitidasNfseTab = lazy(() => import('./emitidas/EmitidasNfseTab'));
 const ErrosNfseTab = lazy(() => import('./erros/ErrosNfseTab'));
 const ModelosNfseTab = lazy(() => import('./modelos/ModelosNfseTab'));
+const ServicosParceirosNfseTab = lazy(() => import('./parceiros/ServicosParceirosNfseTab'));
+type NfseWorkspaceTab = NfseTab | 'servicos';
 
 export interface EmissorNfsePageProps {
   poloId?: string | null;
@@ -28,6 +30,7 @@ export interface EmissorNfsePageProps {
 
 const tabs = [
   { id: 'preparar' as const, label: 'Preparar emissão', icon: <ClipboardList size={15} /> },
+  { id: 'servicos' as const, label: 'Serviços', icon: <BriefcaseBusiness size={15} /> },
   { id: 'pendentes' as const, label: 'Pendentes', icon: <Layers size={15} /> },
   { id: 'emitidas' as const, label: 'Emitidas', icon: <CheckCheck size={15} /> },
   { id: 'erros' as const, label: 'Erros', icon: <AlertCircle size={15} /> },
@@ -35,7 +38,7 @@ const tabs = [
 ];
 
 const NfseWorkspace: React.FC<EmissorNfsePageProps> = ({ poloId, poloName, isMatriz, contextKey }) => {
-  const [tab, setTab] = useState<NfseTab>('preparar');
+  const [tab, setTab] = useState<NfseWorkspaceTab>('preparar');
   const [month, setMonth] = useState(getNfseCurrentMonth);
   const monthInputRef = useRef<HTMLInputElement>(null);
   const scope = useMemo<NfseScope | null>(() => {
@@ -78,6 +81,7 @@ const NfseWorkspace: React.FC<EmissorNfsePageProps> = ({ poloId, poloName, isMat
           <NfsePreparationDraftProvider>
           <Suspense fallback={<NfseDataState loading />}>
             {tab === 'preparar' && <PrepararNfseTab />}
+            {tab === 'servicos' && <ServicosParceirosNfseTab />}
             {tab === 'pendentes' && <PendentesNfseTab />}
             {tab === 'emitidas' && <EmitidasNfseTab />}
             {tab === 'erros' && <ErrosNfseTab />}

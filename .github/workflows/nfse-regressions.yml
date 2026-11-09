@@ -45,9 +45,10 @@ jobs:
       - run: node scripts/check-node-security.mjs
       - run: npm ci
       - run: node scripts/test-nfse-local-stage1.mjs
-      - name: Instalar PostgreSQL isolado para o contrato de recebimentos
+      - run: node --test modules/gestor/emissor-nfse/visualizador/danfse.pdf.test.mjs
+      - name: Instalar PostgreSQL isolado para os contratos fiscais
         run: npm install --prefix "$RUNNER_TEMP/nfse-sql" --no-save --package-lock=false --ignore-scripts @electric-sql/pglite@0.3.14
-      - name: Validar recebimentos, seleção e autorização em banco isolado
+      - name: Validar recebimentos, modelos e serviços em banco isolado
         env:
           NFSE_TEST_PGLITE_MODULE: ${{ runner.temp }}/nfse-sql/node_modules/@electric-sql/pglite/dist/index.js
-        run: node --test supabase/tests/nfse_receipt_students.isolated.test.mjs supabase/tests/nfse_models.isolated.test.mjs
+        run: node --test supabase/tests/nfse*.isolated.test.mjs

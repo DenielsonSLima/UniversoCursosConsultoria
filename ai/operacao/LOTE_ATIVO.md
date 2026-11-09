@@ -1,7 +1,7 @@
 # Lote ativo
 
-## Lote: 2026-11-08-nfse-modelo-tecnico-mes
+## Lote: 2026-11-08-nfse-parceiros-visualizador
 
-Cadastrar modelo de curso técnico autorizado e preencher `{{mes_referencia}}` com o mês dos recebimentos selecionados, por RPC, com prévia na edição e preparação. Conferir fontes oficiais; não converter recebimento em competência fiscal nem habilitar emissão. Acesso por polo e piloto Denielson preservados.
+Serviços para parceiros com preparação por polo, opção de criar/vincular conta e visualizador nacional DANFSe por XML. Revalidação de acesso preserva a tela durante consulta, mantendo bloqueio por erro/recusa/identidade. Financeiro e projeção fiscal via RPC; sem transmissão de nota.
 
-Mudança crítica autorizada, após 4.8.266. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-08-nfse-modelo-tecnico-mes.md`. Aplicação da migration, cadastro real, testes e publicação são registrados no recibo `tmp/nfse-modelo-tecnico-production-receipt.json`.
+Mudança crítica. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-08-nfse-parceiros-visualizador.md`. Arquivos pessoais e artefatos não são publicados.
