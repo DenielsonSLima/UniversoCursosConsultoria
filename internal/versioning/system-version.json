@@ -1,9 +1,9 @@
 {
-  "version": "4.8.271",
+  "version": "4.8.272",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 280,
+  "revision": 281,
   "releasedAt": "2026-11-08",
-  "summary": "Despesas agrupadas por mês ou fornecedor, controles junto às abas e quatro cartões por linha"
+  "summary": "Mês atual por categoria, demais períodos por mês e despesas variáveis antes das fixas"
 }
 
