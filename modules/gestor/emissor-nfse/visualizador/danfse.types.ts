@@ -1,4 +1,4 @@
-/** Presentation of an uploaded national XML. This is not an authorization/signature verdict. */
+/** Presentation of national XML. Parsing is not an authorization/signature verdict. */
 export interface DanfseDocument {
   accessKey: string;
   number: string;

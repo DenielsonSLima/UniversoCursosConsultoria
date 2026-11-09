@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "retrieval": "lexical-bm25-with-source-citations",
-  "builtAt": "2026-11-09T02:07:38.627Z",
+  "builtAt": "2026-11-09T03:18:32.543Z",
   "manifestVersion": 2,
-  "sourceSignature": "3f1112a3b5eb50ed30f7405acc975c42499ddb77e9dd61a3e8fdd141e1468091",
+  "sourceSignature": "ab7f351cdcaed1c51268f8f82c1af248b54fc08bf701c52dd3ce880b8620f02b",
   "sources": [
     {
       "path": "AGENTS.md",
@@ -11,7 +11,7 @@
     },
     {
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "hash": "781a292552af4a044545cc9a483e5f811488d51be3242b9cfcbb532d6b3140a9"
+      "hash": "dfd94affa8e468cd44c34aebfb88df9a7d07d11051f13bd1e2e228fd28fb1930"
     },
     {
       "path": "ai/operacao/MEMORIA_CANONICA.md",
@@ -208,23 +208,23 @@
       "part": 1
     },
     {
-      "id": "3ccb8b127b1b7746a1e5",
-      "hash": "3ccb8b127b1b7746a1e5dd0163ee903eafaded321942f0b9cd197c73d17b1a28",
+      "id": "adce3e9305abd22032fd",
+      "hash": "adce3e9305abd22032fde1ecda208139d7a1bed16ec3af8acae680af97a1bf7a",
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Lote: 2026-11-08-nfse-fila-integracao-nacional",
-      "text": "Continuidade autorizada: preparação acadêmica com snapshot e reserva atômica, fila de pendentes, configuração fiscal por estabelecimento, contratos DPS/assinatura e estudo de cancelamento nacional. Três frentes independentes solicitadas pelo usuário. A habilitação depende de certificado, contrato vigente e homologação comprovada.",
-      "normalizedText": "continuidade autorizada preparacao academica com snapshot e reserva atomica fila de pendentes configuracao fiscal por estabelecimento contratos dps assinatura e estudo de cancelamento nacional tres frentes independentes solicitadas pelo usuario a habilitacao depende de certificado contrato vigente e homologacao comprovada",
-      "tokenCount": 36,
+      "section": "Lote: 2026-11-08-nfse-previa-emitidas",
+      "text": "Correção local autorizada: cada nota em Emitidas deve abrir a própria prévia dentro do sistema, sem seleção de arquivo do computador. Extensão em 09/11: menu de três pontos com PDF/XML e seleção por página para ZIPs de PDFs ou XMLs. Preservar o compositor nacional e o mesmo Blob para prévia, download e impressão.",
+      "normalizedText": "correcao local autorizada cada nota em emitidas deve abrir a propria previa dentro do sistema sem selecao de arquivo do computador extensao em 09 11 menu de tres pontos com pdf xml e selecao por pagina para zips de pdfs ou xmls preservar o compositor nacional e o mesmo blob para previa download e impressao",
+      "tokenCount": 49,
       "part": 1
     },
     {
-      "id": "add994abffb7e72ee93c",
-      "hash": "add994abffb7e72ee93ca4c9897f4addfef4c5b4e9220a6222289f4b299a303e",
+      "id": "b7fd9122b17ea1b81518",
+      "hash": "b7fd9122b17ea1b815185e2cd0e1973cace3b8e3be5d15abff898735504a4782",
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Lote: 2026-11-08-nfse-fila-integracao-nacional",
-      "text": "Mudança crítica. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-08-nfse-fila-integracao-nacional.md`. Publicação em produção autorizada pelo usuário em 08/11/2026 para fila, configuração e cadastro A1 seguro no Supabase; emissão e cancelamento continuam bloqueados até homologação. Arquivos pessoais e artefatos não pertencem ao lote.",
-      "normalizedText": "mudanca critica manifesto explicito ai operacao registros alteracoes 2026 11 08 nfse fila integracao nacional md publicacao em producao autorizada pelo usuario em 08 11 2026 para fila configuracao e cadastro a1 seguro no supabase emissao e cancelamento continuam bloqueados ate homologacao arquivos pessoais e artefatos nao pertencem ao lote",
-      "tokenCount": 47,
+      "section": "Lote: 2026-11-08-nfse-previa-emitidas",
+      "text": "Mudança crítica por publicação. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-08-nfse-previa-emitidas.md`. Produção autorizada em 09/11/2026 para o candidato 4.8.276 sobre main 4.8.275, preservando as entregas paralelas. Ledger e recuperação do XML autorizado ainda precisam de backend próprio; a porta fiscal continua bloqueada. Cadastro A1 publicado anteriormente permanece disponível. Sem novas migrations ou alterações remotas no Supabase neste lote.",
+      "normalizedText": "mudanca critica por publicacao manifesto explicito ai operacao registros alteracoes 2026 11 08 nfse previa emitidas md producao autorizada em 09 11 2026 para o candidato 4 8 276 sobre main 4 8 275 preservando as entregas paralelas ledger e recuperacao do xml autorizado ainda precisam de backend proprio a porta fiscal continua bloqueada cadastro a1 publicado anteriormente permanece disponivel sem novas migrations ou alteracoes remotas no supabase neste lote",
+      "tokenCount": 63,
       "part": 1
     },
     {

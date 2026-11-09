@@ -1,9 +1,8 @@
 {
-  "version": "4.8.275",
+  "version": "4.8.276",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 284,
-  "releasedAt": "2026-11-08",
-  "summary": "Ações de despesas em grade e observação/anexo após o pagamento"
+  "revision": 285,
+  "releasedAt": "2026-11-09",
+  "summary": "NFS-e com prévia por nota e downloads PDF/XML individuais e em ZIP"
 }
-

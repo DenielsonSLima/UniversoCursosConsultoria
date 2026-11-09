@@ -2,7 +2,7 @@ import { DANFSE_XML_MAX_BYTES, DANFSE_XML_NAMESPACE, DPS, type DanfseDocument } 
 
 interface XmlParser { parseFromString(source: string, type: 'application/xml'): Document }
 const SIGNATURE_NAMESPACE = 'http://www.w3.org/2000/09/xmldsig#';
-const invalidXml = () => new Error('Selecione um XML NFS-e Nacional válido.');
+const invalidXml = () => new Error('O sistema não recebeu um XML NFS-e Nacional válido.');
 const children = (element: globalThis.Element): globalThis.Element[] => Array.from(element.childNodes)
   .filter((node): node is globalThis.Element => node.nodeType === 1);
 const hasInvalidControl = (value: string) => Array.from(value).some(character => {
