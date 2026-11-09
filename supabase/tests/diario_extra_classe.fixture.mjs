@@ -56,7 +56,8 @@ create table public.turmas_disciplinas(turma_id uuid,disciplina_id uuid,periodo_
   professor_id uuid,concluida boolean,instrumentos_avaliativos jsonb,primary key(turma_id,disciplina_id));
 create table public.matriculas(id uuid primary key,turma_id uuid,aluno_id uuid,status text,data_matricula timestamptz);
 create table public.matricula_movimentacoes(id uuid primary key default gen_random_uuid(),matricula_id uuid,
-  status_anterior text,status_novo text,tipo text,data_movimentacao date,created_at timestamptz default now());
+  status_anterior text,status_novo text,tipo text,data_movimentacao date,created_at timestamptz default now(),
+  metadados jsonb default '{}'::jsonb);
 create table public.matricula_liberacoes_diario(matricula_id uuid,revogado_em timestamptz);
 create table public.diario_matriculas_roster(turma_id uuid,disciplina_id uuid,matricula_id uuid,aluno_id uuid);
 create table public.aulas_turma(id uuid primary key,turma_id uuid,disciplina_id uuid,data_aula date,carga_horaria numeric);
@@ -86,7 +87,7 @@ create function internal_academic.resolve_diario_historical_result(internal_acad
     ($1).frequencia_percent,($1).media_parcial,($1).media_final,($1).resultado_final; $$;
 `;
 
-export async function createDatabase({ patched = true } = {}) {
+export async function createDatabase({ patched = true, legacyPatched = true } = {}) {
   const db = new PGlite();
   try {
     await db.exec(schema);
@@ -110,13 +111,13 @@ export async function createDatabase({ patched = true } = {}) {
       internal_academic.p1_get_enrollment_results_20260730(uuid),
       internal_academic.p1_get_pendencias_fechamento_periodo_20260719(uuid)
       from public,anon,authenticated,service_role;`);
-    if (patched) await applyCandidates(db);
+    if (patched) await applyCandidates(db, { legacyPatched });
     await db.exec("select set_config('request.jwt.claim.role','service_role',false)");
     return db;
   } catch (error) { await db.close(); throw error; }
 }
 
-export async function applyCandidates(db) {
+export async function applyCandidates(db, { legacyPatched = true } = {}) {
   const names = [
     '20261109040000_extra_class_attendance_credit.sql',
     '20261109040100_extra_class_diary_results.sql',
@@ -124,6 +125,7 @@ export async function applyCandidates(db) {
     '20261109040300_extra_class_legacy_result_projection.sql',
   ];
   for (const name of names) await db.exec(await read(name));
+  if (legacyPatched) await db.exec(await read('20261109114644_extra_class_legacy_rollout_evidence.sql'));
 }
 
 export async function seed(db, { status = 'ATIVO', presencial = true, extra = true } = {}) {
@@ -150,3 +152,4 @@ export async function seed(db, { status = 'ATIVO', presencial = true, extra = tr
     values('${id(20)}','${ids.turma}','${ids.subject}','Atividade domiciliar','PUBLICADA',4,current_date-10);`);
   return ids;
 }
+

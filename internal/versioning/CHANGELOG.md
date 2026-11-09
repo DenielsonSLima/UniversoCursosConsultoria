@@ -18,6 +18,14 @@ Histórico arquivado: [06/10/2026 a 09/10/2026 — versões 4.8.175 a 4.8.195](.
 
 Histórico arquivado: [10/10/2026 — versões 4.8.196 a 4.8.198](./changelog/2026-10-10-versoes-4-8-196-a-198.md).
 
+Histórico arquivado: [10/10/2026 — versão 4.8.203](./changelog/2026-10-10-versao-4-8-203.md).
+
+## [4.8.280] - 2026-11-09
+
+- Extras retroativas reconhecem vínculos de implantação legada quando há chamada individual anterior na mesma disciplina.
+- A data técnica de cadastro e sua ativação não substituem prova acadêmica; ingresso real, saídas, trancamentos e pendências continuam protegidos.
+- Preservados matrícula, faltas, notas, histórico documental e assinados anteriores, sem registros artificiais.
+
 ## [4.8.279] - 2026-11-09
 
 ### Corrigido
@@ -485,9 +493,3 @@ Histórico arquivado: [10/10/2026 — versões 4.8.196 a 4.8.198](./changelog/20
 
 - Diário permite O opcional por aluno e mantém campos vazios sem nota; zero exige lançamento explícito.
 - Médias calculadas no backend preservam duas casas decimais, com fechamento e validação documental coerentes.
-
-## [4.8.203] - 2026-10-10
-
-- Seleção de docentes passa a listar os professores ativos vinculados ao polo da turma, incluindo professores com mais de uma unidade.
-- Novas atribuições técnicas validam esse vínculo no banco, preservando docentes já atribuídos e sua remoção.
-
