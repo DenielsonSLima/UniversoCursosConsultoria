@@ -18,6 +18,7 @@ import { useCategoriasFinanceirasQuery } from '../hooks/useCategoriasFinanceiras
 import { useDespesaSugestao } from '../hooks/useDespesaSugestao';
 import type { DespesaCredorTipo } from './DespesaCredorPicker';
 import DespesaFormAssociations from './DespesaFormAssociations';
+import DespesaFormNotes from './DespesaFormNotes';
 import DespesaFormCoreFields from './DespesaFormCoreFields';
 import DespesaFormSettlementFields from './DespesaFormSettlementFields';
 import DespesaNovoCredorModal from './DespesaNovoCredorModal';
@@ -243,12 +244,10 @@ const DespesaForm: React.FC<DespesaFormProps> = ({
         <DespesaFormAssociations {...{
           mode, convenioMesId, convenios, isPoloMatriz, rateioSelection, polosRateio,
           polosSelecionados, togglePoloRateio, rateioSelecionadosInvalido, turmaModalidade,
-          setTurmaModalidade, turmaId, setTurmaId, filteredTurmas, anexo, anexoErro,
-          anexoInputRef, handleAnexo, observacao, setObservacao,
+          setTurmaModalidade, turmaId, setTurmaId, filteredTurmas,
         }} setConvenioMesId={setConvenioMesId} setRateioSelection={setRateioSelection}
           conveniosLoading={conveniosQuery.isPending}
-          conveniosError={conveniosQuery.isError && !conveniosQuery.data}
-          clearAnexo={() => { setAnexo(null); setAnexoErro(''); if (anexoInputRef.current) anexoInputRef.current.value = ''; }} />
+          conveniosError={conveniosQuery.isError && !conveniosQuery.data} />
         {cloneDraft && mode === 'baixa' && <div className="md:col-span-2">
           <label htmlFor="clone-data-pagamento" className="mb-1 block text-xs font-semibold text-slate-500">Data do pagamento *</label>
           <input id="clone-data-pagamento" type="date" required value={dataPagamento} onChange={(event) => setDataPagamento(event.target.value)}
@@ -259,6 +258,8 @@ const DespesaForm: React.FC<DespesaFormProps> = ({
           setIntervaloUnit, splitTotal, setSplitTotal, activeContas, contaBancariaId,
           setContaBancariaId, formaPagamento, setFormaPagamento,
         }} />
+        <DespesaFormNotes {...{ anexo, anexoErro, anexoInputRef, handleAnexo, observacao, setObservacao }}
+          clearAnexo={() => { setAnexo(null); setAnexoErro(''); if (anexoInputRef.current) anexoInputRef.current.value = ''; }} />
         {createMutation.isError && <div className="rounded-xl border border-red-100 bg-red-50 p-3 text-xs font-medium text-red-600 md:col-span-2">
           {(createMutation.error as any)?.message || 'Erro ao criar lançamento'}
         </div>}
@@ -286,4 +287,5 @@ const DespesaForm: React.FC<DespesaFormProps> = ({
 };
 
 export default DespesaForm;
+
 

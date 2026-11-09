@@ -1,8 +1,9 @@
 {
-  "version": "4.8.274",
+  "version": "4.8.275",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 283,
+  "revision": 284,
   "releasedAt": "2026-11-08",
-  "summary": "Clonagem de despesas com escolha pendente/pago, categorias em maiúsculas e abertura em variáveis"
+  "summary": "Ações de despesas em grade e observação/anexo após o pagamento"
 }
+
