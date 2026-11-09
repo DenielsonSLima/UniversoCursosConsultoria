@@ -189,7 +189,8 @@ test('UI guards repeated writes, preserves form on error and explains recoverabl
   assert.match(rows, /Respostas e notas serão preservadas/);
   assert.match(rows, /Sua carga horária deixará de compor os totais/);
   assert.match(rows, /Atividades arquivadas \(\{archived\.length\}\)/);
-  assert.match(rows, /atividade\.status !== 'ARQUIVADA'/);
+  assert.match(rows, /buildGradeChronology\(aulas, atividades\)/);
+  assert.match(source('./turma-grade-cronologia.ts'), /atividade\.status !== 'ARQUIVADA'/);
   assert.match(rows, /atividade\.status === 'ARQUIVADA'/);
   assert.match(rows, /Arquivar atividade/);
   assert.match(editor, /catch \{/);
@@ -242,3 +243,4 @@ test('civil activity dates do not shift across UTC, Maceio and UTC+14 time zones
     else process.env.TZ = previousZone;
   }
 });
+

@@ -18,6 +18,13 @@ Histórico arquivado: [06/10/2026 a 09/10/2026 — versões 4.8.175 a 4.8.195](.
 
 Histórico arquivado: [10/10/2026 — versões 4.8.196 a 4.8.198](./changelog/2026-10-10-versoes-4-8-196-a-198.md).
 
+## [4.8.279] - 2026-11-09
+
+### Corrigido
+- Grade & Profs apresenta aulas e atividades extra-classe juntas em ordem cronológica, sem separar todas as extras ao fim.
+- Numeração, edição, carga horária e conteúdo preservados; datas não definidas ficam ao fim e atividades arquivadas continuam em sua seção recuperável.
+- Regressões cobrem intercalação, datas iguais/ausentes, mudanças de prazo e preservação do editor. Sem alteração de banco ou cálculos acadêmicos.
+
 ## [4.8.278] - 2026-11-09
 
 ### Corrigido
@@ -483,3 +490,4 @@ Histórico arquivado: [10/10/2026 — versões 4.8.196 a 4.8.198](./changelog/20
 
 - Seleção de docentes passa a listar os professores ativos vinculados ao polo da turma, incluindo professores com mais de uma unidade.
 - Novas atribuições técnicas validam esse vínculo no banco, preservando docentes já atribuídos e sua remoção.
+

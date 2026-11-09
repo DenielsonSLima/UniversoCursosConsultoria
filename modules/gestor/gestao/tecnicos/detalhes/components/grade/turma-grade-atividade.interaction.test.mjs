@@ -37,17 +37,20 @@ const result = await build({
     import { createRoot } from 'react-dom/client';
     import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
     import Rows from './TurmaGradeAtividades';
-    export { React, act, createRoot, QueryClient, QueryClientProvider, Rows };`,
+    import Disciplina from './TurmaGradeDisciplina';
+    export { React, act, createRoot, QueryClient, QueryClientProvider, Rows, Disciplina };`,
   resolveDir:componentDirectory,loader:'tsx'},
   bundle:true,write:false,format:'esm',platform:'node',logLevel:'silent',
   plugins:[{
     name:'isolated-component-boundaries',
     setup(builder) {
+      builder.onResolve({filter:/\/plano-curso\/PlanoCursoStatusControl$/}, () => ({path:'plano',namespace:'fixture'}));
       builder.onResolve({filter:/\/lib\/supabase$/}, () => ({path:'supabase',namespace:'fixture'}));
       builder.onResolve({filter:/\/atividades-extra\/atividadesExtraClasse\.service$/}, () => ({path:'activity-keys',namespace:'fixture'}));
       builder.onResolve({filter:/\/ToastNotification$/}, () => ({path:'toast',namespace:'fixture'}));
       builder.onLoad({filter:/.*/,namespace:'fixture'}, ({path}) => ({loader:'js',contents:
-        path === 'supabase' ? 'export const supabase = {rpc:(...args)=>globalThis.__atividadeInteractionRpc(...args)};'
+        path === 'plano' ? 'export default ()=>null;'
+          : path === 'supabase' ? 'export const supabase = {rpc:(...args)=>globalThis.__atividadeInteractionRpc(...args)};'
           : path === 'activity-keys' ? "export const atividadesExtraClasseKeys={turma:(id)=>['atividades-extra-classe',id]};"
             : `export default ()=>null; export const useToast=()=>({toasts:[],removeToast:()=>{},toast:{
               success:(...args)=>globalThis.__atividadeInteractionToast('success',...args),
@@ -56,7 +59,7 @@ const result = await build({
     },
   }],
 });
-const { React, act, createRoot, QueryClient, QueryClientProvider, Rows } = await import(
+const { React, act, createRoot, QueryClient, QueryClientProvider, Rows, Disciplina } = await import(
   `data:text/javascript;base64,${Buffer.from(result.outputFiles[0].text).toString('base64')}`);
 const record = (overrides = {}) => ({
   id:'atividade-1',titulo:'Atividade sintética',cargaHoraria:4,prazoEntrega:'2026-09-12',
@@ -267,4 +270,50 @@ test('successful mutation refreshes scoped academic projections without broad tu
     ['academic-lifecycle','turma','turma-1',section]));
   assert.ok(invalidated.some((key) => key[0] === 'atividades-extra-classe' && key[1] === 'turma-1'));
   assert.equal(invalidated.length,9);
+});
+
+
+const lesson = (id, dataAula) => ({id,titulo:`Conteúdo ${id}`,dataAula,cargaHoraria:8,horaInicio:'08:00',horaFim:'16:00',sessoes:[]});
+const renderDiscipline = async (aulas, atividades) => {
+  await act(async () => root.render(React.createElement(QueryClientProvider,{client},React.createElement(Disciplina,{
+    disciplina:{id:'disciplina-1',nome:'Disciplina sintética',cargaHoraria:80},config:{concluida:false,professor:null},
+    aulas,atividades,theme:{},singleProfessor:true,isExpanded:true,titulo:'',data:'',horas:'',horaInicio:'',horaFim:'',
+    onUpdateAula:async (input)=>calls.push(['update-aula',input]),onDeleteAula:(id)=>calls.push(['delete-aula',id]),
+  }))));
+};
+const position = (text) => {
+  const found = container.textContent.indexOf(text);
+  assert.ok(found >= 0, `expected visible text: ${text}`);
+  return found;
+};
+
+test('full discipline interleaves lesson and extra dates, retaining labels and archived controls', async () => {
+  await renderDiscipline([lesson('a1','2026-06-06'),lesson('a2','2026-06-13')],[
+    record({titulo:'Extra intermediária',prazoEntrega:'2026-06-12'}),
+    record({id:'arquivada',titulo:'Extra arquivada',prazoEntrega:'2026-06-01',status:'ARQUIVADA',statusAnterior:'PUBLICADA'}),
+  ]);
+  assert.ok(position('Aula 1') < position('Extra 1'));
+  assert.ok(position('Extra 1') < position('Aula 2'));
+  assert.ok(position('Aula 2') < position('Atividades arquivadas (1)'));
+  assert.equal(container.textContent.includes('Extra 2'),false);
+  await click(button('Editar aula 2'));
+  assert.equal(container.querySelector('input[aria-label="Data da aula"]').value,'2026-06-13');
+  await click(button('Cancelar edição da aula'));
+  assert.ok(position('Extra 1') < position('Aula 2'));
+  assert.equal(calls.length,0);
+});
+
+test('date refresh moves an extra while its unsaved editor remains associated with the same record', async () => {
+  const aulas = [lesson('a1','2026-06-06'),lesson('a2','2026-06-13')];
+  await renderDiscipline(aulas,[record({prazoEntrega:'2026-06-12'})]);
+  await click(button('Editar atividade Atividade sintética'));
+  await input('text','Rascunho preservado na movimentação');
+  await renderDiscipline(aulas,[record({prazoEntrega:'2026-06-20',updatedAt:'2026-11-09T08:00:00Z'})]);
+  assert.equal(container.querySelector('input[type="text"]').value,'Rascunho preservado na movimentação');
+  assert.equal(button('Salvar atividade').disabled,true);
+  await click(button('Cancelar'));
+  assert.ok(position('Aula 2') < position('Extra 1'));
+  await click(button('Editar atividade Atividade sintética'));
+  assert.equal(container.querySelector('input[type="date"]').value,'2026-06-20');
+  assert.equal(calls.length,0);
 });

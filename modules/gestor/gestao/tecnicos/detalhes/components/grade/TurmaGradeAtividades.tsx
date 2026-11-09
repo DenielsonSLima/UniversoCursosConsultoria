@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { ArchiveRestore, ClipboardCheck, Loader2, Pencil, Trash2 } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import type { TurmaAtividadeExtraClasse } from '../../turma-grade.types';
+import type { TurmaAtividadeExtraClasse, TurmaAulaPlanejada } from '../../turma-grade.types';
 import type { Turma } from '../../../../gestao.types';
 import { academicLifecycleKeys } from '../../academic-lifecycle.keys';
 import { diarioClasseKeys } from '../diarios/diario-classe.keys';
@@ -13,10 +13,15 @@ import { formatGradeHours } from './turma-grade-ui';
 import { getTurmaAtividadeCapabilities } from './turma-grade-atividade.utils';
 import { manageTurmaAtividade, type TurmaAtividadeManagementInput } from './turma-grade-atividade.service';
 import TurmaGradeAtividadeEditor from './TurmaGradeAtividadeEditor';
+import { buildGradeChronology } from './turma-grade-cronologia';
 
-interface Props { atividades: TurmaAtividadeExtraClasse[] }
+interface Props {
+  atividades: TurmaAtividadeExtraClasse[];
+  aulas?: TurmaAulaPlanejada[];
+  renderAula?: (aula: TurmaAulaPlanejada, index: number) => React.ReactNode;
+}
 
-const TurmaGradeAtividades: React.FC<Props> = ({ atividades }) => {
+const TurmaGradeAtividades: React.FC<Props> = ({ atividades, aulas = [], renderAula }) => {
   const queryClient = useQueryClient();
   const { toasts, removeToast, toast } = useToast();
   const [editingActivity, setEditingActivity] = useState<TurmaAtividadeExtraClasse | null>(null);
@@ -61,7 +66,7 @@ const TurmaGradeAtividades: React.FC<Props> = ({ atividades }) => {
     pendingRef.current = true;
     try { await mutation.mutateAsync(input); } finally { pendingRef.current = false; }
   };
-  const active = atividades.filter((atividade) => atividade.status !== 'ARQUIVADA');
+  const chronology = buildGradeChronology(aulas, atividades);
   const archived = atividades.filter((atividade) => atividade.status === 'ARQUIVADA');
   const busy = mutation.isPending;
   const renderRow = (atividade: TurmaAtividadeExtraClasse, index: number) => {
@@ -111,7 +116,11 @@ const TurmaGradeAtividades: React.FC<Props> = ({ atividades }) => {
   };
   return (
     <>
-      {active.map(renderRow)}
+      {chronology.map((item) => (
+        <React.Fragment key={`${item.tipo}:${item.tipo === 'aula' ? item.aula.id : item.atividade.id}`}>
+          {item.tipo === 'aula' ? renderAula?.(item.aula, item.index) : renderRow(item.atividade, item.index)}
+        </React.Fragment>
+      ))}
       {archived.length > 0 && <details className="rounded-xl border border-slate-200 bg-white p-3"><summary className="cursor-pointer text-xs font-bold text-slate-500">Atividades arquivadas ({archived.length})</summary><div className="mt-3 space-y-2">{archived.map(renderRow)}</div></details>}
       <ToastNotification toasts={toasts} onRemove={removeToast} />
     </>
@@ -119,3 +128,4 @@ const TurmaGradeAtividades: React.FC<Props> = ({ atividades }) => {
 };
 
 export default TurmaGradeAtividades;
+

@@ -1,8 +1,8 @@
 {
-  "version": "4.8.278",
+  "version": "4.8.279",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 287,
+  "revision": 288,
   "releasedAt": "2026-11-09",
-  "summary": "Crédito extra-classe na frequência por disciplina com elegibilidade temporal e diário assinado compatível"
+  "summary": "Aulas e atividades extra-classe intercaladas em ordem cronológica na Grade & Profs"
 }
