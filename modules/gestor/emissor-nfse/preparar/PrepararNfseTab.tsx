@@ -15,11 +15,15 @@ import NfseStudentsModal from './NfseStudentsModal';
 import NfseStudentGroups from './NfseStudentGroups';
 import { useNfseModelDescriptionPreview } from '../modelos/hooks/useNfseModelDescriptionPreview';
 import NfseDescriptionPreview from '../modelos/NfseDescriptionPreview';
+import ToastNotification, { useToast } from '../../components/ToastNotification';
+import { usePrepareNfseQueue } from '../fila/useNfseQueue';
 
 export default function PrepararNfseTab() {
-  const { scope } = useNfseTabContext();
+  const { scope, onPrepared, canPrepareQueue } = useNfseTabContext();
   const [open, setOpen] = useState(false);
-  const { draft, setDraft } = useNfsePreparationDraft();
+  const { draft, setDraft, preparationAttempt } = useNfsePreparationDraft();
+  const prepare = usePrepareNfseQueue(scope);
+  const { toasts, removeToast, toast } = useToast();
   const [month, setMonth] = useState(getNfseCurrentMonth);
   const [ids, setIds] = useState<string[]>([]);
   const [filters, setFilters] = useState(defaultNfseReceiptFilters);
@@ -78,28 +82,42 @@ export default function PrepararNfseTab() {
   const removeDraft = (targets: string[]) => setDraft(current => ({
     ...current, ids: current.ids.filter(id => !targets.includes(id)),
   }));
+  const canPrepare = Boolean(canPrepareQueue && scope && selectedModel && !modelsQuery.isFetching && draftSelection?.valid
+    && draftSelection.selectedCount > 0 && !draftLoading && !draftError && !prepare.isPending);
+  const addToQueue = () => {
+    if (!canPrepare || !scope || !selectedModel) return;
+    const input = preparationAttempt(scope, { candidateIds: draft.ids, modelId: selectedModel.id,
+      modelVersion: selectedModel.version, paymentMonth: draft.month });
+    prepare.mutate(input, { onSuccess: ({ result }) => {
+      preparationAttempt.confirm(input.requestId);
+      setDraft(current => ({ ...current, ids: [] }));
+      onPrepared(result.message);
+    }, onError: error => toast.error('Preparação não confirmada', error.message) });
+  };
 
   return <section className="nfse-panel" aria-label="Preparar emissão de notas">
+    <ToastNotification toasts={toasts} onRemove={removeToast} />
     <div className="nfse-section-heading">
       <div><h2>Alunos selecionados</h2>{draft.ids.length > 0 && <p>Recebimentos de {formatNfseMonth(draft.month)}</p>}</div>
-      <button type="button" className="nfse-button nfse-button-primary" onClick={openStudents} disabled={!validScope}><UserPlus size={16} />Adicionar alunos</button>
+      <button type="button" className="nfse-button nfse-button-primary" onClick={openStudents} disabled={!validScope || prepare.isPending}><UserPlus size={16} />Adicionar alunos</button>
     </div>
     {draft.ids.length > 0 ? <>
       <div className="nfse-toolbar"><div className="nfse-field"><label htmlFor="nfse-model">Modelo de emissão</label>
         <InstitutionalSelect id="nfse-model" ariaLabel="Modelo de emissão" value={draft.modelId} onValueChange={modelId => setDraft(current => ({ ...current, modelId }))}
           options={models.filter(item => item.active).map(item => ({ value: item.id, label: item.name }))}
-          placeholder="Selecionar modelo" disabled={!validScope} loading={modelsQuery.isPending}
+          placeholder="Selecionar modelo" disabled={!validScope || prepare.isPending} loading={modelsQuery.isPending}
           error={modelsQuery.error ? 'Não foi possível consultar os modelos.' : undefined} />
-      </div><button type="button" className="nfse-button nfse-button-secondary" onClick={() => { setLimitError(null); setDraft(current => ({ ...current, ids: [] })); }}>Limpar seleção</button></div>
+      </div><button type="button" className="nfse-button nfse-button-secondary" disabled={prepare.isPending} onClick={() => { setLimitError(null); setDraft(current => ({ ...current, ids: [] })); }}>Limpar seleção</button></div>
       {selectedModel && <div className="nfse-preparation-description"><NfseDescriptionPreview preview={descriptionPreview} label="Descrição para emissão" /></div>}
       {draftError ? <div className="nfse-footer" role="alert"><span>{draftError}</span>
         <button type="button" className="nfse-button nfse-button-secondary" onClick={() => void draftQuery.refetch()}>Atualizar</button>
       </div> : null}
       {draftSelection?.groups && <NfseStudentGroups groups={draftSelection.groups} selectedIds={draft.ids}
-        disabled={draftLoading} onToggleStudent={id => removeDraft([id])} onToggleGroup={removeDraft} />}
+        disabled={draftLoading || prepare.isPending} onToggleStudent={id => removeDraft([id])} onToggleGroup={removeDraft} />}
       <div className="nfse-footer">
         <span aria-live="polite">Total selecionado: <strong>{draftLoading ? 'Atualizando…' : !draftQuery.error && draftSelection?.valid ? formatNfseMoney(draftSelection.selectedAmount) : '—'}</strong></span>
-        <button type="button" className="nfse-button nfse-button-secondary" disabled title="A preparação fiscal ainda não está habilitada"><ListPlus size={16} />Adicionar aos pendentes</button>
+        <button type="button" className="nfse-button nfse-button-primary" disabled={!canPrepare} onClick={addToQueue}
+          title={!canPrepareQueue ? 'A fila de preparação ainda não está disponível neste ambiente.' : undefined}><ListPlus size={16} />{prepare.isPending ? 'Preparando…' : 'Adicionar aos pendentes'}</button>
       </div>
     </> : <div className="nfse-empty"><UserPlus size={26} /><strong>Nenhum aluno selecionado</strong></div>}
     {open && <NfseStudentsModal

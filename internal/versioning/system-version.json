@@ -1,8 +1,8 @@
 {
-  "version": "4.8.272",
+  "version": "4.8.273",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 281,
+  "revision": 282,
   "releasedAt": "2026-11-08",
-  "summary": "Despesas por categoria no mês atual, formulário compacto e detalhes do rateio"
+  "summary": "NFS-e com fila de preparação e cadastro seguro do certificado A1 no Supabase Vault"
 }

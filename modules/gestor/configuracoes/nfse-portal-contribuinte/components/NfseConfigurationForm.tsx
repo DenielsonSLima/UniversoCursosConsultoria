@@ -2,28 +2,37 @@ import React, { useEffect, useRef, useState } from 'react';
 import { KeyRound, Save, Settings2 } from 'lucide-react';
 import InstitutionalSelect from '../../../../shared/components/InstitutionalSelect';
 import ToastNotification, { useToast } from '../../../components/ToastNotification';
-import { useSaveNfseConfiguration } from '../../../emissor-nfse/hooks/useNfseMutations';
-import { NFSE_WRITES_ENABLED } from '../../../emissor-nfse/services/nfse.runtime';
-import type { NfseConfiguration, NfseConfigurationInput, NfseScope } from '../../../emissor-nfse/types/nfse.types';
+import { useSaveNfseConfigurationMetadata } from '../../../emissor-nfse/services/configuration/useNfseConfigurationMetadata';
+import { NFSE_CONFIGURATION_ENABLED } from '../../../emissor-nfse/services/configuration/configuration.service';
+import type { NfseConfigurationDefinition, NfseConfigurationMetadata } from '../../../emissor-nfse/services/configuration/configuration.types';
+import NfseTaxRegimeFields from './NfseTaxRegimeFields';
+import NfseCertificateModal from './NfseCertificateModal';
+import type { NfseScope } from '../../../emissor-nfse/types/nfse.types';
 
-type MetadataDraft = Omit<NfseConfigurationInput, 'requestId'>;
-interface Props { scope: NfseScope; configuration?: NfseConfiguration; activePolo: boolean }
+type MetadataDraft = Omit<NfseConfigurationDefinition, 'opSimpNac' | 'regEspTrib'> & {
+  opSimpNac: NfseConfigurationDefinition['opSimpNac'] | '';
+  regEspTrib: NfseConfigurationDefinition['regEspTrib'] | '';
+};
+interface Props { scope: NfseScope; configuration?: NfseConfigurationMetadata; activePolo: boolean }
 
-const initialDraft = (scope: NfseScope, config?: NfseConfiguration): MetadataDraft => ({
+const initialDraft = (scope: NfseScope, config?: NfseConfigurationMetadata): MetadataDraft => ({
   municipalityCode: config?.municipalityCode || '',
   municipalRegistration: config?.municipalRegistration || '',
   portalAccess: config?.portalAccess || 'CERTIFICATE',
   credentialSource: config?.credentialSource || 'MATRIZ',
-  environment: scope.environment,
+  opSimpNac: config?.opSimpNac || '',
+  regEspTrib: config?.regEspTrib || '',
+  regApTribSN: config?.regApTribSN || null,
 });
 
 const NfseConfigurationForm: React.FC<Props> = ({ scope, configuration, activePolo }) => {
   const [draft, setDraft] = useState(() => initialDraft(scope, configuration));
   const [dirty, setDirty] = useState(false);
+  const [certificateOpen,setCertificateOpen]=useState(false);
   const request = useRef<{ fingerprint: string; id: string } | null>(null);
-  const mutation = useSaveNfseConfiguration(scope, configuration?.canManage === true && activePolo);
+  const mutation = useSaveNfseConfigurationMetadata(scope);
   const { toasts, removeToast, toast } = useToast();
-  const canEdit = Boolean(NFSE_WRITES_ENABLED && configuration?.canManage && activePolo);
+  const canEdit = Boolean(NFSE_CONFIGURATION_ENABLED && configuration?.canManage && activePolo);
 
   useEffect(() => {
     if (!dirty) setDraft(initialDraft(scope, configuration));
@@ -36,11 +45,14 @@ const NfseConfigurationForm: React.FC<Props> = ({ scope, configuration, activePo
 
   const save = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!canEdit || mutation.isPending || !dirty) return;
-    const fingerprint = JSON.stringify(draft);
+    if (!canEdit || mutation.isPending || !dirty || !draft.opSimpNac || !draft.regEspTrib) return;
+    const expectedVersion = configuration?.version ?? 0;
+    const fingerprint = JSON.stringify({ definition: draft, expectedVersion });
     if (request.current?.fingerprint !== fingerprint) request.current = { fingerprint, id: crypto.randomUUID() };
     try {
-      await mutation.mutateAsync({ ...draft, requestId: request.current.id });
+      await mutation.mutateAsync({ definition: { ...draft, opSimpNac: draft.opSimpNac, regEspTrib: draft.regEspTrib },
+        requestId: request.current.id, expectedVersion });
+      request.current = null;
       setDirty(false);
       toast.success('Configuração atualizada', 'Os parâmetros desta unidade foram salvos.');
     } catch {
@@ -58,7 +70,7 @@ const NfseConfigurationForm: React.FC<Props> = ({ scope, configuration, activePo
               value={draft.municipalityCode} onChange={(event) => update('municipalityCode', event.target.value)} placeholder="Código do município" />
           </label>
           <label><span>Inscrição municipal</span>
-            <input aria-label="Inscrição municipal" maxLength={30} value={draft.municipalRegistration}
+            <input aria-label="Inscrição municipal" maxLength={15} value={draft.municipalRegistration}
               onChange={(event) => update('municipalRegistration', event.target.value)} placeholder="Quando aplicável" />
           </label>
           <label><span>Forma de acesso ao portal</span>
@@ -74,8 +86,11 @@ const NfseConfigurationForm: React.FC<Props> = ({ scope, configuration, activePo
               ariaLabel="Origem do certificado para a integração" disabled={!canEdit || mutation.isPending} />
           </label>
         </div>
+        <NfseTaxRegimeFields draft={draft} disabled={!canEdit || mutation.isPending} onChange={patch => {
+          setDirty(true); setDraft(previous => ({ ...previous, ...patch }));
+        }} />
       </fieldset>
-      {!configuration ? <p className="nfse-portal-note">As opções exibidas são sugestões iniciais. Nenhuma configuração foi salva para esta unidade.</p> : null}
+      {!configuration?.configured ? <p className="nfse-portal-note">As opções exibidas são sugestões iniciais. Nenhuma configuração foi salva para esta unidade.</p> : null}
       {configuration && !activePolo ? <p className="nfse-portal-note">Esta unidade está inativa em Polos e Filiais.</p> : null}
     </section>
 
@@ -85,13 +100,18 @@ const NfseConfigurationForm: React.FC<Props> = ({ scope, configuration, activePo
         <div><dt>Certificado</dt><dd>{configuration ? configuration.certificate.configured ? 'Cadastrado' : 'Ainda não cadastrado' : 'Situação ainda não verificada'}</dd></div>
         <div><dt>Acesso com login e senha</dt><dd>{configuration ? configuration.portalLoginConfigured ? 'Cadastrado' : 'Ainda não cadastrado' : 'Situação ainda não verificada'}</dd></div>
       </dl>
-      <p className="nfse-portal-note">O cadastro seguro de credenciais será disponibilizado na próxima etapa. A emissão automática exige certificado e representação validados, mesmo quando o portal é acessado por senha.</p>
+      <p className="nfse-portal-note">O certificado A1 pode ser cadastrado após salvar os parâmetros. A emissão exige também verificação de revogação, representação e habilitação fiscal no ambiente.</p>
+      <button type="button" className="nfse-portal-button" disabled={!canEdit || !configuration?.configured || dirty || mutation.isPending}
+        onClick={()=>setCertificateOpen(true)}>Cadastrar certificado A1</button>
       <div className="nfse-portal-actions">
         <button type="submit" className="nfse-portal-button" data-primary="true" disabled={!canEdit || !dirty || mutation.isPending}>
           <Save size={14} aria-hidden="true" /> {mutation.isPending ? 'Salvando…' : 'Salvar parâmetros'}
         </button>
       </div>
     </section>
+    {certificateOpen && <NfseCertificateModal scope={scope} onClose={()=>setCertificateOpen(false)} onSaved={()=>{
+      setCertificateOpen(false); toast.success('Certificado cadastrado','A emissão continua aguardando validação fiscal.');
+    }} />}
     <ToastNotification toasts={toasts} onRemove={removeToast} />
   </form>;
 };

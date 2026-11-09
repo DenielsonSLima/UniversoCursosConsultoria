@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Building2, ExternalLink, Info, ShieldCheck } from 'lucide-react';
 import InstitutionalSelect from '../../../../shared/components/InstitutionalSelect';
-import { useNfseConfiguration } from '../../../emissor-nfse/hooks/useNfseQueries';
+import { useNfseConfigurationMetadata } from '../../../emissor-nfse/services/configuration/useNfseConfigurationMetadata';
 import { NfseUnavailableError } from '../../../emissor-nfse/services/nfse.errors';
 import { getNfseCurrentMonth } from '../../../emissor-nfse/types/nfse.scope';
 import type { NfseEnvironment, NfseScope } from '../../../emissor-nfse/types/nfse.types';
@@ -15,7 +15,7 @@ const NfseCompanyPanel: React.FC<Props> = ({ polo, contextKey }) => {
   const scope = useMemo<NfseScope>(() => ({
     poloId: polo.id, contextKey, environment, month: getNfseCurrentMonth(),
   }), [polo.id, contextKey, environment]);
-  const configQuery = useNfseConfiguration(scope);
+  const configQuery = useNfseConfigurationMetadata(scope);
   const configuration = configQuery.error ? undefined : configQuery.data;
   const unavailable = configQuery.error instanceof NfseUnavailableError;
   const failed = configQuery.isError && !unavailable;

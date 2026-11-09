@@ -88,6 +88,7 @@
 .nfse-button-secondary:hover:not(:disabled) { background: #f8fafc; }
 .nfse-button:disabled { cursor: not-allowed; opacity: .48; }
 .nfse-button:focus-visible { outline: 2px solid #4169e1; outline-offset: 2px; }
+.nfse-queue-actions { align-items: center; display: flex; flex-wrap: wrap; gap: 8px; }
 .nfse-empty { align-items: center; color: #64748b; display: flex; flex-direction: column; gap: 9px; padding: 38px 20px; text-align: center; }
 .nfse-empty > svg { color: #8fa2ba; }
 .nfse-empty strong { color: #36506b; font-size: 14px; font-weight: 500; }

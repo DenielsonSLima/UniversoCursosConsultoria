@@ -4,6 +4,7 @@ import { createHash } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { basename, extname } from 'node:path';
+import { loadThirdPartySources } from './file-line-third-party-sources.mjs';
 
 const CONFIG_PATH = 'ai/operacao/qualidade/limite-linhas.json';
 const MIGRATION_EXEMPTIONS_PATH = 'ai/operacao/qualidade/migrations-aplicadas.json';
@@ -41,6 +42,7 @@ const additionalMigrationExemptionRegistries = (
   registry: existsSync(path) ? JSON.parse(read(path)) : null,
 }));
 const failures = [];
+const thirdPartySources = loadThirdPartySources(config.thirdPartyRegistry, failures);
 
 const countPhysicalLines = content => {
   if (!content) return 0;
@@ -190,6 +192,10 @@ const readGitFile = (ref, path) => {
 };
 
 for (const path of manifestPaths) {
+  if (thirdPartySources.has(path)) {
+    skipped.push({ path, reason: 'verified-third-party-source' });
+    continue;
+  }
   if (exemptions.has(path)) {
     const exemption = exemptions.get(path);
     if (!/^supabase\/migrations\/[^/]+\.sql$/.test(path)) {
