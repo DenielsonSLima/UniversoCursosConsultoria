@@ -4,6 +4,5 @@
   "stage": "stable",
   "revision": 281,
   "releasedAt": "2026-11-08",
-  "summary": "Mês atual por categoria, demais períodos por mês e despesas variáveis antes das fixas"
+  "summary": "Mês atual por categoria, ordem das despesas e detalhes dos polos e valores do rateio"
 }
-

@@ -21,6 +21,7 @@ Histórico arquivado: [06/10/2026 a 09/10/2026 — versões 4.8.175 a 4.8.195](.
 - Mês atual abre agrupado por categoria; Em aberto e Todos abrem por mês nas despesas fixas e variáveis.
 - A troca de período restaura o agrupamento correspondente, mantendo a escolha manual disponível.
 - Despesas variáveis aparece antes de Despesas fixas na ordem visual das abas.
+- Custo rateado abre detalhes dos polos e valores autorizados em modal, pela tabela ou cartão.
 
 ## [4.8.271] - 2026-11-08
 
