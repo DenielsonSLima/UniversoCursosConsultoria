@@ -1,7 +1,8 @@
 import React from 'react';
+import { RefreshCw } from 'lucide-react';
 import type { ContaBancaria } from '../../financeiro.service';
 import type { DespesaGroupSummary, DespesaLancamento } from '../despesas.service';
-import type { DespesaTipo } from '../despesas.queryKeys';
+import type { DespesaTipo, DespesaAgrupamento } from '../despesas.queryKeys';
 import { useDespesaPendingDeletion } from '../hooks/useDespesaPendingDeletion';
 import DespesaCard from './DespesaCard';
 import DespesaDeleteModal from './DespesaDeleteModal';
@@ -14,6 +15,9 @@ interface DespesaListWorkspaceProps {
   summaries: DespesaGroupSummary[];
   viewMode: 'tabela' | 'cards';
   agrupar: boolean;
+  groupBy?: DespesaAgrupamento;
+  groupSummaryLoading?: boolean;
+  groupSummaryError?: boolean;
   contas: ContaBancaria[];
   poloId: string;
   tipo: DespesaTipo;
@@ -31,6 +35,9 @@ const DespesaListWorkspace: React.FC<DespesaListWorkspaceProps> = ({
   summaries,
   viewMode,
   agrupar,
+  groupBy = 'categoria',
+  groupSummaryLoading = false,
+  groupSummaryError = false,
   contas,
   poloId,
   tipo,
@@ -69,7 +76,7 @@ const DespesaListWorkspace: React.FC<DespesaListWorkspaceProps> = ({
   };
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3" aria-busy={groupSummaryLoading || undefined}>
       <DespesaSelectionBar
         eligibleItems={deletion.eligibleItems}
         selectedItems={deletion.selectedItems}
@@ -78,12 +85,20 @@ const DespesaListWorkspace: React.FC<DespesaListWorkspaceProps> = ({
         onDelete={() => deletion.openConfirmation()}
       />
 
-      {agrupar ? (
-        <DespesaGroupedView items={items} summaries={summaries} viewMode={viewMode} {...shared} />
+      {agrupar && groupSummaryLoading ? (
+        <div role="status" className="flex items-center justify-center gap-2 py-12 text-sm text-slate-500">
+          <RefreshCw size={20} className="animate-spin text-rose-500" />Carregando agrupamento…
+        </div>
+      ) : agrupar && groupSummaryError ? (
+        <div className="rounded-xl border border-rose-100 bg-rose-50 px-4 py-5 text-sm text-rose-700">
+          Não foi possível carregar os totais do agrupamento selecionado.
+        </div>
+      ) : agrupar ? (
+        <DespesaGroupedView key={groupBy} groupBy={groupBy} items={items} summaries={summaries} viewMode={viewMode} {...shared} />
       ) : viewMode === 'tabela' ? (
         <DespesaTable items={items} {...shared} />
       ) : (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {items.map((item) => (
             <DespesaCard
               key={item.id}

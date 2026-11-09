@@ -5,8 +5,7 @@ import { useExpensePayment } from '../hooks/useExpensePayment';
 import React, { useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
-  Plus, Search, LayoutGrid, LayoutList, RefreshCw,
-  Layers,
+  Plus, Search, RefreshCw,
 } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -20,6 +19,7 @@ import { useDespesasQueries } from '../hooks/useDespesasQueries';
 import { useDespesasRealtime } from '../hooks/useDespesasRealtime';
 import { useCategoriasFinanceirasQuery } from '../hooks/useCategoriasFinanceirasQuery';
 import DespesaForm from '../components/DespesaForm';
+import DespesaViewControls, { type DespesaAgrupamentoSelection } from '../components/DespesaViewControls';
 import DespesaTable from '../components/DespesaTable';
 import DespesaCard from '../components/DespesaCard';
 import DespesaGroupedView from '../components/DespesaGroupedView';
@@ -64,7 +64,9 @@ const DespesasVariaveisTab: React.FC<{ poloId?: string | null; actionsContainer?
   const [categoriaId, setCategoriaId] = useState('');
   const [turmaId, setTurmaId] = useState('');
   const [viewMode, setViewMode] = useState<'tabela' | 'cards'>('tabela');
-  const [agrupar, setAgrupar] = useState(false);
+  const [agrupamento, setAgrupamento] = useState<DespesaAgrupamentoSelection>('mes');
+  const agrupar = agrupamento !== 'nenhum';
+  const groupBy = agrupamento === 'nenhum' ? 'mes' : agrupamento;
   const [showForm, setShowForm] = useState(false);
   const [baixaItem, setBaixaItem] = useState<DespesaLancamento | null>(null);
   const [editItem, setEditItem] = useState<DespesaLancamento | null>(null);
@@ -93,7 +95,7 @@ const DespesasVariaveisTab: React.FC<{ poloId?: string | null; actionsContainer?
   }), [statusScope, dataInicio, dataFim, categoriaId, search, poloId, turmaId]);
 
   const { lancamentosQuery, summaryQuery, groupSummaryQuery } = useDespesasQueries(filters, {
-    groupSummary: agrupar,
+    groupSummary: agrupar, groupBy,
   });
   const categoriasQuery = useCategoriasFinanceirasQuery('DESPESA_VARIAVEL');
 
@@ -304,15 +306,21 @@ const DespesasVariaveisTab: React.FC<{ poloId?: string | null; actionsContainer?
         </div>
       )}
 
-      <FinancialUnderlineTabs
-        compact
-        items={tabs}
-        value={statusScope}
-        onChange={setStatusScope}
-        ariaLabel="Período das despesas variáveis"
-        indicatorClassName="bg-rose-600"
-        activeIconClassName="text-rose-600"
-      />
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+        <div className="min-w-[280px] flex-1">
+          <FinancialUnderlineTabs
+            compact
+            items={tabs}
+            value={statusScope}
+            onChange={setStatusScope}
+            ariaLabel="Período das despesas variáveis"
+            indicatorClassName="bg-rose-600"
+            activeIconClassName="text-rose-600"
+          />
+        </div>
+        <DespesaViewControls viewMode={viewMode} onViewModeChange={setViewMode}
+          agrupamento={agrupamento} onAgrupamentoChange={setAgrupamento} />
+      </div>
 
       <div className="space-y-3">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-12">
@@ -351,15 +359,7 @@ const DespesasVariaveisTab: React.FC<{ poloId?: string | null; actionsContainer?
             placeholder="Todas as turmas" options={[{ value: '', label: 'Todas as turmas' },
               ...turmas.map((turma) => ({ value: turma.id, label: turma.nome, keywords: turma.codigo }))]} className="w-full xl:col-span-2" />
         </div>
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          <div className="flex gap-1 p-1 bg-slate-100 rounded-xl">
-            <button onClick={() => setViewMode('tabela')} className={`p-2 rounded-lg transition-all ${viewMode === 'tabela' ? 'bg-white shadow-sm text-rose-600' : 'text-slate-400 hover:text-slate-600'}`} title="Tabela"><LayoutList size={15} /></button>
-            <button onClick={() => setViewMode('cards')} className={`p-2 rounded-lg transition-all ${viewMode === 'cards' ? 'bg-white shadow-sm text-rose-600' : 'text-slate-400 hover:text-slate-600'}`} title="Cards"><LayoutGrid size={15} /></button>
-          </div>
-          <button onClick={() => setAgrupar((v) => !v)} className={`flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-bold uppercase border transition-all ${agrupar ? 'bg-[#001a33] text-white border-[#001a33]' : 'text-slate-500 border-slate-200 hover:border-slate-400'}`}>
-            <Layers size={13} />Agrupar
-          </button>
-        </div>
+
       </div>
 
       {lancamentosQuery.isLoading || (agrupar && groupSummaryQuery.isLoading) ? (
@@ -374,10 +374,10 @@ const DespesasVariaveisTab: React.FC<{ poloId?: string | null; actionsContainer?
         </div>
       ) : agrupar && groupSummaryQuery.isError ? (
         <div className="rounded-2xl border border-rose-100 bg-rose-50 px-5 py-6 text-center text-sm font-bold text-rose-700">
-          Não foi possível carregar os totais canônicos por categoria.
+          Não foi possível carregar os totais do agrupamento selecionado.
         </div>
       ) : agrupar ? (
-        <DespesaGroupedView
+        <DespesaGroupedView key={groupBy} groupBy={groupBy}
           items={filtered}
           summaries={groupSummaryQuery.data || []}
           viewMode={viewMode}
@@ -399,7 +399,7 @@ const DespesasVariaveisTab: React.FC<{ poloId?: string | null; actionsContainer?
           onAnexo={handleAnexo}
         />
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {filtered.map((item) => (
             <DespesaCard
               key={item.id}

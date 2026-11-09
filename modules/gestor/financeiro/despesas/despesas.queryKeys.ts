@@ -1,5 +1,7 @@
 // File: modules/gestor/financeiro/despesas/despesas.queryKeys.ts
 
+export type DespesaAgrupamento = 'mes' | 'fornecedor' | 'categoria';
+
 export type DespesaTipo = 'DESPESA_FIXA' | 'DESPESA_VARIAVEL' | 'OUTRO_DEBITO';
 export type CategoriaFinanceiraTipo = DespesaTipo | 'OUTRO_CREDITO';
 export type DespesaStatusScope = 'mes_atual' | 'em_aberto' | 'todos';
@@ -30,8 +32,8 @@ export const despesasQueryKeys = {
 
   // Resumo canônico por categoria calculado no banco
   groupSummaryRoot: ['despesas', 'group-summary'] as const,
-  groupSummaryList: (filters: DespesasFilters) =>
-    ['despesas', 'group-summary', filters] as const,
+  groupSummaryList: (filters: DespesasFilters, agrupamento: DespesaAgrupamento = 'categoria') =>
+    ['despesas', 'group-summary', filters, agrupamento] as const,
 
   // Categorias Financeiras
   categoriasRoot: ['despesas', 'categorias-financeiras'] as const,

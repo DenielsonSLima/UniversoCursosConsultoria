@@ -1,8 +1,9 @@
 {
-  "version": "4.8.270",
+  "version": "4.8.271",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 279,
+  "revision": 280,
   "releasedAt": "2026-11-08",
-  "summary": "Serviços para parceiros, visualizador DANFSe por XML e revalidação de acesso sem piscar"
+  "summary": "Despesas agrupadas por mês ou fornecedor, controles junto às abas e quatro cartões por linha"
 }
+

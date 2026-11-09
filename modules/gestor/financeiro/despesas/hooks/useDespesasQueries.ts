@@ -2,10 +2,11 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { despesasService } from '../despesas.service';
-import { despesasQueryKeys, DespesasFilters } from '../despesas.queryKeys';
+import { despesasQueryKeys, DespesasFilters, type DespesaAgrupamento } from '../despesas.queryKeys';
 
 interface UseDespesasQueriesOptions {
   groupSummary?: boolean;
+  groupBy?: DespesaAgrupamento;
 }
 
 export function useDespesasQueries(
@@ -27,8 +28,8 @@ export function useDespesasQueries(
   });
 
   const groupSummaryQuery = useQuery({
-    queryKey: despesasQueryKeys.groupSummaryList(filters),
-    queryFn: () => despesasService.getDespesasGroupSummary(filters),
+    queryKey: despesasQueryKeys.groupSummaryList(filters, options.groupBy),
+    queryFn: () => despesasService.getDespesasGroupSummary(filters, options.groupBy),
     enabled: options.groupSummary === true && Boolean(filters.poloId),
     staleTime: 15_000,
   });

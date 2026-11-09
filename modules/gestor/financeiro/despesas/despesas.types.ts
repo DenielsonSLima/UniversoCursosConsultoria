@@ -196,6 +196,8 @@ export interface DespesasSummary {
 }
 
 export interface DespesaGroupSummary {
+  groupKey?: string;
+  groupLabel?: string;
   categoriaId?: string;
   categoriaNome: string;
   totalValue: number;
