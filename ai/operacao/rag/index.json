@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "retrieval": "lexical-bm25-with-source-citations",
-  "builtAt": "2026-11-09T03:18:32.543Z",
+  "builtAt": "2026-11-09T03:57:35.589Z",
   "manifestVersion": 2,
-  "sourceSignature": "ab7f351cdcaed1c51268f8f82c1af248b54fc08bf701c52dd3ce880b8620f02b",
+  "sourceSignature": "1e7e7e2bae3d5a633160c9be3ffec6453124a4eaa7baba804f8e1a6cafd64089",
   "sources": [
     {
       "path": "AGENTS.md",
@@ -11,7 +11,7 @@
     },
     {
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "hash": "dfd94affa8e468cd44c34aebfb88df9a7d07d11051f13bd1e2e228fd28fb1930"
+      "hash": "7b53c4bb254438cdc2bec6e5cb61b564e1d4cdd402571bf90dc61438c3961e84"
     },
     {
       "path": "ai/operacao/MEMORIA_CANONICA.md",
@@ -208,23 +208,23 @@
       "part": 1
     },
     {
-      "id": "adce3e9305abd22032fd",
-      "hash": "adce3e9305abd22032fde1ecda208139d7a1bed16ec3af8acae680af97a1bf7a",
+      "id": "2d83a388910d04e33df7",
+      "hash": "2d83a388910d04e33df718c84d47005471a5f884a80362f573660b5ede553d51",
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Lote: 2026-11-08-nfse-previa-emitidas",
-      "text": "Correção local autorizada: cada nota em Emitidas deve abrir a própria prévia dentro do sistema, sem seleção de arquivo do computador. Extensão em 09/11: menu de três pontos com PDF/XML e seleção por página para ZIPs de PDFs ou XMLs. Preservar o compositor nacional e o mesmo Blob para prévia, download e impressão.",
-      "normalizedText": "correcao local autorizada cada nota em emitidas deve abrir a propria previa dentro do sistema sem selecao de arquivo do computador extensao em 09 11 menu de tres pontos com pdf xml e selecao por pagina para zips de pdfs ou xmls preservar o compositor nacional e o mesmo blob para previa download e impressao",
-      "tokenCount": 49,
+      "section": "Lote: 2026-11-09-extra-classe-frequencia",
+      "text": "Creditar atividades criadas pelo botão extra-classe na frequência por disciplina, respeitando a situação da matrícula na data da atividade. Preservar chamada presencial, notas, aproveitamentos, dependências, histórico importado e documentos já assinados. Plano discutido por três agentes antes do patch.",
+      "normalizedText": "creditar atividades criadas pelo botao extra classe na frequencia por disciplina respeitando a situacao da matricula na data da atividade preservar chamada presencial notas aproveitamentos dependencias historico importado e documentos ja assinados plano discutido por tres agentes antes do patch",
+      "tokenCount": 38,
       "part": 1
     },
     {
-      "id": "b7fd9122b17ea1b81518",
-      "hash": "b7fd9122b17ea1b815185e2cd0e1973cace3b8e3be5d15abff898735504a4782",
+      "id": "836422d3e412be65a872",
+      "hash": "836422d3e412be65a8729bf838aebce0e1b35fc0ff5c7971e834b1d9db64e815",
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Lote: 2026-11-08-nfse-previa-emitidas",
-      "text": "Mudança crítica por publicação. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-08-nfse-previa-emitidas.md`. Produção autorizada em 09/11/2026 para o candidato 4.8.276 sobre main 4.8.275, preservando as entregas paralelas. Ledger e recuperação do XML autorizado ainda precisam de backend próprio; a porta fiscal continua bloqueada. Cadastro A1 publicado anteriormente permanece disponível. Sem novas migrations ou alterações remotas no Supabase neste lote.",
-      "normalizedText": "mudanca critica por publicacao manifesto explicito ai operacao registros alteracoes 2026 11 08 nfse previa emitidas md producao autorizada em 09 11 2026 para o candidato 4 8 276 sobre main 4 8 275 preservando as entregas paralelas ledger e recuperacao do xml autorizado ainda precisam de backend proprio a porta fiscal continua bloqueada cadastro a1 publicado anteriormente permanece disponivel sem novas migrations ou alteracoes remotas no supabase neste lote",
-      "tokenCount": 63,
+      "section": "Lote: 2026-11-09-extra-classe-frequencia",
+      "text": "Mudança crítica acadêmica/Supabase/PDF/publicação. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-09-extra-classe-frequencia.md`. Produção autorizada em 09/11/2026 após plano e validação. Candidato 4.8.278 revisado com três agentes: crédito temporal, testes isolados, snapshot opcional versionado e PDF vetorial. Base remota 4.8.277 preservada; somente 39 arquivos no manifesto. Sequência aditiva e estado da publicação registrados no manifesto. Smoke visual autenticado pendente por indisponibilidade do CUA.",
+      "normalizedText": "mudanca critica academica supabase pdf publicacao manifesto explicito ai operacao registros alteracoes 2026 11 09 extra classe frequencia md producao autorizada em 09 11 2026 apos plano e validacao candidato 4 8 278 revisado com tres agentes credito temporal testes isolados snapshot opcional versionado e pdf vetorial base remota 4 8 277 preservada somente 39 arquivos no manifesto sequencia aditiva e estado da publicacao registrados no manifesto smoke visual autenticado pendente por indisponibilidade do cua",
+      "tokenCount": 68,
       "part": 1
     },
     {

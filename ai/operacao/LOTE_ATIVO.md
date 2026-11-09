@@ -1,7 +1,7 @@
 # Lote ativo
 
-## Lote: 2026-11-08-nfse-previa-emitidas
+## Lote: 2026-11-09-extra-classe-frequencia
 
-Correção local autorizada: cada nota em Emitidas deve abrir a própria prévia dentro do sistema, sem seleção de arquivo do computador. Extensão em 09/11: menu de três pontos com PDF/XML e seleção por página para ZIPs de PDFs ou XMLs. Preservar o compositor nacional e o mesmo Blob para prévia, download e impressão.
+Creditar atividades criadas pelo botão extra-classe na frequência por disciplina, respeitando a situação da matrícula na data da atividade. Preservar chamada presencial, notas, aproveitamentos, dependências, histórico importado e documentos já assinados. Plano discutido por três agentes antes do patch.
 
-Mudança crítica por publicação. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-08-nfse-previa-emitidas.md`. Produção autorizada em 09/11/2026 para o candidato 4.8.276 sobre main 4.8.275, preservando as entregas paralelas. Ledger e recuperação do XML autorizado ainda precisam de backend próprio; a porta fiscal continua bloqueada. Cadastro A1 publicado anteriormente permanece disponível. Sem novas migrations ou alterações remotas no Supabase neste lote.
+Mudança crítica acadêmica/Supabase/PDF/publicação. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-09-extra-classe-frequencia.md`. Produção autorizada em 09/11/2026 após plano e validação. Candidato 4.8.278 revisado com três agentes: crédito temporal, testes isolados, snapshot opcional versionado e PDF vetorial. Base remota 4.8.277 preservada; somente 39 arquivos no manifesto. Sequência aditiva e estado da publicação registrados no manifesto. Smoke visual autenticado pendente por indisponibilidade do CUA.

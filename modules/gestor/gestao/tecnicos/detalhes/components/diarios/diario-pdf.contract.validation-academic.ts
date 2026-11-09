@@ -1,4 +1,5 @@
 import type { DiarioPdfGradeSnapshot } from "./diario-pdf.contract.types.ts";
+import { assertExtraClassCredit } from './diario-pdf.contract.validation-extra-class.ts';
 import {
   asRecord,
   assertExactKeys,
@@ -183,6 +184,9 @@ export const assertAcademicCollections = (
   instrumentKeys: readonly ["p", "ti", "tg", "s", "cq", "o"],
 ) => {
   const studentIds = assertStudents(snapshot);
+  const extra = snapshot.extraClassCredit === undefined ? null : assertExtraClassCredit(
+    snapshot.extraClassCredit, studentIds, snapshot.generatedAt as string,
+  );
   const { lessonIds, sessionIds, sessionHours } = assertLessons(snapshot);
   const attendanceMap = asRecord(snapshot.attendanceMap, "attendanceMap");
   const gradesMap = asRecord(snapshot.gradesMap, "gradesMap");
@@ -282,8 +286,11 @@ export const assertAcademicCollections = (
         "diverge das faltas congeladas",
       );
     }
+    const eligibleExtraHours = extra?.eligibleHoursByStudent.get(studentId) ?? 0;
+    const frequencyHours = totalHours + eligibleExtraHours;
+    if (frequencyHours <= 0) fail(`gradesMap.${studentId}`, 'carga de frequência elegível obrigatória');
     const expectedFrequency =
-      Math.round(((totalHours - absentHours) / totalHours) * 10_000) / 100;
+      Math.round(((frequencyHours - absentHours) / frequencyHours) * 10_000) / 100;
     if (!nearlyEqual(grade.frequencia_percent as number, expectedFrequency)) {
       fail(
         `gradesMap.${studentId}.frequencia_percent`,
@@ -304,7 +311,7 @@ export const assertAcademicCollections = (
     assertGradeValues(studentId, grade, instruments, instrumentKeys);
   });
 
-  return totalHours;
+  return totalHours + (extra?.totalHours ?? 0);
 };
 
 const assertGradeValues = (

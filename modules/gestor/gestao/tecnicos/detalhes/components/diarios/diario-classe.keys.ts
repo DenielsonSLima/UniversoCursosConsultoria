@@ -4,6 +4,7 @@ export const diarioClasseKeys = {
     ['diario-alunos', turmaId, disciplinaId, accessMode] as const,
   aulasByTurma: (turmaId: string) => ['diario-aulas', turmaId] as const,
   aulas: (turmaId: string, disciplinaId: string) => ['diario-aulas', turmaId, disciplinaId] as const,
+  extraClassCredit: (turmaId: string, disciplinaId: string) => ['diario-extra-classe-credito', turmaId, disciplinaId] as const,
   frequencia: (turmaId: string, disciplinaId: string) => ['diario-frequencia', turmaId, disciplinaId] as const,
   resultadosByTurma: (turmaId: string) => ['diario-notas-resultados', turmaId] as const,
   resultados: (turmaId: string, disciplinaId: string) => ['diario-notas-resultados', turmaId, disciplinaId] as const,

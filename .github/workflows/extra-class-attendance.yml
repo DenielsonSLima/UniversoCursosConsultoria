@@ -1,0 +1,50 @@
+name: Frequência e crédito extra-classe
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/extra-class-attendance.yml'
+      - 'supabase/migrations/20261109040*.sql'
+      - 'supabase/tests/diario_extra*'
+      - 'modules/gestor/gestao/tecnicos/detalhes/components/diarios/**'
+      - 'modules/gestor/gestao/tecnicos/detalhes/hooks/useTurmaGrade.ts'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/extra-class-attendance.yml'
+      - 'supabase/migrations/20261109040*.sql'
+      - 'supabase/tests/diario_extra*'
+      - 'modules/gestor/gestao/tecnicos/detalhes/components/diarios/**'
+      - 'modules/gestor/gestao/tecnicos/detalhes/hooks/useTurmaGrade.ts'
+
+permissions:
+  contents: read
+
+jobs:
+  extra-class-contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9.1
+      - run: npm ci
+      - name: Preparar PostgreSQL isolado, sem conexão remota
+        run: npm install --prefix "$RUNNER_TEMP/extra-class-tools" --no-save --no-package-lock @electric-sql/pglite@0.5.8
+      - name: Validar frequência, elegibilidade, ACL e snapshot
+        run: |
+          export PGLITE_MODULE_PATH="$RUNNER_TEMP/extra-class-tools/node_modules/@electric-sql/pglite/dist/index.js"
+          node --test supabase/tests/diario_extra_classe.isolated.test.mjs supabase/tests/diario_extra_class_snapshot.isolated.test.mjs
+      - name: Validar leitura, conteúdo e atualização da interface
+        run: node --test modules/gestor/gestao/tecnicos/detalhes/components/diarios/diario-extra-classe.client.test.mjs
+      - name: Validar contrato e compositor vetorial
+        run: |
+          deno test --allow-read --allow-env \
+            modules/gestor/gestao/tecnicos/detalhes/components/diarios/diario-extra-classe.contract.test.ts \
+            modules/gestor/gestao/tecnicos/detalhes/components/diarios/diario-extra-classe.pdf.test.ts

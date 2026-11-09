@@ -2,9 +2,12 @@ import React, { Dispatch, SetStateAction } from 'react';
 import { BookOpen, CheckCircle2, Loader2, Save } from 'lucide-react';
 import { isAcademicClassContentPending } from '../../../../../../../lib/academicClassMeetings';
 import { DiarioAula } from './diario-classe.service';
+import type { DiarioExtraClassCredit } from './diario-extra-classe.types';
+import DiarioExtraClasseConteudo from './DiarioExtraClasseConteudo';
 
 interface DiarioConteudoTabProps {
   aulas: DiarioAula[];
+  extraClassCredit?: DiarioExtraClassCredit;
   localTitulos: Record<string, string>;
   setLocalTitulos: Dispatch<SetStateAction<Record<string, string>>>;
   localPraticas: Record<string, string>;
@@ -18,6 +21,7 @@ interface DiarioConteudoTabProps {
 
 const DiarioConteudoTab: React.FC<DiarioConteudoTabProps> = ({
   aulas,
+  extraClassCredit,
   localTitulos,
   setLocalTitulos,
   localPraticas,
@@ -137,6 +141,7 @@ const DiarioConteudoTab: React.FC<DiarioConteudoTabProps> = ({
         </div>
       </div>
     )}
+    <DiarioExtraClasseConteudo credit={extraClassCredit} />
   </div>
 );
 

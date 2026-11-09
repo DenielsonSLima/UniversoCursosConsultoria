@@ -19,6 +19,7 @@ interface UseDiarioExportInput {
   moduloNome: string;
   students: DiarioPrintDocumentProps['students'];
   aulas: DiarioPrintDocumentProps['aulas'];
+  extraClassCredit?: DiarioPrintDocumentProps['extraClassCredit'];
   attendanceMap: DiarioPrintDocumentProps['attendanceMap'];
   gradesMap: DiarioPrintDocumentProps['gradesMap'];
   praticasMap: DiarioPrintDocumentProps['praticasMap'];
@@ -39,6 +40,7 @@ export const useDiarioExport = ({
   moduloNome,
   students,
   aulas,
+  extraClassCredit,
   attendanceMap,
   gradesMap,
   praticasMap,
@@ -65,6 +67,7 @@ export const useDiarioExport = ({
       moduloNome,
       students,
       aulas,
+      extraClassCredit: documentary ? undefined : extraClassCredit,
       attendanceMap,
       gradesMap: documentary ? Object.fromEntries(Object.entries(gradesMap).map(([id, grade]) => [
         id, { ...grade, instrumentos_documentais: documentary.students[id]?.gradeRows ?? null },
@@ -81,6 +84,7 @@ export const useDiarioExport = ({
     activeInstruments,
     attendanceMap,
     aulas,
+    extraClassCredit,
     disciplina,
     exportMode,
     gradesMap,
