@@ -32,16 +32,6 @@
 }
 .nfse-xml-toolbar > span { color: #64748b; font-size: 13px; }
 .nfse-xml-actions { display: flex; gap: 8px; margin-left: auto; }
-.nfse-xml-file { position: relative; cursor: pointer; }
-.nfse-xml-file input {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  cursor: pointer;
-  opacity: 0;
-}
-.nfse-xml-file:focus-within { outline: 2px solid #4169ff; outline-offset: 3px; }
 .nfse-xml-preview { flex: 1; min-height: 0; background: #e8edf2; }
 .nfse-xml-preview iframe { width: 100%; height: 100%; border: 0; }
 .nfse-xml-empty {

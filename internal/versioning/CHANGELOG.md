@@ -18,6 +18,13 @@ Histórico arquivado: [06/10/2026 a 09/10/2026 — versões 4.8.175 a 4.8.195](.
 
 Histórico arquivado: [10/10/2026 — versões 4.8.196 a 4.8.198](./changelog/2026-10-10-versoes-4-8-196-a-198.md).
 
+## [4.8.276] - 2026-11-09
+
+### Corrigido
+- Emissor NFS-e: prévia por nota e menu com download PDF/XML, sem importar arquivo.
+- Seleção da página para ZIPs de PDFs/XMLs, com progresso e cancelamento.
+- Emissão permanece bloqueada até concluir a integração e homologação fiscal.
+
 ## [4.8.275] - 2026-11-08
 
 - Despesa paga organiza Pago/Clonar e Prévia/Estornar em duas linhas e duas colunas, na tabela e no cartão.

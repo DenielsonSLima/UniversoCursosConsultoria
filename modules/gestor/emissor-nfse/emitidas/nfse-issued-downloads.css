@@ -1,0 +1,17 @@
+.nfse-note-menu-trigger { min-width: 38px; padding: 8px; }
+.nfse-note-menu {
+  position: fixed; z-index: 1500; width: 188px; padding: 4px;
+  background: #fff; border: 1px solid #dbe3ed; border-radius: 8px;
+  box-shadow: 0 8px 24px rgb(0 26 51 / 14%); color: #18334b; font-size: 13px;
+}
+.nfse-note-menu button {
+  display: flex; width: 100%; align-items: center; gap: 8px; padding: 10px;
+  min-height: 44px; border: 0; border-radius: 5px; background: #fff;
+  color: inherit; font: inherit; text-align: left; cursor: pointer;
+}
+.nfse-note-menu button:hover, .nfse-note-menu button:focus { background: #f1f5f9; outline: 2px solid #4169e1; outline-offset: -2px; }
+.nfse-issued-downloads { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.nfse-issued-downloads p { flex-basis: 100%; margin: 0; }
+.nfse-issued-check { width: 42px; }
+.nfse-download-error { color: #a33e3e; font-size: 12px; }
+@media (max-width: 760px) { .nfse-note-menu-trigger { min-width: 44px; } }

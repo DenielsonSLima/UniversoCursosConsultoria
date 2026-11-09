@@ -1,9 +1,9 @@
 import { useEffect, useRef } from 'react';
 
-export function useNfseStudentsDialog(onClose: () => void) {
+export function useNfseStudentsDialog<T extends HTMLElement = HTMLInputElement>(onClose: () => void) {
   const overlayRef = useRef<HTMLDivElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
-  const initialFocusRef = useRef<HTMLInputElement>(null);
+  const initialFocusRef = useRef<T>(null);
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
 

@@ -1,46 +1,32 @@
 import React, { useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Download, FileUp, Loader2, Printer, X } from 'lucide-react';
+import { Download, FileSearch, Loader2, Printer, X } from 'lucide-react';
 import { downloadPdfBlob } from '../../../shared/pdf/download-pdf-blob';
 import { printPdfBlob } from '../../secretaria/shared/pdf-blob-print';
 import { useNfseStudentsDialog } from '../preparar/useNfseStudentsDialog';
-import { loadDanfseAssets } from './danfse.assets';
-import { createDanfsePdf } from './danfse.pdf';
-import { DANFSE_XML_MAX_BYTES } from './danfse.types';
-import { parseDanfseXml } from './danfse.xml';
+import type { NfseDocument } from '../types/nfse.types';
 import { useNfseTabContext } from '../components/NfseTabContext';
-import { danfseComponents, needsDanfseProjection } from './danfse.projection';
-import { useDanfseProjection } from './hooks/useDanfseProjection';
+import { useNfseIssuedXml } from './hooks/useNfseIssuedXml';
+import { prepareIssuedDanfsePdf } from './services/nfse-issued-pdf.service';
 import './nfse-xml-viewer.css';
 
 interface PreparedDanfse { blob: Blob; filename: string; number: string }
 
-export default function NfseXmlViewerModal({ onClose }: { onClose: () => void }) {
+export default function NfseXmlViewerModal({ document, onClose }: { document: NfseDocument; onClose: () => void }) {
   const titleId = useId();
   const { scope } = useNfseTabContext();
-  const projectionQuery = useDanfseProjection(scope);
-  const scopeKey = JSON.stringify(scope);
-  const { overlayRef, dialogRef, initialFocusRef } = useNfseStudentsDialog(onClose);
+  const query = useNfseIssuedXml(scope, document);
+  const issued = query.error ? undefined : query.data;
+  const { overlayRef, dialogRef, initialFocusRef } = useNfseStudentsDialog<globalThis.HTMLButtonElement>(onClose);
   const [prepared, setPrepared] = useState<PreparedDanfse | null>(null);
   const [previewUrl, setPreviewUrl] = useState('');
   const [busy, setBusy] = useState(false);
   const [printing, setPrinting] = useState(false);
   const [error, setError] = useState('');
-  const sequence = useRef(0);
   const printController = useRef<AbortController | null>(null);
-  const projectionController = useRef<AbortController | null>(null);
+  const canUsePdf = Boolean(prepared && !busy && !query.isFetching && !query.error);
 
-  useEffect(() => {
-    setPrepared(null);
-    setBusy(false);
-    setPrinting(false);
-    setError('');
-    return () => {
-      sequence.current += 1;
-      printController.current?.abort();
-      projectionController.current?.abort();
-    };
-  }, [scopeKey]);
+  useEffect(() => () => printController.current?.abort(), []);
   useEffect(() => {
     if (!prepared) { setPreviewUrl(''); return; }
     const url = URL.createObjectURL(prepared.blob);
@@ -48,34 +34,30 @@ export default function NfseXmlViewerModal({ onClose }: { onClose: () => void })
     return () => URL.revokeObjectURL(url);
   }, [prepared]);
 
-  const openXml = async (file?: File) => {
-    if (!file) return;
-    const request = ++sequence.current;
-    projectionController.current?.abort();
+  useEffect(() => {
     const controller = new AbortController();
-    projectionController.current = controller;
     setPrepared(null);
     setError('');
-    setBusy(true);
-    try {
-      if (!/\.xml$/i.test(file.name)) throw new Error('Selecione um arquivo XML.');
-      if (file.size > DANFSE_XML_MAX_BYTES) throw new Error('O XML deve ter até 2 MB.');
-      const document = parseDanfseXml(await file.text());
-      const components = danfseComponents(document);
-      const [assets, projection] = await Promise.all([
-        loadDanfseAssets(),
-        needsDanfseProjection(components) ? projectionQuery.mutateAsync({ components, signal: controller.signal }) : undefined,
-      ]);
-      if (request !== sequence.current) return;
-      const blob = createDanfsePdf(document, assets, projection);
-      setPrepared({ blob, filename: `DANFSe-${document.accessKey}.pdf`, number: document.number });
-    } catch (cause) {
-      if (request === sequence.current) setError(cause instanceof Error ? cause.message : 'Não foi possível abrir o XML.');
-    } finally { if (request === sequence.current) setBusy(false); }
-  };
+    setBusy(Boolean(issued));
+    if (!issued || !scope) {
+      printController.current?.abort();
+      setPrinting(false);
+    } else {
+      void (async () => {
+        try {
+          const blob = await prepareIssuedDanfsePdf(scope, issued, controller.signal);
+          if (controller.signal.aborted) return;
+          setPrepared({ blob, filename: `DANFSe-${issued.accessKey}.pdf`, number: issued.number });
+        } catch (cause) {
+          if (!controller.signal.aborted) setError(cause instanceof Error ? cause.message : 'Não foi possível visualizar a nota.');
+        } finally { if (!controller.signal.aborted) setBusy(false); }
+      })();
+    }
+    return () => controller.abort();
+  }, [issued, scope]);
 
   const print = async () => {
-    if (!prepared || printing) return;
+    if (!canUsePdf || !prepared || printing) return;
     setPrinting(true);
     setError('');
     const controller = new AbortController();
@@ -90,29 +72,24 @@ export default function NfseXmlViewerModal({ onClose }: { onClose: () => void })
     onMouseDown={event => { if (event.target === event.currentTarget) onClose(); }}>
     <div ref={dialogRef} className="nfse-xml-dialog" role="dialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1}>
       <header className="nfse-section-heading nfse-xml-heading">
-        <h2 id={titleId}>Visualizar NFS-e</h2>
-        <button type="button" className="nfse-button nfse-button-secondary" onClick={onClose} aria-label="Fechar visualizador"><X size={17} /></button>
+        <h2 id={titleId}>NFS-e {document.number} · {document.studentName}</h2>
+        <button ref={initialFocusRef} type="button" className="nfse-button nfse-button-secondary" onClick={onClose} aria-label="Fechar visualizador"><X size={17} /></button>
       </header>
       <div className="nfse-xml-toolbar">
-        <label className="nfse-button nfse-button-secondary nfse-xml-file">
-          <FileUp size={16} />Selecionar XML
-          <input ref={initialFocusRef} type="file" accept=".xml,application/xml,text/xml" aria-label="Selecionar XML da NFS-e"
-            onChange={event => { void openXml(event.target.files?.[0]); event.target.value = ''; }} />
-        </label>
-        <span>{prepared ? `NFS-e ${prepared.number} · Visualização do XML` : 'Arquivo NFS-e Nacional · até 2 MB'}</span>
+        <span>DANFSe da nota emitida · {scope?.environment === 'HOMOLOGACAO' ? 'Homologação' : 'Produção'}</span>
         <div className="nfse-xml-actions">
-          <button type="button" className="nfse-button nfse-button-secondary" disabled={!prepared || busy} onClick={() => prepared && downloadPdfBlob(prepared.blob, prepared.filename)}><Download size={16} />Baixar PDF</button>
-          <button type="button" className="nfse-button nfse-button-primary" disabled={!prepared || busy || printing} onClick={() => void print()}>
+          <button type="button" className="nfse-button nfse-button-secondary" disabled={!canUsePdf} onClick={() => canUsePdf && prepared && downloadPdfBlob(prepared.blob, prepared.filename)}><Download size={16} />Baixar PDF</button>
+          <button type="button" className="nfse-button nfse-button-primary" disabled={!canUsePdf || printing} onClick={() => void print()}>
             {printing ? <Loader2 size={16} className="animate-spin" /> : <Printer size={16} />}Imprimir
           </button>
         </div>
       </div>
-      {error && <p className="nfse-xml-error" role="alert">{error}</p>}
-      <div className="nfse-xml-preview" aria-busy={busy}>
-        {busy ? <div className="nfse-xml-empty" role="status"><Loader2 className="animate-spin" size={24} /><p>Preparando DANFSe…</p></div>
-          : prepared && previewUrl ? <iframe src={previewUrl} title={`DANFSe ${prepared.number}`} />
-            : <div className="nfse-xml-empty"><FileUp size={28} /><p>Selecione o XML para visualizar o DANFSe.</p></div>}
+      {(error || query.error) && <p className="nfse-xml-error" role="alert">{error || query.error?.message}</p>}
+      <div className="nfse-xml-preview" aria-busy={busy || query.isFetching}>
+        {busy || query.isFetching ? <div className="nfse-xml-empty" role="status"><Loader2 className="animate-spin" size={24} /><p>Carregando nota emitida…</p></div>
+          : !query.error && prepared && previewUrl ? <iframe src={previewUrl} title={`DANFSe ${prepared.number}`} />
+            : <div className="nfse-xml-empty"><FileSearch size={28} /><p>Não foi possível carregar a prévia desta nota.</p></div>}
       </div>
     </div>
-  </div>, document.body);
+  </div>, globalThis.document.body);
 }
