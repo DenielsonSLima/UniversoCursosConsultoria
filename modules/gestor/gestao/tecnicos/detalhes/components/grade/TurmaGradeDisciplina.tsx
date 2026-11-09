@@ -233,8 +233,10 @@ const TurmaGradeDisciplina: React.FC<TurmaGradeDisciplinaProps> = ({
                 Nenhuma aula ou atividade extra-classe cadastrada nesta turma ainda.
               </p>
             ) : (
-              <>
-                {aulas.map((aula, index) => {
+              <TurmaGradeAtividades
+                atividades={atividades}
+                aulas={aulas}
+                renderAula={(aula, index) => {
                   const dataFormatada = aula.dataAula
                     ? new Date(`${aula.dataAula}T00:00:00`).toLocaleDateString('pt-BR', {
                         day: '2-digit',
@@ -397,9 +399,8 @@ const TurmaGradeDisciplina: React.FC<TurmaGradeDisciplinaProps> = ({
                       </div>
                     </div>
                   );
-                })}
-                <TurmaGradeAtividades atividades={atividades} />
-              </>
+                }}
+              />
             )}
           </div>
 
@@ -428,3 +429,4 @@ const TurmaGradeDisciplina: React.FC<TurmaGradeDisciplinaProps> = ({
 };
 
 export default TurmaGradeDisciplina;
+
