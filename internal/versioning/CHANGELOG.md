@@ -16,6 +16,12 @@ Histórico arquivado: [05/10/2026 — versões 4.8.171 a 4.8.174](./changelog/20
 
 Histórico arquivado: [06/10/2026 a 09/10/2026 — versões 4.8.175 a 4.8.195](./changelog/2026-10-06-a-09-versoes-4-8-175-a-195.md).
 
+## [4.8.269] - 2026-11-08
+
+- Ao selecionar o credor em despesas fixas ou variáveis, sugere categoria ativa, descrição e valor-base do último cadastro do mesmo polo e tipo.
+- Mantém edições manuais, ignora respostas atrasadas de outros credores e informa quando não há histórico ou a consulta falha.
+- O novo lançamento continua pendente e mantém suas datas; pagamentos, encargos, parcelas e anexos não são copiados.
+
 ## [4.8.268] - 2026-11-08
 
 - Modelos NFS-e aceitam a variável `{{mes_referencia}}`, preenchida por RPC como mês por extenso e ano.

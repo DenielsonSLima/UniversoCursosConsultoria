@@ -15,6 +15,7 @@ import {
 } from '../despesas.service';
 import { despesasQueryKeys, type DespesaTipo } from '../despesas.queryKeys';
 import { useCategoriasFinanceirasQuery } from '../hooks/useCategoriasFinanceirasQuery';
+import { useDespesaSugestao } from '../hooks/useDespesaSugestao';
 import type { DespesaCredorTipo } from './DespesaCredorPicker';
 import DespesaFormAssociations from './DespesaFormAssociations';
 import DespesaFormCoreFields from './DespesaFormCoreFields';
@@ -53,11 +54,8 @@ const DespesaForm: React.FC<DespesaFormProps> = ({
 }) => {
   const queryClient = useQueryClient();
   const [mode, setMode] = useState<LancamentoMode>('pendente');
-  const [descricao, setDescricao] = useState('');
-  const [valor, setValor] = useState('');
   const [dataLancamento, setDataLancamento] = useState(today());
   const [dataVencimento, setDataVencimento] = useState(today());
-  const [categoriaId, setCategoriaId] = useState('');
   const [fornecedorTipo, setFornecedorTipo] = useState<DespesaCredorTipo | ''>('');
   const [fornecedorId, setFornecedorId] = useState('');
   const [showNovoCredor, setShowNovoCredor] = useState(false);
@@ -89,6 +87,10 @@ const DespesaForm: React.FC<DespesaFormProps> = ({
   const requestIdRef = useRef(createFinanceRequestId());
 
   const categoriasQuery = useCategoriasFinanceirasQuery(tipo);
+  const sugestao = useDespesaSugestao(
+    poloId, tipo, fornecedorId, categoriasQuery.data, !categoriasQuery.isPending,
+  );
+  const { descricao, setDescricao, valor, setValor, categoriaId, setCategoriaId } = sugestao;
   const conveniosQuery = useConveniosListQuery(poloId, 'ABERTOS', '');
   const categorias = categoriasQuery.data || [];
   const convenios = conveniosQuery.data?.itens || [];
@@ -217,7 +219,7 @@ const DespesaForm: React.FC<DespesaFormProps> = ({
           categoriaSelectRef, descricao, setDescricao, valor, setValor, fornecedorTipo,
           setFornecedorTipo, fornecedorId, setFornecedorId, jurosValor, setJurosValor, multaValor,
           setMultaValor, descontoValor, setDescontoValor,
-        }} parceiros={credores} onNovoCredor={() => setShowNovoCredor(true)}
+        }} parceiros={credores} sugestao={sugestao} onNovoCredor={() => setShowNovoCredor(true)}
           convenioVinculado={Boolean(convenioMesId)} />
         <DespesaFormAssociations {...{
           mode, convenioMesId, convenios, isPoloMatriz, rateioSelection, polosRateio,

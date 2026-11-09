@@ -30,3 +30,5 @@ jobs:
           modules/gestor/parceiros/parceiros-filters.model.test.ts
           modules/gestor/financeiro/despesas/despesas-fornecedores.test.ts
           modules/gestor/parceiros/components/cards/PJIdentityPreview.test.mjs
+          modules/gestor/financeiro/despesas/components/despesa-sugestao.model.test.ts
+          modules/gestor/financeiro/despesas/despesas-sugestoes.service.test.mjs
