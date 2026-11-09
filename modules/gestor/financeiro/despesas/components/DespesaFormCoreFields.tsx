@@ -1,6 +1,6 @@
 import FinancialSelect from '../../components/FinancialSelect';
-import React from 'react';
-import { Calendar, CheckCircle2, Clock, DollarSign, FileText, Layers, Plus, Tag } from 'lucide-react';
+import React, { useEffect, useRef } from 'react';
+import { Calendar, CheckCircle2, ChevronDown, Clock, DollarSign, FileText, Layers, Plus, Tag } from 'lucide-react';
 import type { CategoriaFinanceira } from '../despesas.service';
 import type { DespesaTipo } from '../despesas.queryKeys';
 import CategoriaFinanceiraInlineModal from './CategoriaFinanceiraInlineModal';
@@ -8,6 +8,7 @@ import DespesaCredorPicker, { DespesaCredorTipo } from './DespesaCredorPicker';
 import {
   formatCurrencyInput,
   formatCurrencyTyping,
+  parseCurrencyInput,
   type LancamentoMode,
 } from './despesa-form.utils';
 
@@ -46,6 +47,14 @@ interface Props {
 }
 
 const DespesaFormCoreFields: React.FC<Props> = (props) => {
+  const ajustesRef = useRef<React.ComponentRef<'details'>>(null);
+  const hasAdjustments = [props.jurosValor, props.multaValor, props.descontoValor]
+    .some((value) => parseCurrencyInput(value) > 0);
+
+  useEffect(() => {
+    if (hasAdjustments && ajustesRef.current) ajustesRef.current.open = true;
+  }, [hasAdjustments, props.jurosValor, props.multaValor, props.descontoValor]);
+
   const modes = props.convenioVinculado
     ? [
         { id: 'pendente' as const, label: 'Pendente', Icon: Clock },
@@ -129,12 +138,19 @@ const DespesaFormCoreFields: React.FC<Props> = (props) => {
       </div>
     </div>
 
-    <div className="financial-dialog-section rounded-2xl border border-amber-100 bg-amber-50/70 p-4 md:col-span-2">
-      <div className="mb-3 flex items-start justify-between gap-4">
-        <div><p className="text-xs font-black uppercase tracking-wider text-amber-800">Ajustes do valor</p>
-          <p className="mt-0.5 text-[10px] font-medium text-amber-700/70">Valores opcionais por lançamento ou por parcela.</p></div>
-        <span className="rounded-lg border border-amber-200 bg-white px-2 py-1 text-[9px] font-black uppercase tracking-wider text-amber-700">Calculado no banco</span>
-      </div>
+    <details ref={ajustesRef} className="financial-dialog-section group rounded-2xl border border-amber-100 bg-amber-50/70 md:col-span-2">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-2xl p-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 [&::-webkit-details-marker]:hidden">
+        <span className="text-xs font-bold text-amber-800">Ajustes do valor</span>
+        <span className="flex items-center gap-2 text-xs text-amber-700">
+          {hasAdjustments && <span className="rounded-md bg-white px-2 py-1">Com ajustes</span>}
+          <ChevronDown size={16} className="shrink-0 transition-transform group-open:rotate-180" aria-hidden="true" />
+        </span>
+      </summary>
+      <div className="px-4 pb-4">
+        <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
+          <p className="text-[10px] font-medium text-amber-700/70">Valores opcionais por lançamento ou por parcela.</p>
+          <span className="rounded-lg border border-amber-200 bg-white px-2 py-1 text-[9px] font-black uppercase tracking-wider text-amber-700">Calculado automaticamente</span>
+        </div>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         {[{ label: 'Juros', value: props.jurosValor, setter: props.setJurosValor },
           { label: 'Multa', value: props.multaValor, setter: props.setMultaValor },
@@ -150,8 +166,10 @@ const DespesaFormCoreFields: React.FC<Props> = (props) => {
         ))}
       </div>
       <p className="mt-3 text-[10px] font-semibold text-slate-500">Valor final = valor-base + juros + multa − desconto.</p>
-    </div>
+      </div>
+    </details>
   </>;
 };
 
 export default DespesaFormCoreFields;
+

@@ -4,5 +4,5 @@
   "stage": "stable",
   "revision": 281,
   "releasedAt": "2026-11-08",
-  "summary": "Mês atual por categoria, ordem das despesas e detalhes dos polos e valores do rateio"
+  "summary": "Despesas por categoria no mês atual, formulário compacto e detalhes do rateio"
 }

@@ -1,4 +1,4 @@
-# Agrupamento por período, ordem das abas e detalhes do rateio
+# Despesas: agrupamento, rateio e formulário compacto
 
 Data: 08/11/2026. Correção da interface entregue na 4.8.271, com estado local,
 ordem visual e leitura dos rateios existentes. Não altera RPCs, dados, valores,
@@ -34,7 +34,11 @@ parcelas, autorização ou pagamentos.
 - `modules/gestor/financeiro/despesas/components/DespesaRateioModal.tsx`
 - `modules/gestor/financeiro/despesas/despesas-rateios.service.ts`
 
-Total: 12 arquivos.
+- `modules/gestor/financeiro/despesas/components/DespesaFormCoreFields.tsx`
+- `modules/gestor/financeiro/despesas/components/DespesaFormAssociations.tsx`
+- `modules/gestor/financeiro/despesas/components/DespesaFormSettlementFields.tsx`
+
+Total: 15 arquivos.
 
 ## Causa e validação
 
@@ -51,8 +55,9 @@ Mês atual exibe grupo Internet / Telefone; Em aberto e Todos exibem os meses.
 Não foi feita operação financeira nem alteração no Supabase.
 
 TypeScript focado e ESLint aprovados. Smoke de desktop e de 390 px aprovado.
-Manifesto de doze arquivos respeita o teto de 500 linhas. A checagem global
-local reporta 39 caminhos históricos ausentes e o manifesto ainda não registrado\ndo lote NFS-e paralelo, totalizando 40 pendências locais;
+Manifesto de quinze arquivos respeita o teto de 500 linhas. A checagem global
+ local reporta 39 caminhos históricos ausentes e o manifesto ainda não registrado
+ do lote NFS-e paralelo, totalizando 40 pendências locais;
 CI executará essa validação no checkout remoto completo.
 CI e Preview validam o checkout remoto completo antes de eventual publicação.
 
@@ -70,3 +75,22 @@ valores canônicos e RLS por polo. Consulta sem identidade retornou zero registr
 Smoke local com componentes reais confirmou tabela, cartão, 390 px, erro, vazio,
 Tab/Shift+Tab contidos e Escape com retorno de foco. Nome longo quebra sem cortar.
 Não houve alteração remota no schema nem nos dados financeiros.
+
+## Formulário compacto
+
+Pedido adicional dividido entre três agentes: ajustes e textos; convênio/turma;
+revisão independente do parent, payload e guardas. Nenhuma alteração no parent.
+Ajustes usa details nativo, inicialmente recolhido com zeros; os inputs permanecem
+montados, valores presentes abrem a seção e o selo Com ajustes permanece visível.
+Convênio e turma usam Não/Sim, Não inicial; Sim expande campos e avisos existentes.
+Não limpa o vínculo correspondente (também a modalidade da turma), evitando IDs
+ocultos no envio. O rateio, anexo, observação, modos e bloqueios foram preservados.
+Textos usam Calculado automaticamente e divisão sem perder centavos.
+
+Revisão dos três agentes, TypeScript focado e lint aprovados. Smoke dos componentes
+reais em desktop/390 px validou os padrões, expansão, preservação dos três ajustes,
+Sim/Não com escolha e limpeza, convênio bloqueando parcelas/rateio e rateio ativo
+bloqueando convênio. Envios sintéticos interrompidos antes de qualquer gravação
+confirmaram juros 5, multa 2, desconto 1 com seção recolhida, nos modos simples,
+parcelado/desdobrado e baixa, preservando conta e forma. Todos os IDs da simulação
+são fictícios. Não houve mutação financeira nem upload remoto.

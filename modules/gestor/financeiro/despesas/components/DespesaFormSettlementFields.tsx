@@ -40,14 +40,14 @@ const DespesaFormSettlementFields: React.FC<Props> = (props) => <>
         </div>
       </div>
       <p className="text-[10px] font-medium text-indigo-500">
-        {props.splitTotal ? 'O valor total e os ajustes serão divididos de forma canônica no banco.' : 'Cada parcela manterá o valor informado.'}
+        {props.splitTotal ? 'O valor total e os ajustes serão divididos entre as parcelas.' : 'Cada parcela manterá o valor informado.'}
         {' '}O intervalo será de <strong>{props.intervaloDias} {props.intervaloUnit}</strong>.
       </p>
       <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-indigo-200 bg-white/80 p-3 text-left">
         <input type="checkbox" checked={props.splitTotal} onChange={(event) => props.setSplitTotal(event.target.checked)}
           className="mt-0.5 h-4 w-4 rounded border-indigo-300 text-indigo-600 focus:ring-indigo-500" />
         <span><span className="block text-[11px] font-black uppercase tracking-wider text-indigo-800">Desdobrar valor total</span>
-          <span className="mt-0.5 block text-[10px] font-medium text-indigo-600">O backend divide o total preservando todos os centavos.</span></span>
+          <span className="mt-0.5 block text-[10px] font-medium text-indigo-600">O total é dividido entre as parcelas sem perder centavos.</span></span>
       </label>
     </div>
   )}
@@ -71,3 +71,4 @@ const DespesaFormSettlementFields: React.FC<Props> = (props) => <>
 </>;
 
 export default DespesaFormSettlementFields;
+

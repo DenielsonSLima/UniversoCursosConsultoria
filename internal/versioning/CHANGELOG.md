@@ -22,6 +22,8 @@ Histórico arquivado: [06/10/2026 a 09/10/2026 — versões 4.8.175 a 4.8.195](.
 - A troca de período restaura o agrupamento correspondente, mantendo a escolha manual disponível.
 - Despesas variáveis aparece antes de Despesas fixas na ordem visual das abas.
 - Custo rateado abre detalhes dos polos e valores autorizados em modal, pela tabela ou cartão.
+- Ajustes do valor iniciam recolhidos; convênio e turma usam Não/Sim, preservando campos, valores e bloqueios.
+- Textos do parcelamento foram simplificados para remover termos de implementação.
 
 ## [4.8.271] - 2026-11-08
 

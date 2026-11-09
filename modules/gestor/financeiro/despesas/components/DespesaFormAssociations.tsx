@@ -1,5 +1,5 @@
 import FinancialSelect from '../../components/FinancialSelect';
-import React from 'react';
+import React, { useId, useState } from 'react';
 import { CheckSquare, Handshake, Paperclip, Trash2, UploadCloud, UsersRound } from 'lucide-react';
 import type { ConvenioFinanceiroMes } from '../../convenios/convenios.types';
 import {
@@ -43,7 +43,31 @@ const formatMoney = (value: number) => value.toLocaleString('pt-BR', {
   style: 'currency', currency: 'BRL',
 });
 
+const AssociationToggle = ({ label, enabled, controls, onChange }: {
+  label: string;
+  enabled: boolean;
+  controls: string;
+  onChange: (enabled: boolean) => void;
+}) => (
+  <div role="group" aria-label={label} className="inline-flex shrink-0 gap-1 rounded-lg border border-slate-200 bg-white p-1">
+    {[{ value: false, label: 'Não' }, { value: true, label: 'Sim' }].map((option) => (
+      <button key={option.label} type="button" aria-pressed={enabled === option.value}
+        aria-controls={controls} aria-expanded={enabled}
+        aria-label={`${option.label}: ${label}`}
+        onClick={() => onChange(option.value)}
+        className={`min-h-11 min-w-12 rounded-md px-3 py-1.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 sm:min-h-7 ${enabled === option.value ? 'bg-[#001a33] text-white' : 'text-slate-600 hover:bg-slate-100'}`}>
+        {option.label}
+      </button>
+    ))}
+  </div>
+);
+
 const DespesaFormAssociations: React.FC<Props> = (props) => {
+  const sectionId = useId();
+  const [convenioEnabled, setConvenioEnabled] = useState(Boolean(props.convenioMesId));
+  const [turmaEnabled, setTurmaEnabled] = useState(Boolean(props.turmaId || props.turmaModalidade));
+  const showConvenio = convenioEnabled || Boolean(props.convenioMesId);
+  const showTurma = turmaEnabled || Boolean(props.turmaId || props.turmaModalidade);
   const convenioBlockedByMode = props.mode === 'parcelado';
   const convenioBlockedByRateio = props.rateioSelection !== 'DESLIGADO';
 
@@ -52,22 +76,33 @@ const DespesaFormAssociations: React.FC<Props> = (props) => {
       <div className="flex items-start gap-3">
         <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white text-cyan-700 shadow-sm"><Handshake size={16} /></div>
         <div className="min-w-0 flex-1">
-          <p className="text-xs font-black uppercase tracking-wide text-[#001a33]">Vincular a um convênio</p>
-          <p className="mt-0.5 text-xs font-medium leading-relaxed text-slate-500">
-            Opcional. O valor integral será reservado na competência aberta, sem criar uma segunda saída no Caixa.
-          </p>
-          <FinancialSelect value={props.convenioMesId} onValueChange={props.setConvenioMesId}
-            ariaLabel="Vincular a um convênio" placeholder="Sem vínculo com convênio"
-            disabled={convenioBlockedByMode || convenioBlockedByRateio || props.conveniosLoading || props.conveniosError}
-            loading={props.conveniosLoading} error={props.conveniosError ? 'Não foi possível carregar os convênios' : undefined}
-            options={[{ value: '', label: 'Sem vínculo com convênio' }, ...props.convenios.map((item) => ({
-              value: item.id, label: `${item.nome} · ${formatCompetencia(item.competencia)} · reservável ${formatMoney(item.saldoProjetado)}`,
-            }))]} className="mt-3 w-full" />
-          {!props.conveniosLoading && !props.conveniosError && props.convenios.length === 0 && (
-            <p className="mt-2 text-[10px] font-bold text-slate-500">Este polo não possui competência de convênio aberta.</p>
-          )}
-          {convenioBlockedByMode && <p className="mt-2 text-[10px] font-bold text-amber-700">Convênio aceita somente lançamento pendente ou baixa imediata no MVP.</p>}
-          {convenioBlockedByRateio && <p className="mt-2 text-[10px] font-bold text-amber-700">Desative o rateio por polo para vincular um convênio.</p>}
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-xs font-black uppercase tracking-wide text-[#001a33]">Vincular a um convênio</p>
+            <AssociationToggle label="Vincular a um convênio" enabled={showConvenio} controls={`${sectionId}-convenio`}
+              onChange={(enabled) => {
+                setConvenioEnabled(enabled);
+                if (!enabled) props.setConvenioMesId('');
+              }} />
+          </div>
+          <div id={`${sectionId}-convenio`}>
+          {showConvenio && <>
+            <p className="mt-0.5 text-xs font-medium leading-relaxed text-slate-500">
+              Opcional. O valor integral será reservado na competência aberta, sem criar uma segunda saída no Caixa.
+            </p>
+            <FinancialSelect value={props.convenioMesId} onValueChange={props.setConvenioMesId}
+              ariaLabel="Vincular a um convênio" placeholder="Sem vínculo com convênio"
+              disabled={convenioBlockedByMode || convenioBlockedByRateio || props.conveniosLoading || props.conveniosError}
+              loading={props.conveniosLoading} error={props.conveniosError ? 'Não foi possível carregar os convênios' : undefined}
+              options={[{ value: '', label: 'Sem vínculo com convênio' }, ...props.convenios.map((item) => ({
+                value: item.id, label: `${item.nome} · ${formatCompetencia(item.competencia)} · reservável ${formatMoney(item.saldoProjetado)}`,
+              }))]} className="mt-3 w-full" />
+            {!props.conveniosLoading && !props.conveniosError && props.convenios.length === 0 && (
+              <p className="mt-2 text-[10px] font-bold text-slate-500">Este polo não possui competência de convênio aberta.</p>
+            )}
+            {convenioBlockedByMode && <p className="mt-2 text-[10px] font-bold text-amber-700">Convênio aceita somente lançamento pendente ou baixa imediata no MVP.</p>}
+            {convenioBlockedByRateio && <p className="mt-2 text-[10px] font-bold text-amber-700">Desative o rateio por polo para vincular um convênio.</p>}
+          </>}
+          </div>
         </div>
       </div>
     </div>
@@ -111,21 +146,37 @@ const DespesaFormAssociations: React.FC<Props> = (props) => {
       </div>
     )}
 
-    <div className="grid grid-cols-1 gap-3 md:col-span-2 md:grid-cols-2">
-      <div><label className="mb-1.5 block text-[10px] font-black uppercase tracking-wider text-slate-400">Tipo da Turma</label>
-        <FinancialSelect value={props.turmaModalidade}
-          onValueChange={(value) => { props.setTurmaModalidade(value as TurmaModalidade | ''); props.setTurmaId(''); }}
-          ariaLabel="Tipo da turma" placeholder="Selecionar tipo (opcional)..."
-          options={[{ value: '', label: 'Selecionar tipo (opcional)...' }, ...turmaModalidadeOptions]} className="w-full" />
+    <section className="financial-dialog-section rounded-2xl border border-slate-200 bg-slate-50/60 p-4 md:col-span-2">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-xs font-black uppercase tracking-wide text-[#001a33]">Vincular a uma turma</p>
+        <AssociationToggle label="Vincular a uma turma" enabled={showTurma} controls={`${sectionId}-turma`}
+          onChange={(enabled) => {
+            setTurmaEnabled(enabled);
+            if (!enabled) { props.setTurmaId(''); props.setTurmaModalidade(''); }
+          }} />
       </div>
-      <div><label className="mb-1.5 block text-[10px] font-black uppercase tracking-wider text-slate-400">Vincular a uma Turma</label>
-        <FinancialSelect value={props.turmaId} onValueChange={props.setTurmaId} disabled={!props.turmaModalidade}
-          ariaLabel="Vincular a uma turma" placeholder={props.turmaModalidade ? 'Nenhuma turma (opcional)...' : 'Selecione o tipo primeiro...'}
-          options={[{ value: '', label: props.turmaModalidade ? 'Nenhuma turma (opcional)...' : 'Selecione o tipo primeiro...' },
-            ...props.filteredTurmas.map((turma) => ({ value: turma.id, label: `${turma.nome} (${turma.codigo})`, keywords: turma.codigo }))]}
-          className="w-full" />
+      <div id={`${sectionId}-turma`}>
+        {showTurma && (
+          <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
+            <div>
+              <label className="mb-1.5 block text-[10px] font-black uppercase tracking-wider text-slate-400">Tipo da Turma</label>
+              <FinancialSelect value={props.turmaModalidade}
+                onValueChange={(value) => { props.setTurmaModalidade(value as TurmaModalidade | ''); props.setTurmaId(''); }}
+                ariaLabel="Tipo da turma" placeholder="Selecionar tipo (opcional)..."
+                options={[{ value: '', label: 'Selecionar tipo (opcional)...' }, ...turmaModalidadeOptions]} className="w-full" />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-[10px] font-black uppercase tracking-wider text-slate-400">Vincular a uma Turma</label>
+              <FinancialSelect value={props.turmaId} onValueChange={props.setTurmaId} disabled={!props.turmaModalidade}
+                ariaLabel="Vincular a uma turma" placeholder={props.turmaModalidade ? 'Nenhuma turma (opcional)...' : 'Selecione o tipo primeiro...'}
+                options={[{ value: '', label: props.turmaModalidade ? 'Nenhuma turma (opcional)...' : 'Selecione o tipo primeiro...' },
+                  ...props.filteredTurmas.map((turma) => ({ value: turma.id, label: `${turma.nome} (${turma.codigo})`, keywords: turma.codigo }))]}
+                className="w-full" />
+            </div>
+          </div>
+        )}
       </div>
-    </div>
+    </section>
 
     <div className="md:col-span-2">
       <label className="mb-1.5 block text-[10px] font-black uppercase tracking-wider text-slate-400"><Paperclip size={11} className="mr-1 inline" />Foto ou PDF</label>
@@ -150,3 +201,4 @@ const DespesaFormAssociations: React.FC<Props> = (props) => {
 };
 
 export default DespesaFormAssociations;
+
