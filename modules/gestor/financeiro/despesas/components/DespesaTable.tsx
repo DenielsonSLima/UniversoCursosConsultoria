@@ -20,7 +20,7 @@ const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
     CANCELADO: { label: 'Cancelado', className: 'border-slate-200 bg-slate-100 text-slate-500', Icon: XCircle },
   };
   const config = configs[status] || configs.PENDENTE;
-  return <span className={`inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${config.className}`}><config.Icon size={10} /> {config.label}</span>;
+  return <span className={`inline-flex min-h-11 min-w-0 w-full items-center justify-center gap-1 whitespace-nowrap rounded-lg border px-2.5 py-1 text-[10px] sm:min-h-[38px] [&>svg]:shrink-0 font-bold uppercase tracking-wider ${config.className}`}><config.Icon size={10} /> {config.label}</span>;
 };
 
 interface DespesaTableProps {
@@ -37,7 +37,7 @@ interface DespesaTableProps {
   onSelectionChange?: (ids: Set<string>) => void;
 }
 
-const actionClass = 'inline-flex items-center justify-center gap-1.5 rounded-lg border bg-white px-2.5 py-2 text-[9px] font-black uppercase tracking-wide shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1';
+const actionClass = 'inline-flex h-11 sm:h-[38px] min-h-11 min-w-0 w-full whitespace-nowrap sm:min-h-[38px] [&>svg]:shrink-0 items-center justify-center gap-1.5 rounded-lg border bg-white px-2 py-2 text-[9px] font-black uppercase tracking-wide shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1';
 
 const DespesaTable: React.FC<DespesaTableProps> = ({
   items, contas, onPagar, onEditar, onClonar, onCancelar, onExcluir, onImprimir, onAnexo,
@@ -101,17 +101,19 @@ const DespesaTable: React.FC<DespesaTableProps> = ({
                     : hasBaixaEstornada ? <><p className="font-black text-slate-600">Baixa estornada</p><p>{contaLabel || 'Conta preservada no histórico'}</p></>
                     : <><p className="font-black text-slate-600">Ainda não baixada</p><p>{item.turmaNome ? `Turma: ${item.turmaNome}` : item.observacao || 'Sem observação adicional'}</p></>}
                 </td>
-                <td className="px-4 py-4"><StatusBadge status={hasPartialPayment(item.paymentSummary) ? 'PARCIAL' : item.status} />
-                  {item.isRateioDerived ? <p className="mt-2 text-[10px] font-bold text-slate-400">Somente informativa</p> : <div className="mt-2 grid grid-cols-2 gap-1.5">
+                <td className="px-4 py-4"><div className="grid grid-cols-2 items-stretch gap-1.5">
+                  <StatusBadge status={hasPartialPayment(item.paymentSummary) ? 'PARCIAL' : item.status} />
+                  {item.isRateioDerived ? <p className="text-[10px] font-bold text-slate-400">Somente informativa</p> : <>
                     {!isCancelado && onClonar && <button type="button" onClick={() => onClonar(item)} className={`${actionClass} border-slate-200 text-slate-600 hover:bg-slate-100 focus-visible:ring-slate-500`} aria-label={`Clonar lançamento ${item.descricao}`}><Copy size={13} /> Clonar</button>}
                     {isAberto && !item.paymentSummary?.hasEvents && onEditar && <button type="button" onClick={() => onEditar(item)} className={`${actionClass} border-blue-200 text-blue-700 hover:bg-blue-50 focus-visible:ring-blue-500`} aria-label={`Editar lançamento ${item.descricao}`}><Pencil size={13} /> Editar</button>}
                     {isAberto && onPagar && <button type="button" onClick={() => onPagar(item)} className={`${actionClass} border-emerald-200 text-emerald-700 hover:bg-emerald-50 focus-visible:ring-emerald-500`} aria-label={`Dar baixa em ${item.descricao}`}><CheckCircle2 size={13} /> {hasPartialPayment(item.paymentSummary) ? 'Pagar saldo' : 'Dar baixa'}</button>}
                     {item.paymentSummary?.hasEvents && onPagar && <button type="button" onClick={() => onPagar(item)} className={`${actionClass} border-emerald-200 text-emerald-700`}>Histórico</button>}
                     {!isCancelado && !item.paymentSummary?.hasEvents && onImprimir && <button type="button" onClick={() => onImprimir(item)} className={`${actionClass} border-slate-200 text-slate-600 hover:bg-slate-100 focus-visible:ring-slate-500`} aria-label={`Abrir prévia de ${item.descricao}`}><Printer size={13} /> Prévia</button>}
-                    {item.anexoPath && onAnexo && !isCancelado && <button type="button" onClick={() => onAnexo(item)} className={`${actionClass} border-violet-200 text-violet-700 hover:bg-violet-50 focus-visible:ring-violet-500`} aria-label={`Abrir anexo de ${item.descricao}`}><Paperclip size={13} /> Anexo</button>}
                     {isAberto && !item.paymentSummary?.hasEvents && onExcluir ? <button type="button" onClick={() => onExcluir([item])} className={`${actionClass} border-rose-200 text-rose-700 hover:bg-rose-50 focus-visible:ring-rose-500`} aria-label={`Excluir ${item.descricao}`}><Trash2 size={13} /> Excluir</button>
                       : !isCancelado && !item.paymentSummary?.hasEvents && onCancelar ? <button type="button" onClick={() => onCancelar(item)} className={`${actionClass} ${isPago ? 'border-rose-200 text-rose-700 hover:bg-rose-50 focus-visible:ring-rose-500' : 'border-slate-200 text-slate-600 hover:bg-slate-100 focus-visible:ring-slate-500'}`} aria-label={`${isPago ? 'Estornar e cancelar' : 'Cancelar'} ${item.descricao}`}>{isPago ? <RotateCcw size={13} /> : <XCircle size={13} />}{isPago ? 'Estornar' : 'Cancelar'}</button> : null}
-                  </div>}
+                    {item.anexoPath && onAnexo && !isCancelado && <button type="button" onClick={() => onAnexo(item)} className={`${actionClass} border-violet-200 text-violet-700 hover:bg-violet-50 focus-visible:ring-violet-500`} aria-label={`Abrir anexo de ${item.descricao}`}><Paperclip size={13} /> Anexo</button>}
+                  </>}
+                  </div>
                 </td>
               </tr>
             );
@@ -123,3 +125,4 @@ const DespesaTable: React.FC<DespesaTableProps> = ({
 };
 
 export default DespesaTable;
+

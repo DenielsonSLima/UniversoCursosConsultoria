@@ -18,6 +18,12 @@ Histórico arquivado: [06/10/2026 a 09/10/2026 — versões 4.8.175 a 4.8.195](.
 
 Histórico arquivado: [10/10/2026 — versões 4.8.196 a 4.8.198](./changelog/2026-10-10-versoes-4-8-196-a-198.md).
 
+## [4.8.275] - 2026-11-08
+
+- Despesa paga organiza Pago/Clonar e Prévia/Estornar em duas linhas e duas colunas, na tabela e no cartão.
+- Botões mantêm largura/altura uniformes; ações extras e estados de histórico, cancelamento e rateio continuam disponíveis.
+- Observação e Foto ou PDF ficam depois da data e das opções de pagamento, também nos modos pendente e parcelado.
+
 ## [4.8.274] - 2026-11-08
 
 - Contas a pagar abre em Despesas variáveis.
@@ -482,3 +488,4 @@ Histórico arquivado: [10/10/2026 — versões 4.8.196 a 4.8.198](./changelog/20
 - Recebimento seleciona nosso curso técnico antes da turma e usa suas disciplinas, sem campo de curso de origem.
 - Financeiro apresenta cobranças em lista, com ciclos independentes, valores formatados, edição, inclusão, remoção e movimentação de mensalidades.
 - Cronograma conserva datas e condições por item na emissão posterior; o segundo ciclo dispensa justificativa adicional de continuidade.
+

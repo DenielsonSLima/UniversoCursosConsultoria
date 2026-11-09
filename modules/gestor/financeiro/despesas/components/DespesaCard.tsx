@@ -45,7 +45,7 @@ interface DespesaCardProps {
   onSelectionChange?: (item: DespesaLancamento, selected: boolean) => void;
 }
 
-const actionClass = 'inline-flex items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-[10px] font-black uppercase tracking-wide transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1';
+const actionClass = 'inline-flex h-11 sm:h-[38px] min-h-11 min-w-0 w-full whitespace-nowrap sm:min-h-[38px] [&>svg]:shrink-0 items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-[10px] font-black uppercase tracking-wide transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1';
 
 const DespesaCard: React.FC<DespesaCardProps> = ({
   item,
@@ -98,10 +98,11 @@ const DespesaCard: React.FC<DespesaCardProps> = ({
             <DespesaRateioBadge item={item} />
             </div>
           </div>
-          <span className={`inline-flex flex-shrink-0 items-center gap-1 rounded-xl border px-2.5 py-1 text-[10px] font-bold uppercase ${cfg.bg} ${cfg.text} ${cfg.border}`}>
+
+          {(item.isRateioDerived || isCancelado) && <span className={`inline-flex flex-shrink-0 items-center gap-1 rounded-xl border px-2.5 py-1 text-[10px] font-bold uppercase ${cfg.bg} ${cfg.text} ${cfg.border}`}>
             <cfg.Icon size={10} />
             {hasPartialPayment(item.paymentSummary) ? 'Baixa parcial' : cfg.label}
-          </span>
+          </span>}
         </div>
 
         <div className="mb-4 rounded-2xl bg-slate-50 px-4 py-3">
@@ -179,7 +180,11 @@ const DespesaCard: React.FC<DespesaCardProps> = ({
         )}
 
         {!item.isRateioDerived && !isCancelado && (
-          <div className="mt-4 flex flex-wrap gap-2 border-t border-slate-100 pt-3">
+          <div className="mt-4 grid grid-cols-2 items-stretch gap-2 border-t border-slate-100 pt-3">
+          <span className={`inline-flex min-h-11 min-w-0 w-full items-center justify-center sm:min-h-[38px] gap-1 whitespace-nowrap rounded-lg border px-2.5 py-1 text-[10px] font-bold uppercase ${cfg.bg} ${cfg.text} ${cfg.border}`}>
+            <cfg.Icon size={10} />
+            {hasPartialPayment(item.paymentSummary) ? 'Baixa parcial' : cfg.label}
+          </span>
             {onClonar && <button type="button" onClick={() => onClonar(item)}
               className={`${actionClass} border border-slate-200 text-slate-600 hover:bg-slate-50 focus-visible:ring-slate-500`}
               aria-label={`Clonar lançamento ${item.descricao}`}><Copy size={13} /> Clonar</button>}
@@ -211,17 +216,7 @@ const DespesaCard: React.FC<DespesaCardProps> = ({
                 className={`${actionClass} border border-slate-200 text-slate-600 hover:bg-slate-50 focus-visible:ring-slate-500`}
                 aria-label={`${isPago ? 'Abrir prévia do recibo de' : 'Abrir prévia do lançamento'} ${item.descricao}`}
               >
-                <Printer size={13} /> {isPago ? 'Prévia do recibo' : 'Prévia'}
-              </button>
-            )}
-            {item.anexoPath && onAnexo && (
-              <button
-                type="button"
-                onClick={() => onAnexo(item)}
-                className={`${actionClass} border border-violet-200 text-violet-700 hover:bg-violet-50 focus-visible:ring-violet-500`}
-                aria-label={`Abrir anexo de ${item.descricao}`}
-              >
-                <Paperclip size={13} /> Anexo
+                <Printer size={13} /> Prévia
               </button>
             )}
             {isAberto && !item.paymentSummary?.hasEvents && onExcluir && (
@@ -242,7 +237,17 @@ const DespesaCard: React.FC<DespesaCardProps> = ({
                 aria-label={`${isPago ? 'Estornar e cancelar' : 'Cancelar'} ${item.descricao}`}
               >
                 {isPago ? <RotateCcw size={13} /> : <XCircle size={13} />}
-                {isPago ? 'Estornar e cancelar' : 'Cancelar'}
+                {isPago ? 'Estornar' : 'Cancelar'}
+              </button>
+            )}
+            {item.anexoPath && onAnexo && (
+              <button
+                type="button"
+                onClick={() => onAnexo(item)}
+                className={`${actionClass} border border-violet-200 text-violet-700 hover:bg-violet-50 focus-visible:ring-violet-500`}
+                aria-label={`Abrir anexo de ${item.descricao}`}
+              >
+                <Paperclip size={13} /> Anexo
               </button>
             )}
           </div>
@@ -258,3 +263,4 @@ const DespesaCard: React.FC<DespesaCardProps> = ({
 };
 
 export default DespesaCard;
+
