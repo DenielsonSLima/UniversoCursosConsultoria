@@ -16,6 +16,12 @@ Histórico arquivado: [05/10/2026 — versões 4.8.171 a 4.8.174](./changelog/20
 
 Histórico arquivado: [06/10/2026 a 09/10/2026 — versões 4.8.175 a 4.8.195](./changelog/2026-10-06-a-09-versoes-4-8-175-a-195.md).
 
+## [4.8.271] - 2026-11-08
+
+- Despesas fixas e variáveis iniciam agrupadas por mês de vencimento e permitem alternar para fornecedor, categoria ou lista simples.
+- Controles de tabela, cartões e agrupamento ficam ao lado das abas; cartões usam quatro colunas em telas largas e seleção é preservada na troca de agrupamento.
+- Leitor SQL mantém autorização por polo, filtros e totais canônicos, incluindo baixas parciais.
+
 ## [4.8.270] - 2026-11-08
 
 - NFS-e: nova aba Serviços para parceiros, com opção explícita de criar ou vincular conta a receber por RPC.
@@ -469,4 +475,5 @@ Histórico arquivado: [06/10/2026 a 09/10/2026 — versões 4.8.175 a 4.8.195](.
 - Extrato financeiro da turma reconhece boletos Banese já emitidos e permite abrir o documento existente.
 - Emissão e recebimento aparecem separados; boleto pendente conserva o status até a confirmação do pagamento.
 - Descontos seguem a leitura de Contas a Receber, e alterações financeiras atualizam o extrato da matrícula.
+
 

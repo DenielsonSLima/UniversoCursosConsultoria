@@ -1,0 +1,33 @@
+name: Agrupamento de despesas
+
+on:
+  pull_request:
+    paths:
+      - 'modules/gestor/financeiro/despesas/**'
+      - 'supabase/migrations/20261109003300_expense_month_supplier_groups.sql'
+      - 'supabase/tests/expense_grouping.isolated.test.mjs'
+      - '.github/workflows/despesas-agrupamento.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm ci
+      - name: Instalar Postgres isolado para os testes
+        run: npm install --prefix "$RUNNER_TEMP/expense-grouping-deps" --no-save --no-package-lock @electric-sql/pglite@0.5.8
+      - name: Validar grupos, filtros, totais e autorização
+        env:
+          EXPENSE_GROUPING_PGLITE_MODULE: ${{ runner.temp }}/expense-grouping-deps/node_modules/@electric-sql/pglite/dist/index.js
+        run: >-
+          node --test
+          modules/gestor/financeiro/despesas/components/despesa-grouping.model.test.ts
+          supabase/tests/expense_grouping.isolated.test.mjs

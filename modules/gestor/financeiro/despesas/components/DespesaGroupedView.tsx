@@ -1,12 +1,14 @@
 // File: modules/gestor/financeiro/despesas/components/DespesaGroupedView.tsx
-// Agrupa despesas por categoria com totais
+// Agrupa por mês, fornecedor ou categoria com totais canônicos.
 
 import React, { useMemo, useState } from 'react';
-import { ChevronDown, ChevronRight, Tag } from 'lucide-react';
+import { CalendarDays, ChevronDown, ChevronRight, Tag, Building2 } from 'lucide-react';
 import { DespesaGroupSummary, DespesaLancamento } from '../despesas.service';
 import { ContaBancaria } from '../../financeiro.service';
 import DespesaTable from './DespesaTable';
 import DespesaCard from './DespesaCard';
+import type { DespesaAgrupamento } from '../despesas.queryKeys';
+import { buildDespesaGroups } from './despesa-grouping.model';
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0);
@@ -15,6 +17,7 @@ interface DespesaGroupedViewProps {
   items: DespesaLancamento[];
   summaries: DespesaGroupSummary[];
   viewMode: 'tabela' | 'cards';
+  groupBy?: DespesaAgrupamento;
   contas: ContaBancaria[];
   onPagar?: (item: DespesaLancamento) => void;
   onEditar?: (item: DespesaLancamento) => void;
@@ -30,6 +33,7 @@ const DespesaGroupedView: React.FC<DespesaGroupedViewProps> = ({
   items,
   summaries,
   viewMode,
+  groupBy = 'categoria',
   contas,
   onPagar,
   onEditar,
@@ -39,37 +43,11 @@ const DespesaGroupedView: React.FC<DespesaGroupedViewProps> = ({
   onAnexo,
   selectedIds,
   onSelectionChange,
-}) => {
+}: DespesaGroupedViewProps) => {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
-  const groups = useMemo(() => {
-    const map = new Map<string, { label: string; items: DespesaLancamento[] }>();
-    const summaryMap = new Map<string, DespesaGroupSummary>(
-      summaries.map((summary) => [
-        summary.categoriaId || '__sem_categoria__',
-        summary,
-      ]),
-    );
-    items.forEach((item) => {
-      const key = item.categoriaFinanceiraId || '__sem_categoria__';
-      const label = item.categoriaNome || 'Sem Categoria';
-      if (!map.has(key)) {
-        map.set(key, { label, items: [] });
-      }
-      map.get(key)!.items.push(item);
-    });
-    return Array.from(map.entries()).map(([key, { label, items: groupItems }]) => {
-      const summary = summaryMap.get(key);
-      return {
-        key,
-        label: summary?.categoriaNome || label,
-        items: groupItems,
-        total: summary?.totalValue,
-        pago: summary?.paidValue,
-        count: summary?.itemCount,
-      };
-    });
-  }, [items, summaries]);
+  const groups = useMemo(() => buildDespesaGroups(items, summaries, groupBy), [items, summaries, groupBy]);
+  const GroupIcon = groupBy === 'mes' ? CalendarDays : groupBy === 'fornecedor' ? Building2 : Tag;
 
   const toggleGroup = (key: string) => {
     setExpanded((prev) => {
@@ -97,25 +75,26 @@ const DespesaGroupedView: React.FC<DespesaGroupedViewProps> = ({
           <div key={group.key} className="rounded-2xl border border-slate-100 overflow-hidden shadow-sm">
             {/* Header do grupo */}
             <button
+              type="button" aria-expanded={isOpen}
               onClick={() => toggleGroup(group.key)}
-              className="financial-group-toggle w-full flex items-center justify-between px-5 py-4 bg-slate-50 hover:bg-slate-100 transition-colors"
+              className="financial-group-toggle w-full flex flex-wrap items-center justify-between gap-3 px-4 py-3 bg-slate-50 hover:bg-slate-100 transition-colors"
             >
-              <div className="flex items-center gap-3">
+              <div className="flex min-w-0 basis-full items-center gap-3 sm:flex-1 sm:basis-auto">
                 <div className="p-1.5 bg-rose-100 text-rose-600 rounded-lg">
-                  <Tag size={14} />
+                  <GroupIcon size={14} />
                 </div>
-                <div className="text-left">
-                  <p className="font-black text-sm text-[#001a33] uppercase tracking-tight">
+                <div className="min-w-0 text-left">
+                  <p className="break-words text-[13px] font-semibold text-[#001a33]">
                     {group.label}
                   </p>
-                  <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wider mt-0.5">
+                  <p className="mt-0.5 text-xs font-normal text-slate-500">
                     {group.count === undefined
                       ? 'Quantidade indisponível'
                       : `${group.count} lançamento${group.count !== 1 ? 's' : ''}`}
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-6">
+              <div className="ml-auto flex items-center gap-3 sm:gap-6">
                 <div className="text-right">
                   <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Total previsto</p>
                   <p className="font-black text-base text-[#001a33]">
@@ -151,7 +130,7 @@ const DespesaGroupedView: React.FC<DespesaGroupedViewProps> = ({
                     onSelectionChange={onSelectionChange}
                   />
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                     {group.items.map((item) => (
                       <DespesaCard
                         key={item.id}

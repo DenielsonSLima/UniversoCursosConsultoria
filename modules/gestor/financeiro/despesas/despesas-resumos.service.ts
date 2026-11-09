@@ -1,5 +1,5 @@
 import { supabase } from '../../../../lib/supabase';
-import type { DespesasFilters } from './despesas.queryKeys';
+import type { DespesasFilters, DespesaAgrupamento } from './despesas.queryKeys';
 import type { DespesaGroupSummary, DespesasSummary } from './despesas.types';
 
 const getParams = (filters: DespesasFilters) => ({
@@ -33,8 +33,22 @@ export const getDespesasSummary = async (
 
 export const getDespesasGroupSummary = async (
   filters: DespesasFilters = {},
+  agrupamento: DespesaAgrupamento = 'categoria',
 ): Promise<DespesaGroupSummary[]> => {
   const params = getParams(filters);
+  if (agrupamento !== 'categoria') {
+    if (!params.p_polo_id || !filters.tipo) throw new Error('Selecione um polo e um tipo de despesa.');
+    const { data, error } = await supabase.rpc('get_despesas_economicas_agrupamento_secure', {
+      ...params, p_agrupamento: agrupamento,
+    });
+    if (error) throw error;
+    return (data || []).map((row: any) => ({
+      groupKey: row.grupo_chave, groupLabel: row.grupo_nome,
+      categoriaNome: row.grupo_nome,
+      totalValue: Number(row.total_value || 0), paidValue: Number(row.paid_value || 0),
+      itemCount: Number(row.item_count || 0),
+    }));
+  }
   const rpcName = params.p_polo_id && filters.tipo
     ? 'get_despesas_economicas_group_summary_secure'
     : 'get_despesas_group_summary_secure';
