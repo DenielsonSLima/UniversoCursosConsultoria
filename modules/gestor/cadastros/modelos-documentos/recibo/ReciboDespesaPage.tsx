@@ -7,13 +7,14 @@ import DespesaReciboModal from '../../../financeiro/despesas/components/DespesaR
 
 const exemploRecibo: ReciboData = {
   empresaNome: 'Universo Cursos e Consultoria',
-  descricao: 'Aluguel de Outubro — Sede Principal',
+  descricao: 'ALUGUEL DE OUTUBRO — SEDE PRINCIPAL',
   valor: 2500,
   valorPago: 2500,
   dataLancamento: new Date().toISOString().slice(0, 10),
   dataVencimento: new Date().toISOString().slice(0, 10),
   dataPagamento: new Date().toISOString().slice(0, 10),
   fornecedorNome: 'João Silva Imóveis',
+  parceiroVinculado: true,
   categoriaNome: 'Aluguel',
   formaPagamento: 'PIX',
   contaBancariaNome: 'Conta institucional',
@@ -84,3 +85,4 @@ const ReciboDespesaPage: React.FC = () => {
 };
 
 export default ReciboDespesaPage;
+

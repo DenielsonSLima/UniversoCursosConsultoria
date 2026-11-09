@@ -1,3 +1,4 @@
+import { normalizeDespesaDescricao } from '../despesas-descricao';
 import { sanitizeCurrencyInput } from '../../../../shared/utils/currency-input';
 import FinancialSelect from '../../components/FinancialSelect';
 import React, { useMemo, useRef, useState } from 'react';
@@ -52,7 +53,7 @@ const DespesaEditModal: React.FC<DespesaEditModalProps> = ({
     () => item.dataLancamento || item.createdAt?.slice(0, 10) || item.dataVencimento,
     [item.createdAt, item.dataLancamento, item.dataVencimento],
   );
-  const [descricao, setDescricao] = useState(() => getDescricaoSemSufixoDeParcela(item));
+  const [descricao, setDescricao] = useState(() => normalizeDespesaDescricao(getDescricaoSemSufixoDeParcela(item)));
   const [valorBase, setValorBase] = useState(() => formatCurrencyInput(item.valorBase));
   const [dataLancamento, setDataLancamento] = useState(initialDataLancamento);
   const [dataVencimento, setDataVencimento] = useState(item.dataVencimento);
@@ -147,7 +148,7 @@ const DespesaEditModal: React.FC<DespesaEditModalProps> = ({
             <span className="mb-1.5 block text-[10px] font-black uppercase tracking-wider text-slate-500">Descrição *</span>
             <input
               value={descricao}
-              onChange={(event) => setDescricao(event.target.value)}
+              onChange={(event) => setDescricao(normalizeDespesaDescricao(event.target.value))}
               className={`w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-semibold text-slate-700 outline-none transition-colors focus:ring-2 ${accent.ring}`}
             />
           </label>
@@ -258,3 +259,4 @@ const DespesaEditModal: React.FC<DespesaEditModalProps> = ({
 };
 
 export default DespesaEditModal;
+

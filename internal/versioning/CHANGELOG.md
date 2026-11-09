@@ -4,7 +4,7 @@ Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente
 
 Histórico anterior: [27/09/2026 — versões 4.8.117 a 4.8.127](./changelog/2026-09-27-versoes-4-8-117-a-4-8-127.md), [16/09/2026 a 25/09/2026 — versões 4.8.65 a 4.8.90](./changelog/2026-09-16-a-2026-09-25-versoes-4-8-65-a-4-8-90.md), [13/09/2026 — versões 4.8.53 a 4.8.64](./changelog/2026-09-13-versoes-4-8-53-a-4-8-64.md), [08/09/2026 a 12/09/2026 — versões 4.8.37 a 4.8.52](./changelog/2026-09-08-a-2026-09-12-versoes-4-8-37-a-4-8-52.md), [03/09/2026 a 08/09/2026 — versões 4.8.30 a 4.8.36](./changelog/2026-09-03-a-2026-09-08-versoes-4-8-30-a-4-8-36.md), [02/09/2026 — versões 4.8.27 a 4.8.29](./changelog/2026-09-02-versoes-4-8-27-a-4-8-29.md), [01/09/2026 — versões 4.8.23 a 4.8.26](./changelog/2026-09-01-versoes-4-8-23-a-4-8-26.md), [01/09/2026 — versões 4.8.20 a 4.8.22](./changelog/2026-09-01-versoes-4-8-20-a-4-8-22.md), [27/08/2026 a 31/08/2026 — versões 4.8.8 a 4.8.19](./changelog/2026-08-27-a-2026-08-31.md), [26/08/2026 — versões 4.8.6 a 4.8.7](./changelog/2026-08-26.md), [25/08/2026 — versões 4.8.2 a 4.8.5](./changelog/2026-08-25-parte-1.md), [24/08/2026 — versões 4.8.0 a 4.8.1](./changelog/2026-08-24-parte-2.md), [24/08/2026 — versões 4.7.5 a 4.7.7](./changelog/2026-08-24-parte-1.md), [22/08/2026 a 23/08/2026](./changelog/2026-08-22-a-2026-08-23.md), [21/08/2026 a 22/08/2026 — parte 2](./changelog/2026-08-21-a-2026-08-22-parte-2.md), [21/08/2026 — parte 1](./changelog/2026-08-21-parte-1.md), [11/08/2026 a 20/08/2026](./changelog/2026-08-11-a-2026-08-20.md), [09/08/2026 a 10/08/2026](./changelog/2026-08-09-a-2026-08-10.md), [05/08/2026 — parte 1](./changelog/2026-08-05-parte-1.md), [04/08/2026](./changelog/2026-08-04.md), [03/08/2026](./changelog/2026-08-03.md), [02/08/2026 — continuação](./changelog/2026-08-02-parte-2.md), [02/08/2026 a 31/07/2026](./changelog/2026-07-31-a-2026-08-02.md), [31/07/2026 a 26/07/2026](./changelog/2026-07-26-a-2026-07-31.md) e [26/07/2026 a 14/07/2026](./changelog/2026-07-14-a-2026-07-26.md).
 
-Histórico arquivado: [28/09/2026 a 30/09/2026 — versões 4.8.128 a 4.8.137](./changelog/2026-09-28-a-2026-09-30-versoes-4-8-128-a-4-8-137.md), [27/09/2026 — versões 4.8.115 a 4.8.116](./changelog/2026-09-27-versoes-4-8-115-a-4-8-116.md), [27/09/2026 — versão 4.8.114](./changelog/2026-09-27-versao-4-8-114.md), [27/09/2026 — versão 4.8.113](./changelog/2026-09-27-versao-4-8-113.md), [27/09/2026 — versão 4.8.112](./changelog/2026-09-27-versao-4-8-112.md), [27/09/2026 — versão 4.8.111](./changelog/2026-09-27-versao-4-8-111.md), [25/09/2026 a 26/09/2026 — versões 4.8.91 a 4.8.110](./changelog/2026-09-25-a-2026-09-26-versoes-4-8-91-a-4-8-110.md).
+Histórico arquivado: [10/10/2026 — versões 4.8.199 a 4.8.202](./changelog/2026-10-10-versoes-4-8-199-a-202.md), [28/09/2026 a 30/09/2026 — versões 4.8.128 a 4.8.137](./changelog/2026-09-28-a-2026-09-30-versoes-4-8-128-a-4-8-137.md), [27/09/2026 — versões 4.8.115 a 4.8.116](./changelog/2026-09-27-versoes-4-8-115-a-4-8-116.md), [27/09/2026 — versão 4.8.114](./changelog/2026-09-27-versao-4-8-114.md), [27/09/2026 — versão 4.8.113](./changelog/2026-09-27-versao-4-8-113.md), [27/09/2026 — versão 4.8.112](./changelog/2026-09-27-versao-4-8-112.md), [27/09/2026 — versão 4.8.111](./changelog/2026-09-27-versao-4-8-111.md), [25/09/2026 a 26/09/2026 — versões 4.8.91 a 4.8.110](./changelog/2026-09-25-a-2026-09-26-versoes-4-8-91-a-4-8-110.md).
 
 Histórico arquivado: [30/09/2026 — versões 4.8.138 a 4.8.144](./changelog/2026-09-30-versoes-4-8-138-a-4-8-144.md).
 
@@ -17,6 +17,13 @@ Histórico arquivado: [05/10/2026 — versões 4.8.171 a 4.8.174](./changelog/20
 Histórico arquivado: [06/10/2026 a 09/10/2026 — versões 4.8.175 a 4.8.195](./changelog/2026-10-06-a-09-versoes-4-8-175-a-195.md).
 
 Histórico arquivado: [10/10/2026 — versões 4.8.196 a 4.8.198](./changelog/2026-10-10-versoes-4-8-196-a-198.md).
+
+## [4.8.277] - 2026-11-09
+
+- Descrições de despesas são convertidas automaticamente em maiúsculas; lançamentos existentes recebem a mesma padronização.
+- Recibos exibem a turma vinculada, com nome e código, e assinatura do parceiro quando selecionado.
+- PDF reorganiza linhas e espaços sem omitir informações, preservando assinatura financeira, cabeçalho e marca institucional.
+- Replays de criação, valores, pagamentos, parcelas e permissões permanecem preservados.
 
 ## [4.8.276] - 2026-11-09
 
@@ -469,30 +476,3 @@ Histórico arquivado: [10/10/2026 — versões 4.8.196 a 4.8.198](./changelog/20
 
 - Seleção de docentes passa a listar os professores ativos vinculados ao polo da turma, incluindo professores com mais de uma unidade.
 - Novas atribuições técnicas validam esse vínculo no banco, preservando docentes já atribuídos e sua remoção.
-
-## [4.8.202] - 2026-10-10
-
-- Revisão financeira reconhece o mesmo cronograma retornado pelo banco, sem exigir nova conferência por diferença na ordem dos campos da resposta.
-- Reselecionar o mesmo aluno no recebimento de transferência preserva origem, notas, plano financeiro e revisão, mantendo as cinco etapas disponíveis.
-- Desligar e religar opções financeiras antes de aplicá-las preserva as condições individuais das parcelas.
-
-## [4.8.201] - 2026-10-10
-
-- Turmas técnicas aceitam novas matrículas diretas até 365 dias após a data de início, inclusive; após o prazo, o ingresso exige transferência.
-- Gestor e inscrição pública mostram o prazo e o motivo do bloqueio, usando a mesma elegibilidade do banco.
-- Matrículas existentes, ativações, replays e recebimentos oficiais de transferência mantêm seus fluxos.
-- Recebimento usa a grade completa do curso e organiza aluno, notas, configuração financeira, edição das parcelas e revisão geral em cinco etapas.
-- Matrícula e mensalidades têm vencimentos independentes; o cronograma permite intervalo de 30 dias e confere os ajustes ao avançar.
-
-## [4.8.200] - 2026-10-10
-
-- Configurações, Financeiro e Parceiros carregam módulos sob demanda, reduzindo os chunks JavaScript abaixo de 500 kB.
-- Fontes Inter passam a assets TTF com bytes preservados, cache e nova tentativa de carregamento; certificados mantêm texto e fontes embutidas.
-- Build corrige importação mista da Secretaria, separa dependências sem ciclos e registra decisões explícitas sobre scripts npm.
-
-## [4.8.199] - 2026-10-10
-
-- Recebimento seleciona nosso curso técnico antes da turma e usa suas disciplinas, sem campo de curso de origem.
-- Financeiro apresenta cobranças em lista, com ciclos independentes, valores formatados, edição, inclusão, remoção e movimentação de mensalidades.
-- Cronograma conserva datas e condições por item na emissão posterior; o segundo ciclo dispensa justificativa adicional de continuidade.
-

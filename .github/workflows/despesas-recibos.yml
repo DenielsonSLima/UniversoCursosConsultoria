@@ -1,0 +1,42 @@
+name: Descrições e recibos de despesas
+
+on:
+  pull_request:
+    paths:
+      - 'modules/gestor/financeiro/despesas/**'
+      - 'modules/gestor/cadastros/modelos-documentos/recibo/**'
+      - 'supabase/migrations/20261109031500_expense_descriptions_uppercase.sql'
+      - 'supabase/migrations/20261109031600_expense_receipt_partner_signature.sql'
+      - 'supabase/tests/expense_description*'
+      - 'supabase/tests/expense_receipt*'
+      - 'supabase/tests/expense_clone*'
+      - 'scripts/test-despesa-recibo-native.mjs'
+      - '.github/workflows/despesas-recibos.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm ci
+      - name: Instalar Postgres isolado
+        run: npm install --prefix "$RUNNER_TEMP/expense-receipt-deps" --no-save --no-package-lock --ignore-scripts @electric-sql/pglite@0.5.8
+      - name: Validar descrição, replay, snapshot e autorização
+        env:
+          PGLITE_MODULE_PATH: ${{ runner.temp }}/expense-receipt-deps/node_modules/@electric-sql/pglite/dist/index.js
+        run: >-
+          node --test
+          modules/gestor/financeiro/despesas/components/despesa-sugestao.model.test.ts
+          modules/gestor/financeiro/despesas/components/despesa-clone.model.test.ts
+          supabase/tests/expense_descriptions_uppercase.isolated.test.mjs
+          supabase/tests/expense_receipt.isolated.test.mjs
+      - name: Validar PDF nativo, turma, assinaturas e fidelidade institucional
+        run: node scripts/test-despesa-recibo-native.mjs
