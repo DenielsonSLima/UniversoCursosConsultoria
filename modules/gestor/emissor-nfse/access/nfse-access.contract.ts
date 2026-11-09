@@ -25,6 +25,21 @@ export const nfseAccessQueryKey = (identity: NfseAccessIdentity) => [
   'nfse-pilot-access', identity.authUserId, identity.contextId,
 ] as const;
 
+export function resolveNfsePilotAccessState(identity: NfseAccessIdentity, eligible: boolean, query: {
+  data?: NfseAccessDecision;
+  isError: boolean;
+  isFetching: boolean;
+}) {
+  const hasCurrentDecision = isNfseAccessIdentity(identity)
+    && typeof query.data?.allowed === 'boolean'
+    && query.data.authUserId === identity.authUserId
+    && query.data.contextId === identity.contextId;
+  return {
+    allowed: eligible && !query.isError && hasNfseAccessDecision(query.data, identity),
+    isChecking: eligible && query.isFetching && !hasCurrentDecision,
+  };
+}
+
 export function createNfseAccessReader(dependencies: {
   currentAuthUserId: () => Promise<string | null>;
   request: (contextId: string, signal?: AbortSignal) => Promise<unknown>;

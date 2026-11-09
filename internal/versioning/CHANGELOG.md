@@ -16,6 +16,13 @@ Histórico arquivado: [05/10/2026 — versões 4.8.171 a 4.8.174](./changelog/20
 
 Histórico arquivado: [06/10/2026 a 09/10/2026 — versões 4.8.175 a 4.8.195](./changelog/2026-10-06-a-09-versoes-4-8-175-a-195.md).
 
+## [4.8.270] - 2026-11-08
+
+- NFS-e: nova aba Serviços para parceiros, com opção explícita de criar ou vincular conta a receber por RPC.
+- Visualizador XML com DANFSe vetorial A4, prévia, download e impressão; projeção de tributos pelo servidor.
+- Revalidação da permissão mantém o Emissor e seus rascunhos durante consultas em segundo plano; recusa e erro continuam bloqueando.
+- Validação: 83 testes frontend, 55 SQL isolados, teste estrutural PDF e smoke Safari desktop/390px; sem transmissão fiscal.
+
 ## [4.8.269] - 2026-11-08
 
 - Ao selecionar o credor em despesas fixas ou variáveis, sugere categoria ativa, descrição e valor-base do último cadastro do mesmo polo e tipo.

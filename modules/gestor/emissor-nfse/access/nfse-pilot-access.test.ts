@@ -1,9 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { focusManager, QueryClient, QueryObserver } from '@tanstack/react-query';
 import { normalizeGestorPermissions } from '../../access-control';
 import { canOpenGestorModule } from '../../gestor-module-access';
 import {
-  createNfseAccessReader, hasNfseAccessDecision, nfseAccessQueryKey,
+  createNfseAccessReader, hasNfseAccessDecision, nfseAccessQueryKey, resolveNfsePilotAccessState,
 } from './nfse-access.contract';
 
 const identity = {
@@ -78,4 +79,59 @@ test('recusa e concessão preservam identidade validada', async () => {
     });
     assert.deepEqual(await read(identity), { ...identity, allowed });
   }
+});
+
+test('foco revalida sem remover acesso; recusa e erro continuam bloqueando', async () => {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
+  let resolve: (allowed: boolean) => void = () => {};
+  let reject: (error: Error) => void = () => {};
+  let calls = 0;
+  const observer = new QueryObserver(client, {
+    queryKey: nfseAccessQueryKey(identity), staleTime: 0, refetchOnWindowFocus: 'always',
+    queryFn: async () => {
+      calls += 1;
+      const allowed = await new Promise<boolean>((accept, fail) => { resolve = accept; reject = fail; });
+      return { ...identity, allowed };
+    },
+  });
+  const state = () => resolveNfsePilotAccessState(identity, true, observer.getCurrentResult());
+  const waitFor = async (predicate: () => boolean) => {
+    for (let attempt = 0; attempt < 20 && !predicate(); attempt += 1) await new Promise(done => setTimeout(done, 0));
+    assert.ok(predicate(), 'query did not reach the expected state');
+  };
+  client.mount();
+  const unsubscribe = observer.subscribe(() => {});
+  try {
+    assert.deepEqual(state(), { allowed: false, isChecking: true });
+    resolve(true);
+    await waitFor(() => state().allowed);
+    focusManager.setFocused(false);
+    focusManager.setFocused(true);
+    await waitFor(() => calls === 2);
+    assert.equal(observer.getCurrentResult().isFetching, true);
+    assert.deepEqual(state(), { allowed: true, isChecking: false });
+    resolve(false);
+    await waitFor(() => !observer.getCurrentResult().isFetching);
+    assert.deepEqual(state(), { allowed: false, isChecking: false });
+
+    const accepted = observer.refetch();
+    resolve(true);
+    await accepted;
+    assert.equal(state().allowed, true);
+    const failed = observer.refetch();
+    assert.deepEqual(state(), { allowed: true, isChecking: false });
+    reject(new Error('serviço indisponível'));
+    await failed;
+    assert.equal(observer.getCurrentResult().data?.allowed, true, 'the stale decision remains in Query cache');
+    assert.deepEqual(state(), { allowed: false, isChecking: false });
+  } finally {
+    unsubscribe(); client.unmount(); client.clear(); focusManager.setFocused(undefined);
+  }
+});
+
+test('carregamento nunca preserva decisão de outra identidade nem de sessão inelegível', () => {
+  const query = { data: { ...identity, allowed: true }, isFetching: true, isError: false };
+  assert.deepEqual(resolveNfsePilotAccessState({ ...identity, authUserId: otherId }, true, query), { allowed: false, isChecking: true });
+  assert.deepEqual(resolveNfsePilotAccessState({ ...identity, contextId: otherId }, true, query), { allowed: false, isChecking: true });
+  assert.deepEqual(resolveNfsePilotAccessState(identity, false, query), { allowed: false, isChecking: false });
 });

@@ -1,8 +1,8 @@
 {
-  "version": "4.8.269",
+  "version": "4.8.270",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 278,
+  "revision": 279,
   "releasedAt": "2026-11-08",
-  "summary": "Despesas com categoria, descrição e valor sugeridos pelo histórico do credor"
+  "summary": "Serviços para parceiros, visualizador DANFSe por XML e revalidação de acesso sem piscar"
 }
