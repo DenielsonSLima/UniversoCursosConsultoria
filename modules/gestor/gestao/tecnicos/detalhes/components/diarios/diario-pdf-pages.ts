@@ -21,6 +21,7 @@ import {
   measureTableRowHeights,
 } from "./diario-pdf-table.ts";
 import { drawGroupedResultTable, RESULT_TABLE_HEADER_HEIGHT } from './diario-pdf-result-table.ts';
+import { extraClassContentRows } from './diario-extra-classe.presentation.ts';
 import type { PdfImage } from "./diario-pdf-image.core.ts";
 import type { CanonicalInstitutionalHeader } from "../../../../../secretaria/shared/canonical-institutional-header-pdf.ts";
 import {
@@ -284,7 +285,7 @@ export const drawContentPages = (
     aula.titulo,
     props.praticasMap[aula.id],
     `${aula.cargaHoraria}h`,
-  ]);
+  ]).concat(extraClassContentRows(props.extraClassCredit));
   const rowHeights = measureTableRowHeights(
     pdf,
     contentRows,
@@ -293,9 +294,8 @@ export const drawContentPages = (
     [1, 2],
     9,
   );
-  const entries = props.aulas.map((aula, index) => ({
-    aula,
-    row: contentRows[index],
+  const entries = contentRows.map((row, index) => ({
+    row,
     height: rowHeights[index],
   }));
   const regularPageCapacity = STANDARD_CONTENT_BOTTOM - STANDARD_CONTENT_TOP - 8;

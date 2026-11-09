@@ -2,6 +2,7 @@ import { DiarioTemplate } from '../../../../../cadastros/modelos-documentos/diar
 import { DiarioAula, DiarioStudent } from './diario-classe.service';
 import { DiarioExportMode } from './turma-diarios.types';
 import type { HistoricalGradeRow } from './historico/diario-historico.types';
+import type { DiarioExtraClassCredit } from './diario-extra-classe.types';
 
 export type DiarioActiveTab = 'frequencia' | 'resultado' | 'conteudo' | 'observacoes' | 'fechamento';
 export type DiarioLockScope = 'ABERTO' | 'PROFESSOR' | 'TOTAL';
@@ -79,6 +80,7 @@ export interface DiarioPrintDocumentProps {
   moduloNome: string;
   students: DiarioStudent[];
   aulas: DiarioAula[];
+  extraClassCredit?: DiarioExtraClassCredit;
   attendanceMap: AttendanceMap;
   documentaryAttendanceMap?: Record<string, Record<string, string>>;
   gradesMap: GradesMap;

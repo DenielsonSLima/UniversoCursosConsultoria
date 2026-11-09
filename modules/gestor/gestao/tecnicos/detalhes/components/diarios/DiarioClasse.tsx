@@ -31,6 +31,7 @@ import {
 import { useDiarioExport } from './hooks/useDiarioExport';
 import { useDiarioLocalState } from './hooks/useDiarioLocalState';
 import { useDiarioRealtime } from './hooks/useDiarioRealtime';
+import { useDiarioExtraClasseCredito } from './hooks/useDiarioExtraClasseCredito';
 import {
   DiarioClasseProps,
   DiarioActiveTab,
@@ -96,6 +97,7 @@ const DiarioClasseOperacional: React.FC<DiarioClasseProps> = ({
   const { data: watermark } = watermarkQuery;
   const studentsQuery = useDiarioStudents(turma.id, disciplina.id, effectiveAccessMode);
   const aulasQuery = useDiarioAulas(turma.id, disciplina.id);
+  const extraClassQuery = useDiarioExtraClasseCredito(turma.id, disciplina.id);
   const attendanceQuery = useDiarioAttendance(turma.id, disciplina.id);
   const gradesQuery = useDiarioGrades(turma.id, disciplina.id);
   const praticasQuery = useDiarioPraticas(turma.id, disciplina.id);
@@ -334,6 +336,7 @@ const DiarioClasseOperacional: React.FC<DiarioClasseProps> = ({
     gradesMap,
     praticasMap,
     observacoes: dbObservacoes,
+    extraClassCredit: extraClassQuery.data,
     activeInstruments,
     watermark,
     initialExportMode,
@@ -348,6 +351,7 @@ const DiarioClasseOperacional: React.FC<DiarioClasseProps> = ({
     studentsQuery,
     aulasQuery,
     attendanceQuery,
+    extraClassQuery,
     gradesQuery,
     praticasQuery,
     observacoesQuery,
@@ -359,6 +363,7 @@ const DiarioClasseOperacional: React.FC<DiarioClasseProps> = ({
     studentsQuery,
     aulasQuery,
     instrumentsQuery,
+    extraClassQuery,
     watermarkQuery,
   ];
   const coreQueries = initialExportMode === 'EM_BRANCO'
@@ -418,6 +423,7 @@ const DiarioClasseOperacional: React.FC<DiarioClasseProps> = ({
         activeTab={activeTab}
         students={students}
         aulas={aulas}
+        extraClassCredit={extraClassQuery.data}
         attendanceMap={effectiveAttendanceMap}
         gradesMap={gradesMap}
         localGrades={localGrades}

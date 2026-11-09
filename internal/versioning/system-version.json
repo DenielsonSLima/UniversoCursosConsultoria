@@ -1,8 +1,8 @@
 {
-  "version": "4.8.277",
+  "version": "4.8.278",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 286,
+  "revision": 287,
   "releasedAt": "2026-11-09",
-  "summary": "Descrições em maiúsculas e recibo compacto com turma e assinatura do parceiro"
+  "summary": "Crédito extra-classe na frequência por disciplina com elegibilidade temporal e diário assinado compatível"
 }

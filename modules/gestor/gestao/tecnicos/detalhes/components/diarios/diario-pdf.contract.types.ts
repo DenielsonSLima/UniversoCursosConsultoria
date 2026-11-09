@@ -1,4 +1,5 @@
 import type { HistoricalGradeRow } from './historico/diario-historico.types';
+import type { DiarioExtraClassCredit } from './diario-extra-classe.types';
 
 export type DiarioPdfExportMode = "PREENCHIDO" | "EM_BRANCO";
 
@@ -144,6 +145,8 @@ export interface DiarioPdfRenderableData {
   moduloNome: string;
   students: DiarioPdfStudentSnapshot[];
   aulas: DiarioPdfLessonSnapshot[];
+  /** Ausente nos snapshots antigos; nunca sintetiza sessões ou presença P. */
+  extraClassCredit?: DiarioExtraClassCredit;
   attendanceMap: Record<string, Record<string, "P" | "F" | "J" | null>>;
   documentaryAttendanceMap?: Record<string, Record<string, string>>;
   gradesMap: Record<string, DiarioPdfRenderableGradeSnapshot>;

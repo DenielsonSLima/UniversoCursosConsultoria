@@ -18,6 +18,13 @@ Histórico arquivado: [06/10/2026 a 09/10/2026 — versões 4.8.175 a 4.8.195](.
 
 Histórico arquivado: [10/10/2026 — versões 4.8.196 a 4.8.198](./changelog/2026-10-10-versoes-4-8-196-a-198.md).
 
+## [4.8.278] - 2026-11-09
+
+### Corrigido
+- Atividades extra-classe publicadas e realizadas compõem a frequência individual, respeitando ingresso, trancamento e transferência na data acadêmica.
+- Diário, resultado de matrícula e projeção legada usam o crédito sem fabricar chamadas; histórico e aproveitamentos permanecem prioritários.
+- Conteúdo e PDF vetorial exibem as extras; novos diários assinados congelam a evidência e conservam os documentos anteriores.
+
 ## [4.8.277] - 2026-11-09
 
 - Descrições de despesas são convertidas automaticamente em maiúsculas; lançamentos existentes recebem a mesma padronização.

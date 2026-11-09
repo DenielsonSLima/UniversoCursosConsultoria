@@ -47,6 +47,20 @@ export const useDiarioRealtime = (turmaId: string, disciplinaId: string) => {
         {
           event: '*',
           schema: 'public',
+          table: 'atividades_extra_classe',
+          filter: `turma_id=eq.${turmaId}`,
+        },
+        scheduleRefresh(
+          diarioClasseKeys.extraClassCredit(turmaId, disciplinaId),
+          diarioClasseKeys.resultados(turmaId, disciplinaId),
+          diarioClasseKeys.fechamento(turmaId, disciplinaId),
+        ),
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
           table: 'diario_frequencia',
           filter: `turma_id=eq.${turmaId}`,
         },
@@ -111,6 +125,7 @@ export const useDiarioRealtime = (turmaId: string, disciplinaId: string) => {
           diarioClasseKeys.students(turmaId, disciplinaId, 'GESTOR'),
           diarioClasseKeys.students(turmaId, disciplinaId, 'PROFESSOR'),
           diarioClasseKeys.resultados(turmaId, disciplinaId),
+          diarioClasseKeys.extraClassCredit(turmaId, disciplinaId),
         ),
       )
       .on(
@@ -125,6 +140,7 @@ export const useDiarioRealtime = (turmaId: string, disciplinaId: string) => {
           diarioClasseKeys.students(turmaId, disciplinaId, 'GESTOR'),
           diarioClasseKeys.students(turmaId, disciplinaId, 'PROFESSOR'),
           diarioClasseKeys.resultados(turmaId, disciplinaId),
+          diarioClasseKeys.extraClassCredit(turmaId, disciplinaId),
         ),
       )
       .subscribe();

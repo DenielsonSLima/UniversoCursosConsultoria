@@ -141,8 +141,8 @@ const useTurmaGradeInvalidation = (
       }),
       queryClient.invalidateQueries({
         queryKey: diarioClasseKeys.resultadosByTurma(turmaId),
-        exact: true,
       }),
+      queryClient.invalidateQueries({ queryKey: ['diario-extra-classe-credito', turmaId] }),
       queryClient.invalidateQueries({
         queryKey: diarioClasseKeys.praticasByTurma(turmaId),
         exact: true,

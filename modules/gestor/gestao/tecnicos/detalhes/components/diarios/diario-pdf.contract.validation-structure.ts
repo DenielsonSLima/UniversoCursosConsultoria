@@ -42,7 +42,7 @@ export const assertSnapshotEnvelope = (input: unknown) => {
     "closure",
     "generatedAt",
   ] as const;
-  assertExactKeys(snapshot, topLevelKeys, [], "raiz");
+  assertExactKeys(snapshot, topLevelKeys, ["extraClassCredit"], "raiz");
   if (snapshot.schemaVersion !== 2 || snapshot.composerSchemaVersion !== 1) {
     fail(
       "versão",

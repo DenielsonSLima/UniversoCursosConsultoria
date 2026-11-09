@@ -16,6 +16,7 @@ import type {
   GradesMap,
 } from './diario-classe.types';
 import { getStudentStats } from './diario-classe.utils';
+import type { DiarioExtraClassCredit } from './diario-extra-classe.types';
 
 export type EditableGradeField = 'p' | 'ti' | 'tg' | 's' | 'cq' | 'o' | 'rec';
 
@@ -23,6 +24,7 @@ interface DiarioClasseTabsProps {
   activeTab: DiarioActiveTab;
   students: DiarioStudent[];
   aulas: DiarioAula[];
+  extraClassCredit?: DiarioExtraClassCredit;
   attendanceMap: AttendanceMap;
   gradesMap: GradesMap;
   localGrades: GradesMap;
@@ -60,6 +62,7 @@ const DiarioClasseTabs = ({
   activeTab,
   students,
   aulas,
+  extraClassCredit,
   attendanceMap,
   gradesMap,
   localGrades,
@@ -115,6 +118,7 @@ const DiarioClasseTabs = ({
       {activeTab === 'conteudo' && (
         <DiarioConteudoTab
           aulas={aulas}
+          extraClassCredit={extraClassCredit}
           localTitulos={localTitulos}
           setLocalTitulos={setLocalTitulos}
           localPraticas={localPraticas}
