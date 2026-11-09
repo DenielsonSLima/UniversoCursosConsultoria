@@ -16,6 +16,15 @@ Histórico arquivado: [05/10/2026 — versões 4.8.171 a 4.8.174](./changelog/20
 
 Histórico arquivado: [06/10/2026 a 09/10/2026 — versões 4.8.175 a 4.8.195](./changelog/2026-10-06-a-09-versoes-4-8-175-a-195.md).
 
+## [4.8.272] - 2026-11-08
+
+- Mês atual abre agrupado por categoria; Em aberto e Todos abrem por mês nas despesas fixas e variáveis.
+- A troca de período restaura o agrupamento correspondente, mantendo a escolha manual disponível.
+- Despesas variáveis aparece antes de Despesas fixas na ordem visual das abas.
+- Custo rateado abre detalhes dos polos e valores autorizados em modal, pela tabela ou cartão.
+- Ajustes do valor iniciam recolhidos; convênio e turma usam Não/Sim, preservando campos, valores e bloqueios.
+- Textos do parcelamento foram simplificados para remover termos de implementação.
+
 ## [4.8.271] - 2026-11-08
 
 - Despesas fixas e variáveis iniciam agrupadas por mês de vencimento e permitem alternar para fornecedor, categoria ou lista simples.
@@ -475,5 +484,6 @@ Histórico arquivado: [06/10/2026 a 09/10/2026 — versões 4.8.175 a 4.8.195](.
 - Extrato financeiro da turma reconhece boletos Banese já emitidos e permite abrir o documento existente.
 - Emissão e recebimento aparecem separados; boleto pendente conserva o status até a confirmação do pagamento.
 - Descontos seguem a leitura de Contas a Receber, e alterações financeiras atualizam o extrato da matrícula.
+
 
 

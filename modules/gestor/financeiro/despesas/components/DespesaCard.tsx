@@ -1,4 +1,5 @@
 import React from 'react';
+import DespesaRateioBadge from './DespesaRateioBadge';
 import { FinancialPaymentBalance, hasPartialPayment } from '../../settlements/financial-payment.presentation';
 import {
   AlertCircle,
@@ -91,15 +92,7 @@ const DespesaCard: React.FC<DespesaCardProps> = ({
             )}
             <p className="mt-1 break-words text-[10px] font-medium leading-4 text-slate-500">{getDespesaFornecedorRotulo(item)}</p>
             <DespesaConvenioBadge item={item} />
-            {item.isRateioDerived ? (
-              <p className="mt-1 text-[10px] font-bold text-indigo-600">
-                Rateio da Matriz{item.poloMatrizNome ? ` · ${item.poloMatrizNome}` : ''}
-              </p>
-            ) : item.rateioMode && item.rateioMode !== 'SEM_RATEIO' ? (
-              <p className="mt-1 text-[10px] font-bold text-indigo-600">
-                Custo rateado{item.rateioPolosQuantidade ? ` em ${item.rateioPolosQuantidade} polo${item.rateioPolosQuantidade === 1 ? '' : 's'}` : ''}
-              </p>
-            ) : null}
+            <DespesaRateioBadge item={item} />
             </div>
           </div>
           <span className={`inline-flex flex-shrink-0 items-center gap-1 rounded-xl border px-2.5 py-1 text-[10px] font-bold uppercase ${cfg.bg} ${cfg.text} ${cfg.border}`}>

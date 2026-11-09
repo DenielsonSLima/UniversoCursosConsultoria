@@ -1,4 +1,5 @@
 import React from 'react';
+import DespesaRateioBadge from './DespesaRateioBadge';
 import { FinancialPaymentBalance, hasPartialPayment } from '../../settlements/financial-payment.presentation';
 import {
   AlertCircle, Banknote, CheckCircle2, Clock, Paperclip, Pencil,
@@ -79,8 +80,7 @@ const DespesaTable: React.FC<DespesaTableProps> = ({
                     <p className="mt-1 text-[10px] font-semibold leading-4 text-rose-600">{item.categoriaNome || 'Sem categoria'}</p>
                     <p className="mt-1 break-words text-[10px] font-medium leading-4 text-slate-500">{getDespesaFornecedorRotulo(item)}</p>
                     <DespesaConvenioBadge item={item} />
-                    {item.isRateioDerived && <p className="mt-1 text-[10px] font-bold text-indigo-600">Rateio da Matriz{item.poloMatrizNome ? ` · ${item.poloMatrizNome}` : ''}</p>}
-                    {!item.isRateioDerived && item.rateioMode && item.rateioMode !== 'SEM_RATEIO' && <p className="mt-1 text-[10px] font-bold text-indigo-600">Custo rateado{item.rateioPolosQuantidade ? ` em ${item.rateioPolosQuantidade} polos` : ''}</p>}
+                    <DespesaRateioBadge item={item} />
                   </div>
                 </div></td>
                 <td className="px-4 py-4 text-xs font-semibold leading-5 text-slate-700">

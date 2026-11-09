@@ -17,8 +17,8 @@ const DespesasTab: React.FC<DespesasTabProps> = ({ poloId }) => {
   const [actionsContainer, setActionsContainer] = useState<HTMLDivElement | null>(null);
 
   const subtabs = [
-    { id: 'fixas' as const, label: 'Despesas fixas', icon: <Building size={14} /> },
     { id: 'variaveis' as const, label: 'Despesas variáveis', icon: <ShoppingBag size={14} /> },
+    { id: 'fixas' as const, label: 'Despesas fixas', icon: <Building size={14} /> },
   ];
 
   const renderSubTab = () => {
@@ -59,3 +59,4 @@ const DespesasTab: React.FC<DespesasTabProps> = ({ poloId }) => {
 };
 
 export default DespesasTab;
+

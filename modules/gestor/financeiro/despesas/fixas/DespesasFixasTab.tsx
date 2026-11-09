@@ -48,7 +48,7 @@ const DespesasFixasTab: React.FC<{ poloId?: string | null; actionsContainer?: HT
   const [categoriaId, setCategoriaId] = useState('');
   const [turmaId, setTurmaId] = useState('');
   const [viewMode, setViewMode] = useState<'tabela' | 'cards'>('tabela');
-  const [agrupamento, setAgrupamento] = useState<DespesaAgrupamentoSelection>('mes');
+  const [agrupamento, setAgrupamento] = useState<DespesaAgrupamentoSelection>('categoria');
   const agrupar = agrupamento !== 'nenhum';
   const groupBy = agrupamento === 'nenhum' ? 'mes' : agrupamento;
   const [showForm, setShowForm] = useState(false);
@@ -269,7 +269,10 @@ const DespesasFixasTab: React.FC<{ poloId?: string | null; actionsContainer?: HT
             compact
             items={tabs}
             value={statusScope}
-            onChange={setStatusScope}
+            onChange={(scope) => {
+              setStatusScope(scope);
+              setAgrupamento(scope === 'mes_atual' ? 'categoria' : 'mes');
+            }}
             ariaLabel="Período das despesas fixas"
             indicatorClassName="bg-rose-600"
             activeIconClassName="text-rose-600"
