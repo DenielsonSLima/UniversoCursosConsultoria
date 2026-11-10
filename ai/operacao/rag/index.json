@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "retrieval": "lexical-bm25-with-source-citations",
-  "builtAt": "2026-11-09T11:53:20.298Z",
+  "builtAt": "2026-11-10T11:13:10.490Z",
   "manifestVersion": 2,
-  "sourceSignature": "de759a5138cf2330a85ac5880aa83e6f2fd6c3cf595129745721d0a5913ac694",
+  "sourceSignature": "2e07c5a44a2a81f43540f6f1f08c948070826b081d5859b9549fc9045e573142",
   "sources": [
     {
       "path": "AGENTS.md",
@@ -11,7 +11,7 @@
     },
     {
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "hash": "09eec64d41e4594a308ee17a6a7374af19a1dc270535ffdd3a8c6bf1fe6ae205"
+      "hash": "2a83a5f1a55a50364f36b598a93a2902b99be00ba05a1ee6876f87c822ef8497"
     },
     {
       "path": "ai/operacao/MEMORIA_CANONICA.md",
@@ -208,23 +208,23 @@
       "part": 1
     },
     {
-      "id": "8b4dcf309ddec799051b",
-      "hash": "8b4dcf309ddec799051b36033918099eec3f3f6de6c67df87b94d6b10dd0078b",
+      "id": "20be6d445cb2466be67e",
+      "hash": "20be6d445cb2466be67eb5c52a30395c5ec604c667d22593f27d5e5dce869c15",
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Lote: 2026-11-09-extra-classe-legado-comprovado",
-      "text": "Corrigir crédito retroativo em vínculos de implantação legada com prova individual da mesma oferta. Preservar datas de matrícula, movimentos reais, faltas, notas, histórico importado, documentos assinados e chamada incompleta. Não fechar diário.",
-      "normalizedText": "corrigir credito retroativo em vinculos de implantacao legada com prova individual da mesma oferta preservar datas de matricula movimentos reais faltas notas historico importado documentos assinados e chamada incompleta nao fechar diario",
-      "tokenCount": 31,
+      "section": "Lote: 2026-11-10-nfse-certificado-senha-validade",
+      "text": "Refazer o cadastro A1 no novo padrão visual de Configurações, corrigir senha/PBES2 Unicode e apresentar validade, preservando credenciais e bloqueio de emissão. Publicação no GitHub e em produção autorizada pelo usuário.",
+      "normalizedText": "refazer o cadastro a1 no novo padrao visual de configuracoes corrigir senha pbes2 unicode e apresentar validade preservando credenciais e bloqueio de emissao publicacao no github e em producao autorizada pelo usuario",
+      "tokenCount": 28,
       "part": 1
     },
     {
-      "id": "9cce3938c0a7ac7c8760",
-      "hash": "9cce3938c0a7ac7c8760a1400eb3cb4041c886daffde9e8f815c7a68b15f127a",
+      "id": "d98d719a0bbd1f0e237d",
+      "hash": "d98d719a0bbd1f0e237d8532baedd8319574ac525c0653be57d56178cff9a830",
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Lote: 2026-11-09-extra-classe-legado-comprovado",
-      "text": "Mudança crítica acadêmica/Supabase/publicação. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-09-extra-classe-legado-comprovado.md`. Base 4.8.279 preservada. Candidata 4.8.280, revisão 289; vinte testes isolados aprovados e simulação remota somente leitura sem reduções de crédito. CI/Preview e conferência de invariantes antes de aplicar. Smoke visual Safari pendente porque o Mac está offline.",
-      "normalizedText": "mudanca critica academica supabase publicacao manifesto explicito ai operacao registros alteracoes 2026 11 09 extra classe legado comprovado md base 4 8 279 preservada candidata 4 8 280 revisao 289 vinte testes isolados aprovados e simulacao remota somente leitura sem reducoes de credito ci preview e conferencia de invariantes antes de aplicar smoke visual safari pendente porque o mac esta offline",
-      "tokenCount": 54,
+      "section": "Lote: 2026-11-10-nfse-certificado-senha-validade",
+      "text": "Mudança crítica por segurança/Edge/publicação. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-10-nfse-certificado-senha-validade.md`. Base main 4ef4d649f7cfb94acba9509b332da4cad4f38909, versão 4.8.280, revisão 289; candidata 4.8.281, revisão 290. Baseline 27af198c aprovado nos nove checks e Preview, incluindo build e Deno congelado. Nova revisão visual mantém nove testes frontend e smoke DOM aprovados; exige CI/Preview do SHA final antes do deploy. Smoke Safari autenticado pendente porque o computador está offline. Nenhum certificado real ou segredo foi usado.",
+      "normalizedText": "mudanca critica por seguranca edge publicacao manifesto explicito ai operacao registros alteracoes 2026 11 10 nfse certificado senha validade md base main 4ef4d649f7cfb94acba9509b332da4cad4f38909 versao 4 8 280 revisao 289 candidata 4 8 281 revisao 290 baseline 27af198c aprovado nos nove checks e preview incluindo build e deno congelado nova revisao visual mantem nove testes frontend e smoke dom aprovados exige ci preview do sha final antes do deploy smoke safari autenticado pendente porque o computador esta offline nenhum certificado real ou segredo foi usado",
+      "tokenCount": 76,
       "part": 1
     },
     {

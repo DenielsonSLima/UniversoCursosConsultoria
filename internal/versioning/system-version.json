@@ -1,8 +1,9 @@
 {
-  "version": "4.8.280",
+  "version": "4.8.281",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 289,
-  "releasedAt": "2026-11-09",
-  "summary": "Crédito extra-classe retroativo com prova acadêmica individual em vínculos de implantação legada"
+  "revision": 290,
+  "releasedAt": "2026-11-10",
+  "summary": "Cadastro A1 com senha visível, compatibilidade UTF-8, erros seguros e validade após salvar"
 }
+

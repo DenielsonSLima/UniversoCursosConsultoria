@@ -41,17 +41,18 @@ Deno.test('A1 parser proves key/certificate/chain/CNPJ, without claiming revocat
   assert.equal(parsed.metadata.cnpj,'00000000000100');
   assert.equal(parsed.metadata.chainVerified,true); assert.equal(parsed.metadata.revocationStatus,'UNKNOWN');
   assert.equal(parsed.metadata.representationVerified,false); assert.match(parsed.metadata.fingerprint,/^[0-9a-f]{64}$/);
+  assert.equal(parsed.metadata.expiresAt,'2040-01-01T00:00:00.000Z');
   assert.match(parsed.material.privateKeyPem,/BEGIN RSA PRIVATE KEY/);
   assert.match(parsed.material.certificatePem,/BEGIN CERTIFICATE/);
 });
 Deno.test('A1 parser refuses wrong password, expired certificate, A3, wrong key and untrusted roots',()=>{
   const valid=fixture();
-  assert.throws(()=>inspectPkcs12(valid,'wrong',[rootPem]));
+  assert.throws(()=>inspectPkcs12(valid,'wrong',[rootPem]),{message:'INVALID_PFX_PASSWORD_OR_DATA'});
   assert.throws(()=>inspectPkcs12(fixture({expired:true}),'test-password',[rootPem]));
   assert.throws(()=>inspectPkcs12(fixture({a3:true}),'test-password',[rootPem]));
   assert.throws(()=>inspectPkcs12(fixture({wrongKey:true}),'test-password',[rootPem]));
   assert.throws(()=>inspectPkcs12(valid,'test-password',[]));
-  assert.throws(()=>inspectPkcs12(valid,'test-password',officialTrustAnchors()));
+  assert.throws(()=>inspectPkcs12(valid,'test-password',officialTrustAnchors()),{message:'UNTRUSTED_CERTIFICATE_CHAIN'});
   assert.throws(()=>inspectPkcs12(new Uint8Array(MAX_PFX_BYTES+1),'test-password',[rootPem]));
 });
 const uuid=(n: number)=>`00000000-0000-0000-0000-${String(n).padStart(12,'0')}`;
@@ -108,3 +109,4 @@ Deno.test('preflight rejects artificial MAC and encrypted-bag KDF costs before d
   assert.throws(()=>assertPfxCost(sequence([asn.create(asn.Class.UNIVERSAL,asn.Type.OID,false,
     asn.oidToDer('1.2.840.113549.1.5.12').getBytes()),sequence([integer('\x01'),integer('\x7f\xff\xff\xff')])])));
 });
+
