@@ -14,6 +14,7 @@ import { NfsePreparationDraftProvider } from './preparar/hooks/NfsePreparationDr
 import './nfse.css';
 import ToastNotification, { useToast } from '../components/ToastNotification';
 import { useNfseQueue } from './fila/useNfseQueue';
+import { useNfseQueueRealtime } from './fila/useNfseQueueRealtime';
 
 const PrepararNfseTab = lazy(() => import('./preparar/PrepararNfseTab'));
 const PendentesNfseTab = lazy(() => import('./pendentes/PendentesNfseTab'));
@@ -51,6 +52,7 @@ const NfseWorkspace: React.FC<EmissorNfsePageProps> = ({ poloId, poloName, isMat
   const queue = useNfseQueue(scope);
   const { toasts, removeToast, toast } = useToast();
   useNfseRealtime(scope);
+  useNfseQueueRealtime(scope);
   const workspace = query.error ? undefined : query.data;
   const unavailable = !scope || query.error instanceof NfseUnavailableError;
   const canRead = Boolean(scope && workspace && !query.error);

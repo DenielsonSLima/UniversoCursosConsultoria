@@ -1,0 +1,6 @@
+.nfse-button-danger { background: #fff; border-color: #efc8c8; color: #a33e3e; }
+.nfse-button-danger:hover:not(:disabled) { background: #fff4f4; }
+.nfse-queue-selection { align-items: center; color: #64748b; display: flex; flex-wrap: wrap; gap: 12px; padding: 10px 16px; }
+.nfse-table .nfse-selection-cell { width: 44px; }
+.nfse-table tr[data-selected="true"] { background: #f5f8ff; }
+.nfse-table input[type="checkbox"]:focus-visible { outline: 2px solid #4169e1; outline-offset: 3px; }

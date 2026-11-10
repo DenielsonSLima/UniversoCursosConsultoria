@@ -62,6 +62,10 @@ jobs:
         env:
           NFSE_CERTIFICATE_JSDOM_PATH: ${{ runner.temp }}/nfse-certificate-ui/node_modules/jsdom
         run: node scripts/test-nfse-certificate-ui.mjs
+      - name: Exercitar seleção e exclusão lógica da fila com dados sintéticos
+        env:
+          NFSE_TEST_JSDOM_MODULE: ${{ runner.temp }}/nfse-certificate-ui/node_modules/jsdom/lib/api.js
+        run: node --test modules/gestor/emissor-nfse/pendentes/PendentesNfseTab.interaction.test.mjs
       - run: node --test scripts/check-file-line-limits.test.mjs
       - run: node --test modules/gestor/emissor-nfse/visualizador/danfse.pdf.test.mjs
       - name: Instalar PostgreSQL isolado para os contratos fiscais
