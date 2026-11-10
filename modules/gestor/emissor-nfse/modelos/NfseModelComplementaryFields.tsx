@@ -5,8 +5,8 @@ interface Props { fields: NfseModelFormValues; setField: SetNfseModelField }
 
 export default function NfseModelComplementaryFields({ fields, setField }: Props) {
   return (
-    <details className="nfse-model-section nfse-model-complementary">
-      <summary>Informações complementares</summary>
+    <section className="nfse-model-section nfse-model-complementary" aria-labelledby="nfse-model-complementary-heading">
+      <h3 id="nfse-model-complementary-heading">Informações complementares</h3>
       <div className="nfse-model-grid">
         <label className="nfse-field">
           <span>Número do documento de responsabilidade técnica</span>
@@ -26,6 +26,6 @@ export default function NfseModelComplementaryFields({ fields, setField }: Props
           <input maxLength={60} value={fields.orderReference} onChange={(event) => setField('orderReference', event.target.value)} />
         </label>
       </div>
-    </details>
+    </section>
   );
 }

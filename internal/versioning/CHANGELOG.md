@@ -26,6 +26,9 @@ Histórico arquivado: [10/10/2026 a 13/10/2026 — versões 4.8.208 a 4.8.214](.
 
 ## [4.8.285] - 2026-11-10
 
+- Pré-modelos NFS-e passam a quatro etapas, com Pessoas e Serviço completos no recorte recebido; Valores e Revisão aguardam as próximas referências.
+- Pessoas preserva estratégias de competência/DPS, enquadramento e vínculos cadastrais; Serviço usa catálogos e escolhas condicionais de IBS/CBS, compra governamental e operação.
+- Descrições de modelos e serviços aceitam até 2.000 caracteres, inclusive após preenchimento do mês de referência.
 - NFS-e recebe painel de homologação com revisão do teste individual, retorno fiscal e consulta da mesma DPS após resposta incerta.
 - Pendentes permite revisar os dados fiscais com modelo ativo 080201, confirmação do aluno como tomador e datas explícitas, preservando preparações e recebimentos.
 - Rejeição E0037 mostra explicação sobre o convênio municipal no ambiente consultado, sem concluir a situação em produção ou reenviar automaticamente.

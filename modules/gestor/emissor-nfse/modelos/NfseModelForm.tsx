@@ -6,6 +6,13 @@ import { useNfseTabContext } from '../components/NfseTabContext';
 import type { NfseModel } from '../types/nfse.types';
 import NfseModelServiceFields, { NfseRequiredMark, type NfseModelFormValues, type SetNfseModelField } from './NfseModelServiceFields';
 import NfseModelComplementaryFields from './NfseModelComplementaryFields';
+import NfseModelSteps, { NfseModelPendingStep, nfseModelSteps, type NfseModelStep } from './NfseModelSteps';
+import NfseModelGeneralOptions from './NfseModelGeneralOptions';
+import NfseModelServiceLocation from './NfseModelServiceLocation';
+import NfseModelOperationType from './NfseModelOperationType';
+import { isNfseServiceOptionsComplete, normalizeNfsePeopleOptions, normalizeNfseServiceOptions } from './nfse-model-options-form';
+import { createDefaultNfseModelPeopleOptions, isNfseModelPeopleOptionsComplete } from './services/nfse-model-people-options';
+import NfseModelPeopleStep from './NfseModelPeopleStep';
 import { useNfseFiscalCatalogs } from './hooks/useNfseFiscalCatalogs';
 import { useNfseModelDescriptionPreview } from './hooks/useNfseModelDescriptionPreview';
 import './nfse-model-form.css';
@@ -22,6 +29,7 @@ const NfseModelForm: React.FC<NfseModelFormProps> = ({ model, onClose, onSaved }
   const onCloseRef = useRef(onClose);
   const closeBlockedRef = useRef(false);
   const { scope } = useNfseTabContext();
+  const [step, setStep] = useState<NfseModelStep>('people');
   const [fields, setFields] = useState<NfseModelFormValues>(() => ({
     name: model?.name || '', nationalServiceCode: model?.nationalServiceCode || '',
     serviceDescription: model?.serviceDescription || '', nbsCode: model?.nbsCode || '',
@@ -29,17 +37,32 @@ const NfseModelForm: React.FC<NfseModelFormProps> = ({ model, onClose, onSaved }
     immunityType: model?.immunityType || '', technicalResponsibilityDocument: model?.technicalResponsibilityDocument || '',
     referenceDocument: model?.referenceDocument || '', complementaryInfo: model?.complementaryInfo || '',
     orderReference: model?.orderReference || '', active: model?.active ?? true,
+    serviceOptions: model?.serviceOptions || null,
+    peopleOptions: model ? model.peopleOptions || null : createDefaultNfseModelPeopleOptions(),
   }));
   const [specialTreatment, setSpecialTreatment] = useState<boolean | null>(
     model?.issTreatment ? model.issTreatment !== 'TRIBUTAVEL' : null,
   );
-  const setField: SetNfseModelField = (key, value) => setFields((current) => ({ ...current, [key]: value }));
+  const setField: SetNfseModelField = (key, value) => setFields((current) => {
+    const next = { ...current, [key]: value };
+    if (next.serviceOptions) {
+      next.serviceOptions = normalizeNfseServiceOptions(next.serviceOptions, next.nationalServiceCode, next.issTreatment);
+      if (next.serviceOptions.includeIbsCbs === false) next.operationIndicatorCode = '';
+    }
+    if (next.peopleOptions) next.peopleOptions = normalizeNfsePeopleOptions(next.peopleOptions, next.serviceOptions);
+    return next;
+  });
   const request = useRef<{ fingerprint: string; id: string } | null>(null);
   const save = useSaveNfseModel(scope);
   const catalogQuery = useNfseFiscalCatalogs();
   const descriptionPreview = useNfseModelDescriptionPreview(scope, fields.serviceDescription);
   const catalogs = catalogQuery.data;
-  const allowed = Boolean(scope && descriptionPreview.ready && catalogs && !catalogQuery.isPending && !catalogQuery.error
+  const allowed = Boolean(scope && fields.name.trim() && fields.serviceDescription.trim()
+    && fields.issTreatment && specialTreatment !== null
+    && (fields.issTreatment !== 'IMUNIDADE' || fields.immunityType)
+    && isNfseServiceOptionsComplete(fields.serviceOptions, fields.nationalServiceCode, fields.operationIndicatorCode, fields.issTreatment)
+    && isNfseModelPeopleOptionsComplete(fields.peopleOptions, fields.serviceOptions?.includeIbsCbs ?? null)
+    && descriptionPreview.ready && catalogs && !catalogQuery.isPending && !catalogQuery.error
     && catalogs.nationalServices.some((option) => option.code === fields.nationalServiceCode)
     && catalogs.nbs.some((option) => option.code === fields.nbsCode)
     && (!fields.operationIndicatorCode || catalogs.operationIndicators.some((option) => option.code === fields.operationIndicatorCode)));
@@ -121,7 +144,7 @@ const NfseModelForm: React.FC<NfseModelFormProps> = ({ model, onClose, onSaved }
     if (request.current?.fingerprint !== fingerprint) request.current = { fingerprint, id: crypto.randomUUID() };
     try {
       await save.mutateAsync({ ...input, requestId: request.current.id });
-      onSaved('Modelo disponível para este estabelecimento.');
+      onSaved('Pré-modelo disponível para este estabelecimento.');
     } catch { /* The mutation error is shown in the form; the request ID is preserved. */ }
   };
 
@@ -146,29 +169,51 @@ const NfseModelForm: React.FC<NfseModelFormProps> = ({ model, onClose, onSaved }
       className="nfse-model-dialog w-full max-w-3xl rounded-xl border border-slate-200 bg-white shadow-xl"
       onSubmit={(event) => void submit(event)}
     >
-      <div className="nfse-section-heading"><h2 id={titleId}>{model ? 'Editar modelo' : 'Novo modelo'}</h2><button type="button" className="nfse-button nfse-button-secondary shrink-0" onClick={onClose} disabled={save.isPending} aria-label="Fechar formulário do modelo"><X size={16} /></button></div>
+      <div className="nfse-section-heading"><h2 id={titleId}>{model ? 'Editar pré-modelo' : 'Novo pré-modelo'}</h2><button type="button" className="nfse-button nfse-button-secondary shrink-0" onClick={onClose} disabled={save.isPending} aria-label="Fechar formulário do pré-modelo"><X size={16} /></button></div>
+      <div className="nfse-model-section nfse-model-grid nfse-model-identity">
+        <label className="nfse-field"><span>Nome do pré-modelo<NfseRequiredMark /></span><input ref={initialFocusRef} required maxLength={120} disabled={save.isPending} value={fields.name} onChange={(event) => setField('name', event.target.value)} placeholder="Ex.: Mensalidade de curso técnico" /></label>
+        <label className="nfse-model-active"><input type="checkbox" disabled={save.isPending} checked={fields.active} onChange={(event) => setField('active', event.target.checked)} />Pré-modelo ativo</label>
+      </div>
+      <NfseModelSteps current={step} disabled={save.isPending} onChange={setStep} />
       <div className="nfse-model-body">
         <fieldset className="nfse-model-fields" disabled={save.isPending}>
-          <div className="nfse-model-section nfse-model-grid">
-            <label className="nfse-field"><span>Nome do modelo<NfseRequiredMark /></span><input ref={initialFocusRef} required maxLength={120} value={fields.name} onChange={(event) => setField('name', event.target.value)} placeholder="Ex.: Mensalidade de curso técnico" /></label>
-            <label className="nfse-model-active"><input type="checkbox" checked={fields.active} onChange={(event) => setField('active', event.target.checked)} />Modelo ativo</label>
-          </div>
-          <NfseModelServiceFields fields={fields} setField={setField} specialTreatment={specialTreatment}
+          {step === 'people' && <><NfseModelGeneralOptions section="ibs" value={fields.serviceOptions}
+            onChange={options => setField('serviceOptions', options)} />
+            <NfseModelPeopleStep scope={scope} value={fields.peopleOptions}
+              onChange={options => setField('peopleOptions', options)} includeIbsCbs={fields.serviceOptions?.includeIbsCbs ?? null}
+              governmentPurchase={fields.serviceOptions?.governmentPurchase ?? null} disabled={save.isPending}
+              afterIssuer={<NfseModelGeneralOptions section="government" value={fields.serviceOptions}
+                onChange={options => setField('serviceOptions', options)} />} /></>}
+          {step === 'service' && <><NfseModelServiceLocation value={fields.serviceOptions}
+            onChange={options => setField('serviceOptions', options)} /><NfseModelServiceFields fields={fields} setField={setField} specialTreatment={specialTreatment}
             descriptionPreview={descriptionPreview}
             catalogs={catalogs} catalogsLoading={catalogQuery.isPending} catalogsError={Boolean(catalogQuery.error)}
             onRetryCatalogs={() => { void catalogQuery.refetch(); }} onSpecialTreatmentChange={(value) => {
             setSpecialTreatment(value);
-            setFields((current) => ({ ...current, issTreatment: value ? (current.issTreatment === 'TRIBUTAVEL' ? '' : current.issTreatment) : 'TRIBUTAVEL', immunityType: value ? current.immunityType : '' }));
+            setFields((current) => {
+              const next = { ...current, issTreatment: value ? (current.issTreatment === 'TRIBUTAVEL' ? '' as const : current.issTreatment) : 'TRIBUTAVEL' as const, immunityType: value ? current.immunityType : '' as const };
+              if (next.serviceOptions) next.serviceOptions = normalizeNfseServiceOptions(next.serviceOptions, next.nationalServiceCode, next.issTreatment);
+              return next;
+            });
           }} />
-          <NfseModelComplementaryFields fields={fields} setField={setField} />
+          <NfseModelOperationType options={fields.serviceOptions} nationalServiceCode={fields.nationalServiceCode}
+            onChange={options => setField('serviceOptions', options)} />
+          <NfseModelComplementaryFields fields={fields} setField={setField} /></>}
+          {(step === 'values' || step === 'review') && <NfseModelPendingStep step={step} />}
         </fieldset>
-        {save.error && <div className="nfse-notice" role="alert">Não foi possível salvar o modelo. Revise os campos e tente novamente.</div>}
+        {save.error && <div className="nfse-notice" role="alert">Não foi possível salvar o pré-modelo. Revise os campos e tente novamente.</div>}
       </div>
       <div className="nfse-footer">
         {!scope && <span>Salvamento indisponível.</span>}
+        <div className="nfse-model-step-actions">
+          <button type="button" className="nfse-button nfse-button-secondary" disabled={save.isPending || step === 'people'}
+            onClick={() => setStep(nfseModelSteps[nfseModelSteps.findIndex(item => item.id === step) - 1].id)}>Voltar</button>
+          <button type="button" className="nfse-button nfse-button-secondary" disabled={save.isPending || step === 'review'}
+            onClick={() => setStep(nfseModelSteps[nfseModelSteps.findIndex(item => item.id === step) + 1].id)}>Continuar</button>
+        </div>
         <div className="ml-auto flex flex-wrap justify-end gap-2">
           <button type="button" className="nfse-button nfse-button-secondary" onClick={onClose} disabled={save.isPending}>Cancelar</button>
-          <button type="submit" className="nfse-button nfse-button-primary" disabled={!allowed || save.isPending}><Save size={15} />{save.isPending ? 'Salvando…' : 'Salvar modelo'}</button>
+          <button type="submit" className="nfse-button nfse-button-primary" disabled={!allowed || save.isPending}><Save size={15} />{save.isPending ? 'Salvando…' : 'Salvar pré-modelo'}</button>
         </div>
       </div>
     </form>

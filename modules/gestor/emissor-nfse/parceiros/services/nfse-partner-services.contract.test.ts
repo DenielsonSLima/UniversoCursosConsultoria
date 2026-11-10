@@ -43,11 +43,21 @@ test('ambiguous money, variables, financial contradictions and foreign months ne
   const service = createNfsePartnerServices(async () => { throw new Error('Unexpected transport'); });
   for (const changed of [{ amount: '0.00' }, { amount: '1234,56' }, { amount: '1.234' }, { amount: '-1.00' },
     { serviceDescription: 'Valores em {{mes_referencia}}.' }, { serviceDescription: 'Texto }}' },
-    { serviceDescription: 'x'.repeat(1001) }, { serviceDate: '2026-10-08' }, { modelVersion: 0 },
+    { serviceDescription: 'x'.repeat(2001) }, { serviceDate: '2026-10-08' }, { modelVersion: 0 },
     { dueDate: '2026-11-30' }, { existingReceivableId: id(8) }, { generateReceivable: true },
     { generateReceivable: true, existingReceivableId: id(8), categoryId: id(7) }]) {
     await assert.rejects(service.save(scope, { ...input, ...changed }), NfseContractError);
   }
+});
+
+test('partner preparation preserves a complete 2000-character model description', async () => {
+  const description = 'DESCRIÇÃO SINTÉTICA '.padEnd(2000, 'x');
+  const service = createNfsePartnerServices(async (_name, args) => {
+    assert.equal((args.p_definition as Record<string, unknown>).serviceDescription, description);
+    return envelope({ id: id(6), receivableId: null, receivableAction: 'NONE', message: 'Salvo.' });
+  });
+  assert.equal(nfsePartnerServiceDefinition({ ...input, serviceDescription: description }).serviceDescription.length, 2000);
+  assert.equal((await service.save(scope, { ...input, serviceDescription: description })).receivableAction, 'NONE');
 });
 
 test('partner options preserve only PF/PJ identities and reject duplicated choices', () => {

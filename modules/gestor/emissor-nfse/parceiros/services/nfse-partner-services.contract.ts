@@ -68,7 +68,7 @@ export function parseNfsePartnerServicesPage(value: unknown, expectedPage: numbe
 
 export function nfsePartnerServiceDefinition(input: NfsePartnerServiceInput) {
   const serviceDescription = string(input.serviceDescription).trim();
-  if (serviceDescription.length > 1000 || /\{\{|\}\}/.test(serviceDescription) || amount(input.amount) === '0.00') throw new NfseContractError();
+  if (serviceDescription.length > 2000 || /\{\{|\}\}/.test(serviceDescription) || amount(input.amount) === '0.00') throw new NfseContractError();
   const generateReceivable = boolean(input.generateReceivable);
   const existingReceivableId = nullableUuid(input.existingReceivableId);
   const dueDate = input.dueDate === null ? null : date(input.dueDate);

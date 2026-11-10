@@ -5,6 +5,7 @@ import { NfseContractError } from '../../services/nfse.errors';
 import { nfseModelDefinition, parseNfseStoredModel } from './nfse-models.contract';
 import { createNfseModelsService } from './nfse-models.service-core';
 import { nfseModelsKeys } from '../queries/nfse-models.keys';
+import { createDefaultNfseModelPeopleOptions } from './nfse-model-people-options';
 
 const id = (value: number) => `00000000-0000-0000-0000-${String(value).padStart(12, '0')}`;
 const scope: NfseScope = { contextKey: id(1), poloId: id(2), month: '2026-11', environment: 'HOMOLOGACAO' };
@@ -32,7 +33,7 @@ test('models reject ambiguous tax treatment, malformed official field sizes and 
   const service = createNfseModelsService(async () => { throw new Error('Unexpected transport'); });
   for (const change of [{ issTreatment: '' }, { immunityType: '1' }, { issTreatment: 'IMUNIDADE' },
     { issTreatment: 'IMUNIDADE', immunityType: '0' }, { nationalServiceCode: '0801' },
-    { nbsCode: '123' }, { operationIndicatorCode: '12345' }, { serviceDescription: 'x'.repeat(1001) },
+    { nbsCode: '123' }, { operationIndicatorCode: '12345' }, { serviceDescription: 'x'.repeat(2001) },
     { technicalResponsibilityDocument: 'x'.repeat(41) }, { referenceDocument: 'x'.repeat(256) },
     { complementaryInfo: 'x'.repeat(2001) }, { orderReference: 'x'.repeat(61) }, { name: ' ' }]) {
     assert.throws(() => nfseModelDefinition({ ...input, ...change } as NfseModelInput), NfseContractError);
@@ -60,6 +61,27 @@ test('model cache invalidation spans months only inside the same context, polo a
   }
 });
 
+test('people and service presets round-trip together and government purchases require a Brazilian recipient', () => {
+  const serviceOptions = { version: 1 as const, countryCode: 'BRA', municipalityCode: '2803401',
+    exportResultCountryCode: null, includeIbsCbs: true, governmentPurchase: true,
+    governmentEntityType: '4' as const, operationType: '5' as const, countryLabel: 'BRASIL',
+    municipalityLabel: 'JAPOATÃ / SE' };
+  const peopleOptions = { ...createDefaultNfseModelPeopleOptions(), recipientIsDestination: false,
+    destinationPartnerId: id(8), destinationPartnerLabel: 'Parceiro sintético' };
+  const stored = { ...input, id: id(5), version: 1, operationIndicatorCode: '030102', serviceOptions, peopleOptions };
+  const parsed = parseNfseStoredModel(stored);
+  assert.equal(parsed.serviceOptions?.municipalityLabel, 'JAPOATÃ / SE');
+  assert.equal(parsed.peopleOptions?.destinationPartnerLabel, 'Parceiro sintético');
+  const definition = nfseModelDefinition({ ...parsed, requestId: id(3) });
+  assert.equal(definition.serviceOptions?.countryCode, 'BRA');
+  assert.equal(definition.peopleOptions?.destinationPartnerId, id(8));
+  assert.equal('countryLabel' in definition.serviceOptions!, false);
+  assert.equal('destinationPartnerLabel' in definition.peopleOptions!, false);
+  for (const recipientLocation of ['EXTERIOR', 'NOT_INFORMED'] as const) {
+    assert.throws(() => nfseModelDefinition({ ...stored, peopleOptions: { ...peopleOptions, recipientLocation } }), NfseContractError);
+  }
+});
+
 test('description preview sends the literal template and receipt month to the RPC', async () => {
   const monthScope = { ...scope, month: '2026-10' };
   const template = 'Valores recebidos em {{mes_referencia}}.';
@@ -81,7 +103,7 @@ test('description preview accepts static text but rejects malformed or foreign-s
   const canonical = { description: 'Descrição literal.', monthLabel: 'novembro de 2026', usesReferenceMonth: false };
   const service = createNfseModelsService(async () => envelope(canonical));
   assert.deepEqual(await service.previewDescription(scope, canonical.description), canonical);
-  for (const change of [{ description: '' }, { description: 'x'.repeat(1001) }, { monthLabel: null }, { usesReferenceMonth: 'true' }]) {
+  for (const change of [{ description: '' }, { description: 'x'.repeat(2001) }, { monthLabel: null }, { usesReferenceMonth: 'true' }]) {
     const invalid = createNfseModelsService(async () => envelope({ ...canonical, ...change }));
     await assert.rejects(invalid.previewDescription(scope, 'Texto'), NfseContractError);
   }

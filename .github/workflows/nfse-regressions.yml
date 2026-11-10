@@ -82,6 +82,14 @@ jobs:
         env:
           NFSE_TEST_JSDOM_MODULE: ${{ runner.temp }}/nfse-certificate-ui/node_modules/jsdom/lib/api.js
         run: node --test modules/gestor/emissor-nfse/fila/fiscal-review/NfseFiscalReviewModal.interaction.test.mjs
+      - name: Exercitar cadastro de pré-modelos sem transmissão
+        env:
+          NFSE_TEST_JSDOM_MODULE: ${{ runner.temp }}/nfse-certificate-ui/node_modules/jsdom/lib/api.js
+        run: >-
+          node --test
+          modules/gestor/emissor-nfse/modelos/NfseModelForm.interaction.test.mjs
+          modules/gestor/emissor-nfse/modelos/NfseModelLocationPicker.interaction.test.mjs
+          modules/gestor/emissor-nfse/parceiros/NfsePartnerServiceModal.interaction.test.mjs
       - run: node --test scripts/check-file-line-limits.test.mjs
       - run: node --test modules/gestor/emissor-nfse/visualizador/danfse.pdf.test.mjs
       - name: Instalar PostgreSQL isolado para os contratos fiscais

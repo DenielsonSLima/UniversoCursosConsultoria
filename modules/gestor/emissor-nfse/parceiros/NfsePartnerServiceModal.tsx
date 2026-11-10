@@ -99,7 +99,7 @@ export default function NfsePartnerServiceModal({ scope, onClose, onSaved }: Pro
             <label className="nfse-field"><span>Valor do serviço</span><input inputMode="decimal" required placeholder="0,00" value={linked ? selectedReceivable ? nfsePartnerAmountInput(selectedReceivable.amount) : '' : amountInput}
               readOnly={linked} onChange={(event) => setAmountInput(sanitizeCurrencyInput(event.target.value, amountInput))} /></label>
             {serviceDate && !currentMonthDate && <small className="nfse-partner-error nfse-wide" role="alert">Escolha uma data em {formatNfseMonth(scope.month)}.</small>}
-            <label className="nfse-field nfse-wide"><span>Descrição do serviço</span><textarea required maxLength={1000} value={serviceDescription} onChange={(event) => setServiceDescription(event.target.value)} /></label>
+            <label className="nfse-field nfse-wide"><span>Descrição do serviço</span><textarea required maxLength={2000} value={serviceDescription} onChange={(event) => setServiceDescription(event.target.value)} /></label>
             {hasVariable ? <small className="nfse-partner-error nfse-wide" role="alert">Informe a descrição final deste serviço, sem variáveis de recebimentos.</small>
               : <div className="nfse-wide"><NfseDescriptionPreview preview={preview} /></div>}
           </section>

@@ -1,7 +1,7 @@
 # Lote ativo
 
-## Lote: 2026-11-10-nfse-homologacao-emissao
+## Lote: 2026-11-10-nfse-premodelos-etapas-1-2
 
-Objetivo: concluir o piloto NFS-e de homologação e a revisão fiscal da fila, preservando recebimentos e emissão real bloqueada.
-Status: candidata 4.8.285 no PR rascunho #379, sobre main 4.8.284. Preflight verificado; única transmissão piloto rejeitada com E0037. Consulta e seleção autenticadas conferidas; gravação da revisão e autorização de NFS-e não comprovadas. Sem publicação em produção.
-Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-10-nfse-homologacao-emissao.md`. Evidências, decisões, validações e limites no [registro do lote](registros/alteracoes/2026-11-10-nfse-homologacao-emissao.md).
+Objetivo: pré-cadastro NFS-e de Pessoas/Serviço conforme capturas; pesquisa oficial das quatro etapas e ramos faltantes. Valores/Revisão ainda exigem integração. Sem emissão fiscal.
+Status: implementação inicial validada no Safari, quatro migrations aplicadas; candidata no PR rascunho #379. Quatro etapas mapeadas pelo guia oficial 1.3 e anexos por ambiente.
+Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-10-nfse-premodelos-etapas-1-2.md`.
