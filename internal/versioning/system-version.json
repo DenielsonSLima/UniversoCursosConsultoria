@@ -1,9 +1,8 @@
 {
-  "version": "4.8.281",
+  "version": "4.8.282",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 290,
+  "revision": 291,
   "releasedAt": "2026-11-10",
-  "summary": "Cadastro A1 com senha visível, compatibilidade UTF-8, erros seguros e validade após salvar"
+  "summary": "Cadastro A1 compatível com Deno da Edge, preservando validações de chave, cadeia e CNPJ"
 }
-

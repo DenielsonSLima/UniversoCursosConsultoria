@@ -20,7 +20,13 @@ Histórico arquivado: [10/10/2026 — versões 4.8.196 a 4.8.198](./changelog/20
 
 Histórico arquivado: [10/10/2026 — versão 4.8.203](./changelog/2026-10-10-versao-4-8-203.md).
 
-Histórico arquivado: [10/10/2026 — versão 4.8.204](./changelog/2026-10-10-versao-4-8-204.md).
+Histórico arquivado: [10/10/2026 — versão 4.8.204](./changelog/2026-10-10-versao-4-8-204.md), [10/10/2026 — versão 4.8.205](./changelog/2026-10-10-versao-4-8-205.md).
+
+## [4.8.282] - 2026-11-10
+
+- Cadastro A1 verifica chave RSA, cadeia e impressão digital sem APIs X509 ausentes no runtime da Edge.
+- Preserva senha UTF-8, CNPJ, validade, confiança e bloqueio de emissão; interface e metadados continuam iguais.
+- CI passa a testar também Deno 2.1.4, mantendo a validação no Deno atual e casos de rejeição de certificados inválidos.
 
 ## [4.8.281] - 2026-11-10
 
@@ -492,8 +498,3 @@ Histórico arquivado: [10/10/2026 — versão 4.8.204](./changelog/2026-10-10-ve
 - Atividade em painéis internos e controles que interrompem eventos renova corretamente o prazo da sessão.
 - Abas sincronizam a atividade mais recente antes do logout, preservando os 30 minutos de inatividade.
 
-## [4.8.205] - 2026-10-10
-
-- Frequência acomoda seis encontros de manhã/tarde no mesmo bloco, com larguras fixas para identificação do aluno e faltas.
-- Diário soma no backend apenas as notas preenchidas em qualquer instrumento ativo; campos vazios não impedem a soma.
-- Zero continua exigindo lançamento explícito e ausência total de notas mantém média vazia; fechamento e validação documental acompanham a regra.

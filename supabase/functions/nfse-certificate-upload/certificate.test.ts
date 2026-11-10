@@ -1,13 +1,13 @@
 import assert from 'node:assert/strict';
 import forge from 'npm:node-forge@1.4.3';
-import { generateKeyPairSync } from 'node:crypto';
+import { generateKeyPairSync, X509Certificate } from 'node:crypto';
 import { inspectPkcs12, MAX_PFX_BYTES } from './certificate.ts';
 import { createCertificateUploadHandler } from './handler.ts';
 import { officialTrustAnchors } from './trust-store.ts';
 import { assertPfxCost } from './pfx-limits.ts';
 
-const pair = () => {
-  const generated=generateKeyPairSync('rsa',{modulusLength:2048});
+const pair = (modulusLength = 2048) => {
+  const generated=generateKeyPairSync('rsa',{modulusLength});
   return {privateKey:forge.pki.privateKeyFromPem(generated.privateKey.export({type:'pkcs1',format:'pem'}).toString()),
     publicKey:forge.pki.publicKeyFromPem(generated.publicKey.export({type:'pkcs1',format:'pem'}).toString())};
 };
@@ -18,20 +18,50 @@ root.setSubject([{name:'commonName',value:'Synthetic root for isolated tests'}])
 root.setExtensions([{name:'basicConstraints',cA:true,critical:true},{name:'keyUsage',keyCertSign:true,cRLSign:true,critical:true}]);
 root.sign(rootKey.privateKey,forge.md.sha256.create());
 const rootPem=forge.pki.certificateToPem(root);
-function fixture(options: { cnpj?: string; expired?: boolean; a3?: boolean; wrongKey?: boolean } = {}) {
-  const key=pair(); const cert=forge.pki.createCertificate(); cert.publicKey=key.publicKey; cert.serialNumber='02';
+interface FixtureOptions {
+  cnpj?: string; expired?: boolean; a3?: boolean; wrongKey?: boolean; weakKey?: boolean;
+  ca?: boolean; noDigitalSignature?: boolean; intermediate?: boolean; omitIntermediate?: boolean;
+  badSignature?: boolean; decoyIssuer?: boolean;
+  subjectUtf8?: boolean; corruptPrivateComponents?: boolean;
+}
+function fixture(options: FixtureOptions = {}) {
+  const key=pair(options.weakKey ? 1024 : 2048); const cert=forge.pki.createCertificate(); cert.publicKey=key.publicKey; cert.serialNumber='02';
   cert.validity.notBefore=new Date('2020-01-01'); cert.validity.notAfter=new Date(options.expired?'2021-01-01':'2040-01-01');
-  cert.setSubject([{name:'commonName',value:'Synthetic A1 test'}]); cert.setIssuer(root.subject.attributes);
+  let issuer=root; let issuerKey=rootKey; const chain=[root];
+  if (options.intermediate) {
+    issuerKey=pair(); issuer=forge.pki.createCertificate(); issuer.publicKey=issuerKey.publicKey; issuer.serialNumber='03';
+    issuer.validity.notBefore=new Date('2020-01-01'); issuer.validity.notAfter=new Date('2040-01-01');
+    issuer.setSubject([{name:'commonName',value:'Synthetic intermediate'}]); issuer.setIssuer(root.subject.attributes);
+    issuer.setExtensions([{name:'basicConstraints',cA:true,critical:true},{name:'keyUsage',keyCertSign:true,critical:true}]);
+    issuer.sign(rootKey.privateKey,forge.md.sha256.create());
+    if (options.decoyIssuer) {
+      const decoy=forge.pki.createCertificate(); decoy.publicKey=pair().publicKey; decoy.serialNumber='04';
+      decoy.validity.notBefore=issuer.validity.notBefore; decoy.validity.notAfter=issuer.validity.notAfter;
+      decoy.setSubject(issuer.subject.attributes); decoy.setIssuer(root.subject.attributes);
+      decoy.setExtensions([{name:'basicConstraints',cA:true,critical:true},{name:'keyUsage',keyCertSign:true,critical:true}]);
+      decoy.sign(rootKey.privateKey,forge.md.sha256.create()); chain.push(decoy);
+    }
+    if (!options.omitIntermediate) chain.push(issuer);
+  }
+  cert.setSubject(options.subjectUtf8
+    ? [{name:'commonName',value:'Certificado São José',valueTagClass:forge.asn1.Type.UTF8}]
+    : [{name:'commonName',value:'Synthetic A1 test'}]); cert.setIssuer(issuer.subject.attributes);
   const asn=forge.asn1; const seq=(value: unknown[])=>asn.create(asn.Class.UNIVERSAL,asn.Type.SEQUENCE,true,value);
   const oid=(value: string)=>asn.create(asn.Class.UNIVERSAL,asn.Type.OID,false,asn.oidToDer(value).getBytes());
   const san=seq([asn.create(asn.Class.CONTEXT_SPECIFIC,0,true,[
     oid('2.16.76.1.3.3'),asn.create(asn.Class.CONTEXT_SPECIFIC,0,true,[
       asn.create(asn.Class.UNIVERSAL,asn.Type.UTF8,false,options.cnpj || '00000000000100')])])]);
-  cert.setExtensions([{name:'basicConstraints',cA:false,critical:true},{name:'keyUsage',digitalSignature:true,critical:true},
+  cert.setExtensions([{name:'basicConstraints',cA:options.ca===true,critical:true},{name:'keyUsage',digitalSignature:!options.noDigitalSignature,critical:true},
     {id:'2.5.29.17',value:asn.toDer(san).getBytes()},
     {id:'2.5.29.32',value:asn.toDer(seq([seq([oid(options.a3?'2.16.76.1.2.3.1':'2.16.76.1.2.1.1')])])).getBytes()}]);
-  cert.sign(rootKey.privateKey,forge.md.sha256.create());
-  const pfx=forge.pkcs12.toPkcs12Asn1(options.wrongKey?pair().privateKey:key.privateKey,[cert,root], 'test-password',
+  cert.sign(options.badSignature ? pair().privateKey : issuerKey.privateKey,forge.md.sha256.create());
+  let exportedKey=options.wrongKey?pair().privateKey:key.privateKey;
+  if (options.corruptPrivateComponents) {
+    const wrong=pair().privateKey;
+    exportedKey=forge.pki.setRsaPrivateKey(key.privateKey.n,key.privateKey.e,
+      wrong.d,wrong.p,wrong.q,wrong.dP,wrong.dQ,wrong.qInv);
+  }
+  const pfx=forge.pkcs12.toPkcs12Asn1(exportedKey,[...chain,cert], 'test-password',
     {algorithm:'3des',count:1024});
   return new Uint8Array(forge.util.binary.raw.decode(asn.toDer(pfx).getBytes()));
 }
@@ -44,6 +74,8 @@ Deno.test('A1 parser proves key/certificate/chain/CNPJ, without claiming revocat
   assert.equal(parsed.metadata.expiresAt,'2040-01-01T00:00:00.000Z');
   assert.match(parsed.material.privateKeyPem,/BEGIN RSA PRIVATE KEY/);
   assert.match(parsed.material.certificatePem,/BEGIN CERTIFICATE/);
+  const nativeFingerprint=new X509Certificate(parsed.material.certificatePem).fingerprint256.replaceAll(':','').toLowerCase();
+  assert.equal(parsed.metadata.fingerprint,nativeFingerprint);
 });
 Deno.test('A1 parser refuses wrong password, expired certificate, A3, wrong key and untrusted roots',()=>{
   const valid=fixture();
@@ -54,6 +86,45 @@ Deno.test('A1 parser refuses wrong password, expired certificate, A3, wrong key 
   assert.throws(()=>inspectPkcs12(valid,'test-password',[]));
   assert.throws(()=>inspectPkcs12(valid,'test-password',officialTrustAnchors()),{message:'UNTRUSTED_CERTIFICATE_CHAIN'});
   assert.throws(()=>inspectPkcs12(new Uint8Array(MAX_PFX_BYTES+1),'test-password',[rootPem]));
+});
+
+Deno.test('A1 parsing never depends on unimplemented Edge Runtime X509 methods',()=>{
+  const prototype=X509Certificate.prototype;
+  const names=['checkPrivateKey','checkIssued','verify','raw'] as const;
+  const descriptors=names.map(name=>[name,Object.getOwnPropertyDescriptor(prototype,name)!] as const);
+  try {
+    for (const name of names) Object.defineProperty(prototype,name,{configurable:true,
+      ...(name==='raw' ? {get:()=>{throw new Error('UNIMPLEMENTED_EDGE_X509');}}
+        : {value:()=>{throw new Error('UNIMPLEMENTED_EDGE_X509');}})});
+    assert.equal(inspectPkcs12(fixture(),'test-password',[rootPem]).metadata.chainVerified,true);
+  } finally {
+    for (const [name,descriptor] of descriptors) Object.defineProperty(prototype,name,descriptor);
+  }
+});
+
+Deno.test('RSA size, leaf CA and digital-signature restrictions remain enforced',()=>{
+  for (const [options,code] of [
+    [{weakKey:true},'UNSUPPORTED_A1_KEY'],
+    [{ca:true},'INVALID_SIGNING_CERTIFICATE'],
+    [{noDigitalSignature:true},'INVALID_SIGNING_CERTIFICATE'],
+    [{wrongKey:true},'CERTIFICATE_KEY_MISMATCH'],
+  ] as const) assert.throws(()=>inspectPkcs12(fixture(options),'test-password',[rootPem]),{message:code});
+});
+
+Deno.test('subject Unicode is preserved and matching public components alone do not prove a private key',()=>{
+  assert.match(inspectPkcs12(fixture({subjectUtf8:true}),'test-password',[rootPem]).metadata.subject,/CN=Certificado São José/);
+  assert.throws(()=>inspectPkcs12(fixture({corruptPrivateComponents:true}),'test-password',[rootPem]),
+    {message:'CERTIFICATE_KEY_MISMATCH'});
+});
+
+Deno.test('issuer order and same-name decoys cannot replace cryptographic chain verification',()=>{
+  const parsed=inspectPkcs12(fixture({intermediate:true,decoyIssuer:true}),'test-password',[rootPem]);
+  assert.equal(parsed.metadata.chainVerified,true);
+  assert.equal((parsed.material.chainPem.match(/BEGIN CERTIFICATE/g)??[]).length,2);
+  assert.throws(()=>inspectPkcs12(fixture({intermediate:true,omitIntermediate:true}),'test-password',[rootPem]),
+    {message:'UNTRUSTED_CERTIFICATE_CHAIN'});
+  assert.throws(()=>inspectPkcs12(fixture({badSignature:true}),'test-password',[rootPem]),
+    {message:'UNTRUSTED_CERTIFICATE_CHAIN'});
 });
 const uuid=(n: number)=>`00000000-0000-0000-0000-${String(n).padStart(12,'0')}`;
 function request(bytes: Uint8Array) {

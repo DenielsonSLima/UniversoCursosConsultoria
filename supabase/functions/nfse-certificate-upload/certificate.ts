@@ -1,5 +1,4 @@
 import forge from 'npm:node-forge@1.4.3';
-import { createHash, createPrivateKey, X509Certificate } from 'node:crypto';
 import { Pkcs12ReadError, readPkcs12 } from './pkcs12-reader.ts';
 
 export const MAX_PFX_BYTES = 128 * 1024;
@@ -61,16 +60,29 @@ export function inspectPkcs12(bytes: Uint8Array,password: string,trustedCaPem: s
       pfx.getBags({bagType})[bagType] ?? []);
     const certs = pfx.getBags({bagType:forge.pki.oids.certBag})[forge.pki.oids.certBag] ?? [];
     requireCertificate(keys.length === 1 && keys[0].key && certs.length > 0 && certs.length <= 8,'INVALID_PFX_CONTENTS');
-    const privateKeyPem = forge.pki.privateKeyToPem(keys[0].key);
-    const key = createPrivateKey(privateKeyPem);
-    requireCertificate(key.asymmetricKeyType === 'rsa' && (key.asymmetricKeyDetails?.modulusLength ?? 0) >= 2048,'UNSUPPORTED_A1_KEY');
-    const certificates: { forge: any; native: X509Certificate }[] = certs.map((bag: any) => ({forge:bag.cert,native:new X509Certificate(forge.pki.certificateToPem(bag.cert))}));
-    const matching = certificates.filter(item => item.native.checkPrivateKey(key));
+    // Supabase Edge's Node polyfill does not implement X509Certificate's
+    // checkPrivateKey/checkIssued/verify/raw. Keep all checks in Forge instead.
+    const key = keys[0].key;
+    requireCertificate(key.n && key.e && key.d && typeof key.n.bitLength === 'function'
+      && key.n.bitLength() >= 2048,'UNSUPPORTED_A1_KEY');
+    const privateKeyPem = forge.pki.privateKeyToPem(key);
+    const certificates: any[] = certs.map((bag: any) => bag.cert);
+    requireCertificate(certificates.every(certificate => certificate?.publicKey),'INVALID_PFX_CONTENTS');
+    const matching = certificates.filter(certificate => certificate.publicKey.n?.equals(key.n)
+      && certificate.publicKey.e?.equals(key.e));
     requireCertificate(matching.length === 1,'CERTIFICATE_KEY_MISMATCH');
     const leaf = matching[0];
-    requireCertificate(!leaf.native.ca && leaf.forge.getExtension('keyUsage')?.digitalSignature === true,'INVALID_SIGNING_CERTIFICATE');
-    requireCertificate(now >= leaf.forge.validity.notBefore && now < leaf.forge.validity.notAfter,'CERTIFICATE_EXPIRED_OR_NOT_YET_VALID');
-    const policies = nodes(extensionAsn(leaf.forge,'certificatePolicies'))
+    let signingKeyMatches = false;
+    try {
+      const challenge = forge.md.sha256.create().update('nfse-certificate-key-pair-check-v1');
+      const signature = key.sign(challenge);
+      signingKeyMatches = leaf.publicKey.verify(challenge.digest().getBytes(),signature);
+    } catch { /* Invalid private components must not pass on matching n/e alone. */ }
+    requireCertificate(signingKeyMatches,'CERTIFICATE_KEY_MISMATCH');
+    requireCertificate(leaf.getExtension('basicConstraints')?.cA !== true
+      && leaf.getExtension('keyUsage')?.digitalSignature === true,'INVALID_SIGNING_CERTIFICATE');
+    requireCertificate(now >= leaf.validity.notBefore && now < leaf.validity.notAfter,'CERTIFICATE_EXPIRED_OR_NOT_YET_VALID');
+    const policies = nodes(extensionAsn(leaf,'certificatePolicies'))
       .filter(node => node.type === forge.asn1.Type.OID && typeof node.value === 'string')
       .map(node => forge.asn1.derToOid(node.value as string));
     requireCertificate(policies.some(oid => /^2\.16\.76\.1\.2\.1\.\d+$/.test(oid)),'ICP_A1_POLICY_REQUIRED');
@@ -78,21 +90,30 @@ export function inspectPkcs12(bytes: Uint8Array,password: string,trustedCaPem: s
     const unused = certificates.filter(item => item !== leaf);
     while (unused.length) {
       const current = chain[chain.length-1];
-      if (current.native.checkIssued(current.native)) break;
-      const next = unused.findIndex(item => current.native.checkIssued(item.native) && current.native.verify(item.native.publicKey));
+      if (current.isIssuer(current)) break;
+      const next = unused.findIndex(issuer => {
+        if (!current.isIssuer(issuer)) return false;
+        try { return issuer.verify(current); } catch { return false; }
+      });
       if (next < 0) break;
       chain.push(unused.splice(next,1)[0]);
     }
     const store = forge.pki.createCaStore(trustedCaPem);
-    try { forge.pki.verifyCertificateChain(store,chain.map(item => item.forge),{validityCheckDate:now}); }
+    try { forge.pki.verifyCertificateChain(store,chain,{validityCheckDate:now}); }
     catch { throw new CertificateError('UNTRUSTED_CERTIFICATE_CHAIN'); }
-    const certificatePem = forge.pki.certificateToPem(leaf.forge);
+    const certificatePem = forge.pki.certificateToPem(leaf);
+    const certificateDer = forge.asn1.toDer(forge.pki.certificateToAsn1(leaf)).getBytes();
     return {
-      metadata:{fingerprint:createHash('sha256').update(leaf.native.raw).digest('hex'),
-        subject:leaf.native.subject,cnpj:certificateCnpj(leaf.forge),
-        notBefore:leaf.forge.validity.notBefore.toISOString(),expiresAt:leaf.forge.validity.notAfter.toISOString(),
+      metadata:{fingerprint:forge.md.sha256.create().update(certificateDer).digest().toHex(),
+        subject:leaf.subject.attributes.map((attribute: any) => {
+          const value = attribute.valueTagClass === forge.asn1.Type.UTF8
+            ? forge.util.decodeUtf8(attribute.value) : attribute.value;
+          return `${attribute.shortName || attribute.name || attribute.type}=${value}`;
+        }).join('\n'),
+        cnpj:certificateCnpj(leaf),
+        notBefore:leaf.validity.notBefore.toISOString(),expiresAt:leaf.validity.notAfter.toISOString(),
         chainVerified:true,revocationStatus:'UNKNOWN',representationVerified:false},
-      material:{privateKeyPem,certificatePem,chainPem:chain.slice(1).map(item=>forge.pki.certificateToPem(item.forge)).join('\n')},
+      material:{privateKeyPem,certificatePem,chainPem:chain.slice(1).map(item=>forge.pki.certificateToPem(item)).join('\n')},
     };
   } catch (error) {
     if (error instanceof CertificateError) throw error;
