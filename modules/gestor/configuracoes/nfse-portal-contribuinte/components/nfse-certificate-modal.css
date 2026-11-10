@@ -1,0 +1,84 @@
+/* Match Configurações dialogs without relying on lazy-loaded invoice styles. */
+.nfse-certificate-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgb(9 25 42 / 38%);
+  backdrop-filter: blur(2px);
+  color: #243b53;
+}
+.nfse-certificate-modal * { box-sizing: border-box; }
+.nfse-certificate-modal .nfse-certificate-dialog {
+  width: 100%;
+  max-width: 580px;
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  border: 1px solid #e3e9ee;
+  border-radius: 14px;
+  background: #fff;
+  padding: 0;
+  box-shadow: 0 20px 65px rgb(9 25 42 / 18%);
+  font-size: 13px;
+  line-height: 1.55;
+}
+.nfse-certificate-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; padding: 16px 20px; border-bottom: 1px solid #e3e9ee; }
+.nfse-certificate-title { display: flex; align-items: center; gap: 12px; }
+.nfse-certificate-icon { display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; flex: 0 0 auto; background: #f1f5f9; border-radius: 10px; color: #36506b; }
+.nfse-certificate-title h2 { margin: 0; color: #18334b; font-size: 18px; font-weight: 600; line-height: 1.4; letter-spacing: -.02em; }
+.nfse-certificate-title p { margin: 4px 0 0; color: #64748b; font-size: 12px; }
+.nfse-certificate-close { display: inline-flex; align-items: center; justify-content: center; width: 38px; min-height: 38px; flex: 0 0 auto; border: 1px solid #e3e9ee; border-radius: 8px; color: #526579; background: #fff; }
+.nfse-certificate-close:disabled { opacity: .5; cursor: not-allowed; }
+.nfse-certificate-close:focus-visible { outline: 2px solid #4169e1; outline-offset: 2px; }
+.nfse-certificate-body { padding: 20px; }
+.nfse-certificate-body fieldset { display: grid; gap: 20px; border: 0; margin: 0; min-width: 0; padding: 0; }
+.nfse-certificate-field { display: flex; flex-direction: column; gap: 7px; min-width: 0; }
+.nfse-certificate-field > span,
+.nfse-certificate-field > label { color: #334e68; font-size: 12px; font-weight: 500; }
+.nfse-certificate-field input {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid #94a3b8;
+  border-radius: 8px;
+  background: #fff;
+  color: #18334b;
+  caret-color: #18334b;
+  font: inherit;
+  text-transform: none;
+}
+.nfse-certificate-field input[type="file"] { padding: 8px; background: #f8fafc; }
+.nfse-certificate-field input::file-selector-button { min-height: 32px; margin-right: 10px; padding: 6px 10px; border: 1px solid #dbe3ed; border-radius: 6px; background: #fff; color: #243b53; font: inherit; cursor: pointer; }
+.nfse-certificate-field input::placeholder { color: #526579; opacity: 1; }
+.nfse-certificate-field input:focus-visible { outline: 2px solid #4169e1; outline-offset: 2px; }
+.nfse-certificate-field input:disabled { background: #f1f5f9; color: #475569; cursor: not-allowed; }
+.nfse-certificate-password { display: flex; align-items: stretch; gap: 8px; }
+.nfse-certificate-password input { flex: 1 1 0; }
+.nfse-certificate-password button { flex: 0 0 auto; min-height: 44px; }
+.nfse-certificate-field small,
+.nfse-certificate-help { color: #64748b; font-size: 12px; line-height: 1.5; margin: 0; }
+.nfse-certificate-error { margin-top: 16px; padding: 12px 14px; border: 1px solid #fecaca; border-radius: 8px; color: #991b1b; background: #fff7f7; }
+.nfse-certificate-security { display: flex; align-items: flex-start; gap: 9px; margin: 18px 0 10px; padding: 12px 14px; border: 1px solid #e3e9ee; border-radius: 8px; background: #f8fafc; color: #526579; font-size: 12px; }
+.nfse-certificate-security svg { flex: 0 0 auto; margin-top: 2px; }
+.nfse-certificate-security p { margin: 0; }
+.nfse-certificate-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 10px; margin: 0; padding: 14px 20px; border-top: 1px solid #e3e9ee; }
+@media (max-width: 639px) {
+  .nfse-certificate-modal { padding: 10px; }
+  .nfse-certificate-modal .nfse-certificate-dialog { max-height: calc(100dvh - 20px); }
+  .nfse-certificate-header, .nfse-certificate-body, .nfse-certificate-footer { padding: 16px; }
+  .nfse-certificate-field input { font-size: 16px; }
+  .nfse-certificate-password { flex-wrap: wrap; }
+  .nfse-certificate-password input { flex-basis: 100%; }
+  .nfse-certificate-close, .nfse-certificate-footer button { min-height: 44px; }
+}
+
+/* The form is between the shared dialog shell and its footer. */
+body:has(.configuracoes-workspace) .config-dialog.nfse-certificate-dialog .nfse-certificate-footer { margin-top: 0; padding: 14px 20px; }
+@media (max-width: 639px) {
+  body:has(.configuracoes-workspace) .config-dialog.nfse-certificate-dialog .nfse-certificate-footer { padding: 16px; }
+}

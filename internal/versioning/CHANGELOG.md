@@ -20,6 +20,15 @@ Histórico arquivado: [10/10/2026 — versões 4.8.196 a 4.8.198](./changelog/20
 
 Histórico arquivado: [10/10/2026 — versão 4.8.203](./changelog/2026-10-10-versao-4-8-203.md).
 
+Histórico arquivado: [10/10/2026 — versão 4.8.204](./changelog/2026-10-10-versao-4-8-204.md).
+
+## [4.8.281] - 2026-11-10
+
+- Cadastro A1 segue o novo padrão de modais de Configurações, com senha ampla, opção de mostrar e ocultar e preservação de espaços e acentos.
+- Leitura PBES2 aceita senhas UTF-8 e mantém compatibilidade legada, sem enfraquecer a verificação do certificado.
+- Validade aparece após salvar e no painel; falhas de arquivo, senha, cadeia e acesso têm mensagens próprias sem expor credenciais.
+- Emissão fiscal permanece bloqueada, com validações de CNPJ, confiança e autorização preservadas.
+
 ## [4.8.280] - 2026-11-09
 
 - Extras retroativas reconhecem vínculos de implantação legada quando há chamada individual anterior na mesma disciplina.
@@ -488,8 +497,3 @@ Histórico arquivado: [10/10/2026 — versão 4.8.203](./changelog/2026-10-10-ve
 - Frequência acomoda seis encontros de manhã/tarde no mesmo bloco, com larguras fixas para identificação do aluno e faltas.
 - Diário soma no backend apenas as notas preenchidas em qualquer instrumento ativo; campos vazios não impedem a soma.
 - Zero continua exigindo lançamento explícito e ausência total de notas mantém média vazia; fechamento e validação documental acompanham a regra.
-
-## [4.8.204] - 2026-10-10
-
-- Diário permite O opcional por aluno e mantém campos vazios sem nota; zero exige lançamento explícito.
-- Médias calculadas no backend preservam duas casas decimais, com fechamento e validação documental coerentes.

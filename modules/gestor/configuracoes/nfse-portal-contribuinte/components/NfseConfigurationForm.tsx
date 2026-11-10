@@ -7,6 +7,7 @@ import { NFSE_CONFIGURATION_ENABLED } from '../../../emissor-nfse/services/confi
 import type { NfseConfigurationDefinition, NfseConfigurationMetadata } from '../../../emissor-nfse/services/configuration/configuration.types';
 import NfseTaxRegimeFields from './NfseTaxRegimeFields';
 import NfseCertificateModal from './NfseCertificateModal';
+import { certificateValidity } from './certificate-validity';
 import type { NfseScope } from '../../../emissor-nfse/types/nfse.types';
 
 type MetadataDraft = Omit<NfseConfigurationDefinition, 'opSimpNac' | 'regEspTrib'> & {
@@ -33,6 +34,8 @@ const NfseConfigurationForm: React.FC<Props> = ({ scope, configuration, activePo
   const mutation = useSaveNfseConfigurationMetadata(scope);
   const { toasts, removeToast, toast } = useToast();
   const canEdit = Boolean(NFSE_CONFIGURATION_ENABLED && configuration?.canManage && activePolo);
+  const validity = configuration?.certificate.configured
+    ? certificateValidity(configuration.certificate.expiresAt) : null;
 
   useEffect(() => {
     if (!dirty) setDraft(initialDraft(scope, configuration));
@@ -98,8 +101,12 @@ const NfseConfigurationForm: React.FC<Props> = ({ scope, configuration, activePo
       <h3><KeyRound size={17} aria-hidden="true" /> Credenciais e representação</h3>
       <dl className="nfse-portal-identity">
         <div><dt>Certificado</dt><dd>{configuration ? configuration.certificate.configured ? 'Cadastrado' : 'Ainda não cadastrado' : 'Situação ainda não verificada'}</dd></div>
+        {configuration?.certificate.configured && <div><dt>Validade do certificado</dt><dd>
+          {validity ? <time dateTime={validity.dateTime}>{validity.label}</time> : 'Validade indisponível. Atualize a consulta.'}
+        </dd></div>}
         <div><dt>Acesso com login e senha</dt><dd>{configuration ? configuration.portalLoginConfigured ? 'Cadastrado' : 'Ainda não cadastrado' : 'Situação ainda não verificada'}</dd></div>
       </dl>
+      {validity?.warning && <p className="nfse-portal-state" data-tone="error" role="status">{validity.warning}</p>}
       <p className="nfse-portal-note">O certificado A1 pode ser cadastrado após salvar os parâmetros. A emissão exige também verificação de revogação, representação e habilitação fiscal no ambiente.</p>
       <button type="button" className="nfse-portal-button" disabled={!canEdit || !configuration?.configured || dirty || mutation.isPending}
         onClick={()=>setCertificateOpen(true)}>Cadastrar certificado A1</button>
@@ -109,11 +116,14 @@ const NfseConfigurationForm: React.FC<Props> = ({ scope, configuration, activePo
         </button>
       </div>
     </section>
-    {certificateOpen && <NfseCertificateModal scope={scope} onClose={()=>setCertificateOpen(false)} onSaved={()=>{
-      setCertificateOpen(false); toast.success('Certificado cadastrado','A emissão continua aguardando validação fiscal.');
+    {certificateOpen && <NfseCertificateModal scope={scope} onClose={()=>setCertificateOpen(false)} onSaved={(result)=>{
+      const savedValidity = certificateValidity(result.expiresAt);
+      setCertificateOpen(false); toast.success('Certificado cadastrado',
+        `${savedValidity ? `Validade: ${savedValidity.label}. ` : ''}A emissão continua aguardando validação fiscal.`);
     }} />}
     <ToastNotification toasts={toasts} onRemove={removeToast} />
   </form>;
 };
 
 export default NfseConfigurationForm;
+

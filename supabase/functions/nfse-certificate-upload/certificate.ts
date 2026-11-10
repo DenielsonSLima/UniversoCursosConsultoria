@@ -1,6 +1,6 @@
 import forge from 'npm:node-forge@1.4.3';
 import { createHash, createPrivateKey, X509Certificate } from 'node:crypto';
-import { assertPfxCost } from './pfx-limits.ts';
+import { Pkcs12ReadError, readPkcs12 } from './pkcs12-reader.ts';
 
 export const MAX_PFX_BYTES = 128 * 1024;
 export class CertificateError extends Error {
@@ -56,10 +56,7 @@ export function inspectPkcs12(bytes: Uint8Array,password: string,trustedCaPem: s
   requireCertificate(typeof password === 'string' && password.length <= 1024,'INVALID_PFX_PASSWORD');
   requireCertificate(trustedCaPem.length > 0 && trustedCaPem.length <= 30,'ICP_TRUST_STORE_UNAVAILABLE');
   try {
-    const binary = forge.util.binary.raw.encode(bytes);
-    const asn=forge.asn1.fromDer(binary,true);
-    assertPfxCost(asn);
-    const pfx = forge.pkcs12.pkcs12FromAsn1(asn,true,password);
+    const pfx = readPkcs12(bytes,password);
     const keys = [forge.pki.oids.pkcs8ShroudedKeyBag,forge.pki.oids.keyBag].flatMap(bagType =>
       pfx.getBags({bagType})[bagType] ?? []);
     const certs = pfx.getBags({bagType:forge.pki.oids.certBag})[forge.pki.oids.certBag] ?? [];
@@ -87,7 +84,8 @@ export function inspectPkcs12(bytes: Uint8Array,password: string,trustedCaPem: s
       chain.push(unused.splice(next,1)[0]);
     }
     const store = forge.pki.createCaStore(trustedCaPem);
-    forge.pki.verifyCertificateChain(store,chain.map(item => item.forge),{validityCheckDate:now});
+    try { forge.pki.verifyCertificateChain(store,chain.map(item => item.forge),{validityCheckDate:now}); }
+    catch { throw new CertificateError('UNTRUSTED_CERTIFICATE_CHAIN'); }
     const certificatePem = forge.pki.certificateToPem(leaf.forge);
     return {
       metadata:{fingerprint:createHash('sha256').update(leaf.native.raw).digest('hex'),
@@ -98,7 +96,9 @@ export function inspectPkcs12(bytes: Uint8Array,password: string,trustedCaPem: s
     };
   } catch (error) {
     if (error instanceof CertificateError) throw error;
+    if (error instanceof Pkcs12ReadError) throw new CertificateError(error.code);
     // Crypto libraries may include input fragments or password details in errors.
     throw new CertificateError('INVALID_PFX_OR_UNTRUSTED_CHAIN');
   }
 }
+
