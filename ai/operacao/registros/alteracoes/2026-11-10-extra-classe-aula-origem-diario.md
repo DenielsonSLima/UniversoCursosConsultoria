@@ -2,7 +2,7 @@
 
 ## Objetivo e aceite
 
-Pedido de 10/11/2026: exigir aula de origem ao criar/editar extra-classe, apresentar como complemento/subaula e manter a ordem de data na grade e no diário. Remover a página final de instruções e substituir o retângulo dos títulos internos do diário por texto no estilo da página de validação. Preservar capa, validação/assinatura, modelo e marca d'água. GitHub e produção expressamente solicitados.
+Pedido de 10/11/2026: exigir aula de origem ao criar/editar extra-classe, apresentar como complemento/subaula e manter a ordem de data na grade e no diário. Remover a página final de instruções e substituir o retângulo dos títulos internos do diário por texto no estilo da página de validação. Ajuste posterior solicitado: retirar “DIÁRIO DE CLASSE” do topo e apresentar essa identificação discretamente no rodapé inferior direito. Preservar capa, validação/assinatura, modelo e marca d'água. GitHub e produção expressamente solicitados.
 
 ## Coordenação e escopo
 
@@ -74,4 +74,4 @@ Usuário autorizou rever todos os sete lançamentos existentes. Conteúdo e data
 
 O comando global local de teto encontrou somente o manifesto do piloto NFS-e paralelo ainda não registrado; ele não pertence a esta entrega. A publicação usa o registro remoto vigente acrescido apenas deste manifesto, preservando o lote local de NFS-e. CI e Preview do commit exato validarão esse registro isoladamente.
 
-Migrations, redeploy do compositor da Edge de assinatura e smoke autenticado final serão conferidos no fechamento remoto. Artefatos temporários e fontes do piloto fiscal não integram a publicação.
+Teste adicional do rodapé aprovado: ausência da identificação no cabeçalho e posição vetorial no canto inferior direito. Migrations, redeploy do compositor da Edge de assinatura e smoke autenticado final serão conferidos no fechamento remoto. Artefatos temporários e fontes do piloto fiscal não integram a publicação.

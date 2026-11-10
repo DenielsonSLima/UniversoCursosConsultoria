@@ -28,7 +28,7 @@ Histórico arquivado: [10/10/2026 a 13/10/2026 — versões 4.8.208 a 4.8.214](.
 
 - Extra-classe exige selecionar a aula de origem e aparece como complemento, com vínculo validado na mesma turma e disciplina.
 - Grade e diário mostram a origem do complemento; conteúdo do PDF segue a ordem das datas.
-- Novos diários usam títulos sem moldura e deixam de incluir a página de instruções, preservando validação, assinatura, modelos e marca d’água.
+- Novos diários usam títulos sem moldura e identificação discreta no rodapé inferior direito, sem a página de instruções; validação, assinatura, modelos e marca d’água são preservados.
 
 ## [4.8.283] - 2026-11-10
 

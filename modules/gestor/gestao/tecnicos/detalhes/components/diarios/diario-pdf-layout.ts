@@ -93,7 +93,6 @@ export const drawStandardPage = (
       alias: "diario-institutional-logo",
       metaAppearance: "plain",
       meta: {
-        eyebrow: "DIÁRIO DE CLASSE",
         title,
         label: "PÁGINA",
         value: pageLabel,
@@ -138,7 +137,7 @@ export const drawStandardPage = (
   pdf.setFontSize(6.2);
   setTextColor(pdf, "#64748b");
   pdf.text(props.template.rodape, CONTENT_LEFT, 205);
-  pdf.text(pageLabel, PAGE_WIDTH - CONTENT_RIGHT, 205, { align: "right" });
+  pdf.text(`Diário de classe · ${pageLabel}`, PAGE_WIDTH - CONTENT_RIGHT, 205, { align: "right" });
   if (props.exportMode === "EM_BRANCO") {
     pdf.setFont("helvetica", "bold");
     pdf.setFontSize(6.2);
