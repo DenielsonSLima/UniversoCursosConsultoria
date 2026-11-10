@@ -55,7 +55,7 @@ export const DEFAULT_DIARIO_TEMPLATE: DiarioTemplate = {
   contracapaUrl: null,
   cabecalho: 'UNIVERSO CURSOS E CONSULTORIA',
   rodape: 'Documento Oficial — Diário de Classe emitido eletronicamente',
-  imprimirInstrucoes: true,
+  imprimirInstrucoes: false,
   orientacao: 'landscape',
   versao: 1,
   capaCampos: DEFAULT_CAPA_CAMPOS,

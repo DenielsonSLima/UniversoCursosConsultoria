@@ -1,5 +1,15 @@
 import { Curso } from '../../../cadastros/cadastros.types';
 
+export interface DocenteModalState {
+  isOpen: boolean;
+  disciplinaId: string;
+}
+
+export interface AulaDeleteState {
+  disciplinaId: string;
+  aulaId: string;
+}
+
 export interface TurmaDisciplinaConfig {
   professor: string | null;
   professorId?: string | null;
@@ -32,6 +42,7 @@ export interface TurmaAulaSessao {
 
 export interface TurmaAtividadeExtraClasse {
   id: string;
+  aulaOrigemId?: string | null;
   titulo: string;
   tema?: string | null;
   cargaHoraria: number;
@@ -78,6 +89,7 @@ export interface TurmaAulaUpdateInput {
 
 export interface TurmaAtividadeExtraClasseInput {
   disciplinaId: string;
+  aulaOrigemId: string;
   titulo: string;
   horas: number;
   prazoEntrega?: string | null;

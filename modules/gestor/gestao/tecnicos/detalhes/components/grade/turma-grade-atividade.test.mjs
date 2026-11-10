@@ -41,7 +41,7 @@ const activity = (overrides = {}) => ({
 const withContext = (changes, overrides = {}) => activity({
   ...overrides, contexto:{...activity().contexto,...changes},
 });
-const validDraft = {titulo:' Atividade corrigida ',prazoEntrega:'2026-09-12',horas:'4,5'};
+const validDraft = {titulo:' Atividade corrigida ',prazoEntrega:'2026-09-12',horas:'4,5',aulaOrigemId:'aula-1'};
 const resetMock = (response = {data:{id:'atividade-1'},error:null}) => {
   mock.calls.length = 0;
   mock.response = response;
@@ -112,6 +112,7 @@ test('edit sends one canonical RPC with normalized values and the exact microsec
   assert.deepEqual(mock.calls, [['gerenciar_atividade_extra_classe', {
     p_atividade_id:'atividade-1',p_acao:'EDITAR',p_titulo:'Atividade corrigida',
     p_prazo_entrega:'2026-09-12',p_carga_horaria:4.5,p_updated_at_esperado:record.updatedAt,
+    p_aula_origem_id:'aula-1',
   }]]);
 });
 
@@ -124,9 +125,22 @@ test('archive and restore never send editable fields or call a hard-delete path'
     assert.deepEqual(mock.calls[0][1], {
       p_atividade_id:'atividade-1',p_acao:acao,p_titulo:null,p_prazo_entrega:null,
       p_carga_horaria:null,p_updated_at_esperado:activity().updatedAt,
+      p_aula_origem_id:null,
     });
   }
   assert.doesNotMatch(source('./turma-grade-atividade.service.ts'), /\.delete\(/);
+});
+
+test('origin-only action never forwards editable content, even for an answered activity', async () => {
+  resetMock();
+  await manage({atividade:activity({respostasCount:3}),acao:'VINCULAR_ORIGEM',aulaOrigemId:'aula-1',draft:validDraft});
+  assert.deepEqual(mock.calls[0], ['gerenciar_atividade_extra_classe', {
+    p_atividade_id:'atividade-1',p_acao:'VINCULAR_ORIGEM',p_titulo:null,p_prazo_entrega:null,
+    p_carga_horaria:null,p_updated_at_esperado:activity().updatedAt,p_aula_origem_id:'aula-1',
+  }]);
+  resetMock();
+  await assert.rejects(manage({atividade:activity(),acao:'VINCULAR_ORIGEM'}), /aula de origem/);
+  assert.equal(mock.calls.length,0);
 });
 
 test('empty optional deadline becomes null and invalid drafts never reach the server', async () => {
@@ -136,6 +150,7 @@ test('empty optional deadline becomes null and invalid drafts never reach the se
   resetMock();
   await assert.rejects(manage({atividade:activity(),acao:'EDITAR'}));
   await assert.rejects(manage({atividade:activity(),acao:'EDITAR',draft:{...validDraft,horas:'NaN'}}));
+  await assert.rejects(manage({atividade:activity(),acao:'EDITAR',draft:{...validDraft,aulaOrigemId:''}}), /aula de origem/);
   assert.equal(mock.calls.length, 0);
 });
 
@@ -222,6 +237,7 @@ test('activity changes invalidate only relevant academic, activity, diary and cl
     'academicLifecycleKeys.diarios(contexto.turmaId)', 'academicLifecycleKeys.resumo(contexto.turmaId)',
     'atividadesExtraClasseKeys.turma(contexto.turmaId)',
     'diarioClasseKeys.resultadosByTurma(contexto.turmaId)', 'diarioClasseKeys.praticasByTurma(contexto.turmaId)',
+    "['diario-extra-classe-credito', contexto.turmaId]",
     'gestaoQueryKeys.classesByModality(', 'gestaoQueryKeys.activeClassesRoot()',
   ]) assert.ok(text.includes(expected), expected);
   assert.doesNotMatch(text, /queryKey: academicLifecycleKeys\.turma\(/);

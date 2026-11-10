@@ -202,6 +202,7 @@ const useMarkTurmaGradeDependentsStale = (
         exact: true,
         refetchType: 'none',
       }),
+      queryClient.invalidateQueries({ queryKey: ['diario-extra-classe-credito', turmaId], refetchType: 'none' }),
       ...(invalidateClassLists
         ? [
           queryClient.invalidateQueries({

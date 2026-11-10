@@ -40,5 +40,5 @@ export interface TurmaGradeDisciplinaProps {
   onHoraInicioChange: (value: string) => void;
   onHoraFimChange: (value: string) => void;
   onExtraClasseChange: (value: boolean) => void;
-  onAddPlanejamento: () => void;
+  onAddPlanejamento: (aulaOrigemId?: string) => void;
 }

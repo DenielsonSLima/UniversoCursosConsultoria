@@ -22,6 +22,7 @@ import {
 } from "./diario-pdf-table.ts";
 import { drawGroupedResultTable, RESULT_TABLE_HEADER_HEIGHT } from './diario-pdf-result-table.ts';
 import { extraClassContentRows } from './diario-extra-classe.presentation.ts';
+import { orderedDiaryContent } from './diario-content-order.ts';
 import type { PdfImage } from "./diario-pdf-image.core.ts";
 import type { CanonicalInstitutionalHeader } from "../../../../../secretaria/shared/canonical-institutional-header-pdf.ts";
 import {
@@ -280,12 +281,16 @@ export const drawContentPages = (
 ) => {
   const widths = [24, 115, 115, 18];
   const fontSize = 7;
-  const contentRows = props.aulas.map((aula) => [
-    formatDiarioPdfAcademicDate(aula.dataSource).slice(0, 5),
-    aula.titulo,
-    props.praticasMap[aula.id],
-    `${aula.cargaHoraria}h`,
-  ]).concat(extraClassContentRows(props.extraClassCredit));
+  const extraRows = extraClassContentRows(props.extraClassCredit, props.extraClassCredit?.contentOrder ? props.aulas : undefined);
+  const extraRowsById = new Map(props.extraClassCredit?.activities.map((activity, index) => [activity.id, extraRows[index]]));
+  const contentRows = orderedDiaryContent(props.aulas, props.extraClassCredit).map((entry) => (
+    entry.tipo === 'EXTRA_CLASSE' ? extraRowsById.get(entry.activity.id)! : [
+      formatDiarioPdfAcademicDate(entry.aula.dataSource).slice(0, 5),
+      entry.aula.titulo,
+      props.praticasMap[entry.aula.id],
+      `${entry.aula.cargaHoraria}h`,
+    ]
+  ));
   const rowHeights = measureTableRowHeights(
     pdf,
     contentRows,

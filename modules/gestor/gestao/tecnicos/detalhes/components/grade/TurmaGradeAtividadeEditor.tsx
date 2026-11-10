@@ -1,18 +1,23 @@
 import React, { useState } from 'react';
 import { Loader2, Save, X } from 'lucide-react';
-import type { TurmaAtividadeExtraClasse } from '../../turma-grade.types';
+import type { TurmaAtividadeExtraClasse, TurmaAulaPlanejada } from '../../turma-grade.types';
 import { validateTurmaAtividadeDraft, type TurmaAtividadeEditDraft } from './turma-grade-atividade.utils';
+import InstitutionalSelect from '../../../../../../shared/components/InstitutionalSelect';
+import { getAulaOrigemOptions, resolveAulaOrigem } from './turma-grade-aula-origem';
 
 interface Props {
+  aulas: TurmaAulaPlanejada[];
   atividade: TurmaAtividadeExtraClasse;
   pending: boolean;
   revisionChanged: boolean;
+  originOnly?: boolean;
   onSave: (draft: TurmaAtividadeEditDraft) => Promise<void>;
   onCancel: () => void;
 }
 
-const TurmaGradeAtividadeEditor: React.FC<Props> = ({ atividade, pending, revisionChanged, onSave, onCancel }) => {
+const TurmaGradeAtividadeEditor: React.FC<Props> = ({ aulas, atividade, pending, revisionChanged, originOnly = false, onSave, onCancel }) => {
   const [draft, setDraft] = useState<TurmaAtividadeEditDraft>({
+    aulaOrigemId: resolveAulaOrigem(aulas, atividade.aulaOrigemId)?.aula.id || '',
     titulo: atividade.titulo,
     prazoEntrega: atividade.prazoEntrega || '',
     horas: String(atividade.cargaHoraria),
@@ -25,7 +30,9 @@ const TurmaGradeAtividadeEditor: React.FC<Props> = ({ atividade, pending, revisi
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (pending || revisionChanged) return;
-    const error = validateTurmaAtividadeDraft(draft);
+    const error = originOnly
+      ? (draft.aulaOrigemId ? null : 'Selecione a aula de origem da atividade extra-classe.')
+      : validateTurmaAtividadeDraft(draft);
     setValidationError(error);
     if (error) return;
     try {
@@ -37,14 +44,28 @@ const TurmaGradeAtividadeEditor: React.FC<Props> = ({ atividade, pending, revisi
   const inputClass = 'w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 outline-none focus:border-emerald-500 disabled:opacity-60';
 
   return (
-    <form onSubmit={(event) => void submit(event)} className="space-y-3 rounded-xl border border-emerald-200 bg-white p-3" aria-label="Editar atividade extra-classe" onKeyDown={(event) => {
+    <form onSubmit={(event) => void submit(event)} className="space-y-3 rounded-xl border border-emerald-200 bg-white p-3" aria-label={originOnly ? 'Vincular aula de origem' : 'Editar atividade extra-classe'} onKeyDown={(event) => {
       if (event.key === 'Escape' && !pending) onCancel();
     }}>
       <div className="flex items-center justify-between gap-2">
-        <p className="text-xs font-bold text-emerald-900">Editar atividade extra-classe</p>
+        <p className="text-xs font-bold text-emerald-900">{originOnly ? 'Vincular aula de origem' : 'Editar atividade extra-classe'}</p>
         <button type="button" onClick={onCancel} disabled={pending} aria-label="Cancelar edição da atividade" className="rounded-lg p-1 text-slate-500 hover:bg-slate-100 disabled:opacity-50"><X size={15} /></button>
       </div>
-      <div className="grid gap-3 sm:grid-cols-[minmax(160px,1fr)_150px_100px]">
+      <div className="space-y-1">
+        <label htmlFor={`editar-aula-origem-${atividade.id}`} className="text-xs font-medium text-slate-600">Aula de origem</label>
+        <InstitutionalSelect
+          id={`editar-aula-origem-${atividade.id}`}
+          ariaLabel="Aula de origem da atividade extra-classe"
+          value={draft.aulaOrigemId}
+          onValueChange={(value) => update('aulaOrigemId', value)}
+          options={getAulaOrigemOptions(aulas)}
+          disabled={pending}
+          required
+          placeholder="Selecione a aula complementada..."
+        />
+        {aulas.length === 0 && <p className="text-xs text-amber-700">Planeje uma aula antes de vincular este complemento.</p>}
+      </div>
+      {!originOnly && <div className="grid gap-3 sm:grid-cols-[minmax(160px,1fr)_150px_100px]">
         <label className="space-y-1 text-[10px] font-bold text-slate-600">
           <span>Tema / título</span>
           <input type="text" value={draft.titulo} onChange={(event) => update('titulo', event.target.value)} maxLength={1000} disabled={pending} className={inputClass} autoFocus />
@@ -57,14 +78,16 @@ const TurmaGradeAtividadeEditor: React.FC<Props> = ({ atividade, pending, revisi
           <span>Carga horária</span>
           <input type="number" min="0.1" step="0.1" value={draft.horas.replace(',', '.')} onChange={(event) => update('horas', event.target.value)} disabled={pending} className={inputClass} />
         </label>
-      </div>
-      <p className="text-[10px] text-slate-500">Datas anteriores são permitidas para registrar atividades já realizadas. O prazo continua valendo para novas entregas dos alunos.</p>
+      </div>}
+      <p className="text-[10px] text-slate-500">{originOnly
+        ? 'Somente o vínculo será registrado. Conteúdo, prazo, carga horária, respostas e notas serão preservados.'
+        : 'Datas anteriores são permitidas para registrar atividades já realizadas. O prazo continua valendo para novas entregas dos alunos.'}</p>
       {revisionChanged && <p role="alert" className="text-xs font-semibold text-amber-700">A atividade foi alterada enquanto você editava. Cancele e reabra a edição para revisar os dados atuais.</p>}
       {validationError && <p role="alert" className="text-xs font-semibold text-red-600">{validationError}</p>}
       <div className="flex justify-end gap-2">
         <button type="button" onClick={onCancel} disabled={pending} className="rounded-xl border border-slate-200 px-3 py-2 text-[10px] font-bold text-slate-600 disabled:opacity-50">Cancelar</button>
         <button type="submit" disabled={pending || revisionChanged} className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-3 py-2 text-[10px] font-bold text-white hover:bg-emerald-700 disabled:opacity-50">
-          {pending ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} Salvar atividade
+          {pending ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} {originOnly ? 'Salvar vínculo' : 'Salvar atividade'}
         </button>
       </div>
     </form>

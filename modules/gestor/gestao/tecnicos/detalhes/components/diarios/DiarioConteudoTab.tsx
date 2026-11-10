@@ -4,6 +4,8 @@ import { isAcademicClassContentPending } from '../../../../../../../lib/academic
 import { DiarioAula } from './diario-classe.service';
 import type { DiarioExtraClassCredit } from './diario-extra-classe.types';
 import DiarioExtraClasseConteudo from './DiarioExtraClasseConteudo';
+import { extraClassOriginLabel, orderedDiaryContent } from './diario-content-order';
+import { useDiarioDocumentary } from './historico/DiarioDocumentaryContext';
 
 interface DiarioConteudoTabProps {
   aulas: DiarioAula[];
@@ -31,7 +33,10 @@ const DiarioConteudoTab: React.FC<DiarioConteudoTabProps> = ({
   savingAulaId,
   onSaveAulaTitle,
   onSavePratica,
-}) => (
+}) => {
+  const documentary = useDiarioDocumentary();
+  const entries = orderedDiaryContent<DiarioAula>(aulas, documentary ? undefined : extraClassCredit);
+  return (
   <div className="p-6">
     {aulas.length === 0 ? (
       <div className="py-20 text-center text-slate-400 flex flex-col items-center">
@@ -68,7 +73,13 @@ const DiarioConteudoTab: React.FC<DiarioConteudoTabProps> = ({
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 bg-white">
-            {aulas.map((aula) => (
+            {entries.map((entry) => {
+              if (entry.tipo === 'EXTRA_CLASSE') return (
+                <DiarioExtraClasseConteudo key={`extra:${entry.activity.id}`} activity={entry.activity}
+                  originLabel={extraClassOriginLabel(entry.activity, aulas)} />
+              );
+              const aula = entry.aula;
+              return (
               <tr key={aula.id} className="hover:bg-slate-50/50 transition-colors">
                 <td className="p-4 border-r border-slate-100 font-bold text-sm text-slate-700 align-top">
                   {aula.dataLabel}
@@ -135,14 +146,15 @@ const DiarioConteudoTab: React.FC<DiarioConteudoTabProps> = ({
                   />
                 </td>
               </tr>
-            ))}
+              );
+            })}
           </tbody>
           </table>
         </div>
       </div>
     )}
-    <DiarioExtraClasseConteudo credit={extraClassCredit} />
   </div>
-);
+  );
+};
 
 export default DiarioConteudoTab;

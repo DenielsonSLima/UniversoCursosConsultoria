@@ -57,19 +57,34 @@ test('conteúdo extra tem data/carga legíveis e preserva conteúdo HTML como te
   const ui = await compile(`import React from 'react';
     import { renderToStaticMarkup } from 'react-dom/server';
     import Conteudo from './DiarioExtraClasseConteudo';
-    export const render=(credit)=>renderToStaticMarkup(<Conteudo credit={credit}/>);`, [
-    [/\/historico\/DiarioDocumentaryContext$/, 'export const useDiarioDocumentary=()=>globalThis.__extraDocumentary || null;'],
-  ]);
+    export const render=(credit)=>renderToStaticMarkup(<table><tbody><Conteudo activity={credit.activities[0]} originLabel="Extra-classe — complemento da aula 1 (19/08)"/></tbody></table>);`, []);
   const html = ui.render(credit);
-  assert.match(html, /Atividades extra-classe/u);
-  assert.match(html, /19\/08\/2026/u);
-  assert.match(html, /4h/u);
-  assert.match(html, /75%/u);
+  assert.match(html, /complemento da aula 1/u);
+  assert.match(html, /19\/08/u);
+  assert.match(html, /4H/u);
   assert.match(html, /&lt;script&gt;/u);
   assert.doesNotMatch(html, /<script>|<input|<button/u);
-  assert.equal(ui.render({ ...credit, activities: [] }), '');
+});
+
+test('diário intercala complementos pela cronologia do banco e preserva histórico documental', async () => {
+  const ui = await compile(`import React from 'react';
+    import { renderToStaticMarkup } from 'react-dom/server';
+    import Conteudo from './DiarioConteudoTab';
+    export const render=(credit)=>renderToStaticMarkup(<Conteudo aulas={[
+      {id:'primeira',titulo:'Primeira aula',dataLabel:'18/08',dataAula:'2026-08-18',cargaHoraria:4,sessoes:[]},
+      {id:'segunda',titulo:'Segunda aula',dataLabel:'20/08',dataAula:'2026-08-20',cargaHoraria:4,sessoes:[]}
+    ]} extraClassCredit={credit} localTitulos={{}} localPraticas={{}}/>);`, [
+    [/\/historico\/DiarioDocumentaryContext$/, 'export const useDiarioDocumentary=()=>globalThis.__extraDocumentary || null;'],
+  ]);
+  const linked = { ...credit, activities: [{ ...credit.activities[0], aulaOrigemId: 'primeira' }], contentOrder: [
+    { tipo: 'AULA', id: 'primeira' }, { tipo: 'EXTRA_CLASSE', id: activityId }, { tipo: 'AULA', id: 'segunda' },
+  ] };
+  const html = ui.render(linked);
+  assert.ok(html.indexOf('Primeira aula') < html.indexOf('Atividade &lt;script&gt; sintética'));
+  assert.ok(html.indexOf('Atividade &lt;script&gt; sintética') < html.indexOf('Segunda aula'));
+  assert.match(html, /complemento da aula 1 \(18\/08\)/u);
   globalThis.__extraDocumentary = { students: {} };
-  assert.equal(ui.render(credit), '', 'Histórico não deve ganhar conteúdo extra da operação atual');
+  assert.doesNotMatch(ui.render(linked), /Atividade &lt;script&gt;/u);
   delete globalThis.__extraDocumentary;
 });
 

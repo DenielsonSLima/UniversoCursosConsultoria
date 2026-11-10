@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { assertValidDiarioPdfAcademicSnapshot } from './diario-pdf.contract.ts';
 import { assertExtraClassCredit } from './diario-pdf.contract.validation-extra-class.ts';
-import { createExtraClassSnapshot, EXTRA_IDS } from './diario-extra-classe.fixtures.ts';
+import { createExtraClassSnapshot, createLinkedExtraClassSnapshot, EXTRA_IDS } from './diario-extra-classe.fixtures.ts';
 import { createSnapshot, createSnapshotIntegrity, IDS } from './diario-pdf-server-boundary.fixtures.ts';
 import { verifyFrozenDocumentSnapshot } from '../../../../../../../supabase/functions/assinatura-eletronica-diario-artefatos/snapshot-integrity.ts';
 
@@ -100,4 +100,21 @@ Deno.test('fronteira Edge verifica e congela a evidência extra no mesmo hash do
   await assert.rejects(
     verifyFrozenDocumentSnapshot(changedProof, proof.documentSnapshotSha256), /conteúdo canônico.*alterado/iu,
   );
+});
+
+Deno.test('origem e cronologia incluem todas as aulas e extras sem duplicar sessões do mesmo encontro', () => {
+  const snapshot = createLinkedExtraClassSnapshot();
+  assert.equal(assertValidDiarioPdfAcademicSnapshot(snapshot), snapshot);
+  for (const mutate of [
+    (credit: any) => { credit.activities[0].aulaOrigemId = EXTRA_IDS.activity; },
+    (credit: any) => { credit.contentOrder.pop(); },
+    (credit: any) => { credit.contentOrder.reverse(); },
+    (credit: any) => { credit.contentOrder[0].id = EXTRA_IDS.activity; },
+    (credit: any) => { credit.contentOrder.push({ tipo: 'AULA', id: EXTRA_IDS.afternoon }); },
+    (credit: any) => { credit.contentOrder[1].tipo = 'OUTRA'; },
+  ]) {
+    const changed = globalThis.structuredClone(snapshot);
+    mutate(changed.extraClassCredit);
+    assert.throws(() => assertValidDiarioPdfAcademicSnapshot(changed), /extraClassCredit/u);
+  }
 });

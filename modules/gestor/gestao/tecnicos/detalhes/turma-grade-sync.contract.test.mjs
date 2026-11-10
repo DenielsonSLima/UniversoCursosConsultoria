@@ -70,6 +70,7 @@ test('mutações de aula escrevem o retorno canônico sem iniciar refetch concor
   assert.match(aulaHooks, /useMarkTurmaGradeDependentsStale/);
   assert.match(aulaHooks, /refetchType: 'none'|markStale/);
   assert.doesNotMatch(aulaHooks, /await invalidate\(\)/);
+  assert.match(gradeHook, /queryKey: \['diario-extra-classe-credito', turmaId\], refetchType: 'none'/);
 });
 
 test('conclusão de disciplina invalida diretamente os cards de turma', () => {

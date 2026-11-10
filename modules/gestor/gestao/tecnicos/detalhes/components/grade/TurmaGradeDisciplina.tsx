@@ -405,6 +405,7 @@ const TurmaGradeDisciplina: React.FC<TurmaGradeDisciplinaProps> = ({
           </div>
 
           <TurmaGradePlanejamentoForm
+            aulas={aulas}
             disciplinaId={disciplina.id}
             theme={theme}
             titulo={titulo}
@@ -429,4 +430,3 @@ const TurmaGradeDisciplina: React.FC<TurmaGradeDisciplinaProps> = ({
 };
 
 export default TurmaGradeDisciplina;
-

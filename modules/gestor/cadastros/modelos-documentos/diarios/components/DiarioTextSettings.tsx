@@ -34,8 +34,8 @@ const DiarioTextSettings: React.FC<DiarioTextSettingsProps> = ({ form, setForm }
       </div>
       <label className="mt-5 flex cursor-pointer items-center justify-between gap-4 border-t border-slate-200 pt-5">
         <span>
-          <span className="block text-sm font-bold text-slate-700">Incluir instruções normativas</span>
-          <span className="text-xs text-slate-500">Acrescenta orientações de preenchimento antes da contracapa.</span>
+          <span className="block text-sm font-bold text-slate-700">Incluir página de orientações (opcional)</span>
+          <span className="text-xs text-slate-500">Desativada por padrão. Quando habilitada, acrescenta instruções de preenchimento ao final do diário.</span>
         </span>
         <input
           type="checkbox"

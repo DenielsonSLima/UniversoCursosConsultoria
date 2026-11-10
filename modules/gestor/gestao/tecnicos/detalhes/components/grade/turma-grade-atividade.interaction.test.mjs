@@ -15,10 +15,11 @@ const dom = new JSDOM('<!doctype html><html><body></body></html>', {url:'http://
 globalThis.window = dom.window;
 globalThis.document = dom.window.document;
 Object.defineProperty(globalThis, 'navigator', {value:dom.window.navigator,configurable:true});
-for (const key of ['HTMLElement','HTMLInputElement','Event','MouseEvent','KeyboardEvent']) {
+for (const key of ['HTMLElement','HTMLInputElement','Event','MouseEvent','KeyboardEvent','MutationObserver']) {
   globalThis[key] = dom.window[key];
 }
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+HTMLElement.prototype.scrollIntoView = () => {};
 // Bundled React's act fallback uses Node MessagePorts; close them after this suite.
 const NativeMessageChannel = globalThis.MessageChannel;
 const messagePorts = [];
@@ -38,9 +39,10 @@ const result = await build({
     import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
     import Rows from './TurmaGradeAtividades';
     import Disciplina from './TurmaGradeDisciplina';
-    export { React, act, createRoot, QueryClient, QueryClientProvider, Rows, Disciplina };`,
+    import Planejamento from './TurmaGradePlanejamentoForm';
+    export { React, act, createRoot, QueryClient, QueryClientProvider, Rows, Disciplina, Planejamento };`,
   resolveDir:componentDirectory,loader:'tsx'},
-  bundle:true,write:false,format:'esm',platform:'node',logLevel:'silent',
+  bundle:true,write:false,format:'esm',platform:'node',logLevel:'silent',loader:{'.css':'empty'},
   plugins:[{
     name:'isolated-component-boundaries',
     setup(builder) {
@@ -59,10 +61,10 @@ const result = await build({
     },
   }],
 });
-const { React, act, createRoot, QueryClient, QueryClientProvider, Rows, Disciplina } = await import(
+const { React, act, createRoot, QueryClient, QueryClientProvider, Rows, Disciplina, Planejamento } = await import(
   `data:text/javascript;base64,${Buffer.from(result.outputFiles[0].text).toString('base64')}`);
 const record = (overrides = {}) => ({
-  id:'atividade-1',titulo:'Atividade sintética',cargaHoraria:4,prazoEntrega:'2026-09-12',
+  id:'atividade-1',titulo:'Atividade sintética',cargaHoraria:4,prazoEntrega:'2026-09-12',aulaOrigemId:'a1',
   status:'PUBLICADA',respostasCount:0,updatedAt:'2026-10-02T18:00:00.123456+00:00',
   contexto:{turmaId:'turma-1',turmaStatus:'EM_ANDAMENTO',modalidade:'TECNICO',periodoStatus:'ABERTO'},
   ...overrides,
@@ -74,7 +76,7 @@ const tick = () => new Promise((done) => setTimeout(done,0));
 const flush = () => act(async () => { await tick(); });
 const render = async (atividades = [record()]) => {
   await act(async () => {
-    root.render(React.createElement(QueryClientProvider,{client},React.createElement(Rows,{atividades})));
+    root.render(React.createElement(QueryClientProvider,{client},React.createElement(Rows,{atividades,aulas:[{id:'a1',titulo:'Aula sintética',dataAula:'2026-09-01',cargaHoraria:8,sessoes:[]}]})));
   });
 };
 const button = (label) => [...container.querySelectorAll('button')].find((item) =>
@@ -84,7 +86,7 @@ const click = async (target) => {
   await act(async () => { target.dispatchEvent(new MouseEvent('click',{bubbles:true})); await tick(); });
 };
 const input = async (type, value) => {
-  const element = container.querySelector(`input[type="${type}"]`);
+  const element = container.querySelector(`input[type="${type}"]${type === 'text' ? ':not([role="combobox"])' : ''}`);
   assert.ok(element);
   await act(async () => {
     Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(element,value);
@@ -119,14 +121,14 @@ after(() => {
 
 test('edit opens with existing values; Cancel discards the draft without an RPC', async () => {
   await click(button('Editar atividade Atividade sintética'));
-  assert.equal(container.querySelector('input[type="text"]').value,'Atividade sintética');
+  assert.equal(container.querySelector('input[type="text"]:not([role="combobox"])').value,'Atividade sintética');
   assert.equal(container.querySelector('input[type="date"]').value,'2026-09-12');
   await input('text','Rascunho não salvo');
   await click(button('Cancelar'));
   assert.equal(container.querySelector('form'),null);
   assert.equal(calls.length,0);
   await click(button('Editar atividade Atividade sintética'));
-  assert.equal(container.querySelector('input[type="text"]').value,'Atividade sintética');
+  assert.equal(container.querySelector('input[type="text"]:not([role="combobox"])').value,'Atividade sintética');
 });
 
 test('saving a retroactive edit sends the changed values and closes after confirmation', async () => {
@@ -150,7 +152,7 @@ test('RPC failure preserves the draft and editor for correction', async () => {
   await input('text','Preservar este rascunho');
   await submit();
   await flush();
-  assert.equal(container.querySelector('input[type="text"]').value,'Preservar este rascunho');
+  assert.equal(container.querySelector('input[type="text"]:not([role="combobox"])').value,'Preservar este rascunho');
   assert.equal(button('Salvar atividade').disabled,false);
   assert.equal(notices.at(-1).kind,'error');
   assert.equal(calls.length,1);
@@ -178,14 +180,14 @@ test('external revision refresh retains the draft but blocks saving over newer d
   await click(button('Editar atividade Atividade sintética'));
   await input('text','Rascunho anterior');
   await render([record({titulo:'Título de outra pessoa',updatedAt:'2026-10-02T19:00:00.654321+00:00'})]);
-  assert.equal(container.querySelector('input[type="text"]').value,'Rascunho anterior');
+  assert.equal(container.querySelector('input[type="text"]:not([role="combobox"])').value,'Rascunho anterior');
   assert.equal(button('Salvar atividade').disabled,true);
   assert.match(container.querySelector('[role="alert"]').textContent,/alterada enquanto você editava/);
   await submit();
   assert.equal(calls.length,0);
   await click(button('Cancelar'));
   await click(button('Editar atividade Título de outra pessoa'));
-  assert.equal(container.querySelector('input[type="text"]').value,'Título de outra pessoa');
+  assert.equal(container.querySelector('input[type="text"]:not([role="combobox"])').value,'Título de outra pessoa');
   assert.equal(button('Salvar atividade').disabled,false);
 });
 
@@ -269,7 +271,8 @@ test('successful mutation refreshes scoped academic projections without broad tu
   assert.deepEqual(academic, ['grade','atividades','diarios','resumo'].map((section) =>
     ['academic-lifecycle','turma','turma-1',section]));
   assert.ok(invalidated.some((key) => key[0] === 'atividades-extra-classe' && key[1] === 'turma-1'));
-  assert.equal(invalidated.length,9);
+  assert.ok(invalidated.some((key) => key[0] === 'diario-extra-classe-credito' && key[1] === 'turma-1'));
+  assert.equal(invalidated.length,10);
 });
 
 
@@ -309,11 +312,86 @@ test('date refresh moves an extra while its unsaved editor remains associated wi
   await click(button('Editar atividade Atividade sintética'));
   await input('text','Rascunho preservado na movimentação');
   await renderDiscipline(aulas,[record({prazoEntrega:'2026-06-20',updatedAt:'2026-11-09T08:00:00Z'})]);
-  assert.equal(container.querySelector('input[type="text"]').value,'Rascunho preservado na movimentação');
+  assert.equal(container.querySelector('input[type="text"]:not([role="combobox"])').value,'Rascunho preservado na movimentação');
   assert.equal(button('Salvar atividade').disabled,true);
   await click(button('Cancelar'));
   assert.ok(position('Aula 2') < position('Extra 1'));
   await click(button('Editar atividade Atividade sintética'));
   assert.equal(container.querySelector('input[type="date"]').value,'2026-06-20');
   assert.equal(calls.length,0);
+});
+
+test('legacy edit requires selecting its origin and sends the chosen canonical lesson', async () => {
+  await render([record({aulaOrigemId:null})]);
+  assert.match(container.textContent,/Aula de origem não vinculada/);
+  await click(button('Editar atividade Atividade sintética'));
+  await submit();
+  assert.equal(calls.length,0);
+  assert.match(container.querySelector('[role="alert"]').textContent,/aula de origem/);
+  const picker = container.querySelector('[role="combobox"]');
+  await act(async () => picker.focus());
+  assert.equal(document.querySelectorAll('[role="option"]').length,1);
+  await act(async () => picker.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowDown',bubbles:true})));
+  await act(async () => picker.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true,cancelable:true})));
+  assert.match(picker.value,/Aula 1.*01\/09\/2026/);
+  assert.equal(document.querySelector('[role="listbox"]'),null);
+  await submit();
+  await flush();
+  assert.equal(calls.length,1);
+  assert.equal(calls[0][1].p_aula_origem_id,'a1');
+});
+
+test('creation picker lists, filters, selects and requires an origin before submitting', async () => {
+  const aulas = [lesson('a1','2026-06-06'), {...lesson('a2','2026-06-13'),titulo:'Anatomia óssea'}];
+  const onAddPlanejamento = (id) => calls.push(['criar',id]);
+  const ignore = () => {};
+  await act(async () => root.render(React.createElement(Planejamento,{
+    aulas,disciplinaId:'disciplina-1',theme:{},titulo:'Complemento sintético',data:'2026-06-19',horas:'5',
+    horaInicio:'',horaFim:'',isExtraClasse:true,isSaving:false,onAddPlanejamento,
+    onTituloChange:ignore,onDataChange:ignore,onHorasChange:ignore,onHoraInicioChange:ignore,
+    onHoraFimChange:ignore,onExtraClasseChange:ignore,
+  })));
+  assert.equal(button('Criar atividade extra-classe').disabled,true);
+  const picker = container.querySelector('[role="combobox"]');
+  await act(async () => picker.focus());
+  assert.equal(document.querySelectorAll('[role="option"]').length,2);
+  await act(async () => {
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(picker,'ossea');
+    picker.dispatchEvent(new Event('input',{bubbles:true}));
+  });
+  assert.equal(document.querySelectorAll('[role="option"]').length,1);
+  await act(async () => picker.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowDown',bubbles:true})));
+  await act(async () => picker.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true,cancelable:true})));
+  assert.match(picker.value,/Aula 2.*Anatomia óssea/);
+  assert.equal(button('Criar atividade extra-classe').disabled,false);
+  await click(button('Criar atividade extra-classe'));
+  assert.deepEqual(calls,[['criar','a2']]);
+  await act(async () => picker.dispatchEvent(new MouseEvent('click',{bubbles:true})));
+  assert.ok(document.querySelector('[role="listbox"]'));
+  await act(async () => picker.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true})));
+  assert.equal(document.querySelector('[role="listbox"]'),null);
+  assert.match(picker.value,/Aula 2/);
+});
+
+test('answered legacy activity links its origin while protecting content and grades', async () => {
+  await render([record({aulaOrigemId:null,respostasCount:2})]);
+  assert.equal(button('Editar atividade Atividade sintética').disabled,true);
+  await click(button('Vincular aula de origem da atividade Atividade sintética'));
+  assert.equal(container.querySelector('input[type="date"]'),null);
+  assert.equal(container.querySelector('input[type="number"]'),null);
+  assert.equal(container.querySelector('input[type="text"]:not([role="combobox"])'),null);
+  assert.match(container.textContent,/respostas e notas serão preservados/);
+  const picker = container.querySelector('[role="combobox"]');
+  await act(async () => picker.focus());
+  await act(async () => picker.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowDown',bubbles:true})));
+  await act(async () => picker.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true,cancelable:true})));
+  await submit();
+  await flush();
+  assert.equal(calls.length,1);
+  assert.equal(calls[0][1].p_acao,'VINCULAR_ORIGEM');
+  assert.equal(calls[0][1].p_aula_origem_id,'a1');
+  assert.equal(calls[0][1].p_titulo,null);
+  assert.equal(calls[0][1].p_prazo_entrega,null);
+  assert.equal(calls[0][1].p_carga_horaria,null);
+  assert.equal(notices.at(-1).args[0],'Aula de origem vinculada');
 });

@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { after, before, test } from 'node:test';
+import { functionSql } from './diario_extra_classe.fixture.mjs';
 import { createSnapshot, IDS } from '../../modules/gestor/gestao/tecnicos/detalhes/components/diarios/diario-pdf-server-boundary.fixtures.ts';
 
 // Isolated PostgreSQL/WASM only. No remote connection or production records.
@@ -92,6 +93,9 @@ before(async () => {
   assert.equal(await valid(await snapshot({ extension: false })), true, 'Existing snapshot remains valid');
   assert.equal(await valid(await snapshot()), false, 'Reproduce old rejection of the new evidence');
   await db.exec(migration);
+  await db.exec(functionSql(await read('../migrations/20261110184100_extra_class_diary_chronology.sql'),
+    'internal_academic.diario_content_order'));
+  await db.exec(await read('../migrations/20261110184200_extra_class_snapshot_chronology.sql'));
 });
 after(async () => { await db.close(); });
 
@@ -205,4 +209,41 @@ test('the freeze migration rejects an unexpected builder before changing its cod
   await assert.rejects(db.exec(patch), /Drift ou dependência ausente/);
   await db.exec('rollback');
   assert.deepEqual((await db.query(metadata, [signature])).rows, before);
+});
+
+
+test('frozen origin and chronological order validate without rewriting legacy snapshots', async () => {
+  const data = await snapshot();
+  data.extraClassCredit.activities[0].aulaOrigemId = IDS.session;
+  data.extraClassCredit.contentOrder = [
+    {tipo:'EXTRA_CLASSE',id:extraId},{tipo:'AULA',id:IDS.session},
+  ];
+  assert.equal(await valid(await seal(data)),true);
+  data.extraClassCredit.activities[0].aulaOrigemId = null;
+  assert.equal(await valid(await seal(data)),true,'Unlinked historical evidence stays valid');
+  delete data.extraClassCredit.activities[0].aulaOrigemId;
+  delete data.extraClassCredit.contentOrder;
+  assert.equal(await valid(await seal(data)),true,'Old credit format retains its exact contract');
+});
+
+test('frozen chronology and origin cannot reference unknown, duplicate or reordered entries', async () => {
+  const mutations = [
+    s => { s.extraClassCredit.activities[0].aulaOrigemId = extraId; },
+    s => { s.extraClassCredit.activities[0].aulaOrigemId = 1; },
+    s => { s.extraClassCredit.contentOrder.reverse(); },
+    s => { s.extraClassCredit.contentOrder.pop(); },
+    s => { s.extraClassCredit.contentOrder.push({tipo:'EXTRA_CLASSE',id:extraId}); },
+    s => { s.extraClassCredit.contentOrder[0].id = IDS.lesson; },
+    s => { s.extraClassCredit.contentOrder[0].tipo = 'CLASS'; },
+    s => { s.extraClassCredit.contentOrder[0].frontendHint = true; },
+  ];
+  for (const mutation of mutations) {
+    const data = await snapshot();
+    data.extraClassCredit.activities[0].aulaOrigemId = IDS.session;
+    data.extraClassCredit.contentOrder = [
+      {tipo:'EXTRA_CLASSE',id:extraId},{tipo:'AULA',id:IDS.session},
+    ];
+    mutation(data);
+    assert.equal(await valid(await seal(data)),false,mutation.toString());
+  }
 });

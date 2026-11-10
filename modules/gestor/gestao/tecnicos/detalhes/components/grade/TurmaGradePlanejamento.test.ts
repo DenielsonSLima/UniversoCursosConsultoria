@@ -4,6 +4,7 @@ import test from 'node:test';
 import { buildGradeChronology } from './turma-grade-cronologia.ts';
 import type { TurmaAulaPlanejada, TurmaAtividadeExtraClasse } from '../../turma-grade.types';
 import { getSuggestedClassScheduleForHoursChange } from './turma-grade-ui.ts';
+import { getAulaOrigemOptions, resolveAulaOrigem } from './turma-grade-aula-origem.ts';
 
 const emptyDraft = {
   previousHours: '',
@@ -121,4 +122,23 @@ test('mantém desempate estável, rascunhos visíveis e arquivadas fora da crono
   assert.deepEqual(result.map(identity), ['a1', 'a2', 'rascunho', 'publicada']);
   assert.deepEqual(result.map((item) => item.index), [0, 1, 0, 1]);
   assert.deepEqual(buildGradeChronology([], []), []);
+});
+
+test('origem preserva a identidade e reconhece as sessões de um mesmo encontro', () => {
+  const aulas = [aula('m1', '2026-06-06'), aula('m2', '2026-06-13')];
+  aulas[0].sessoes = [{ id: 't1', periodo: 'T', cargaHoraria: 4 }];
+  assert.equal(getAulaOrigemOptions(aulas)[0].value, 'm1');
+  assert.match(getAulaOrigemOptions(aulas)[0].label, /Aula 1.*06\/06\/2026/);
+  assert.equal(resolveAulaOrigem(aulas, 't1')?.aula.id, 'm1');
+  assert.equal(resolveAulaOrigem(aulas, 'm2')?.label, 'Complemento da Aula 2 • 13/06/2026');
+  assert.equal(resolveAulaOrigem(aulas, null), null);
+  assert.equal(resolveAulaOrigem(aulas, 'inexistente'), null);
+});
+
+test('formulário exige aula de origem canônica sem seletor nativo', () => {
+  const source = readFileSync(new URL('./TurmaGradePlanejamentoForm.tsx', import.meta.url), 'utf8');
+  assert.match(source, /Aula de origem/);
+  assert.match(source, /<InstitutionalSelect/);
+  assert.match(source, /!origemValida/);
+  assert.doesNotMatch(source, /<select\b|<datalist\b/);
 });

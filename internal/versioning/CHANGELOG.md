@@ -22,6 +22,14 @@ Histórico arquivado: [10/10/2026 — versão 4.8.203](./changelog/2026-10-10-ve
 
 Histórico arquivado: [10/10/2026 — versão 4.8.204](./changelog/2026-10-10-versao-4-8-204.md), [10/10/2026 — versão 4.8.205](./changelog/2026-10-10-versao-4-8-205.md).
 
+Histórico arquivado: [10/10/2026 a 13/10/2026 — versões 4.8.208 a 4.8.214](./changelog/2026-10-10-a-13-versoes-4-8-208-a-214.md).
+
+## [4.8.284] - 2026-11-10
+
+- Extra-classe exige selecionar a aula de origem e aparece como complemento, com vínculo validado na mesma turma e disciplina.
+- Grade e diário mostram a origem do complemento; conteúdo do PDF segue a ordem das datas.
+- Novos diários usam títulos sem moldura e identificação discreta no rodapé inferior direito, sem a página de instruções; validação, assinatura, modelos e marca d’água são preservados.
+
 ## [4.8.283] - 2026-11-10
 
 - Pendentes de NFS-e permite selecionar preparações individualmente ou por página, limpar a seleção e confirmar a exclusão em lote.
@@ -448,48 +456,3 @@ Histórico arquivado: [10/10/2026 — versão 4.8.204](./changelog/2026-10-10-ve
 - Revisão 8 do contrato técnico disponibilizada no cadastro para aprovação própria, com plano financeiro individual completo e identificação corrigida.
 - Prévia estrutural do editor passa a respeitar a tipografia V4 e a informar que a paginação é estimada; valores reais continuam vindo da matrícula na emissão.
 - Segunda via conserva o documento original; a versão corrigida requer nova emissão após aprovação da revisão.
-
-## [4.8.214] - 2026-10-13
-
-- Captura financeira do novo contrato interrompe com orientação de nova tentativa quando há atualização concorrente, sem esperar pelos bloqueios financeiros.
-- Plano individual completo é reservado ao modelo V4; revisões anteriores mantêm sua emissão até a aprovação própria do novo texto.
-
-## [4.8.213] - 2026-10-13
-
-- Nova revisão do contrato técnico discrimina o plano individual completo, ciclos, matrícula, rematrículas, total, descontos e encargos com unidade e incidência explícitas.
-- Emissão usa as condições efetivas da matrícula, planos de transferência e ciclos revisados com prova de omissões e dispensas; configurações incompletas impedem documento inexato.
-- Contratante identificado conforme maioridade; modelo V4 com corpo de 12 pontos, paginação no servidor e código/validade do QR integrais.
-- Revisão institucional permanece obrigatória; documentos emitidos, condições bancárias e aprovações históricas são preservados.
-
-## [4.8.212] - 2026-10-11
-
-- Cadastro do aluno aguarda a leitura completa antes de editar ou salvar, com nova tentativa em caso de falha.
-- Atualizações da consulta preservam o rascunho; salvar um aluno e abrir outro mantém os dados e caches separados.
-
-## [4.8.211] - 2026-10-11
-
-- Convite e recuperação revalidam a permissão do gestor e o estado do aluno no banco antes de concluir; revogação bloqueia escrita e entrega posterior do link.
-
-- Link manual de recuperação confere a identidade retornada pelo Auth antes de entregá-lo ao gestor.
-- Identidade divergente ou link ausente interrompe a operação com resposta sanitizada e preserva a credencial atual.
-
-## [4.8.210] - 2026-10-11
-
-- Portal do aluno emite o boletim oficial em PDF do módulo iniciado, com prévia, download e impressão do mesmo arquivo.
-- Boletins exibem matrícula humana e documentos pessoais adaptáveis por CPF, RG e CIN, conforme os dados presentes.
-- Modelo institucional completo, assinatura, QR e marca d’água acompanham novas emissões e seus snapshots.
-- Novas notas geram outro código; o histórico do gestor preserva o mesmo conteúdo do aluno e a impressão pode ser cancelada antes de iniciar.
-- Identificação por CIN preserva nome e matrícula dos modelos personalizados; datas do boletim seguem o dia local congelado na emissão.
-
-## [4.8.209] - 2026-10-11
-
-- Aba Acesso relê cadastro completo e confirmação do e-mail, inclusive ao abrir o aluno pela busca global.
-- Reenvio de acesso recusa estados alterados durante a operação e preserva a senha recém-criada pelo aluno.
-- Confirmação de e-mail e reserva de senha temporária revalidam a permissão vigente do gestor antes de concluir a operação.
-
-## [4.8.208] - 2026-10-10
-
-- Validação administrativa confirma o e-mail para login sem substituir a senha existente.
-- Acesso do aluno apresenta e-mail, senha e termos separadamente; termos pendentes não exigem criar outra senha.
-- Recuperação preserva a credencial criada, e assistência temporária recusa esse estado mesmo com termos pendentes.
-- Confirmação inicial exige prova persistida de senha ou cadastro público canônico para dispensar sua criação.
