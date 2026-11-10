@@ -12,7 +12,8 @@ const modelStore = await readMigration('20261108225453_nfse_models_private_store
 const amountMigration = await readMigration('20261108225236_nfse_receipt_amount_projection.sql');
 const referenceMigration = await readMigration('20261108233250_nfse_model_reference_month.sql');
 const migrations = await Promise.all(['20261109020017_nfse_academic_queue_store.sql',
-  '20261109020019_nfse_academic_queue_prepare.sql','20261109020021_nfse_academic_queue_reads.sql'].map(readMigration));
+  '20261109020019_nfse_academic_queue_prepare.sql','20261109020021_nfse_academic_queue_reads.sql',
+  '20261110132800_nfse_queue_logical_removal.sql','20261110132801_nfse_queue_realtime.sql'].map(readMigration));
 const id = value => `00000000-0000-0000-0000-${String(value).padStart(12,'0')}`;
 const candidate = (classId,studentId) => `${id(classId)}:${id(studentId)}`;
 const scope = {context:id(10),polo:id(1),environment:'HOMOLOGACAO',month:'2026-12'};
@@ -243,6 +244,122 @@ test('academic preparation reserves canonical receipts atomically without fiscal
           'definer',prosecdef,'path',proconfig @> ARRAY['search_path=""']) value FROM pg_proc WHERE oid=$1::regprocedure`,[signature]);
         assert.deepEqual(acl,{anon:false,auth:true,service:false,definer:true,path:true});
       }
+    });
+    const remove = (ids,request=id(700),changes={}) => value(
+      'SELECT public.remove_nfse_queue_documents_secure($1,$2,$3,$4,$5,$6) value',
+      [...Object.values({...scope,...changes}),request,ids]);
+    const removalCounts = () => value(`SELECT jsonb_build_object(
+      'requests',(SELECT count(*) FROM private.nfse_queue_removal_requests),
+      'removed',(SELECT count(*) FROM private.nfse_queue_removals),
+      'events',(SELECT count(*) FROM public.nfse_queue_change_events)) value`);
+    const immutableState = () => value(`SELECT jsonb_build_object(
+      'documents',(SELECT jsonb_agg(to_jsonb(t) ORDER BY id) FROM private.nfse_queue_documents t),
+      'batches',(SELECT jsonb_agg(to_jsonb(t) ORDER BY id) FROM private.nfse_preparation_batches t),
+      'claims',(SELECT jsonb_agg(to_jsonb(t) ORDER BY document_id,receipt_id) FROM private.nfse_receipt_reservations t),
+      'titles',(SELECT jsonb_agg(to_jsonb(t) ORDER BY id) FROM public.contas_receber t),
+      'payments',(SELECT jsonb_agg(to_jsonb(t) ORDER BY id) FROM public.financial_payment_events t)) value`);
+    const targetRows=(await list()).data.rows.filter(row=>[id(32),id(33)].includes(row.studentId));
+    const targets=targetRows.map(row=>row.id);
+    assert.equal(targets.length,2);
+    let removed;
+    await t.test('removal rejects empty, repeated, foreign or partially stale selections atomically',async()=>{
+      const before=await removalCounts();
+      for(const ids of [[],null,[null],[targets[0],targets[0]],Array.from({length:101},(_,i)=>id(800+i))])
+        await assert.rejects(remove(ids),e=>e.code==='22023');
+      for(const ids of [[id(999)],[targets[0],id(999)]])
+        await assert.rejects(remove(ids),e=>e.code==='40001');
+      for(const changes of [{month:'2026-10'},{environment:'PRODUCAO'}])
+        await assert.rejects(remove(targets,id(700),changes),e=>e.code==='40001');
+      await assert.rejects(remove(targets,id(700),{polo:id(3)}),e=>e.code==='42501');
+      assert.deepEqual(await removalCounts(),before);
+      assert.equal((await list()).data.totalItems,4);
+    });
+    await t.test('a ready or future issued document is rejected, not fiscally cancelled',async()=>{
+      await db.exec('BEGIN; ALTER TABLE private.nfse_queue_documents DISABLE TRIGGER nfse_queue_immutable');
+      await db.query(`UPDATE private.nfse_queue_documents SET snapshot=jsonb_set(snapshot,'{fiscalReadiness,ready}','true') WHERE id=$1`,[targets[0]]);
+      await assert.rejects(remove(targets),e=>e.code==='40001');
+      await db.exec('ROLLBACK');
+      await db.exec(`BEGIN; ALTER TABLE private.nfse_queue_documents DROP CONSTRAINT nfse_queue_documents_status_check;
+        ALTER TABLE private.nfse_queue_documents DISABLE TRIGGER nfse_queue_immutable`);
+      await db.query("UPDATE private.nfse_queue_documents SET status='EMITIDA' WHERE id=$1",[targets[0]]);
+      await assert.rejects(remove(targets),e=>e.code==='40001');
+      await db.exec('ROLLBACK');
+    });
+    await t.test('two removals preserve every original record and update backend count/total',async()=>{
+      const before=await immutableState();
+      const eventsBefore=(await removalCounts()).events;
+      await db.exec('SET ROLE authenticated');
+      removed=await remove(targets);
+      assert.equal(removed.data.removedCount,2);
+      assert.deepEqual(removed.data.documentIds,[...targets].sort());
+      assert.deepEqual(removed.data.paymentMonths,['2026-11']);
+      assert.equal((await list()).data.totalItems,2);
+      assert.equal((await list()).data.totalAmount,'273.30');
+      await db.exec('RESET ROLE');
+      assert.deepEqual(await immutableState(),before);
+      assert.equal((await removalCounts()).events,eventsBefore+1);
+    });
+    await t.test('replay is exact and order independent without another realtime event',async()=>{
+      const before=await removalCounts();
+      assert.deepEqual(await remove([...targets].reverse()),removed);
+      await assert.rejects(remove([targets[0]]),e=>e.code==='22023');
+      assert.deepEqual(await removalCounts(),before);
+      // Another operator cannot partially remove a mixed already-removed batch.
+      await assert.rejects(remove([targets[0],first.data.documentIds[0]],id(701)),e=>e.code==='40001');
+      assert.equal((await list()).data.totalItems,2);
+    });
+    await t.test('current permission is mandatory before removal replay',async()=>{
+      await db.exec(`UPDATE public.test_context SET allowed=false WHERE id='${scope.context}'`);
+      await assert.rejects(remove(targets),e=>e.code==='42501');
+      await db.exec('SET ROLE authenticated');
+      assert.equal(await value('SELECT count(*)::int value FROM public.nfse_queue_change_events'),0);
+      await db.exec('RESET ROLE');
+      await db.exec(`UPDATE public.test_context SET allowed=true WHERE id='${scope.context}'`);
+      await db.exec("SET test.actor=''");
+      await assert.rejects(remove(targets),e=>e.code==='42501');
+      await db.exec(`SET test.actor='${id(11)}'`);
+    });
+    await t.test('released receipts can be prepared again while historical claims remain immutable',async()=>{
+      const oldClaims=(await counts()).claims;
+      const regenerated=await prepare({}, {request:id(702),ids:[candidate(21,33),candidate(20,32)],version:2});
+      assert.equal(regenerated.data.documentCount,2);
+      assert(regenerated.data.documentIds.every(document=>!targets.includes(document)));
+      assert.equal((await counts()).claims,oldClaims+2);
+      assert.equal((await list()).data.totalItems,4);
+      await assert.rejects(prepare({}, {request:id(703),ids:[candidate(21,33)],version:2}),e=>e.code==='23505');
+      await assert.rejects(remove(regenerated.data.documentIds,id(704),{environment:'PRODUCAO'}),e=>e.code==='40001');
+    });
+    await t.test('a failed removal rolls back audit, marker and realtime event together',async()=>{
+      const before=await removalCounts();
+      await db.exec(`CREATE FUNCTION private.fail_test_removal() RETURNS trigger LANGUAGE plpgsql AS
+        $$BEGIN RAISE EXCEPTION 'SYNTHETIC_REMOVAL_FAILURE'; END$$;
+        CREATE TRIGGER test_removal_failure BEFORE INSERT ON private.nfse_queue_removals
+        FOR EACH ROW EXECUTE FUNCTION private.fail_test_removal()`);
+      await assert.rejects(remove([first.data.documentIds[0]],id(705)),/SYNTHETIC_REMOVAL_FAILURE/);
+      assert.deepEqual(await removalCounts(),before);
+      await db.exec('DROP TRIGGER test_removal_failure ON private.nfse_queue_removals');
+    });
+    await t.test('removal and original records stay private and immutable; event has no financial payload',async()=>{
+      for(const table of ['nfse_queue_removals','nfse_queue_removal_requests']) {
+        await assert.rejects(db.exec(`DELETE FROM private.${table}`),e=>e.code==='55000');
+        await assert.rejects(db.exec(`UPDATE private.${table} SET created_at=now()`),e=>e.code==='55000');
+        assert.equal(await value("SELECT has_table_privilege('authenticated',$1,'SELECT') value",[`private.${table}`]),false);
+      }
+      const signature='public.remove_nfse_queue_documents_secure(uuid,uuid,text,text,uuid,uuid[])';
+      assert.equal(await value("SELECT has_function_privilege('anon',$1,'EXECUTE') value",[signature]),false);
+      assert.equal(await value("SELECT has_function_privilege('service_role',$1,'EXECUTE') value",[signature]),false);
+      await db.exec('SET ROLE authenticated');
+      const events=await value('SELECT jsonb_agg(to_jsonb(t)) value FROM public.nfse_queue_change_events t');
+      assert(events.length>0);
+      for(const event of events) assert.deepEqual(Object.keys(event).sort(),['created_at','environment','id','month','polo_id','version']);
+      await assert.rejects(db.exec(`INSERT INTO public.nfse_queue_change_events(polo_id,environment,month)
+        VALUES('${id(1)}','HOMOLOGACAO','2026-12')`),e=>e.code==='42501');
+      await db.exec('RESET ROLE');
+    });
+    await t.test('stale transaction snapshots cannot release reservations',async()=>{
+      await db.exec('BEGIN ISOLATION LEVEL REPEATABLE READ');
+      await assert.rejects(remove(targets),e=>e.code==='25001');
+      await db.exec('ROLLBACK');
     });
   } finally { await db.close(); }
 });

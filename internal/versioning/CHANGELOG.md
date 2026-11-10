@@ -2,7 +2,7 @@
 
 Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente deve sempre corresponder ao arquivo `system-version.json`.
 
-Histórico anterior: [27/09/2026 — versões 4.8.117 a 4.8.127](./changelog/2026-09-27-versoes-4-8-117-a-4-8-127.md), [16/09/2026 a 25/09/2026 — versões 4.8.65 a 4.8.90](./changelog/2026-09-16-a-2026-09-25-versoes-4-8-65-a-4-8-90.md), [13/09/2026 — versões 4.8.53 a 4.8.64](./changelog/2026-09-13-versoes-4-8-53-a-4-8-64.md), [08/09/2026 a 12/09/2026 — versões 4.8.37 a 4.8.52](./changelog/2026-09-08-a-2026-09-12-versoes-4-8-37-a-4-8-52.md), [03/09/2026 a 08/09/2026 — versões 4.8.30 a 4.8.36](./changelog/2026-09-03-a-2026-09-08-versoes-4-8-30-a-4-8-36.md), [02/09/2026 — versões 4.8.27 a 4.8.29](./changelog/2026-09-02-versoes-4-8-27-a-4-8-29.md), [01/09/2026 — versões 4.8.23 a 4.8.26](./changelog/2026-09-01-versoes-4-8-23-a-4-8-26.md), [01/09/2026 — versões 4.8.20 a 4.8.22](./changelog/2026-09-01-versoes-4-8-20-a-4-8-22.md), [27/08/2026 a 31/08/2026 — versões 4.8.8 a 4.8.19](./changelog/2026-08-27-a-2026-08-31.md), [26/08/2026 — versões 4.8.6 a 4.8.7](./changelog/2026-08-26.md), [25/08/2026 — versões 4.8.2 a 4.8.5](./changelog/2026-08-25-parte-1.md), [24/08/2026 — versões 4.8.0 a 4.8.1](./changelog/2026-08-24-parte-2.md), [24/08/2026 — versões 4.7.5 a 4.7.7](./changelog/2026-08-24-parte-1.md), [22/08/2026 a 23/08/2026](./changelog/2026-08-22-a-2026-08-23.md), [21/08/2026 a 22/08/2026 — parte 2](./changelog/2026-08-21-a-2026-08-22-parte-2.md), [21/08/2026 — parte 1](./changelog/2026-08-21-parte-1.md), [11/08/2026 a 20/08/2026](./changelog/2026-08-11-a-2026-08-20.md), [09/08/2026 a 10/08/2026](./changelog/2026-08-09-a-2026-08-10.md), [05/08/2026 — parte 1](./changelog/2026-08-05-parte-1.md), [04/08/2026](./changelog/2026-08-04.md), [03/08/2026](./changelog/2026-08-03.md), [02/08/2026 — continuação](./changelog/2026-08-02-parte-2.md), [02/08/2026 a 31/07/2026](./changelog/2026-07-31-a-2026-08-02.md), [31/07/2026 a 26/07/2026](./changelog/2026-07-26-a-2026-07-31.md) e [26/07/2026 a 14/07/2026](./changelog/2026-07-14-a-2026-07-26.md).
+Histórico anterior: [10/10/2026 — versões 4.8.206 a 4.8.207](./changelog/2026-10-10-versoes-4-8-206-a-207.md), [27/09/2026 — versões 4.8.117 a 4.8.127](./changelog/2026-09-27-versoes-4-8-117-a-4-8-127.md), [16/09/2026 a 25/09/2026 — versões 4.8.65 a 4.8.90](./changelog/2026-09-16-a-2026-09-25-versoes-4-8-65-a-4-8-90.md), [13/09/2026 — versões 4.8.53 a 4.8.64](./changelog/2026-09-13-versoes-4-8-53-a-4-8-64.md), [08/09/2026 a 12/09/2026 — versões 4.8.37 a 4.8.52](./changelog/2026-09-08-a-2026-09-12-versoes-4-8-37-a-4-8-52.md), [03/09/2026 a 08/09/2026 — versões 4.8.30 a 4.8.36](./changelog/2026-09-03-a-2026-09-08-versoes-4-8-30-a-4-8-36.md), [02/09/2026 — versões 4.8.27 a 4.8.29](./changelog/2026-09-02-versoes-4-8-27-a-4-8-29.md), [01/09/2026 — versões 4.8.23 a 4.8.26](./changelog/2026-09-01-versoes-4-8-23-a-4-8-26.md), [01/09/2026 — versões 4.8.20 a 4.8.22](./changelog/2026-09-01-versoes-4-8-20-a-4-8-22.md), [27/08/2026 a 31/08/2026 — versões 4.8.8 a 4.8.19](./changelog/2026-08-27-a-2026-08-31.md), [26/08/2026 — versões 4.8.6 a 4.8.7](./changelog/2026-08-26.md), [25/08/2026 — versões 4.8.2 a 4.8.5](./changelog/2026-08-25-parte-1.md), [24/08/2026 — versões 4.8.0 a 4.8.1](./changelog/2026-08-24-parte-2.md), [24/08/2026 — versões 4.7.5 a 4.7.7](./changelog/2026-08-24-parte-1.md), [22/08/2026 a 23/08/2026](./changelog/2026-08-22-a-2026-08-23.md), [21/08/2026 a 22/08/2026 — parte 2](./changelog/2026-08-21-a-2026-08-22-parte-2.md), [21/08/2026 — parte 1](./changelog/2026-08-21-parte-1.md), [11/08/2026 a 20/08/2026](./changelog/2026-08-11-a-2026-08-20.md), [09/08/2026 a 10/08/2026](./changelog/2026-08-09-a-2026-08-10.md), [05/08/2026 — parte 1](./changelog/2026-08-05-parte-1.md), [04/08/2026](./changelog/2026-08-04.md), [03/08/2026](./changelog/2026-08-03.md), [02/08/2026 — continuação](./changelog/2026-08-02-parte-2.md), [02/08/2026 a 31/07/2026](./changelog/2026-07-31-a-2026-08-02.md), [31/07/2026 a 26/07/2026](./changelog/2026-07-26-a-2026-07-31.md) e [26/07/2026 a 14/07/2026](./changelog/2026-07-14-a-2026-07-26.md).
 
 Histórico arquivado: [10/10/2026 — versões 4.8.199 a 4.8.202](./changelog/2026-10-10-versoes-4-8-199-a-202.md), [28/09/2026 a 30/09/2026 — versões 4.8.128 a 4.8.137](./changelog/2026-09-28-a-2026-09-30-versoes-4-8-128-a-4-8-137.md), [27/09/2026 — versões 4.8.115 a 4.8.116](./changelog/2026-09-27-versoes-4-8-115-a-4-8-116.md), [27/09/2026 — versão 4.8.114](./changelog/2026-09-27-versao-4-8-114.md), [27/09/2026 — versão 4.8.113](./changelog/2026-09-27-versao-4-8-113.md), [27/09/2026 — versão 4.8.112](./changelog/2026-09-27-versao-4-8-112.md), [27/09/2026 — versão 4.8.111](./changelog/2026-09-27-versao-4-8-111.md), [25/09/2026 a 26/09/2026 — versões 4.8.91 a 4.8.110](./changelog/2026-09-25-a-2026-09-26-versoes-4-8-91-a-4-8-110.md).
 
@@ -21,6 +21,13 @@ Histórico arquivado: [10/10/2026 — versões 4.8.196 a 4.8.198](./changelog/20
 Histórico arquivado: [10/10/2026 — versão 4.8.203](./changelog/2026-10-10-versao-4-8-203.md).
 
 Histórico arquivado: [10/10/2026 — versão 4.8.204](./changelog/2026-10-10-versao-4-8-204.md), [10/10/2026 — versão 4.8.205](./changelog/2026-10-10-versao-4-8-205.md).
+
+## [4.8.283] - 2026-11-10
+
+- Pendentes de NFS-e permite selecionar preparações individualmente ou por página, limpar a seleção e confirmar a exclusão em lote.
+- Exclusão lógica preserva recebimentos, snapshots e histórico; somente preparações ainda não emitidas podem sair da fila e ser refeitas.
+- A fila e seus totais se atualizam automaticamente, sem botão Atualizar, com eventos sanitizados e recuperação após reconexão.
+- Emissão fiscal e cancelamento de notas permanecem bloqueados até validação própria do fluxo fiscal.
 
 ## [4.8.282] - 2026-11-10
 
@@ -486,15 +493,3 @@ Histórico arquivado: [10/10/2026 — versão 4.8.204](./changelog/2026-10-10-ve
 - Acesso do aluno apresenta e-mail, senha e termos separadamente; termos pendentes não exigem criar outra senha.
 - Recuperação preserva a credencial criada, e assistência temporária recusa esse estado mesmo com termos pendentes.
 - Confirmação inicial exige prova persistida de senha ou cadastro público canônico para dispensar sua criação.
-
-## [4.8.207] - 2026-10-10
-
-- Reemissão do boletim atualiza a prévia quando o modelo muda e preserva snapshots documentais existentes.
-- PDF respeita a mesclagem, a opacidade e a ordem da assinatura do editor, mantendo linha e cargo legíveis.
-- Falha ao buscar o modelo salvo do boletim é exibida, sem substituir silenciosamente o documento pelo padrão.
-
-## [4.8.206] - 2026-10-10
-
-- Atividade em painéis internos e controles que interrompem eventos renova corretamente o prazo da sessão.
-- Abas sincronizam a atividade mais recente antes do logout, preservando os 30 minutos de inatividade.
-

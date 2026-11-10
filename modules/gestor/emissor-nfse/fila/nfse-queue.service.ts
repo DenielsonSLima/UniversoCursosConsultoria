@@ -7,6 +7,9 @@ export const nfseQueueService = createNfseQueueService(async (name, args, signal
   if (signal) request.abortSignal(signal);
   const { data, error } = await request;
   if (error) {
+    if (name === 'remove_nfse_queue_documents_secure' && ['40001', '22023', '23505'].includes(error.code)) {
+      throw new Error('A seleção mudou ou não está mais disponível. Nenhuma nova exclusão foi confirmada. Revise os pendentes.');
+    }
     if (error.code === '40001' || error.code === '23505') {
       throw new Error('O modelo ou os recebimentos mudaram, ou já estão reservados. Atualize e revise a seleção.');
     }

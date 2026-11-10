@@ -1,8 +1,8 @@
 {
-  "version": "4.8.282",
+  "version": "4.8.283",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 291,
+  "revision": 292,
   "releasedAt": "2026-11-10",
-  "summary": "Cadastro A1 compatível com Deno da Edge, preservando validações de chave, cadeia e CNPJ"
+  "summary": "Fila NFS-e com seleção múltipla, exclusão lógica auditada e atualização automática"
 }
