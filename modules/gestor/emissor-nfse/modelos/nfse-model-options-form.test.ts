@@ -57,8 +57,11 @@ test('central People normalization forces government recipients to Brazil and cl
   const people = { ...createDefaultNfseModelPeopleOptions(), recipientLocation: 'EXTERIOR' as const,
     recipientIsDestination: false, destinationPartnerId: '00000000-0000-0000-0000-000000000001', destinationPartnerLabel: 'Sintético' };
   const government = { ...emptyNfseModelServiceOptions(), includeIbsCbs: true, governmentPurchase: true };
-  assert.equal(normalizeNfsePeopleOptions(people, government).recipientLocation, 'BRASIL');
+  const normalized = normalizeNfsePeopleOptions(people, government);
+  assert(normalized.version === 1);
+  assert.equal(normalized.recipientLocation, 'BRASIL');
   const disabled = normalizeNfsePeopleOptions(people, { ...government, includeIbsCbs: false, governmentPurchase: null });
+  assert(disabled.version === 1);
   assert.equal(disabled.recipientIsDestination, null); assert.equal(disabled.destinationPartnerId, null);
   assert.equal(disabled.destinationPartnerLabel, null); assert.equal(disabled.recipientLocation, 'EXTERIOR');
 });

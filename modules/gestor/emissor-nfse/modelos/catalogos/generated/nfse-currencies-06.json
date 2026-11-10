@@ -1,0 +1,38 @@
+[
+  {
+    "code": "994",
+    "name": "PLATINA",
+    "symbol": "PLAT",
+    "excludedDate": "10/06/2002",
+    "aliases": [
+      "PLATINA PLAT"
+    ]
+  },
+  {
+    "code": "995",
+    "name": "BUA",
+    "symbol": "BUA",
+    "excludedDate": "17/12/2009",
+    "aliases": [
+      "BUA BUA"
+    ]
+  },
+  {
+    "code": "996",
+    "name": "FUA",
+    "symbol": "FUA",
+    "excludedDate": "17/12/2009",
+    "aliases": [
+      "FUA FUA"
+    ]
+  },
+  {
+    "code": "998",
+    "name": "OURO",
+    "symbol": "XAU",
+    "excludedDate": null,
+    "aliases": [
+      "OURO XAU"
+    ]
+  }
+]

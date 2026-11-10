@@ -6,6 +6,9 @@ export const emptyNfseModelServiceOptions = createDefaultNfseModelServiceOptions
 export { requiresNfseOperationType };
 
 export function normalizeNfsePeopleOptions(options: NfseModelPeopleOptions, service: NfseModelServiceOptions | null): NfseModelPeopleOptions {
+  if (options.version === 2) return { ...options,
+    ...(service?.includeIbsCbs !== true ? { recipientIsDestination: null, destinationSource: null } : {}),
+  };
   return { ...options,
     ...(service?.includeIbsCbs !== true ? { recipientIsDestination: null, destinationPartnerId: null, destinationPartnerLabel: null } : {}),
     ...(service?.governmentPurchase === true ? { recipientLocation: 'BRASIL' as const } : {}),

@@ -1,9 +1,8 @@
 import React from 'react';
 import type { NfseScope } from '../types/nfse.types';
 import { isNfseScopeValid } from '../types/nfse.scope';
-import { useNfseConfigurationMetadata } from '../services/configuration/useNfseConfigurationMetadata';
+import { useNfseModelIssuerMetadata } from './hooks/useNfseModelIssuerMetadata';
 import NfseModelPeopleFields from './NfseModelPeopleFields';
-import { useNfseModelPartnerSearch } from './hooks/useNfseModelPartnerSearch';
 
 type FieldsProps = React.ComponentProps<typeof NfseModelPeopleFields>;
 interface Props extends Pick<FieldsProps, 'value' | 'onChange' | 'includeIbsCbs' | 'governmentPurchase' | 'afterIssuer' | 'disabled'> {
@@ -18,14 +17,22 @@ const specialLabels = { '0': 'Nenhum', '1': 'Ato cooperado', '2': 'Estimativa', 
   '4': 'Notário ou registrador', '5': 'Profissional autônomo', '6': 'Sociedade de profissionais', '9': 'Outros' } as const;
 
 function ConfiguredPeopleFields({ scope, ...props }: FieldsProps & { scope: NfseScope }) {
-  const configuration = useNfseConfigurationMetadata(scope);
+  const configuration = useNfseModelIssuerMetadata(scope);
   const issuer = configuration.data;
   const unavailable = configuration.isPending ? 'Consultando configuração da unidade…' : 'Cadastro do estabelecimento';
   const details = [
     { label: 'CNPJ', value: issuer?.cnpj || unavailable },
-    { label: 'Município', value: issuer?.municipalityCode || unavailable },
+    { label: 'Município', value: issuer ? [issuer.address.city, issuer.address.state].filter(Boolean).join(' / ') || issuer.municipalityCode || 'Não informado' : unavailable },
+    { label: 'Nome cadastrado', value: issuer ? issuer.name || 'Não informado' : unavailable },
     { label: 'Inscrição municipal', value: issuer ? issuer.municipalRegistration || 'Não informada' : unavailable },
-    { label: 'Razão Social', value: 'Cadastro do estabelecimento' },
+    { label: 'Razão Social', value: issuer ? issuer.legalName || 'Não informada no cadastro desta unidade' : unavailable },
+    { label: 'Telefone', value: issuer ? issuer.phone || 'Não informado' : unavailable },
+    { label: 'E-mail', value: issuer ? issuer.email || 'Não informado' : unavailable },
+    { label: 'CEP', value: issuer ? issuer.address.postalCode || 'Não informado' : unavailable },
+    { label: 'Bairro', value: issuer ? issuer.address.district || 'Não informado' : unavailable },
+    { label: 'Logradouro', value: issuer ? issuer.address.street || 'Não informado' : unavailable },
+    { label: 'Número', value: issuer ? issuer.address.number || 'Não informado' : unavailable },
+    { label: 'Complemento', value: issuer ? issuer.address.complement || 'Não informado' : unavailable },
     { label: 'Regime especial de tributação', value: issuer ? issuer.regEspTrib ? specialLabels[issuer.regEspTrib] : 'Não informado' : unavailable },
     { label: 'Opção pelo Simples Nacional', value: issuer ? issuer.opSimpNac ? simpleLabels[issuer.opSimpNac] : 'Não informada' : unavailable },
     { label: 'Apuração tributária do Simples', value: issuer ? issuer.regApTribSN ? assessmentLabels[issuer.regApTribSN] : 'Não informada' : unavailable },
@@ -40,8 +47,5 @@ function ConfiguredPeopleFields({ scope, ...props }: FieldsProps & { scope: Nfse
 }
 
 export default function NfseModelPeopleStep({ scope, ...props }: Props) {
-  const destinationLookup = useNfseModelPartnerSearch(scope, props.value?.destinationPartnerId);
-  const intermediaryLookup = useNfseModelPartnerSearch(scope, props.value?.intermediaryPartnerId);
-  const fields = { ...props, destinationLookup, intermediaryLookup };
-  return isNfseScopeValid(scope) ? <ConfiguredPeopleFields {...fields} scope={scope} /> : <NfseModelPeopleFields {...fields} />;
+  return isNfseScopeValid(scope) ? <ConfiguredPeopleFields {...props} scope={scope} /> : <NfseModelPeopleFields {...props} />;
 }

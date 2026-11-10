@@ -1,0 +1,443 @@
+[
+  {
+    "code": "829",
+    "name": "RUBLO BELARUS",
+    "symbol": "BYR",
+    "excludedDate": "30/06/2016",
+    "aliases": [
+      "RUBLO BELARUS BYR"
+    ]
+  },
+  {
+    "code": "830",
+    "name": "RUBLO/RUSSIA",
+    "symbol": "RUB",
+    "excludedDate": null,
+    "aliases": [
+      "RUBLO/RUSSIA RUB"
+    ]
+  },
+  {
+    "code": "831",
+    "name": "RUBLO BELARUS",
+    "symbol": "BYN",
+    "excludedDate": null,
+    "aliases": [
+      "RUBLO BELARUS BYN"
+    ]
+  },
+  {
+    "code": "835",
+    "name": "SOMONI TADJIQUISTAO",
+    "symbol": "TJS",
+    "excludedDate": null,
+    "aliases": [
+      "SOMONI TADJIQUISTAO TJS"
+    ]
+  },
+  {
+    "code": "840",
+    "name": "RUPIA/MAURICIO",
+    "symbol": "MUR",
+    "excludedDate": null,
+    "aliases": [
+      "RUPIA/MAURICIO MUR"
+    ]
+  },
+  {
+    "code": "845",
+    "name": "RUPIA/NEPAL",
+    "symbol": "NPR",
+    "excludedDate": null,
+    "aliases": [
+      "RUPIA/NEPAL NPR"
+    ]
+  },
+  {
+    "code": "850",
+    "name": "RUPIA SEYCHELES",
+    "symbol": "SCR",
+    "excludedDate": null,
+    "aliases": [
+      "RUPIA SEYCHELES SCR"
+    ]
+  },
+  {
+    "code": "855",
+    "name": "RUPIA/SRI LANKA",
+    "symbol": "LKR",
+    "excludedDate": null,
+    "aliases": [
+      "RUPIA/SRI LANKA LKR"
+    ]
+  },
+  {
+    "code": "860",
+    "name": "RUPIA/INDIA",
+    "symbol": "INR",
+    "excludedDate": null,
+    "aliases": [
+      "RUPIA/INDIA INR"
+    ]
+  },
+  {
+    "code": "865",
+    "name": "RUPIA/INDONESIA",
+    "symbol": "IDR",
+    "excludedDate": null,
+    "aliases": [
+      "RUPIA/INDONESIA IDR"
+    ]
+  },
+  {
+    "code": "870",
+    "name": "RUFIA/MALDIVAS",
+    "symbol": "MVR",
+    "excludedDate": null,
+    "aliases": [
+      "RUFIA/MALDIVAS MVR"
+    ]
+  },
+  {
+    "code": "875",
+    "name": "RUPIA/PAQUISTAO",
+    "symbol": "PKR",
+    "excludedDate": null,
+    "aliases": [
+      "RUPIA/PAQUISTAO PKR"
+    ]
+  },
+  {
+    "code": "880",
+    "name": "SHEKEL/ISRAEL",
+    "symbol": "ILS",
+    "excludedDate": null,
+    "aliases": [
+      "SHEKEL/ISRAEL ILS"
+    ]
+  },
+  {
+    "code": "890",
+    "name": "SOL PERUANO",
+    "symbol": "S/.",
+    "excludedDate": "26/04/1988",
+    "aliases": [
+      "SOL PERUANO S/."
+    ]
+  },
+  {
+    "code": "892",
+    "name": "SOM DO QUIRGUISTAO",
+    "symbol": "KGS",
+    "excludedDate": null,
+    "aliases": [
+      "SOM DO QUIRGUISTAO KGS"
+    ]
+  },
+  {
+    "code": "893",
+    "name": "SOM UZBEQUISTAO",
+    "symbol": "UZS",
+    "excludedDate": null,
+    "aliases": [
+      "SOM UZBEQUISTAO UZS"
+    ]
+  },
+  {
+    "code": "895",
+    "name": "SUCRE EQUADOR",
+    "symbol": "ECS",
+    "excludedDate": "09/09/2000",
+    "aliases": [
+      "SUCRE EQUADOR ECS"
+    ]
+  },
+  {
+    "code": "905",
+    "name": "TACA/BANGLADESH",
+    "symbol": "BDT",
+    "excludedDate": null,
+    "aliases": [
+      "TACA/BANGLADESH BDT"
+    ]
+  },
+  {
+    "code": "910",
+    "name": "TALA",
+    "symbol": "WS$",
+    "excludedDate": "27/07/1988",
+    "aliases": [
+      "TALA WS$"
+    ]
+  },
+  {
+    "code": "911",
+    "name": "TALA DA SAMOA OCIDENTAL",
+    "symbol": "WST",
+    "excludedDate": "02/12/2014",
+    "aliases": [
+      "TALA DA SAMOA OCIDENTAL WST"
+    ]
+  },
+  {
+    "code": "912",
+    "name": "TALA SAMOA",
+    "symbol": "WST",
+    "excludedDate": null,
+    "aliases": [
+      "TALA SAMOA WST"
+    ]
+  },
+  {
+    "code": "913",
+    "name": "TENGE CAZAQUISTAO",
+    "symbol": "KZT",
+    "excludedDate": null,
+    "aliases": [
+      "TENGE CAZAQUISTAO KZT"
+    ]
+  },
+  {
+    "code": "914",
+    "name": "TOLAR/ESLOVENIA",
+    "symbol": "SIT",
+    "excludedDate": "03/03/2009",
+    "aliases": [
+      "TOLAR/ESLOVENIA SIT"
+    ]
+  },
+  {
+    "code": "915",
+    "name": "TUGRIK/MONGOLIA",
+    "symbol": "MNT",
+    "excludedDate": null,
+    "aliases": [
+      "TUGRIK/MONGOLIA MNT"
+    ]
+  },
+  {
+    "code": "916",
+    "name": "UNID FOMENTO CHIL",
+    "symbol": "CLF",
+    "excludedDate": "20/01/2014",
+    "aliases": [
+      "UNID FOMENTO CHIL CLF"
+    ]
+  },
+  {
+    "code": "918",
+    "name": "UNID.MONET.EUROP.",
+    "symbol": "XEU",
+    "excludedDate": null,
+    "aliases": [
+      "UNID.MONET.EUROP. XEU"
+    ]
+  },
+  {
+    "code": "920",
+    "name": "VATU VANUATU",
+    "symbol": "VUV",
+    "excludedDate": null,
+    "aliases": [
+      "VATU VANUATU VUV"
+    ]
+  },
+  {
+    "code": "925",
+    "name": "WON/COREIA NORTE",
+    "symbol": "KPW",
+    "excludedDate": null,
+    "aliases": [
+      "WON/COREIA NORTE KPW"
+    ]
+  },
+  {
+    "code": "930",
+    "name": "WON COREIA SUL",
+    "symbol": "KRW",
+    "excludedDate": null,
+    "aliases": [
+      "WON COREIA SUL KRW"
+    ]
+  },
+  {
+    "code": "940",
+    "name": "XELIM AUSTRIACO",
+    "symbol": "ATS",
+    "excludedDate": "02/01/2002",
+    "aliases": [
+      "XELIM AUSTRIACO ATS"
+    ]
+  },
+  {
+    "code": "945",
+    "name": "XELIM TANZANIA",
+    "symbol": "T SH",
+    "excludedDate": "25/11/1999",
+    "aliases": [
+      "XELIM TANZANIA T SH"
+    ]
+  },
+  {
+    "code": "946",
+    "name": "XELIM DA TANZANIA",
+    "symbol": "TZS",
+    "excludedDate": null,
+    "aliases": [
+      "XELIM DA TANZANIA TZS"
+    ]
+  },
+  {
+    "code": "950",
+    "name": "XELIM/QUENIA",
+    "symbol": "KES",
+    "excludedDate": null,
+    "aliases": [
+      "XELIM/QUENIA KES"
+    ]
+  },
+  {
+    "code": "955",
+    "name": "XELIM/UGANDA",
+    "symbol": "UGX",
+    "excludedDate": null,
+    "aliases": [
+      "XELIM/UGANDA UGX"
+    ]
+  },
+  {
+    "code": "960",
+    "name": "XELIM/SOMALIA",
+    "symbol": "SOS",
+    "excludedDate": null,
+    "aliases": [
+      "XELIM/SOMALIA SOS"
+    ]
+  },
+  {
+    "code": "970",
+    "name": "NOVO ZAIRE ZAIRE",
+    "symbol": "ZRN",
+    "excludedDate": "31/07/1998",
+    "aliases": [
+      "NOVO ZAIRE ZAIRE ZRN"
+    ]
+  },
+  {
+    "code": "971",
+    "name": "NOVO ZAIRE",
+    "symbol": "ZRN",
+    "excludedDate": "30/10/1998",
+    "aliases": [
+      "NOVO ZAIRE ZRN"
+    ]
+  },
+  {
+    "code": "975",
+    "name": "ZLOTY/POLONIA",
+    "symbol": "PLN",
+    "excludedDate": null,
+    "aliases": [
+      "ZLOTY/POLONIA PLN"
+    ]
+  },
+  {
+    "code": "978",
+    "name": "EURO",
+    "symbol": "EUR",
+    "excludedDate": null,
+    "aliases": [
+      "EURO EUR"
+    ]
+  },
+  {
+    "code": "980",
+    "name": "DOLAR-EX-ALEM.ORI",
+    "symbol": "CL$RDA",
+    "excludedDate": "04/08/1998",
+    "aliases": [
+      "DOLAR-EX-ALEM.ORI CL$RDA"
+    ]
+  },
+  {
+    "code": "982",
+    "name": "DOLAR-BULGARIA",
+    "symbol": "CL$BULG",
+    "excludedDate": "04/08/1998",
+    "aliases": [
+      "DOLAR-BULGARIA CL$BULG"
+    ]
+  },
+  {
+    "code": "983",
+    "name": "DOLAR-GRECIA",
+    "symbol": "CL$GREC",
+    "excludedDate": "04/08/1998",
+    "aliases": [
+      "DOLAR-GRECIA CL$GREC"
+    ]
+  },
+  {
+    "code": "984",
+    "name": "DOLAR-HUNGRIA",
+    "symbol": "CL$HUNG",
+    "excludedDate": "04/08/1998",
+    "aliases": [
+      "DOLAR-HUNGRIA CL$HUNG"
+    ]
+  },
+  {
+    "code": "986",
+    "name": "DOLAR-ISRAEL",
+    "symbol": "CL$ISR.",
+    "excludedDate": "04/08/1998",
+    "aliases": [
+      "DOLAR-ISRAEL CL$ISR."
+    ]
+  },
+  {
+    "code": "988",
+    "name": "DOLAR-IUGOSLAVIA",
+    "symbol": "CL$IUG.",
+    "excludedDate": "04/08/1998",
+    "aliases": [
+      "DOLAR-IUGOSLAVIA CL$IUG."
+    ]
+  },
+  {
+    "code": "990",
+    "name": "DOLAR-POLONIA",
+    "symbol": "CL$POL.",
+    "excludedDate": "04/08/1998",
+    "aliases": [
+      "DOLAR-POLONIA CL$POL."
+    ]
+  },
+  {
+    "code": "991",
+    "name": "PRATA",
+    "symbol": "XAG",
+    "excludedDate": "10/06/2002",
+    "aliases": [
+      "PRATA XAG"
+    ]
+  },
+  {
+    "code": "992",
+    "name": "DOLAR-ROMENIA",
+    "symbol": "CL$ROM.",
+    "excludedDate": "04/08/1998",
+    "aliases": [
+      "DOLAR-ROMENIA CL$ROM."
+    ]
+  },
+  {
+    "code": "993",
+    "name": "PALADIO",
+    "symbol": "XPD",
+    "excludedDate": "10/06/2002",
+    "aliases": [
+      "PALADIO XPD"
+    ]
+  }
+]

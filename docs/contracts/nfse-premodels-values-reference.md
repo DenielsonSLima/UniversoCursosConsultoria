@@ -1,7 +1,8 @@
 # Pré-modelos NFS-e: referência completa de Valores
 
-Pesquisa de contrato em 10/11/2026. Inventário para futura implementação da etapa 3,
-sem alterar UI, banco, enquadramento da empresa ou emissão. O objetivo do produto
+Pesquisa de contrato em 10/11/2026. Inventário usado na implementação da etapa 3,
+incluindo ramos de API que permanecem fora do formulário Web. O estado implementado
+está no [contrato das quatro etapas](nfse-premodels-stage12.md). O objetivo do produto
 é resolver a nota a partir de parceiro + pré-modelo e das fontes financeiras
 vinculadas, com valores fixos ou regras previamente configuradas.
 
@@ -17,7 +18,7 @@ vinculadas, com valores fixos ou regras previamente configuradas.
   As alterações declaradas em 1.3 tratam de acesso, perfis e procurações.
 - **P:** [Anexo I de produção, 09/02/2026](https://www.gov.br/nfse/pt-br/biblioteca/documentacao-tecnica/documentacao-atual/anexo_i-sefin_adn-dps_nfse-snnfse-v1-01-20260209.xlsx)
   e [XSD de produção 1.01](https://www.gov.br/nfse/pt-br/biblioteca/documentacao-tecnica/documentacao-atual/nfse-esquemas_xsd-v1-01-20260209.zip).
-  Planilha original SHA256 `de 5bc492959eadc8bfa7540e16939995924f2188f743648eaf84d3b31e9eeb7c`.
+  Planilha original SHA256 `de5bc492959eadc8bfa7540e16939995924f2188f743648eaf84d3b31e9eeb7c`.
 - **H:** [Anexo I de homologação, 20/10/2026](https://www.gov.br/nfse/pt-br/biblioteca/documentacao-tecnica/producao-restrita/anexo_i-sefin_adn-dps_nfse-snnfse_prodrest-v1-01-20261020.xlsx)
   e [documentação/XSD de produção restrita](https://www.gov.br/nfse/pt-br/biblioteca/documentacao-tecnica/producao-restrita).
   Planilha original SHA256 `72b05981c8882cdd807f3acf901b669465360f9cf1b9d9e235ac4363dacfb2d8`.

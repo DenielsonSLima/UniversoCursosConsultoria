@@ -1,0 +1,150 @@
+{
+  "provenance": {
+    "version": 1,
+    "retrievedAt": "2026-11-10",
+    "currencySource": "https://ptax.bcb.gov.br/ptax_internet/consultarTabelaMoedas.do?method=consultaTabelaMoedas",
+    "currencySha256": "6d56e9007acbc80abefde48145efe9bec43a05b0c532f1bc101e1d65d7b2254e",
+    "currencyRows": 249,
+    "supportSource": "https://www.gov.br/nfse/pt-br/biblioteca/documentacao-tecnica/producao-restrita/esquemas_prod_restrita_20261020.zip"
+  },
+  "providerSupport": [
+    {
+      "code": "01",
+      "description": "Nenhum"
+    },
+    {
+      "code": "02",
+      "description": "ACC - Adiantamento sobre Contrato de Câmbio – Redução a Zero do IR e do IOF"
+    },
+    {
+      "code": "03",
+      "description": "ACE – Adiantamento sobre Cambiais Entregues - Redução a Zero do IR e do IOF"
+    },
+    {
+      "code": "04",
+      "description": "BNDES-Exim Pós-Embarque – Serviços"
+    },
+    {
+      "code": "05",
+      "description": "BNDES-Exim Pré-Embarque - Serviços"
+    },
+    {
+      "code": "06",
+      "description": "FGE - Fundo de Garantia à Exportação"
+    },
+    {
+      "code": "07",
+      "description": "PROEX - EQUALIZAÇÃO"
+    },
+    {
+      "code": "08",
+      "description": "PROEX - Financiamento"
+    }
+  ],
+  "recipientSupport": [
+    {
+      "code": "01",
+      "description": "Nenhum"
+    },
+    {
+      "code": "02",
+      "description": "Adm. Pública e Repr. Internacional"
+    },
+    {
+      "code": "03",
+      "description": "Alugueis e Arrend. Mercantil de maquinas, equip., embarc. e aeronaves"
+    },
+    {
+      "code": "04",
+      "description": "Arrendamento Mercantil de aeronave para empresa de transporte aéreo público"
+    },
+    {
+      "code": "05",
+      "description": "Comissão a agentes externos na exportação"
+    },
+    {
+      "code": "06",
+      "description": "Despesas de armazenagem, mov. e transporte de carga no exterior"
+    },
+    {
+      "code": "07",
+      "description": "Eventos FIFA (subsidiária)"
+    },
+    {
+      "code": "08",
+      "description": "Eventos FIFA"
+    },
+    {
+      "code": "09",
+      "description": "Fretes, arrendamentos de embarcações ou aeronaves e outros"
+    },
+    {
+      "code": "10",
+      "description": "Material Aeronáutico"
+    },
+    {
+      "code": "11",
+      "description": "Promoção de Bens no Exterior"
+    },
+    {
+      "code": "12",
+      "description": "Promoção de Dest. Turísticos Brasileiros"
+    },
+    {
+      "code": "13",
+      "description": "Promoção do Brasil no Exterior"
+    },
+    {
+      "code": "14",
+      "description": "Promoção Serviços no Exterior"
+    },
+    {
+      "code": "15",
+      "description": "RECINE"
+    },
+    {
+      "code": "16",
+      "description": "RECOPA"
+    },
+    {
+      "code": "17",
+      "description": "Registro e Manutenção de marcas, patentes e cultivares"
+    },
+    {
+      "code": "18",
+      "description": "REICOMP"
+    },
+    {
+      "code": "19",
+      "description": "REIDI"
+    },
+    {
+      "code": "20",
+      "description": "REPENEC"
+    },
+    {
+      "code": "21",
+      "description": "REPES"
+    },
+    {
+      "code": "22",
+      "description": "RETAERO"
+    },
+    {
+      "code": "23",
+      "description": "RETID"
+    },
+    {
+      "code": "24",
+      "description": "Royalties, Assistência Técnica, Científica e Assemelhados"
+    },
+    {
+      "code": "25",
+      "description": "Serviços de avaliação da conformidade vinculados aos Acordos da OMC"
+    },
+    {
+      "code": "26",
+      "description": "ZPE"
+    }
+  ]
+}

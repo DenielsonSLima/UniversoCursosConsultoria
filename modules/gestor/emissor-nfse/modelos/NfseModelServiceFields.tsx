@@ -8,6 +8,8 @@ import type { NfseModelServiceOptions } from './services/nfse-model-service-opti
 import type { NfseModelPeopleOptions } from './services/nfse-model-people-options';
 import NfseModelLocationPicker from './NfseModelLocationPicker';
 import { emptyNfseModelServiceOptions } from './nfse-model-options-form';
+import type { NfseModelValuesDraft } from './services/nfse-model-values.types';
+import type { NfseModelAdditionalDraft } from './services/nfse-model-additional.types';
 
 export interface NfseModelFormValues {
   name: string;
@@ -24,6 +26,8 @@ export interface NfseModelFormValues {
   active: boolean;
   serviceOptions: NfseModelServiceOptions | null;
   peopleOptions: NfseModelPeopleOptions | null;
+  valuesOptions: NfseModelValuesDraft | null;
+  additionalOptions: NfseModelAdditionalDraft | null;
 }
 
 export type SetNfseModelField = <K extends keyof NfseModelFormValues>(

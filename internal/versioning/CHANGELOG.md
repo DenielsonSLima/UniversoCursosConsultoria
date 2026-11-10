@@ -26,8 +26,11 @@ Histórico arquivado: [10/10/2026 a 13/10/2026 — versões 4.8.208 a 4.8.214](.
 
 ## [4.8.285] - 2026-11-10
 
-- Pré-modelos NFS-e passam a quatro etapas, com Pessoas e Serviço completos no recorte recebido; Valores e Revisão aguardam as próximas referências.
-- Pessoas preserva estratégias de competência/DPS, enquadramento e vínculos cadastrais; Serviço usa catálogos e escolhas condicionais de IBS/CBS, compra governamental e operação.
+- Pré-modelos NFS-e têm Configuração, Serviço, Valores e Revisão, com regras reutilizáveis do Guia Web oficial.
+- Tomador e demais participantes são escolhidos ao emitir cada nota; o modelo não cadastra pessoas, documentos concretos ou campos vazios de cálculos da emissão.
+- Modal segue o padrão compacto de Contas a Pagar/Receber, com etapas, grupos de campos, rolagem interna e ações fixas, inclusive no móvel.
+- Emitente usa o cadastro fiscal da unidade; códigos e opções vêm de catálogos oficiais validados no salvamento. Códigos municipais fixos dependem de fonte municipal validada.
+- Valores configuram origens, descontos, ISSQN, tributos federais, IBS/CBS e transparência. A revisão mostra escolhas, origens e pendências sem simular emissão autorizada.
 - Descrições de modelos e serviços aceitam até 2.000 caracteres, inclusive após preenchimento do mês de referência.
 - NFS-e recebe painel de homologação com revisão do teste individual, retorno fiscal e consulta da mesma DPS após resposta incerta.
 - Pendentes permite revisar os dados fiscais com modelo ativo 080201, confirmação do aluno como tomador e datas explícitas, preservando preparações e recebimentos.

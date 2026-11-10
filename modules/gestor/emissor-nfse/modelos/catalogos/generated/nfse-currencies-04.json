@@ -1,0 +1,443 @@
+[
+  {
+    "code": "640",
+    "name": "NOVO DOLAR/TAIWAN",
+    "symbol": "TWD",
+    "excludedDate": null,
+    "aliases": [
+      "NOVO DOLAR/TAIWAN TWD"
+    ]
+  },
+  {
+    "code": "642",
+    "name": "LIRA TURCA",
+    "symbol": "TRY",
+    "excludedDate": null,
+    "aliases": [
+      "LIRA TURCA TRY"
+    ]
+  },
+  {
+    "code": "645",
+    "name": "NOVO PESO/MEXICO",
+    "symbol": "MXN",
+    "excludedDate": "08/07/2008",
+    "aliases": [
+      "NOVO PESO/MEXICO MXN"
+    ]
+  },
+  {
+    "code": "646",
+    "name": "NOVO PESO/MEXICO",
+    "symbol": "MXN",
+    "excludedDate": "03/06/2008",
+    "aliases": [
+      "NOVO PESO/MEXICO MXN"
+    ]
+  },
+  {
+    "code": "650",
+    "name": "NOVO PESO URUGUAI",
+    "symbol": "N$",
+    "excludedDate": "03/06/2008",
+    "aliases": [
+      "NOVO PESO URUGUAI N$"
+    ]
+  },
+  {
+    "code": "651",
+    "name": "NOVO PESO URUGUAI",
+    "symbol": "NC",
+    "excludedDate": "03/06/2008",
+    "aliases": [
+      "NOVO PESO URUGUAI NC"
+    ]
+  },
+  {
+    "code": "660",
+    "name": "NOVO SOL/PERU",
+    "symbol": "PEN",
+    "excludedDate": null,
+    "aliases": [
+      "NOVO SOL/PERU PEN"
+    ]
+  },
+  {
+    "code": "663",
+    "name": "NOVO ZAIRE",
+    "symbol": "ZRN",
+    "excludedDate": "30/10/1998",
+    "aliases": [
+      "NOVO ZAIRE ZRN"
+    ]
+  },
+  {
+    "code": "665",
+    "name": "NGULTRUM/BUTAO",
+    "symbol": "BTN",
+    "excludedDate": null,
+    "aliases": [
+      "NGULTRUM/BUTAO BTN"
+    ]
+  },
+  {
+    "code": "670",
+    "name": "UGUIA MAURITANIA",
+    "symbol": "MRO",
+    "excludedDate": null,
+    "aliases": [
+      "UGUIA MAURITANIA MRO"
+    ]
+  },
+  {
+    "code": "671",
+    "name": "UGUIA MAURITANIA",
+    "symbol": "MRU",
+    "excludedDate": null,
+    "aliases": [
+      "UGUIA MAURITANIA MRU"
+    ]
+  },
+  {
+    "code": "680",
+    "name": "PAANGA/TONGA",
+    "symbol": "TOP",
+    "excludedDate": null,
+    "aliases": [
+      "PAANGA/TONGA TOP"
+    ]
+  },
+  {
+    "code": "685",
+    "name": "PATACA/MACAU",
+    "symbol": "MOP",
+    "excludedDate": null,
+    "aliases": [
+      "PATACA/MACAU MOP"
+    ]
+  },
+  {
+    "code": "690",
+    "name": "PESETA/ANDORA",
+    "symbol": "ADP",
+    "excludedDate": "27/02/2004",
+    "aliases": [
+      "PESETA/ANDORA ADP"
+    ]
+  },
+  {
+    "code": "700",
+    "name": "PESETA ESPANHOLA",
+    "symbol": "ESP",
+    "excludedDate": "02/01/2002",
+    "aliases": [
+      "PESETA ESPANHOLA ESP"
+    ]
+  },
+  {
+    "code": "705",
+    "name": "PESO ARGENTINO",
+    "symbol": "$(ARG)",
+    "excludedDate": "03/11/1986",
+    "aliases": [
+      "PESO ARGENTINO $(ARG)"
+    ]
+  },
+  {
+    "code": "706",
+    "name": "PESO ARGENTINO",
+    "symbol": "ARS",
+    "excludedDate": null,
+    "aliases": [
+      "PESO ARGENTINO ARS"
+    ]
+  },
+  {
+    "code": "710",
+    "name": "PESO BOLIVIANO",
+    "symbol": "$B",
+    "excludedDate": "20/09/1993",
+    "aliases": [
+      "PESO BOLIVIANO $B"
+    ]
+  },
+  {
+    "code": "715",
+    "name": "PESO CHILE",
+    "symbol": "CLP",
+    "excludedDate": null,
+    "aliases": [
+      "PESO CHILE CLP"
+    ]
+  },
+  {
+    "code": "720",
+    "name": "PESO/COLOMBIA",
+    "symbol": "COP",
+    "excludedDate": null,
+    "aliases": [
+      "PESO/COLOMBIA COP"
+    ]
+  },
+  {
+    "code": "721",
+    "name": "UNIDADE DE VALOR REAL",
+    "symbol": "COU",
+    "excludedDate": null,
+    "aliases": [
+      "UNIDADE DE VALOR REAL COU"
+    ]
+  },
+  {
+    "code": "725",
+    "name": "PESO/CUBA",
+    "symbol": "CUP",
+    "excludedDate": null,
+    "aliases": [
+      "PESO/CUBA CUP"
+    ]
+  },
+  {
+    "code": "730",
+    "name": "PESO/REP. DOMINIC",
+    "symbol": "DOP",
+    "excludedDate": null,
+    "aliases": [
+      "PESO/REP. DOMINIC DOP"
+    ]
+  },
+  {
+    "code": "735",
+    "name": "PESO/FILIPINAS",
+    "symbol": "PHP",
+    "excludedDate": null,
+    "aliases": [
+      "PESO/FILIPINAS PHP"
+    ]
+  },
+  {
+    "code": "738",
+    "name": "PESO GUINE BISSAU",
+    "symbol": "GWP",
+    "excludedDate": "27/11/2020",
+    "aliases": [
+      "PESO GUINE BISSAU GWP"
+    ]
+  },
+  {
+    "code": "740",
+    "name": "PESO MEXICANO",
+    "symbol": "MEX$",
+    "excludedDate": "31/05/1993",
+    "aliases": [
+      "PESO MEXICANO MEX$"
+    ]
+  },
+  {
+    "code": "741",
+    "name": "PESO/MEXICO",
+    "symbol": "MXN",
+    "excludedDate": null,
+    "aliases": [
+      "PESO/MEXICO MXN"
+    ]
+  },
+  {
+    "code": "745",
+    "name": "PESO/URUGUAIO",
+    "symbol": "UYU",
+    "excludedDate": null,
+    "aliases": [
+      "PESO/URUGUAIO UYU"
+    ]
+  },
+  {
+    "code": "755",
+    "name": "PULA BOTSWANA",
+    "symbol": "BWP",
+    "excludedDate": null,
+    "aliases": [
+      "PULA BOTSWANA BWP"
+    ]
+  },
+  {
+    "code": "760",
+    "name": "QUACHA/MALAVI",
+    "symbol": "MWK",
+    "excludedDate": null,
+    "aliases": [
+      "QUACHA/MALAVI MWK"
+    ]
+  },
+  {
+    "code": "765",
+    "name": "QUACHA ZAMBIA",
+    "symbol": "ZMK",
+    "excludedDate": "31/12/2012",
+    "aliases": [
+      "QUACHA ZAMBIA ZMK"
+    ]
+  },
+  {
+    "code": "766",
+    "name": "QUACHA ZAMBIA",
+    "symbol": "ZMW",
+    "excludedDate": null,
+    "aliases": [
+      "QUACHA ZAMBIA ZMW"
+    ]
+  },
+  {
+    "code": "770",
+    "name": "QUETZAL/GUATEMALA",
+    "symbol": "GTQ",
+    "excludedDate": null,
+    "aliases": [
+      "QUETZAL/GUATEMALA GTQ"
+    ]
+  },
+  {
+    "code": "775",
+    "name": "QUIATE/BIRMANIA",
+    "symbol": "MMK",
+    "excludedDate": null,
+    "aliases": [
+      "QUIATE/BIRMANIA MMK"
+    ]
+  },
+  {
+    "code": "776",
+    "name": "KARBOVANETS",
+    "symbol": "UAK",
+    "excludedDate": "04/08/1998",
+    "aliases": [
+      "KARBOVANETS UAK"
+    ]
+  },
+  {
+    "code": "778",
+    "name": "KINA DE PAPUA NOVA GUINE",
+    "symbol": "PGK",
+    "excludedDate": null,
+    "aliases": [
+      "KINA DE PAPUA NOVA GUINE PGK"
+    ]
+  },
+  {
+    "code": "779",
+    "name": "KUNA DA CROACIA",
+    "symbol": "HRK",
+    "excludedDate": "31/12/2022",
+    "aliases": [
+      "KUNA DA CROACIA HRK"
+    ]
+  },
+  {
+    "code": "780",
+    "name": "QUIPE/LAOS, REP",
+    "symbol": "LAK",
+    "excludedDate": null,
+    "aliases": [
+      "QUIPE/LAOS, REP LAK"
+    ]
+  },
+  {
+    "code": "785",
+    "name": "RANDE/AFRICA SUL",
+    "symbol": "ZAR",
+    "excludedDate": null,
+    "aliases": [
+      "RANDE/AFRICA SUL ZAR"
+    ]
+  },
+  {
+    "code": "790",
+    "name": "REAL BRASIL",
+    "symbol": "BRL",
+    "excludedDate": null,
+    "aliases": [
+      "REAL BRASIL BRL"
+    ]
+  },
+  {
+    "code": "795",
+    "name": "RENMINBI CHINES",
+    "symbol": "CNY",
+    "excludedDate": null,
+    "aliases": [
+      "RENMINBI CHINES CNY"
+    ]
+  },
+  {
+    "code": "796",
+    "name": "RENMINBI HONG KONG",
+    "symbol": "CNH",
+    "excludedDate": null,
+    "aliases": [
+      "RENMINBI HONG KONG CNH"
+    ]
+  },
+  {
+    "code": "800",
+    "name": "RIAL/CATAR",
+    "symbol": "QAR",
+    "excludedDate": null,
+    "aliases": [
+      "RIAL/CATAR QAR"
+    ]
+  },
+  {
+    "code": "805",
+    "name": "RIAL/OMA",
+    "symbol": "OMR",
+    "excludedDate": null,
+    "aliases": [
+      "RIAL/OMA OMR"
+    ]
+  },
+  {
+    "code": "810",
+    "name": "RIAL/IEMEN",
+    "symbol": "YER",
+    "excludedDate": null,
+    "aliases": [
+      "RIAL/IEMEN YER"
+    ]
+  },
+  {
+    "code": "815",
+    "name": "RIAL/IRAN, REP",
+    "symbol": "IRR",
+    "excludedDate": null,
+    "aliases": [
+      "RIAL/IRAN, REP IRR"
+    ]
+  },
+  {
+    "code": "820",
+    "name": "RIAL/ARAB SAUDITA",
+    "symbol": "SAR",
+    "excludedDate": null,
+    "aliases": [
+      "RIAL/ARAB SAUDITA SAR"
+    ]
+  },
+  {
+    "code": "825",
+    "name": "RIEL/CAMBOJA",
+    "symbol": "KHR",
+    "excludedDate": null,
+    "aliases": [
+      "RIEL/CAMBOJA KHR"
+    ]
+  },
+  {
+    "code": "828",
+    "name": "RINGGIT/MALASIA",
+    "symbol": "MYR",
+    "excludedDate": null,
+    "aliases": [
+      "RINGGIT/MALASIA MYR"
+    ]
+  }
+]

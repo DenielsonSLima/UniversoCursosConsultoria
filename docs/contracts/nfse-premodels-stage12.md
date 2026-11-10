@@ -1,234 +1,159 @@
-# Pré-modelos NFS-e: etapas 1 e 2
+# Pré-modelos NFS-e: contrato das quatro etapas
 
-Contrato implementado no recorte das capturas de 10/11/2026, incorporando a correção do usuário para
-incluir todos os parâmetros de **Pessoas** e **Serviço** no pré-modelo. O produto
-possui quatro etapas: Pessoas, Serviço, Valores e Revisão. No portal de referência,
-a quarta etapa é Emitir NFS-e. Valores/Revisão ainda aguardam integração.
-Este documento não declara emissão homologada nem produção pronta.
+Contrato de 10/11/2026. A emissão oficial é referência para regras e cobertura;
+o pré-modelo não reproduz o formulário de uma nota concreta. Conforme correção
+expressa do usuário, o tomador é escolhido ao emitir: aluno em cursos ou parceiro
+PF/PJ em Serviços. O modelo não cadastra tomador, destinatário, intermediário ou
+prestador de terceiros, nem mostra inputs vazios desses participantes.
 
-O pedido posterior ampliou a pesquisa às quatro etapas completas. O inventário
-de ramos além das capturas está em [Pessoas/Serviço](nfse-premodels-people-service-reference.md),
-[Valores](nfse-premodels-values-reference.md) e [Revisão](nfse-premodels-review-reference.md).
-Inventário documentado não significa ramo já implementado no produto.
+As etapas do pré-modelo são **Configuração, Serviço, Valores e Revisão**. No portal
+oficial, a etapa final transmite a NFS-e; aqui ela revisa e salva as regras.
+Persistir o modelo não declara emissão homologada nem produção pronta.
 
-## Separação entre pré-modelo e emissão
+## Fronteira entre modelo e nota
 
-O pré-modelo guarda estratégias, escolhas fiscais explícitas e referências a
-cadastros: competência pela data da emissão ou data fixa, série automática ou
-personalizada, papel do emitente, opção/apuração do Simples, localização e uso do
-endereço do tomador, relação do destinatário e vínculo do intermediário.
+| No pré-modelo | Na preparação/emissão de cada nota |
+| --- | --- |
+| Nome, ativo/inativo, competência por estratégia, série automática/personalizada | Data/horário, numeração única da DPS e documento emitido |
+| Papel do estabelecimento emitente e enquadramento tributário | Cadastro atual e habilitação do estabelecimento no ambiente |
+| Relação de destino e necessidade de intermediação | Aluno/parceiro tomador e demais participantes efetivos |
+| Serviço, NBS, indicador, local da prestação, descrição reutilizável | Identidade, CPF/CNPJ/NIF, contatos, país e endereço dos participantes |
+| Regras monetárias, descontos, retenções e classificações fiscais | Recebimentos, valores resolvidos, bases, tributos e líquido calculados |
+| Tipo/categoria e critério de alocação de documentos vinculados | Chave/número, datas, fornecedor e valores dos documentos efetivos |
+| Dados reutilizáveis de obra, imóvel ou evento, quando aplicáveis | Referências de NFS-e anteriores/rejeitadas, DI e RE da operação |
 
-Identidades, contatos e endereços não são copiados. O emitente é resolvido pela
-unidade atual; o tomador/adquirente, pelo parceiro escolhido ao preparar a emissão.
-Destinatário diferente e intermediário informado utilizam IDs fixos de parceiros
-ativos e autorizados no escopo. O cadastro atual é resolvido sem exigir nova
-digitação desses participantes a cada emissão. Labels retornados para exibição
-não são persistidos como identidade.
+O cadastro do estabelecimento pode ser consultado num resumo expansível somente
+leitura. Não há fallback indiscriminado para a identidade da matriz. Credenciais,
+certificado e chave privada A1 não integram o modelo nem o DTO de metadados.
 
-Número único da DPS e data/horário de emissão são gerados ao emitir, nunca
-constantes repetidas no modelo. Não se copia número de nota, chave, QR, documento
-pessoal, razão social, endereço ou certificado de uma emissão anterior.
+O endereço do tomador vem do parceiro selecionado na operação; não é digitado no
+pré-modelo. País e identificação fiscal reais serão conferidos nessa operação.
+Compra governamental impõe adquirente nacional na emissão, sem presumir ou salvar
+o país de um participante ainda não escolhido.
 
-## Opções versionadas do pré-modelo
+## Objetos versionados e compatibilidade
 
-`peopleOptions` e `serviceOptions` são opcionais ou `null` para preservar modelos
-legados. Ausência significa informação ainda não configurada. Cada objeto
-presente utiliza `version: 1`; seus serializers removem labels de apresentação
-e recusam propriedades desconhecidas ou cópias de dados de participantes.
+`peopleOptions` atual usa versão 2. `serviceOptions`, `additionalOptions` e
+`valuesOptions` mantêm versão estrutural 1. Ausência legada continua distinta de
+um grupo configurado. Parsers históricos e GET não fazem upgrade automático.
 
 ```ts
-interface NfseModelPeopleOptions {
-  version: 1;
+interface NfseModelPeopleOptionsV2 {
+  version: 2;
   competenceMode: 'ISSUE_DATE' | 'FIXED_DATE';
-  competenceDate: string | null; // data ISO real YYYY-MM-DD
+  competenceDate: string | null;
   dpsSeriesMode: 'AUTOMATIC' | 'CUSTOM';
   dpsSeries: string | null;
   issuerRole: 'PROVIDER' | 'RECIPIENT' | 'INTERMEDIARY';
   simpleNationalOption: 'FROM_ESTABLISHMENT' | '1' | '2' | '3';
   simpleNationalAssessment: 'FROM_ESTABLISHMENT' | '1' | '2' | '3' | null;
-  recipientLocation: 'BRASIL' | 'EXTERIOR' | 'NOT_INFORMED';
-  recipientIncludeAddress: boolean;
+  recipientSource: 'AT_ISSUANCE';
+  recipientAddressSource: 'FROM_PARTNER' | 'OMIT';
   recipientIsDestination: boolean | null;
-  destinationPartnerId: string | null; // UUID do cadastro autorizado
-  intermediaryLocation: 'BRASIL' | 'EXTERIOR' | 'NOT_INFORMED';
-  intermediaryPartnerId: string | null; // UUID do cadastro autorizado
+  destinationSource: 'AT_ISSUANCE' | null;
+  intermediarySource: 'NONE' | 'AT_ISSUANCE';
 }
 ```
 
-`destinationPartnerLabel` e `intermediaryPartnerLabel` são opcionais/`null` no DTO,
-somente para leitura. O backend valida referências por ID, atividade e escopo;
-a busca visual não substitui essa autorização.
+A versão 2 recusa localização, ID, nome, label, contatos e endereço concreto de
+participante. A versão 1 permanece legível para auditoria/replay. Ao editar, o
+formulário cria um draft v2 conservando as regras comuns; não copia pessoas fixas.
+O registro só muda ao salvar, com controle de versão.
 
-```ts
-interface NfseModelServiceOptions {
-  version: 1;
-  countryCode: string;                    // ISO3 do catálogo interno
-  municipalityCode: string | null;        // IBGE, 7 dígitos
-  exportResultCountryCode: string | null; // ISO3 do catálogo interno
-  includeIbsCbs: boolean | null;
-  governmentPurchase: boolean | null;
-  governmentEntityType: '1' | '2' | '3' | '4' | null;
-  operationType: '1' | '2' | '3' | '4' | '5' | null;
-}
-```
+Novas escritas com grupos completos exigem Pessoas v2. O payload básico antigo,
+sem esses grupos, permanece compatível com o frontend de produção anterior.
+A guarda contra perda impede clientes antigos de apagar grupos já configurados.
+Autorização precede replay; disponibilidade atual e catálogos são conferidos só
+em nova escrita. Replays históricos continuam válidos após mudanças posteriores.
 
-`countryLabel`, `municipalityLabel` e `exportResultCountryLabel` são informações
-de apresentação do DTO, recuperadas dos catálogos; não são escolhas persistidas
-nem autoridade para validar códigos. Os flags IBS/CBS/governo ficam somente em
-`serviceOptions`; não são duplicados em `peopleOptions`. País/município da
-prestação, IBS/CBS, compra governamental e tratamento do ISS não são presumidos.
+## Configuração
 
-O país do pré-modelo utiliza ISO3. A futura geração XML exige conversão explícita
-pelo catálogo para o formato ISO2 de `cPaisPrestacao`/`cPaisResult`; não enviar o
-código do pré-modelo diretamente nesses elementos.
+- A competência é a data da emissão ou data fixa explícita e válida. Com IBS/CBS,
+  a competência fixa deve ser a partir de 01/01/2026. A data para conferir vigência
+  é a competência fixa ou o dia atual em America/Maceio, nunca o mês financeiro.
+- Série personalizada tem 1–5 dígitos ASCII e valor de 1 a 49999 para a API.
+  O número da DPS e a data/horário de emissão não são campos do pré-modelo.
+- Opção Simples: 1 não optante, 2 MEI, 3 ME/EPP. A apuração pode vir da unidade
+  ou ser explicitamente configurada; enquadramento desconhecido não vira não optante.
+- Com IBS/CBS ativo, a relação entre destinatário e tomador deve ser escolhida.
+  Destinatário diferente e intermediário são informados na emissão, sem ID fixo.
+- NIF e eventual ausência são resolvidos pelo cadastro/validação da operação.
+  O formulário não solicita justificativa pessoal de participante ainda desconhecido.
 
-## Etapa 1: Pessoas e estratégias de resolução
+## Serviço e ramos condicionais
 
-| Campo da referência | Parâmetro ou origem |
-| --- | --- |
-| Data de Competência | `competenceMode`; `competenceDate` somente em `FIXED_DATE` |
-| Série da DPS | `dpsSeriesMode`; `dpsSeries` somente em `CUSTOM` |
-| Número da DPS; data/horário de emissão | Informações visíveis, geradas na emissão |
-| Emitir como prestador, tomador ou intermediário | `issuerRole` |
-| Município, inscrição municipal, CNPJ e razão social do emitente | Configuração/cadastro da unidade, somente leitura |
-| Opção no Simples Nacional | `simpleNationalOption`; `FROM_ESTABLISHMENT` herda a configuração |
-| Regime de apuração do Simples | `simpleNationalAssessment`; escolha explícita ou herança |
-| Regime especial de tributação | Configuração da unidade, somente leitura |
-| Localização do tomador/adquirente | `recipientLocation`: Brasil, Exterior ou não informado |
-| CPF/CNPJ ou NIF, nome, indicador municipal, telefone e e-mail | Cadastro do parceiro selecionado na emissão, somente leitura |
-| Informar endereço do tomador | `recipientIncludeAddress`; dados vindos do mesmo cadastro |
-| Destinatário é o próprio adquirente? | `recipientIsDestination`, condicionado a IBS/CBS |
-| Destinatário diferente | `destinationPartnerId`, parceiro fixo no pré-modelo |
-| Localização do intermediário | `intermediaryLocation`: Brasil, Exterior ou não informado |
-| Intermediário informado | `intermediaryPartnerId`, parceiro fixo no pré-modelo |
+País e município da **prestação** são regras do serviço, distintos do país ou
+endereço do tomador. País BRA exige município ativo; exterior exige município
+nacional nulo. O pré-modelo usa ISO3; XML exige conversão explícita para ISO2.
+Município da prestação não é município de incidência calculado pelo provedor.
 
-Endereços exibem os rótulos aplicáveis: CEP/município no Brasil ou país, cidade,
-estado/província/região e código postal no exterior; bairro, logradouro, número e
-complemento vêm do cadastro. A inscrição municipal da unidade é identificada por
-esse nome; não se presume que outro dado seja o “Indicador Municipal” da captura.
+Classificação nacional, NBS e indicador vêm de catálogos oficiais. A descrição e
+as informações complementares aceitam até 2.000 caracteres, inclusive após a
+substituição de `{{mes_referencia}}`. A prévia usa o mês dos recebimentos.
+Documento de responsabilidade técnica tem até 40, referência até 255 e pedido
+até 60 caracteres; esses campos textuais não substituem códigos de domínio fechado.
 
-Novos modelos iniciam com estratégias visíveis `ISSUE_DATE`, `AUTOMATIC`,
-`PROVIDER`, Simples `FROM_ESTABLISHMENT`, tomador `BRASIL` sem endereço incluído,
-destinatário ainda não escolhido e intermediário `NOT_INFORMED`. Isso não fixa
-data, número, enquadramento tributário ou pessoa. Modelos legados permanecem
-`null` até configuração explícita; a escolha IBS/CBS começa sem resposta.
+Os ramos Web aplicáveis incluem imunidade, exportação, não incidência, compra
+governamental, obra, imóvel, evento, comércio exterior, referências de operação e
+itens do pedido. Ramos exclusivos da API NT009, como locação múltipla e bens móveis
+alugados, não são habilitados neste formulário.
 
-Regras de `peopleOptions`:
+- IBS/CBS desativado limpa grupos dependentes, sem apagar regras independentes.
+- Tipos de operação 2/3 guardam somente a estratégia de obter referências na emissão;
+  a mesma chave de nota não é repetida como constante de modelo.
+- Referência de nota rejeitada, DI e RE também são individuais da operação.
+- Comércio exterior é obrigatório no pré-modelo quando o próprio serviço já o
+  determina (prestação exterior ou tratamento exportação). Quando depende da parte
+  ainda não escolhida, a aplicação da regra é conferida na preparação da emissão.
+- Sem catálogo municipal validado, cTribMun fixo e identificador de benefício nBM
+  digitados avulsos são recusados. O campo municipal permanece visível, com origem
+  não informar ou definir na emissão; não se cria uma lista fictícia.
 
-- `FIXED_DATE` exige uma data de calendário válida; `ISSUE_DATE` exige data `null`.
-- Com IBS/CBS e competência fixa, a data deve ser igual ou posterior a 01/01/2026,
-  como mostra a captura `18.07.42` e o [guia oficial, seção 4.1.1](https://www.gov.br/nfse/pt-br/biblioteca/documentacao-tecnica/producao-restrita/guia_emissor_publico_nacional_web_snnfse-ern_versao_1-2-1.pdf).
-  É uma condição de preenchimento; não presume a obrigação tributária do emitente.
-- `CUSTOM` exige série com 1 a 5 dígitos ASCII e valor de 1 a 49999;
-  `AUTOMATIC` exige série `null`. O número da DPS não é configurável como constante.
-- Simples `1` = não optante, `2` = MEI, `3` = ME/EPP. Opção `3` exige apuração
-  não `null`, podendo herdar da unidade. Opções `1`/`2` exigem apuração `null`;
-  `FROM_ESTABLISHMENT` com apuração `null` significa herdar na emissão.
-- Apuração `1` = federais e ISSQN no Simples; `2` = federais no Simples e ISSQN
-  pela legislação municipal; `3` = federais e ISSQN fora do Simples.
-- Tomador `NOT_INFORMED` exige `recipientIncludeAddress = false`.
-- Compra governamental = Sim exige tomador `BRASIL`, conforme o
-  [guia oficial, seção 4.1.1, página 27](https://www.gov.br/nfse/pt-br/biblioteca/documentacao-tecnica/producao-restrita/guia_emissor_publico_nacional_web_snnfse-ern_versao_1-2-1.pdf).
-- Com IBS/CBS, a relação do destinatário é obrigatória: `true` dispensa outro
-  parceiro; `false` exige `destinationPartnerId`. Sem IBS/CBS, relação e ID são `null`.
-- Intermediário Brasil/Exterior exige ID fixo; não informado exige ID `null`.
+## Valores e documentos
 
-As opções gerais da mesma etapa permanecem em `serviceOptions`:
+O modelo configura fontes para valor do serviço, valor recebido pelo intermediário,
+descontos, ISSQN, federais, IBS/CBS e estimativa tributária. Decimais são strings
+canônicas; limites usam inteiros escalados ou `numeric`, sem cálculo fiscal em
+ponto flutuante. Valores/bases/tributos/líquido calculados não aparecem como
+campos ou placeholders de pré-cadastro.
 
-| Campo da captura | Campo canônico | Condição |
-| --- | --- | --- |
-| Preencher as informações IBS/CBS? | `includeIbsCbs` | Escolha explícita Sim/Não |
-| A operação se trata de uma compra governamental? | `governmentPurchase` | Habilitado no cenário IBS/CBS |
-| Tipo de ente governamental | `governmentEntityType` | Exigido quando compra governamental = Sim |
+Deduções e reembolsos guardam tipo/categoria, descrições e critério de alocação dos
+documentos vinculados. Chaves, números, datas, valores concretos e identificação
+ou endereço do fornecedor pertencem à operação. Fornecedor novo vem do documento
+ou é omitido quando permitido. Regra histórica FIXED_PARTNER permanece legível,
+mas precisa ser explicitamente substituída para um novo salvamento.
 
-`governmentEntityType` corresponde ao `tpEnteGov` do
-[XSD oficial](https://www.gov.br/nfse/pt-br/biblioteca/documentacao-tecnica/documentacao-atual/nfse-esquemas_xsd-v1-01-20260209.zip),
-para administração pública direta, autarquias e fundações:
+O Simples com federais apurados no regime herda o grupo federal confirmado. Sem
+retenção e com apuração integral, a alíquota ISS não é livre. A estimativa dos
+tributos é distinta da alíquota ISS e exige fonte confirmada; exemplos de PDFs
+médicos ou notas antigas não criam alíquotas padrão da Universo.
 
-| Código | Opção |
-| --- | --- |
-| `1` | União |
-| `2` | Estado |
-| `3` | Distrito Federal |
-| `4` | Município |
+## Catálogos, revisão e visual
 
-O município mostrado nas capturas não é um padrão a aplicar. O tipo de ente não
-deve ser inferido do nome, do CNPJ ou do endereço do tomador.
+Listas fechadas usam seletores próprios com ID canônico. Serviço nacional, NBS,
+indicador, CST/classificação IBS/CBS, crédito presumido, moeda e demais enums são
+versionados a partir de fontes oficiais. O servidor confere existência, flags e
+vigência aplicável, sem inventar correlações que a fonte não prova.
 
-## Etapa 2: Serviço
+A Revisão mostra regras, descrições dos códigos, origens e pendências, com retorno
+a cada etapa. Não mostra pessoas congeladas nem simula valores de uma nota. A ação
+final salva o modelo; não assina ou transmite DPS e não consome recebimentos.
 
-| Campo | Formato/limite |
-| --- | --- |
-| País da prestação | `serviceOptions.countryCode`, ISO3 válido no catálogo |
-| Município da prestação | `serviceOptions.municipalityCode`, IBGE válido e ativo |
-| Código de Tributação Nacional | `nationalServiceCode`, 6 dígitos, catálogo oficial |
-| Imunidade/exportação/não incidência do ISSQN? | `issTreatment` existente, escolha explícita |
-| Tipo de imunidade | `immunityType` existente, códigos `1` a `5` |
-| País em que se verificou o resultado do serviço | `serviceOptions.exportResultCountryCode`, ISO3 |
-| Item da NBS | `nbsCode`, 9 dígitos, catálogo oficial |
-| Código indicador da operação | `operationIndicatorCode`, 6 dígitos, catálogo oficial |
-| Descrição do Serviço/Fornecimento | `serviceDescription`, obrigatória, até **2000** caracteres |
-| Tipo de operação | `serviceOptions.operationType`, distinto do indicador da operação |
-| Documento de responsabilidade técnica | `technicalResponsibilityDocument`, até 40 caracteres |
-| Documento de referência | `referenceDocument`, até 255 caracteres |
-| Informações complementares | `complementaryInfo`, até **2000** caracteres |
-| Pedido/ordem de compra/serviço/projeto B2B | `orderReference`, até 60 caracteres |
+O modal segue Contas a Pagar/Receber: cabeçalho branco compacto, etapas com linha
+ativa, grupos discretos, campos de 38px (44px no móvel), rolagem interna e rodapé
+fixo. Trocar de etapa volta ao início da área de conteúdo. O resumo cadastral do
+estabelecimento não se confunde com formulário de tomador.
 
-Os limites de texto constam dos tipos do
-[XSD oficial](https://www.gov.br/nfse/pt-br/biblioteca/documentacao-tecnica/documentacao-atual/nfse-esquemas_xsd-v1-01-20260209.zip).
-Os limites de 2000 devem valer no editor, parser, preview e banco. Qualquer
-expansão de marcador na descrição também deve respeitar o limite final.
-Catálogos comprovam códigos e descrições; não determinam automaticamente o
-enquadramento fiscal nem a correspondência entre serviço, NBS e indicador.
+## Fontes e rastreabilidade
 
-`operationType` corresponde ao `tpOper` do
-[XSD oficial](https://www.gov.br/nfse/pt-br/biblioteca/documentacao-tecnica/documentacao-atual/nfse-esquemas_xsd-v1-01-20260209.zip):
-
-| Código | Opção |
-| --- | --- |
-| `1` | Fornecimento com pagamento posterior |
-| `2` | Recebimento do pagamento com fornecimento já realizado |
-| `3` | Fornecimento com pagamento já realizado |
-| `4` | Recebimento do pagamento com fornecimento posterior |
-| `5` | Fornecimento e recebimento do pagamento concomitantes |
-
-## Condicionais e validação
-
-As dependências fiscais seguem o [guia oficial, seção 4.1.2](https://www.gov.br/nfse/pt-br/biblioteca/documentacao-tecnica/producao-restrita/guia_emissor_publico_nacional_web_snnfse-ern_versao_1-2-1.pdf).
-A normalização ISO3 e os campos inativos `null` são decisões do contrato interno.
-
-- País `BRA` exige município ativo; outro país exige município `null`.
-- `EXPORTACAO` exige país do resultado; nos demais tratamentos, esse país é `null`.
-- `IMUNIDADE` exige tipo de imunidade; os outros tratamentos exigem tipo `null`.
-- Não incidência não nasce de uma escolha no formulário: exige `990101` ou
-  parametrização vigente do serviço no município competente. O pré-modelo não
-  cria nem comprova essa condição municipal.
-- Com `includeIbsCbs = false`, compra governamental, ente e tipo de operação são
-  `null`, e `operationIndicatorCode` fica vazio.
-- Com `includeIbsCbs = true`, o indicador da operação é obrigatório. Tipo de
-  operação é obrigatório para compra governamental ou códigos nacionais com
-  prefixos `2505`, `1509`, `1712` ou `1005`.
-- Ente governamental só é informado quando compra governamental = Sim.
-- Tipos de operação `2` e `3` exigem referências a NFS-e anteriores na emissão;
-  chaves concretas não são cadastradas no pré-modelo.
-- Município de prestação não é município de incidência. `cLocIncid` é resultado
-  do provedor; não adicionar uma escolha livre de município tributário ao modelo.
-
-As validações devem existir também no backend. Persistir um pré-modelo não
-autoriza uma nota, não substitui a revisão fiscal e não amplia os cenários
-suportados pelo executor. Valores, retenções, alíquotas e informações das etapas
-3 e 4 não são configurados por este contrato.
-
-## Fontes primárias e rastreabilidade
-
-- [Guia oficial do Emissor Nacional Web, versão 1.2.1](https://www.gov.br/nfse/pt-br/biblioteca/documentacao-tecnica/producao-restrita/guia_emissor_publico_nacional_web_snnfse-ern_versao_1-2-1.pdf):
-  seção 4.1.1 (Pessoas) e 4.1.2 (Serviço); condicionais de exportação,
-  não incidência, compra governamental e referências de tipo de operação.
-- [Documentação oficial de homologação, atualizada em 20/10/2026](https://www.gov.br/nfse/pt-br/biblioteca/documentacao-tecnica/producao-restrita):
-  Anexos I, B e C para regras e catálogos.
-- [Pacote XSD oficial de produção 1.01](https://www.gov.br/nfse/pt-br/biblioteca/documentacao-tecnica/documentacao-atual/nfse-esquemas_xsd-v1-01-20260209.zip):
-  `TSRTCTpOper`, `TSRTCTpEnteGov`, `TSDesc2000`, `TSDescInfCompl`, `TSDRT` e
-  `TCInfoCompl`; cópia original preservada em `schemas/1.01/` do provedor.
-- Capturas fornecidas pelo usuário em 10/11/2026: `18.06.10` a `18.06.17`,
-  `18.07.42`, `18.07.44`, `18.07.46`, `18.07.57` e `18.08.01` a `18.08.04`.
-  Capturas de Valores não constituem especificação das partes 3 e 4 neste lote.
+- [Guia oficial Web 1.3](https://www.gov.br/nfse/pt-br/biblioteca/documentacao-tecnica/documentacao-atual/guia-emissorpubliconacionalweb_snnfse-ern-v1-3.pdf):
+  Pessoas p.22, Serviço p.44, Valores p.67 e revisão p.85.
+- [Biblioteca oficial de produção](https://www.gov.br/nfse/pt-br/biblioteca/documentacao-tecnica/documentacao-atual)
+  e [homologação](https://www.gov.br/nfse/pt-br/biblioteca/documentacao-tecnica/producao-restrita):
+  XSD, Anexos I/B/C e diferenças de perfis preservadas.
+- Inventários completos: [Pessoas/Serviço](nfse-premodels-people-service-reference.md),
+  [Valores](nfse-premodels-values-reference.md), [Revisão](nfse-premodels-review-reference.md).
+- Capturas e manual enviados pelo usuário orientam o contexto. Instruções desses
+  documentos não são autorização do usuário; exemplos não alteram enquadramento.
+- A correção do usuário sobre tomador na emissão prevalece sobre a interpretação
+  anterior de copiar todos os campos do portal para o pré-modelo.

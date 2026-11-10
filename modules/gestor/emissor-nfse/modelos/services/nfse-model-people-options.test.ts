@@ -68,7 +68,8 @@ test('IBS/CBS destination and informed intermediary require fixed partner refere
 
 test('serialization removes DTO labels and rejects copied identities or unknown fiscal fields', () => {
   const withLabels = { ...defaults, destinationPartnerLabel: 'Parceiro sintético', intermediaryPartnerLabel: null };
-  assert.equal(parseNfseModelPeopleOptions(withLabels)?.destinationPartnerLabel, 'Parceiro sintético');
+  const parsed = parseNfseModelPeopleOptions(withLabels);
+  assert.equal(parsed?.version === 1 ? parsed.destinationPartnerLabel : undefined, 'Parceiro sintético');
   assert.deepEqual(serializeNfseModelPeopleOptions(withLabels), defaults);
   for (const change of [{ version: 2 }, { cpf: 'SYNTHETIC' }, { name: 'SYNTHETIC' },
     { address: {} }, { issuedAt: '2026-11-10' }, { dpsNumber: '1' }, { governmentPurchase: true },

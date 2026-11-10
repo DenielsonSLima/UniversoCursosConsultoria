@@ -3,6 +3,8 @@ import { NfseContractError } from '../../services/nfse.errors';
 import { boolean, integer, oneOf, record, string } from '../../services/nfse.validation';
 import { parseNfseModelServiceOptions, serializeNfseModelServiceOptions } from './nfse-model-service-options';
 import { parseNfseModelPeopleOptions, serializeNfseModelPeopleOptions } from './nfse-model-people-options';
+import { parseNfseModelValuesOptions, serializeNfseModelValuesOptions } from './nfse-model-values-options';
+import { parseNfseModelAdditionalOptions, serializeNfseModelAdditionalOptions } from './nfse-model-additional-options';
 
 const text = (value: unknown, max: number, optional = false) => {
   const result = string(value, optional).trim();
@@ -23,7 +25,7 @@ export function parseNfseModelFields(value: unknown): NfseModelServiceFields {
   const serviceOptions = row.serviceOptions === undefined ? undefined : parseNfseModelServiceOptions(row.serviceOptions);
   const peopleOptions = row.peopleOptions === undefined ? undefined
     : parseNfseModelPeopleOptions(row.peopleOptions, serviceOptions?.includeIbsCbs ?? null);
-  if (serviceOptions?.governmentPurchase === true && peopleOptions && peopleOptions.recipientLocation !== 'BRASIL') {
+  if (serviceOptions?.governmentPurchase === true && peopleOptions?.version === 1 && peopleOptions.recipientLocation !== 'BRASIL') {
     throw new NfseContractError();
   }
   return {
@@ -38,6 +40,8 @@ export function parseNfseModelFields(value: unknown): NfseModelServiceFields {
     orderReference: text(row.orderReference, 60, true),
     ...(serviceOptions !== undefined ? { serviceOptions } : {}),
     ...(peopleOptions !== undefined ? { peopleOptions } : {}),
+    ...(row.valuesOptions === undefined ? {} : { valuesOptions: parseNfseModelValuesOptions(row.valuesOptions) }),
+    ...(row.additionalOptions === undefined ? {} : { additionalOptions: parseNfseModelAdditionalOptions(row.additionalOptions) }),
   };
 }
 
@@ -54,6 +58,8 @@ export function nfseModelDefinition(input: NfseModelInput) {
       fields.issTreatment, fields.nationalServiceCode, fields.operationIndicatorCode) } : {}),
     ...(fields.peopleOptions !== undefined ? { peopleOptions: serializeNfseModelPeopleOptions(fields.peopleOptions,
       fields.serviceOptions?.includeIbsCbs ?? null) } : {}),
+    ...(fields.valuesOptions === undefined ? {} : { valuesOptions: serializeNfseModelValuesOptions(fields.valuesOptions) }),
+    ...(fields.additionalOptions === undefined ? {} : { additionalOptions: serializeNfseModelAdditionalOptions(fields.additionalOptions) }),
   };
 }
 

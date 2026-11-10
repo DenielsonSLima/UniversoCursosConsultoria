@@ -88,6 +88,8 @@ jobs:
         run: >-
           node --test
           modules/gestor/emissor-nfse/modelos/NfseModelForm.interaction.test.mjs
+          modules/gestor/emissor-nfse/modelos/NfseModelValuesFields.interaction.test.mjs
+          modules/gestor/emissor-nfse/modelos/NfseModelAdditionalFields.interaction.test.mjs
           modules/gestor/emissor-nfse/modelos/NfseModelLocationPicker.interaction.test.mjs
           modules/gestor/emissor-nfse/parceiros/NfsePartnerServiceModal.interaction.test.mjs
       - run: node --test scripts/check-file-line-limits.test.mjs

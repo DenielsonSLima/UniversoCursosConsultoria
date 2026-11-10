@@ -1,0 +1,443 @@
+[
+  {
+    "code": "160",
+    "name": "DOLAR/BERMUDAS",
+    "symbol": "BMD",
+    "excludedDate": null,
+    "aliases": [
+      "DOLAR/BERMUDAS BMD"
+    ]
+  },
+  {
+    "code": "165",
+    "name": "DOLAR CANADENSE",
+    "symbol": "CAD",
+    "excludedDate": null,
+    "aliases": [
+      "DOLAR CANADENSE CAD"
+    ]
+  },
+  {
+    "code": "170",
+    "name": "DOLAR DA GUIANA",
+    "symbol": "GYD",
+    "excludedDate": null,
+    "aliases": [
+      "DOLAR DA GUIANA GYD"
+    ]
+  },
+  {
+    "code": "173",
+    "name": "DOLAR DA NAMIBIA",
+    "symbol": "NAD",
+    "excludedDate": null,
+    "aliases": [
+      "DOLAR DA NAMIBIA NAD"
+    ]
+  },
+  {
+    "code": "175",
+    "name": "DOLAR/BARBADOS",
+    "symbol": "BBD",
+    "excludedDate": null,
+    "aliases": [
+      "DOLAR/BARBADOS BBD"
+    ]
+  },
+  {
+    "code": "180",
+    "name": "DOLAR/BELIZE",
+    "symbol": "BZD",
+    "excludedDate": null,
+    "aliases": [
+      "DOLAR/BELIZE BZD"
+    ]
+  },
+  {
+    "code": "185",
+    "name": "DOLAR BRUNEI",
+    "symbol": "BND",
+    "excludedDate": null,
+    "aliases": [
+      "DOLAR BRUNEI BND"
+    ]
+  },
+  {
+    "code": "190",
+    "name": "DOLAR CAYMAN",
+    "symbol": "KYD",
+    "excludedDate": null,
+    "aliases": [
+      "DOLAR CAYMAN KYD"
+    ]
+  },
+  {
+    "code": "195",
+    "name": "DOLAR CINGAPURA",
+    "symbol": "SGD",
+    "excludedDate": null,
+    "aliases": [
+      "DOLAR CINGAPURA SGD"
+    ]
+  },
+  {
+    "code": "197",
+    "name": "UNIDADE DE FOMENTO DO CHILE",
+    "symbol": "CLF",
+    "excludedDate": null,
+    "aliases": [
+      "UNIDADE DE FOMENTO DO CHILE CLF"
+    ]
+  },
+  {
+    "code": "200",
+    "name": "DOLAR FIJI",
+    "symbol": "FJD",
+    "excludedDate": null,
+    "aliases": [
+      "DOLAR FIJI FJD"
+    ]
+  },
+  {
+    "code": "205",
+    "name": "DOLAR HONG KONG",
+    "symbol": "HKD",
+    "excludedDate": null,
+    "aliases": [
+      "DOLAR HONG KONG HKD"
+    ]
+  },
+  {
+    "code": "210",
+    "name": "DOLAR/TRIN. TOBAG",
+    "symbol": "TTD",
+    "excludedDate": null,
+    "aliases": [
+      "DOLAR/TRIN. TOBAG TTD"
+    ]
+  },
+  {
+    "code": "215",
+    "name": "DOLAR CARIBE ORIENTAL",
+    "symbol": "XCD",
+    "excludedDate": null,
+    "aliases": [
+      "DOLAR CARIBE ORIENTAL XCD"
+    ]
+  },
+  {
+    "code": "217",
+    "name": "DOLAR ZIMBABUE",
+    "symbol": "ZWL",
+    "excludedDate": "30/08/2024",
+    "aliases": [
+      "DOLAR ZIMBABUE ZWL"
+    ]
+  },
+  {
+    "code": "218",
+    "name": "OURO DO ZIMBABWE",
+    "symbol": "ZWG",
+    "excludedDate": null,
+    "aliases": [
+      "OURO DO ZIMBABWE ZWG"
+    ]
+  },
+  {
+    "code": "220",
+    "name": "DOLAR DOS EUA",
+    "symbol": "USD",
+    "excludedDate": null,
+    "aliases": [
+      "DOLAR DOS EUA USD"
+    ]
+  },
+  {
+    "code": "225",
+    "name": "DOLAR/ETIOPIA",
+    "symbol": "ETB",
+    "excludedDate": "04/08/1998",
+    "aliases": [
+      "DOLAR/ETIOPIA ETB"
+    ]
+  },
+  {
+    "code": "230",
+    "name": "DOLAR/JAMAICA",
+    "symbol": "JMD",
+    "excludedDate": null,
+    "aliases": [
+      "DOLAR/JAMAICA JMD"
+    ]
+  },
+  {
+    "code": "235",
+    "name": "DOLAR LIBERIA",
+    "symbol": "LRD",
+    "excludedDate": null,
+    "aliases": [
+      "DOLAR LIBERIA LRD"
+    ]
+  },
+  {
+    "code": "240",
+    "name": "DOLAR MALAIO",
+    "symbol": "M$",
+    "excludedDate": "24/04/1986",
+    "aliases": [
+      "DOLAR MALAIO M$"
+    ]
+  },
+  {
+    "code": "245",
+    "name": "DOLAR NOVA ZELANDIA",
+    "symbol": "NZD",
+    "excludedDate": null,
+    "aliases": [
+      "DOLAR NOVA ZELANDIA NZD"
+    ]
+  },
+  {
+    "code": "250",
+    "name": "DOLAR DAS ILHAS SALOMAO",
+    "symbol": "SBD",
+    "excludedDate": null,
+    "aliases": [
+      "DOLAR DAS ILHAS SALOMAO SBD"
+    ]
+  },
+  {
+    "code": "255",
+    "name": "DOLAR DO SURINAME",
+    "symbol": "SRD",
+    "excludedDate": null,
+    "aliases": [
+      "DOLAR DO SURINAME SRD"
+    ]
+  },
+  {
+    "code": "260",
+    "name": "DONGUE/VIETNAN",
+    "symbol": "VND",
+    "excludedDate": null,
+    "aliases": [
+      "DONGUE/VIETNAN VND"
+    ]
+  },
+  {
+    "code": "270",
+    "name": "DRACMA/GRECIA",
+    "symbol": "GRD",
+    "excludedDate": "02/01/2002",
+    "aliases": [
+      "DRACMA/GRECIA GRD"
+    ]
+  },
+  {
+    "code": "275",
+    "name": "DRAM ARMENIA REP",
+    "symbol": "AMD",
+    "excludedDate": null,
+    "aliases": [
+      "DRAM ARMENIA REP AMD"
+    ]
+  },
+  {
+    "code": "295",
+    "name": "ESCUDO CABO VERDE",
+    "symbol": "CVE",
+    "excludedDate": null,
+    "aliases": [
+      "ESCUDO CABO VERDE CVE"
+    ]
+  },
+  {
+    "code": "315",
+    "name": "ESCUDO PORTUGUES",
+    "symbol": "PTE",
+    "excludedDate": "02/01/2002",
+    "aliases": [
+      "ESCUDO PORTUGUES PTE"
+    ]
+  },
+  {
+    "code": "320",
+    "name": "ESCUDO TIMOR LESTE",
+    "symbol": "TPE",
+    "excludedDate": "01/01/2000",
+    "aliases": [
+      "ESCUDO TIMOR LESTE TPE"
+    ]
+  },
+  {
+    "code": "325",
+    "name": "GUILDER ANTILHAS HOLANDESAS",
+    "symbol": "ANG",
+    "excludedDate": "30/06/2025",
+    "aliases": [
+      "GUILDER ANTILHAS HOLANDESAS ANG"
+    ]
+  },
+  {
+    "code": "326",
+    "name": "GUILDA CARIBENHA",
+    "symbol": "XCG",
+    "excludedDate": null,
+    "aliases": [
+      "GUILDA CARIBENHA XCG"
+    ]
+  },
+  {
+    "code": "328",
+    "name": "FLORIM/ARUBA",
+    "symbol": "AWG",
+    "excludedDate": null,
+    "aliases": [
+      "FLORIM/ARUBA AWG"
+    ]
+  },
+  {
+    "code": "330",
+    "name": "FLORIM/SURINAME",
+    "symbol": "SRG",
+    "excludedDate": "06/09/2005",
+    "aliases": [
+      "FLORIM/SURINAME SRG"
+    ]
+  },
+  {
+    "code": "333",
+    "name": "DOLAR/SURINAME",
+    "symbol": "SRD",
+    "excludedDate": "06/09/2005",
+    "aliases": [
+      "DOLAR/SURINAME SRD"
+    ]
+  },
+  {
+    "code": "335",
+    "name": "FLORIM HOLANDES",
+    "symbol": "NLG",
+    "excludedDate": "02/01/2002",
+    "aliases": [
+      "FLORIM HOLANDES NLG"
+    ]
+  },
+  {
+    "code": "345",
+    "name": "FORINT/HUNGRIA",
+    "symbol": "HUF",
+    "excludedDate": null,
+    "aliases": [
+      "FORINT/HUNGRIA HUF"
+    ]
+  },
+  {
+    "code": "360",
+    "name": "FRANCO BELGA/BELG",
+    "symbol": "BEF",
+    "excludedDate": "02/01/2002",
+    "aliases": [
+      "FRANCO BELGA/BELG BEF"
+    ]
+  },
+  {
+    "code": "361",
+    "name": "FRANCO BELGA FINA",
+    "symbol": "FBF",
+    "excludedDate": "04/08/1998",
+    "aliases": [
+      "FRANCO BELGA FINA FBF"
+    ]
+  },
+  {
+    "code": "363",
+    "name": "FRANCO CONGOLES",
+    "symbol": "CDF",
+    "excludedDate": null,
+    "aliases": [
+      "FRANCO CONGOLES CDF"
+    ]
+  },
+  {
+    "code": "365",
+    "name": "FRANCO/BURUNDI",
+    "symbol": "BIF",
+    "excludedDate": null,
+    "aliases": [
+      "FRANCO/BURUNDI BIF"
+    ]
+  },
+  {
+    "code": "368",
+    "name": "FRANCO COMORES",
+    "symbol": "KMF",
+    "excludedDate": null,
+    "aliases": [
+      "FRANCO COMORES KMF"
+    ]
+  },
+  {
+    "code": "370",
+    "name": "FRANCO CFA BEAC",
+    "symbol": "XAF",
+    "excludedDate": null,
+    "aliases": [
+      "FRANCO CFA BEAC XAF"
+    ]
+  },
+  {
+    "code": "372",
+    "name": "FRANCO CFA BCEAO",
+    "symbol": "XOF",
+    "excludedDate": null,
+    "aliases": [
+      "FRANCO CFA BCEAO XOF"
+    ]
+  },
+  {
+    "code": "380",
+    "name": "FRANCO CFP",
+    "symbol": "XPF",
+    "excludedDate": null,
+    "aliases": [
+      "FRANCO CFP XPF"
+    ]
+  },
+  {
+    "code": "385",
+    "name": "FRANCO/BURUNDI",
+    "symbol": "BIF",
+    "excludedDate": "31/07/1998",
+    "aliases": [
+      "FRANCO/BURUNDI BIF"
+    ]
+  },
+  {
+    "code": "390",
+    "name": "FRANCO/DJIBUTI",
+    "symbol": "DJF",
+    "excludedDate": null,
+    "aliases": [
+      "FRANCO/DJIBUTI DJF"
+    ]
+  },
+  {
+    "code": "395",
+    "name": "FRANCO FRANCES",
+    "symbol": "FRF",
+    "excludedDate": "02/01/2002",
+    "aliases": [
+      "FRANCO FRANCES FRF"
+    ]
+  },
+  {
+    "code": "398",
+    "name": "FRANCO/GUINE",
+    "symbol": "GNF",
+    "excludedDate": null,
+    "aliases": [
+      "FRANCO/GUINE GNF"
+    ]
+  }
+]

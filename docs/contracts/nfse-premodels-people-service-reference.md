@@ -1,10 +1,11 @@
 # Pré-modelos: referência completa de Pessoas e Serviço
 
 Auditoria de 10/11/2026. Inventário das etapas 1/2 da emissão completa, comparado
-com o código atual; não é declaração de suporte a todos os cenários, emissão
-autorizada ou prontidão de produção. O contrato implementado em
-[nfse-premodels-stage12.md](nfse-premodels-stage12.md) cobre um subconjunto deste
-inventário. Valores e revisão pertencem aos contratos específicos das etapas 3/4.
+com a implementação inicial do commit `478b6e98cc69639389e00347f552c601bdf57acb`.
+Os déficits apontados nas tabelas são desse diagnóstico inicial. O estado atual
+da implementação Web está no [contrato das quatro etapas](nfse-premodels-stage12.md).
+Este inventário inclui referências da API além do Web e não declara suporte do
+executor a todos os cenários, emissão autorizada ou prontidão de produção.
 
 ## Fontes e limites de versão
 

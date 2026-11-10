@@ -1,0 +1,443 @@
+[
+  {
+    "code": "400",
+    "name": "FRANCO LUXEMBURGO",
+    "symbol": "LUF",
+    "excludedDate": "02/01/2002",
+    "aliases": [
+      "FRANCO LUXEMBURGO LUF"
+    ]
+  },
+  {
+    "code": "405",
+    "name": "FRANCO MALGAXE MADAGA",
+    "symbol": "MGF",
+    "excludedDate": "14/06/2010",
+    "aliases": [
+      "FRANCO MALGAXE MADAGA MGF"
+    ]
+  },
+  {
+    "code": "406",
+    "name": "ARIARY MADAGASCAR",
+    "symbol": "MGA",
+    "excludedDate": null,
+    "aliases": [
+      "ARIARY MADAGASCAR MGA"
+    ]
+  },
+  {
+    "code": "410",
+    "name": "FRANCO MALI",
+    "symbol": "MF",
+    "excludedDate": "31/07/1998",
+    "aliases": [
+      "FRANCO MALI MF"
+    ]
+  },
+  {
+    "code": "420",
+    "name": "FRANCO/RUANDA",
+    "symbol": "RWF",
+    "excludedDate": null,
+    "aliases": [
+      "FRANCO/RUANDA RWF"
+    ]
+  },
+  {
+    "code": "425",
+    "name": "FRANCO SUICO",
+    "symbol": "CHF",
+    "excludedDate": null,
+    "aliases": [
+      "FRANCO SUICO CHF"
+    ]
+  },
+  {
+    "code": "440",
+    "name": "GOURDE HAITI",
+    "symbol": "HTG",
+    "excludedDate": null,
+    "aliases": [
+      "GOURDE HAITI HTG"
+    ]
+  },
+  {
+    "code": "450",
+    "name": "GUARANI/PARAGUAI",
+    "symbol": "PYG",
+    "excludedDate": null,
+    "aliases": [
+      "GUARANI/PARAGUAI PYG"
+    ]
+  },
+  {
+    "code": "460",
+    "name": "HRYVNIA UCRANIA",
+    "symbol": "UAH",
+    "excludedDate": null,
+    "aliases": [
+      "HRYVNIA UCRANIA UAH"
+    ]
+  },
+  {
+    "code": "470",
+    "name": "IENE",
+    "symbol": "JPY",
+    "excludedDate": null,
+    "aliases": [
+      "IENE JPY"
+    ]
+  },
+  {
+    "code": "480",
+    "name": "INTI PERUANO",
+    "symbol": "I",
+    "excludedDate": "01/02/1991",
+    "aliases": [
+      "INTI PERUANO I"
+    ]
+  },
+  {
+    "code": "482",
+    "name": "LARI GEORGIA",
+    "symbol": "GEL",
+    "excludedDate": null,
+    "aliases": [
+      "LARI GEORGIA GEL"
+    ]
+  },
+  {
+    "code": "485",
+    "name": "LAT LETONIA REP",
+    "symbol": "LVL",
+    "excludedDate": "31/12/2013",
+    "aliases": [
+      "LAT LETONIA REP LVL"
+    ]
+  },
+  {
+    "code": "490",
+    "name": "LEK ALBANIA REP",
+    "symbol": "ALL",
+    "excludedDate": null,
+    "aliases": [
+      "LEK ALBANIA REP ALL"
+    ]
+  },
+  {
+    "code": "495",
+    "name": "LEMPIRA/HONDURAS",
+    "symbol": "HNL",
+    "excludedDate": null,
+    "aliases": [
+      "LEMPIRA/HONDURAS HNL"
+    ]
+  },
+  {
+    "code": "500",
+    "name": "LEONE/SERRA LEOA",
+    "symbol": "SLL",
+    "excludedDate": null,
+    "aliases": [
+      "LEONE/SERRA LEOA SLL"
+    ]
+  },
+  {
+    "code": "503",
+    "name": "LEU/MOLDAVIA, REP",
+    "symbol": "MDL",
+    "excludedDate": null,
+    "aliases": [
+      "LEU/MOLDAVIA, REP MDL"
+    ]
+  },
+  {
+    "code": "505",
+    "name": "LEU/ROMENIA",
+    "symbol": "ROL",
+    "excludedDate": "17/12/2009",
+    "aliases": [
+      "LEU/ROMENIA ROL"
+    ]
+  },
+  {
+    "code": "506",
+    "name": "NOVO LEU DA ROMENIA",
+    "symbol": "RON",
+    "excludedDate": null,
+    "aliases": [
+      "NOVO LEU DA ROMENIA RON"
+    ]
+  },
+  {
+    "code": "510",
+    "name": "LEV BULGARIA",
+    "symbol": "BGN",
+    "excludedDate": "31/12/2025",
+    "aliases": [
+      "LEV BULGARIA BGN"
+    ]
+  },
+  {
+    "code": "520",
+    "name": "LIBRA CIP/CHIPRE",
+    "symbol": "CYP",
+    "excludedDate": "03/03/2009",
+    "aliases": [
+      "LIBRA CIP/CHIPRE CYP"
+    ]
+  },
+  {
+    "code": "530",
+    "name": "LIBRA DE GIBRALTAR",
+    "symbol": "GIP",
+    "excludedDate": null,
+    "aliases": [
+      "LIBRA DE GIBRALTAR GIP"
+    ]
+  },
+  {
+    "code": "535",
+    "name": "LIBRA/EGITO",
+    "symbol": "EGP",
+    "excludedDate": null,
+    "aliases": [
+      "LIBRA/EGITO EGP"
+    ]
+  },
+  {
+    "code": "540",
+    "name": "LIBRA ESTERLINA",
+    "symbol": "GBP",
+    "excludedDate": null,
+    "aliases": [
+      "LIBRA ESTERLINA GBP"
+    ]
+  },
+  {
+    "code": "545",
+    "name": "LIBRA/FALKLAND",
+    "symbol": "FKP",
+    "excludedDate": null,
+    "aliases": [
+      "LIBRA/FALKLAND FKP"
+    ]
+  },
+  {
+    "code": "550",
+    "name": "LIBRA/IRLANDA",
+    "symbol": "IEP",
+    "excludedDate": "02/01/2002",
+    "aliases": [
+      "LIBRA/IRLANDA IEP"
+    ]
+  },
+  {
+    "code": "555",
+    "name": "LIBRA ISRAELENSE",
+    "symbol": "IL",
+    "excludedDate": "04/08/1998",
+    "aliases": [
+      "LIBRA ISRAELENSE IL"
+    ]
+  },
+  {
+    "code": "560",
+    "name": "LIBRA/LIBANO",
+    "symbol": "LBP",
+    "excludedDate": null,
+    "aliases": [
+      "LIBRA/LIBANO LBP"
+    ]
+  },
+  {
+    "code": "565",
+    "name": "LIRA/MALTA",
+    "symbol": "MTL",
+    "excludedDate": "03/03/2009",
+    "aliases": [
+      "LIRA/MALTA MTL"
+    ]
+  },
+  {
+    "code": "570",
+    "name": "LIBRA DE SANTA HELENA",
+    "symbol": "SHP",
+    "excludedDate": null,
+    "aliases": [
+      "LIBRA DE SANTA HELENA SHP"
+    ]
+  },
+  {
+    "code": "575",
+    "name": "LIBRA SIRIA",
+    "symbol": "SYP",
+    "excludedDate": null,
+    "aliases": [
+      "LIBRA SIRIA SYP"
+    ]
+  },
+  {
+    "code": "580",
+    "name": "LIBRA SUDANESA",
+    "symbol": "LSD",
+    "excludedDate": "21/05/1996",
+    "aliases": [
+      "LIBRA SUDANESA LSD"
+    ]
+  },
+  {
+    "code": "585",
+    "name": "LILANGENI/SUAZIL",
+    "symbol": "SZL",
+    "excludedDate": null,
+    "aliases": [
+      "LILANGENI/SUAZIL SZL"
+    ]
+  },
+  {
+    "code": "595",
+    "name": "LIRA ITALIANA",
+    "symbol": "ITL",
+    "excludedDate": "02/01/2002",
+    "aliases": [
+      "LIRA ITALIANA ITL"
+    ]
+  },
+  {
+    "code": "600",
+    "name": "LIRA TURQUIA",
+    "symbol": "TRL",
+    "excludedDate": "17/12/2009",
+    "aliases": [
+      "LIRA TURQUIA TRL"
+    ]
+  },
+  {
+    "code": "601",
+    "name": "LITA LITUANIA",
+    "symbol": "LTL",
+    "excludedDate": "31/12/2014",
+    "aliases": [
+      "LITA LITUANIA LTL"
+    ]
+  },
+  {
+    "code": "603",
+    "name": "LOTI/LESOTO",
+    "symbol": "LSL",
+    "excludedDate": null,
+    "aliases": [
+      "LOTI/LESOTO LSL"
+    ]
+  },
+  {
+    "code": "605",
+    "name": "MARCO",
+    "symbol": "M",
+    "excludedDate": "04/08/1998",
+    "aliases": [
+      "MARCO M"
+    ]
+  },
+  {
+    "code": "607",
+    "name": "MANAT ARZEBAIJAO",
+    "symbol": "AZN",
+    "excludedDate": null,
+    "aliases": [
+      "MANAT ARZEBAIJAO AZN"
+    ]
+  },
+  {
+    "code": "608",
+    "name": "NOVO MANAT TURCOMANO",
+    "symbol": "TMT",
+    "excludedDate": null,
+    "aliases": [
+      "NOVO MANAT TURCOMANO TMT"
+    ]
+  },
+  {
+    "code": "610",
+    "name": "MARCO ALEMAO",
+    "symbol": "DEM",
+    "excludedDate": "02/01/2002",
+    "aliases": [
+      "MARCO ALEMAO DEM"
+    ]
+  },
+  {
+    "code": "612",
+    "name": "MARCO CONV BOSNIA",
+    "symbol": "BAM",
+    "excludedDate": null,
+    "aliases": [
+      "MARCO CONV BOSNIA BAM"
+    ]
+  },
+  {
+    "code": "615",
+    "name": "MARCO FINLANDES",
+    "symbol": "FIM",
+    "excludedDate": "02/01/2002",
+    "aliases": [
+      "MARCO FINLANDES FIM"
+    ]
+  },
+  {
+    "code": "620",
+    "name": "METICAL MOCAMBIQ",
+    "symbol": "MZM",
+    "excludedDate": "01/07/2006",
+    "aliases": [
+      "METICAL MOCAMBIQ MZM"
+    ]
+  },
+  {
+    "code": "622",
+    "name": "NOVA METICAL/MOCA",
+    "symbol": "MZN",
+    "excludedDate": null,
+    "aliases": [
+      "NOVA METICAL/MOCA MZN"
+    ]
+  },
+  {
+    "code": "625",
+    "name": "NAKFA DA ERITREIA",
+    "symbol": "ERN",
+    "excludedDate": null,
+    "aliases": [
+      "NAKFA DA ERITREIA ERN"
+    ]
+  },
+  {
+    "code": "630",
+    "name": "NAIRA NIGERIA",
+    "symbol": "NGN",
+    "excludedDate": null,
+    "aliases": [
+      "NAIRA NIGERIA NGN"
+    ]
+  },
+  {
+    "code": "635",
+    "name": "KWANZA/ANGOLA",
+    "symbol": "AOA",
+    "excludedDate": null,
+    "aliases": [
+      "KWANZA/ANGOLA AOA"
+    ]
+  },
+  {
+    "code": "637",
+    "name": "NOVO DINAR IUGOSLAVO",
+    "symbol": "YUM",
+    "excludedDate": "27/02/2004",
+    "aliases": [
+      "NOVO DINAR IUGOSLAVO YUM"
+    ]
+  }
+]

@@ -1,5 +1,7 @@
 import type { NfseModelServiceOptions } from '../modelos/services/nfse-model-service-options';
 import type { NfseModelPeopleOptions } from '../modelos/services/nfse-model-people-options';
+import type { NfseModelValuesOptions } from '../modelos/services/nfse-model-values.types';
+import type { NfseModelAdditionalOptions } from '../modelos/services/nfse-model-additional.types';
 
 export type NfseEnvironment = 'HOMOLOGACAO' | 'PRODUCAO';
 export type NfseTab = 'preparar' | 'pendentes' | 'emitidas' | 'erros' | 'modelos';
@@ -33,6 +35,8 @@ export type NfseIssTreatment = 'TRIBUTAVEL' | 'IMUNIDADE' | 'EXPORTACAO' | 'NAO_
 export interface NfseModelServiceFields {
   serviceOptions?: NfseModelServiceOptions | null;
   peopleOptions?: NfseModelPeopleOptions | null;
+  valuesOptions?: NfseModelValuesOptions | null;
+  additionalOptions?: NfseModelAdditionalOptions | null;
   serviceDescription: string;
   nationalServiceCode: string;
   nbsCode: string;

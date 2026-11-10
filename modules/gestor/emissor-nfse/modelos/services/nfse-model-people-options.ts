@@ -1,6 +1,6 @@
 import { NfseContractError } from '../../services/nfse.errors';
 
-export interface NfseModelPeopleOptions {
+export interface NfseModelPeopleOptionsV1 {
   version: 1;
   competenceMode: 'ISSUE_DATE' | 'FIXED_DATE';
   competenceDate: string | null;
@@ -18,6 +18,24 @@ export interface NfseModelPeopleOptions {
   readonly destinationPartnerLabel?: string | null;
   readonly intermediaryPartnerLabel?: string | null;
 }
+
+export interface NfseModelPeopleOptionsV2 {
+  version: 2;
+  competenceMode: 'ISSUE_DATE' | 'FIXED_DATE';
+  competenceDate: string | null;
+  dpsSeriesMode: 'AUTOMATIC' | 'CUSTOM';
+  dpsSeries: string | null;
+  issuerRole: 'PROVIDER' | 'RECIPIENT' | 'INTERMEDIARY';
+  simpleNationalOption: 'FROM_ESTABLISHMENT' | '1' | '2' | '3';
+  simpleNationalAssessment: 'FROM_ESTABLISHMENT' | '1' | '2' | '3' | null;
+  recipientSource: 'AT_ISSUANCE';
+  recipientAddressSource: 'FROM_PARTNER' | 'OMIT';
+  recipientIsDestination: boolean | null;
+  destinationSource: 'AT_ISSUANCE' | null;
+  intermediarySource: 'NONE' | 'AT_ISSUANCE';
+}
+export type NfseModelPeopleOptions = NfseModelPeopleOptionsV1 | NfseModelPeopleOptionsV2;
+
 
 const fields = ['version', 'competenceMode', 'competenceDate', 'dpsSeriesMode', 'dpsSeries',
   'issuerRole', 'simpleNationalOption', 'simpleNationalAssessment', 'recipientLocation',
@@ -43,7 +61,7 @@ function validDate(value: unknown): value is string {
   return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
 }
 
-export function createDefaultNfseModelPeopleOptions(): NfseModelPeopleOptions {
+export function createDefaultNfseModelPeopleOptions(): NfseModelPeopleOptionsV1 {
   return {
     version: 1, competenceMode: 'ISSUE_DATE', competenceDate: null,
     dpsSeriesMode: 'AUTOMATIC', dpsSeries: null, issuerRole: 'PROVIDER',
@@ -54,16 +72,15 @@ export function createDefaultNfseModelPeopleOptions(): NfseModelPeopleOptions {
   };
 }
 
-/** A model stores strategies and authorized partner references, never a copied party record. */
-export function parseNfseModelPeopleOptions(value: unknown,
-  includeIbsCbs: boolean | null = null): NfseModelPeopleOptions | null {
+function parsePeopleV1(value: unknown,
+  includeIbsCbs: boolean | null = null): NfseModelPeopleOptionsV1 | null {
   if (value === null || value === undefined) return null;
   if (!value || typeof value !== 'object' || Array.isArray(value)
     || (includeIbsCbs !== null && typeof includeIbsCbs !== 'boolean')) return fail();
   const row = value as Record<string, unknown>;
   if (Object.keys(row).some((key) => ![...fields, ...labels].includes(key as typeof fields[number]))
     || row.version !== 1) return fail();
-  const result: NfseModelPeopleOptions = {
+  const result: NfseModelPeopleOptionsV1 = {
     version: 1,
     competenceMode: oneOf(row.competenceMode, ['ISSUE_DATE', 'FIXED_DATE']),
     competenceDate: row.competenceDate === null ? null : validDate(row.competenceDate) ? row.competenceDate : fail(),
@@ -98,10 +115,62 @@ export function parseNfseModelPeopleOptions(value: unknown,
   return result;
 }
 
+const v2Fields = ['version', 'competenceMode', 'competenceDate', 'dpsSeriesMode', 'dpsSeries',
+  'issuerRole', 'simpleNationalOption', 'simpleNationalAssessment', 'recipientSource',
+  'recipientAddressSource', 'recipientIsDestination', 'destinationSource', 'intermediarySource'] as const;
+const commonFields = ['competenceMode', 'competenceDate', 'dpsSeriesMode', 'dpsSeries',
+  'issuerRole', 'simpleNationalOption', 'simpleNationalAssessment'] as const;
+
+export function createDefaultNfseModelPeopleOptionsV2(): NfseModelPeopleOptionsV2 {
+  return { version: 2, competenceMode: 'ISSUE_DATE', competenceDate: null,
+    dpsSeriesMode: 'AUTOMATIC', dpsSeries: null, issuerRole: 'PROVIDER',
+    simpleNationalOption: 'FROM_ESTABLISHMENT', simpleNationalAssessment: null,
+    recipientSource: 'AT_ISSUANCE', recipientAddressSource: 'FROM_PARTNER',
+    recipientIsDestination: null, destinationSource: null, intermediarySource: 'NONE' };
+}
+
+/** Explicit form edit: preserve reusable rules and replace participant links with operation strategies. */
+export function upgradeNfseModelPeopleOptions(value: NfseModelPeopleOptions | null,
+  includeIbsCbs: boolean | null): NfseModelPeopleOptionsV2 {
+  if (!value) return createDefaultNfseModelPeopleOptionsV2();
+  const common = Object.fromEntries(commonFields.map(key => [key, value[key]])) as Pick<NfseModelPeopleOptionsV2, typeof commonFields[number]>;
+  const recipientIsDestination = includeIbsCbs === true ? value.recipientIsDestination : null;
+  return { ...common, version: 2, recipientSource: 'AT_ISSUANCE',
+    recipientAddressSource: value.version === 2 ? value.recipientAddressSource : value.recipientIncludeAddress ? 'FROM_PARTNER' : 'OMIT',
+    recipientIsDestination, destinationSource: recipientIsDestination === false ? 'AT_ISSUANCE' : null,
+    intermediarySource: value.version === 2 ? value.intermediarySource : value.intermediaryLocation === 'NOT_INFORMED' ? 'NONE' : 'AT_ISSUANCE' };
+}
+
+/** Reading never upgrades historical models or discards their historical party references. */
+export function parseNfseModelPeopleOptions(value: unknown,
+  includeIbsCbs: boolean | null = null): NfseModelPeopleOptions | null {
+  if (value === null || value === undefined) return null;
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return fail();
+  const row = value as Record<string, unknown>;
+  if (row.version === 1) return parsePeopleV1(value, includeIbsCbs);
+  if (row.version !== 2 || v2Fields.some(key => !(key in row))
+    || Object.keys(row).some(key => !v2Fields.includes(key as typeof v2Fields[number]))) return fail();
+  const recipientIsDestination = row.recipientIsDestination === null ? null : boolean(row.recipientIsDestination);
+  const destinationSource = row.destinationSource === null ? null : oneOf(row.destinationSource, ['AT_ISSUANCE']);
+  if ((includeIbsCbs === true && recipientIsDestination === null)
+    || (includeIbsCbs !== true && recipientIsDestination !== null)
+    || (recipientIsDestination === false) !== (destinationSource === 'AT_ISSUANCE')) return fail();
+  // Reuse the mature calendar, DPS-series and Simples validation without exposing v1 fields in v2.
+  const common = parsePeopleV1({ ...createDefaultNfseModelPeopleOptions(),
+    ...Object.fromEntries(commonFields.map(key => [key, row[key]])), recipientIsDestination: null }, false)!;
+  if (includeIbsCbs === true && common.competenceMode === 'FIXED_DATE' && common.competenceDate! < '2026-01-01') return fail();
+  if (includeIbsCbs !== null && typeof includeIbsCbs !== 'boolean') return fail();
+  return { ...Object.fromEntries(commonFields.map(key => [key, common[key]])), version: 2,
+    recipientSource: oneOf(row.recipientSource, ['AT_ISSUANCE']),
+    recipientAddressSource: oneOf(row.recipientAddressSource, ['FROM_PARTNER', 'OMIT']), recipientIsDestination, destinationSource,
+    intermediarySource: oneOf(row.intermediarySource, ['NONE', 'AT_ISSUANCE']) } as NfseModelPeopleOptionsV2;
+}
+
 export function serializeNfseModelPeopleOptions(value: unknown,
   includeIbsCbs: boolean | null = null): NfseModelPeopleOptions | null {
   const parsed = parseNfseModelPeopleOptions(value, includeIbsCbs);
-  return parsed === null ? null : Object.fromEntries(fields.map((key) => [key, parsed[key]])) as unknown as NfseModelPeopleOptions;
+  if (parsed === null || parsed.version === 2) return parsed;
+  return Object.fromEntries(fields.map(key => [key, parsed[key]])) as unknown as NfseModelPeopleOptionsV1;
 }
 
 export function isNfseModelPeopleOptionsComplete(value: unknown, includeIbsCbs: boolean | null): boolean {
