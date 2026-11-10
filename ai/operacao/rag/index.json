@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "retrieval": "lexical-bm25-with-source-citations",
-  "builtAt": "2026-11-10T11:13:10.490Z",
+  "builtAt": "2026-11-10T12:37:09.795Z",
   "manifestVersion": 2,
-  "sourceSignature": "2e07c5a44a2a81f43540f6f1f08c948070826b081d5859b9549fc9045e573142",
+  "sourceSignature": "65dd579f602aa1633b082779fd7efe062804e567aa3bbae6f1814cc700f0d971",
   "sources": [
     {
       "path": "AGENTS.md",
@@ -11,7 +11,7 @@
     },
     {
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "hash": "2a83a5f1a55a50364f36b598a93a2902b99be00ba05a1ee6876f87c822ef8497"
+      "hash": "b26e14741f44889a7e9699d94976238e6de6f3c7eba0afc2d6dc4279358fb06e"
     },
     {
       "path": "ai/operacao/MEMORIA_CANONICA.md",
@@ -208,23 +208,23 @@
       "part": 1
     },
     {
-      "id": "20be6d445cb2466be67e",
-      "hash": "20be6d445cb2466be67eb5c52a30395c5ec604c667d22593f27d5e5dce869c15",
+      "id": "128c5a87b2e38ede6083",
+      "hash": "128c5a87b2e38ede6083756a432d5b637a255ececa78a801b9f89ffbc07c7e65",
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Lote: 2026-11-10-nfse-certificado-senha-validade",
-      "text": "Refazer o cadastro A1 no novo padrão visual de Configurações, corrigir senha/PBES2 Unicode e apresentar validade, preservando credenciais e bloqueio de emissão. Publicação no GitHub e em produção autorizada pelo usuário.",
-      "normalizedText": "refazer o cadastro a1 no novo padrao visual de configuracoes corrigir senha pbes2 unicode e apresentar validade preservando credenciais e bloqueio de emissao publicacao no github e em producao autorizada pelo usuario",
-      "tokenCount": 28,
+      "section": "Lote: 2026-11-10-nfse-certificado-runtime-edge",
+      "text": "Corrigir a validação A1 após a publicação 4.8.281, removendo dependência de APIs X509 ausentes no Deno 2.1.4. Preservar interface, senha UTF-8, confiança, CNPJ, validade, credenciais e bloqueio de emissão.",
+      "normalizedText": "corrigir a validacao a1 apos a publicacao 4 8 281 removendo dependencia de apis x509 ausentes no deno 2 1 4 preservar interface senha utf 8 confianca cnpj validade credenciais e bloqueio de emissao",
+      "tokenCount": 25,
       "part": 1
     },
     {
-      "id": "d98d719a0bbd1f0e237d",
-      "hash": "d98d719a0bbd1f0e237d8532baedd8319574ac525c0653be57d56178cff9a830",
+      "id": "bec1b0289203474cc639",
+      "hash": "bec1b0289203474cc639077fc0a6e12f15b83c20a4dcd940c400677532494454",
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Lote: 2026-11-10-nfse-certificado-senha-validade",
-      "text": "Mudança crítica por segurança/Edge/publicação. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-10-nfse-certificado-senha-validade.md`. Base main 4ef4d649f7cfb94acba9509b332da4cad4f38909, versão 4.8.280, revisão 289; candidata 4.8.281, revisão 290. Baseline 27af198c aprovado nos nove checks e Preview, incluindo build e Deno congelado. Nova revisão visual mantém nove testes frontend e smoke DOM aprovados; exige CI/Preview do SHA final antes do deploy. Smoke Safari autenticado pendente porque o computador está offline. Nenhum certificado real ou segredo foi usado.",
-      "normalizedText": "mudanca critica por seguranca edge publicacao manifesto explicito ai operacao registros alteracoes 2026 11 10 nfse certificado senha validade md base main 4ef4d649f7cfb94acba9509b332da4cad4f38909 versao 4 8 280 revisao 289 candidata 4 8 281 revisao 290 baseline 27af198c aprovado nos nove checks e preview incluindo build e deno congelado nova revisao visual mantem nove testes frontend e smoke dom aprovados exige ci preview do sha final antes do deploy smoke safari autenticado pendente porque o computador esta offline nenhum certificado real ou segredo foi usado",
-      "tokenCount": 76,
+      "section": "Lote: 2026-11-10-nfse-certificado-runtime-edge",
+      "text": "Mudança crítica por segurança/Edge/publicação. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-10-nfse-certificado-runtime-edge.md`. Base main 678b4264f00df6f6ea48c6b01992450f3395c49c, versão 4.8.281, revisão 290; candidata 4.8.282, revisão 291. Quinze testes sintéticos passaram em Deno 2.1.4 e 2.9.6; tipos do index/testes passaram no atual. CI do SHA final, Preview e implantação deste lote pendentes. Novo job 2.1.4 preserva CI atual; modo node-modules-dir=none ainda exige confirmação no runner limpo. Smoke Safari autenticado indisponível com o computador offline. Somente certificados sintéticos; sem senha real, migrações ou permissões novas. A publicação deve observar a autorização do novo lote e PR.",
+      "normalizedText": "mudanca critica por seguranca edge publicacao manifesto explicito ai operacao registros alteracoes 2026 11 10 nfse certificado runtime edge md base main 678b4264f00df6f6ea48c6b01992450f3395c49c versao 4 8 281 revisao 290 candidata 4 8 282 revisao 291 quinze testes sinteticos passaram em deno 2 1 4 e 2 9 6 tipos do index testes passaram no atual ci do sha final preview e implantacao deste lote pendentes novo job 2 1 4 preserva ci atual modo node modules dir none ainda exige confirmacao no runner limpo smoke safari autenticado indisponivel com o computador offline somente certificados sinteticos sem senha real migracoes ou permissoes novas a publicacao deve observar a autorizacao do novo lote e pr",
+      "tokenCount": 94,
       "part": 1
     },
     {

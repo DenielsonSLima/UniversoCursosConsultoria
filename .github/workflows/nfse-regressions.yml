@@ -101,3 +101,22 @@ jobs:
           deno check --config supabase/functions/nfse-certificate-upload/deno.json
           --frozen supabase/functions/nfse-certificate-upload/index.ts
 
+  nfse-certificate-edge-runtime:
+    name: Cadastro A1 no runtime Deno 2.1.4
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.1.4
+      # Deno 2.1.4 cannot read the Edge's format-5 lockfile. Dependencies in
+      # these tests are version-pinned. Type checks and --frozen remain in
+      # the current-runtime job; this job exercises the production-era runtime.
+      - name: Validar parser e autorização com certificados sintéticos
+        run: >-
+          deno test --no-config --no-lock --no-check --node-modules-dir=none --allow-env
+          supabase/functions/nfse-certificate-upload/certificate.test.ts
+          supabase/functions/nfse-certificate-upload/pkcs12-reader.test.ts
