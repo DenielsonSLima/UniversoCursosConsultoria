@@ -17,8 +17,12 @@ test('private fiscal catalogs retain pinned official domains, flags and both val
       assert.equal(credits.length, 13);
       assert.deepEqual(credits, await json('../../modules/gestor/emissor-nfse/modelos/catalogs/presumed-credits.json'));
       const currencies = (await db.query('SELECT definition FROM private.nfse_currency_catalog ORDER BY code')).rows.map((r) => r.definition);
-      const source = await json('../../modules/gestor/emissor-nfse/modelos/catalogos/generated/nfse-additional-domains.json');
-      assert.equal(currencies.length, 249); assert.deepEqual(currencies, source.currencies.sort((a, b) => a.code.localeCompare(b.code)));
+      const sourceCurrencies = (await Promise.all(Array.from({ length: 6 }, (_, i) => json(
+        `../../modules/gestor/emissor-nfse/modelos/catalogos/generated/nfse-currencies-${String(i + 1).padStart(2, '0')}.json`)))).flat();
+      const metadata = await json('../../modules/gestor/emissor-nfse/modelos/catalogos/generated/nfse-additional-metadata.json');
+      assert.equal(metadata.provenance.currencyRows, 249);
+      assert.equal(metadata.provenance.currencySha256, '6d56e9007acbc80abefde48145efe9bec43a05b0c532f1bc101e1d65d7b2254e');
+      assert.equal(currencies.length, 249); assert.deepEqual(currencies, sourceCurrencies.sort((a, b) => a.code.localeCompare(b.code)));
       const provenance = (await db.query('SELECT provenance FROM private.nfse_fiscal_catalog_releases')).rows[0].provenance;
       assert.equal(provenance.classifications.derivedJsonSha256, '83db57138a1d0c5f87f975d83425e0a802055f51035ddec121cea993107a6b1b');
       assert.equal(provenance.credits.derivedJsonSha256, 'f32d99b1dddcb2ae3dcef65afcc9759b637dc60cb1aa70ed33035d9731c5e30d');
