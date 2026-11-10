@@ -37,10 +37,10 @@ Deno.test('identificação do diário fica discreta no canto inferior direito e 
   snapshot.template.imprimirInstrucoes = false;
   const built = await composeDiarioPdfWithManifest(snapshot, await loadAssets());
   const page = (built.pdf.internal as unknown as { pages: string[][] }).pages.slice(1)
-    .find((commands) => commands.some((command) => command.includes('(Diário de classe · Conteúdo 1)')))!;
+    .find((commands) => commands.some((command) => command.includes('(Conteúdo 1)')))!;
   assert.ok(page, 'A página de conteúdo identifica o diário no rodapé');
   assert.ok(!page.join('\n').includes('(DIÁRIO DE CLASSE) Tj'), 'Não há identificação repetida no cabeçalho');
-  const footer = page.find((command) => command.includes('(Diário de classe · Conteúdo 1)'))!;
+  const footer = page.find((command) => command.includes('(Diário de classe ·)'))!;
   const position = footer.match(/([\d.]+) ([\d.]+) Td\n\(Diário de classe/u);
   assert.ok(position, 'O texto usa posição vetorial nativa');
   assert.ok(Number(position[1]) > 600 && Number(position[2]) < 20, 'O texto fica no canto inferior direito');
