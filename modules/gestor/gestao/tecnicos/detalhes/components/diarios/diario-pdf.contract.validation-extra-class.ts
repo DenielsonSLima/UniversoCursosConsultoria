@@ -13,7 +13,7 @@ export const assertExtraClassCredit = (
   const root = 'extraClassCredit';
   const credit = asRecord(input, root);
   assertExactKeys(credit,
-    ['schemaVersion', 'activities', 'eligibleActivityIdsByStudent'], [], root);
+    ['schemaVersion', 'activities', 'eligibleActivityIdsByStudent'], ['contentOrder'], root);
   if (credit.schemaVersion !== 1) fail(`${root}.schemaVersion`, 'versão desconhecida');
   if (!Array.isArray(credit.activities) || credit.activities.length > 1000) {
     fail(`${root}.activities`, 'lista de até 1000 atividades obrigatória');
@@ -28,8 +28,11 @@ export const assertExtraClassCredit = (
   (credit.activities as unknown[]).forEach((candidate, index) => {
     const path = `${root}.activities[${index}]`;
     const activity = asRecord(candidate, path);
-    assertExactKeys(activity, ['id', 'titulo', 'cargaHoraria', 'dataSource'], [], path);
+    assertExactKeys(activity, ['id', 'titulo', 'cargaHoraria', 'dataSource'], ['aulaOrigemId'], path);
     assertUuid(activity.id, `${path}.id`);
+    if (activity.aulaOrigemId !== undefined && activity.aulaOrigemId !== null) {
+      assertUuid(activity.aulaOrigemId, `${path}.aulaOrigemId`);
+    }
     assertText(activity.titulo, `${path}.titulo`, { max: 2000 });
     assertNumber(activity.cargaHoraria, `${path}.cargaHoraria`, 0.01, 1000);
     assertIsoDate(activity.dataSource, `${path}.dataSource`);
@@ -47,6 +50,28 @@ export const assertExtraClassCredit = (
     hoursByActivity.set(id, activity.cargaHoraria as number);
     activityOrder.set(id, index);
   });
+  if (credit.contentOrder !== undefined) {
+    if (!Array.isArray(credit.contentOrder) || credit.contentOrder.length > 6000) {
+      fail(`${root}.contentOrder`, 'lista de cronologia inválida');
+    }
+    const seen = new Set<string>();
+    const extraIds = new Set<string>();
+    (credit.contentOrder as unknown[]).forEach((candidate, index) => {
+      const path = `${root}.contentOrder[${index}]`;
+      const entry = asRecord(candidate, path);
+      assertExactKeys(entry, ['tipo', 'id'], [], path);
+      assertUuid(entry.id, `${path}.id`);
+      if (entry.tipo !== 'AULA' && entry.tipo !== 'EXTRA_CLASSE') fail(path, 'tipo desconhecido');
+      const key = `${entry.tipo}:${entry.id}`;
+      if (seen.has(key)) fail(path, 'conteúdo duplicado');
+      seen.add(key);
+      if (entry.tipo === 'EXTRA_CLASSE') {
+        if (!hoursByActivity.has(entry.id as string)) fail(path, 'atividade desconhecida');
+        extraIds.add(entry.id as string);
+      }
+    });
+    if (extraIds.size !== hoursByActivity.size) fail(`${root}.contentOrder`, 'atividade ausente');
+  }
   const eligibleMap = asRecord(credit.eligibleActivityIdsByStudent,
     `${root}.eligibleActivityIdsByStudent`);
   if (Object.keys(eligibleMap).length > 2000) {

@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict';
 import { composeDiarioPdfWithManifest } from './diario-pdf.ts';
 import { createSnapshot, loadAssets } from './diario-pdf-server-boundary.fixtures.ts';
-import { createExtraClassSnapshot, EXTRA_IDS } from './diario-extra-classe.fixtures.ts';
+import { createExtraClassSnapshot, createLinkedExtraClassSnapshot, EXTRA_IDS } from './diario-extra-classe.fixtures.ts';
 import { extraClassContentRows } from './diario-extra-classe.presentation.ts';
+import { DEFAULT_DIARIO_TEMPLATE } from '../../../../../cadastros/modelos-documentos/diarios/diarios-template-defaults.ts';
 
 declare const Deno: { test: (name: string, fn: () => Promise<void>) => void };
 const nativeStrings = (commands: string) => [...commands.matchAll(/\(((?:\\.|[^\\)])*)\) Tj/g)]
@@ -47,4 +48,17 @@ Deno.test('extensão vazia mantém páginas de capa/contracapa e manifesto sem a
   assert.deepEqual(built.manifest, original.manifest);
   const withExtra = await composeDiarioPdfWithManifest(createExtraClassSnapshot(), assets);
   assert.equal(withExtra.manifest.targetPageIndex, original.manifest.targetPageIndex);
+});
+
+Deno.test('PDF intercala complemento entre aulas pela ordem canônica e identifica sua origem', async () => {
+  const snapshot = createLinkedExtraClassSnapshot();
+  const built = await composeDiarioPdfWithManifest(snapshot, await loadAssets());
+  const content = pages(built.pdf).map((page) => nativeStrings(page).join(' ')).find((page) => page.includes('CONTEÚDO PROGRAMÁTICO E PRÁTICA PEDAGÓGICA'))!;
+  assert.ok(content.indexOf('Primeira aula sintética') < content.indexOf('Atividade domiciliar sintética'));
+  assert.ok(content.indexOf('Atividade domiciliar sintética') < content.indexOf('Segunda aula sintética'));
+  assert.match(content, /complemento da aula 1 \(19\/08\)/u);
+  assert.equal(built.manifest.instructionsPageIndex, null);
+  assert.equal(DEFAULT_DIARIO_TEMPLATE.imprimirInstrucoes, false);
+  assert.ok(pages(built.pdf)[1].includes('(REGISTRO DE VALIDAÇÃO E ASSINATURA ELETRÔNICA)'));
+  assert.ok(!pages(built.pdf).some((page) => page.includes('(INSTRUÇÕES DE PREENCHIMENTO)')));
 });

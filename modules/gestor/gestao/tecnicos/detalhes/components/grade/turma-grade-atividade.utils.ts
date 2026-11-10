@@ -2,6 +2,7 @@ import type { TurmaAtividadeExtraClasse } from '../../turma-grade.types';
 import { isAtividadeContextoOperacional, isAtividadeTurmaPreparacao } from '../atividades-extra/atividadesExtraClasse.utils';
 
 export interface TurmaAtividadeEditDraft {
+  aulaOrigemId: string;
   titulo: string;
   prazoEntrega: string;
   horas: string;
@@ -25,6 +26,7 @@ export const getTurmaAtividadeCapabilities = (atividade: TurmaAtividadeExtraClas
 };
 
 export const validateTurmaAtividadeDraft = (draft: TurmaAtividadeEditDraft) => {
+  if (!draft.aulaOrigemId?.trim()) return 'Selecione a aula de origem da atividade extra-classe.';
   const titulo = draft.titulo.trim();
   const horas = Number(draft.horas.replace(',', '.'));
   if (!titulo || titulo.length > 1000) return 'Informe um título de até 1000 caracteres.';

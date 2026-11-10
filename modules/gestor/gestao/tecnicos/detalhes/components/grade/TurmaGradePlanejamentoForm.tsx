@@ -1,10 +1,14 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { ClipboardCheck, CornerDownRight, Loader2, Save } from 'lucide-react';
 import { getSuggestedClassScheduleForHoursChange, TurmaGradeTheme } from './turma-grade-ui';
+import InstitutionalSelect from '../../../../../../shared/components/InstitutionalSelect';
+import type { TurmaAulaPlanejada } from '../../turma-grade.types';
+import { getAulaOrigemOptions } from './turma-grade-aula-origem';
 
 const FIELD_LABEL_CLASS = 'text-[9px] font-black uppercase tracking-wider text-slate-500';
 
 interface TurmaGradePlanejamentoFormProps {
+  aulas: TurmaAulaPlanejada[];
   disciplinaId: string;
   theme: TurmaGradeTheme;
   titulo: string;
@@ -20,14 +24,21 @@ interface TurmaGradePlanejamentoFormProps {
   onHoraInicioChange: (value: string) => void;
   onHoraFimChange: (value: string) => void;
   onExtraClasseChange: (value: boolean) => void;
-  onAddPlanejamento: () => void;
+  onAddPlanejamento: (aulaOrigemId?: string) => void;
 }
 
 const TurmaGradePlanejamentoForm: React.FC<TurmaGradePlanejamentoFormProps> = ({
-  disciplinaId, theme, titulo, data, horas, horaInicio, horaFim, isExtraClasse, isSaving,
+  aulas, disciplinaId, theme, titulo, data, horas, horaInicio, horaFim, isExtraClasse, isSaving,
   onTituloChange, onDataChange, onHorasChange, onHoraInicioChange, onHoraFimChange,
   onExtraClasseChange, onAddPlanejamento,
 }) => {
+  const [aulaOrigemId, setAulaOrigemId] = useState('');
+  const aulaOrigemOptions = getAulaOrigemOptions(aulas);
+  const origemValida = aulaOrigemOptions.some((option) => option.value === aulaOrigemId);
+  useEffect(() => {
+    if (!isExtraClasse) setAulaOrigemId('');
+  }, [isExtraClasse]);
+  const addPlanejamento = () => onAddPlanejamento(isExtraClasse ? aulaOrigemId : undefined);
   const handleHoursChange = (value: string) => {
     const suggestedSchedule = getSuggestedClassScheduleForHoursChange({
       previousHours: horas,
@@ -61,6 +72,22 @@ const TurmaGradePlanejamentoForm: React.FC<TurmaGradePlanejamentoFormProps> = ({
           <ClipboardCheck size={14} /> {isExtraClasse ? 'Extra-classe ativa' : 'Marcar extra-classe'}
         </label>
       </div>
+      {isExtraClasse && (
+        <div className="flex min-w-[230px] flex-1 flex-col gap-1">
+          <label htmlFor={`turma-aula-origem-${disciplinaId}`} className="text-xs font-medium text-slate-600">Aula de origem</label>
+          <InstitutionalSelect
+            id={`turma-aula-origem-${disciplinaId}`}
+            ariaLabel="Aula de origem da atividade extra-classe"
+            value={aulaOrigemId}
+            onValueChange={setAulaOrigemId}
+            options={aulaOrigemOptions}
+            placeholder="Selecione a aula complementada..."
+            disabled={isSaving}
+            required
+          />
+          {aulas.length === 0 && <p className="text-xs text-amber-700">Planeje uma aula antes de cadastrar seu complemento.</p>}
+        </div>
+      )}
       <label htmlFor={`turma-titulo-input-${disciplinaId}`} className="flex min-w-[190px] flex-1 flex-col gap-1">
         <span className={FIELD_LABEL_CLASS}>
           {isExtraClasse ? 'Tema da atividade' : 'Conteúdo da aula (opcional)'}
@@ -146,7 +173,7 @@ const TurmaGradePlanejamentoForm: React.FC<TurmaGradePlanejamentoFormProps> = ({
           value={horas}
           onChange={(event) => handleHoursChange(event.target.value)}
           onKeyDown={(event) => {
-            if (event.key === 'Enter') onAddPlanejamento();
+            if (event.key === 'Enter') addPlanejamento();
           }}
           aria-label={isExtraClasse ? 'Carga horária da atividade' : 'Carga horária da aula no dia'}
         />
@@ -158,9 +185,9 @@ const TurmaGradePlanejamentoForm: React.FC<TurmaGradePlanejamentoFormProps> = ({
       )}
       <button
         type="button"
-        onClick={onAddPlanejamento}
+        onClick={addPlanejamento}
         className={`min-h-[38px] px-4 py-2.5 ${theme.bg} ${theme.text} rounded-xl ${theme.hoverBg} hover:text-white transition-colors border ${theme.border} flex items-center justify-center gap-2 shrink-0 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed text-[10px] font-black uppercase tracking-widest`}
-        disabled={isSaving || !horas.trim() || !data.trim() || (isExtraClasse && !titulo.trim())}
+        disabled={isSaving || !horas.trim() || !data.trim() || (isExtraClasse && (!titulo.trim() || !origemValida))}
         aria-label={isExtraClasse ? 'Criar atividade extra-classe' : 'Planejar horário da aula'}
       >
         {isSaving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}

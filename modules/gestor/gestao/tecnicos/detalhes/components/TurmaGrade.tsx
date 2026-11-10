@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AlertTriangle, Loader2, RefreshCw, X } from 'lucide-react';
+import { AlertTriangle, Loader2, RefreshCw } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Turma } from '../../../gestao.types';
 import ToastNotification, { useToast } from '../../../../parceiros/components/shared/ToastNotification';
@@ -22,14 +22,14 @@ import {
   getTurmaGradeTheme,
   TurmaGradeColorTheme,
 } from './grade/turma-grade-ui';
-import { TurmaAulaUpdateInput } from '../turma-grade.types';
+import { resolveErrorMessage, isPermissionError, isExcessHoursMessage } from './grade/turma-grade-errors';
+import { TurmaAulaUpdateInput, DocenteModalState, AulaDeleteState } from '../turma-grade.types';
 import { ACADEMIC_CLASS_CONTENT_PENDING } from '../../../../../../lib/academicClassMeetings';
 import {
   useGestaoPlanosCurso,
-  usePlanoCursoDocumento,
 } from '../../../../../shared/plano-curso/plano-curso.hooks';
 import { usePlanoCursoRealtime } from '../../../../../shared/plano-curso/plano-curso.realtime';
-import PlanoCursoPdfPreview from '../../../../../shared/plano-curso/PlanoCursoPdfPreview';
+import { useTurmaGradePlanoCursoPreview } from './grade/useTurmaGradePlanoCursoPreview';
 import { planoCursoKeys } from '../../../../../shared/plano-curso/plano-curso.keys';
 
 interface TurmaGradeProps {
@@ -38,53 +38,7 @@ interface TurmaGradeProps {
   colorTheme?: TurmaGradeColorTheme;
 }
 
-interface DocenteModalState {
-  isOpen: boolean;
-  disciplinaId: string;
-}
-
-interface AulaDeleteState {
-  disciplinaId: string;
-  aulaId: string;
-}
-
-interface PlanoCursoPreviewState {
-  planoId: string;
-  revisao: number;
-  templateRevision: number;
-  documentoFingerprint: string;
-}
-
 const CLOSED_DOCENTE_MODAL: DocenteModalState = { isOpen: false, disciplinaId: '' };
-const resolveErrorMessage = (error: unknown) => {
-  if (error instanceof Error) return error.message;
-  if (typeof error === 'string') return error;
-  if (!error || typeof error !== 'object') return 'Não foi possível concluir a operação.';
-
-  const normalized = error as {
-    message?: string;
-    details?: string;
-    hint?: string;
-    code?: string;
-    error_description?: string;
-  };
-
-  if (normalized.message) {
-    return normalized.code ? `[${normalized.code}] ${normalized.message}` : normalized.message;
-  }
-  if (normalized.error_description) return normalized.error_description;
-  if (normalized.details) return normalized.details;
-  if (normalized.hint) return normalized.hint;
-
-  return 'Não foi possível concluir a operação.';
-};
-
-const isPermissionError = (message: string) => message.includes('Sem permissão')
-  || message.includes('permission');
-
-const isExcessHoursMessage = (message: string) => message.includes('Carga horaria excedida')
-  || message.includes('carga horária');
-
 const TurmaGrade = ({
   turma,
   singleProfessor = false,
@@ -103,9 +57,7 @@ const TurmaGrade = ({
   const [showDocenteModal, setShowDocenteModal] = useState<DocenteModalState>(CLOSED_DOCENTE_MODAL);
   const [aulaParaExcluir, setAulaParaExcluir] = useState<AulaDeleteState | null>(null);
   const [assigningProfessorId, setAssigningProfessorId] = useState<string | null>(null);
-  const [planoCursoPreview, setPlanoCursoPreview] = useState<PlanoCursoPreviewState | null>(null);
   const assigningProfessorRef = useRef(false);
-  const planoCursoDialogRef = useRef<HTMLDivElement>(null);
   const { data: gradeData, isLoading: loading } = useTurmaGradeData(turma.id, turma.cursoId);
   const cursoBase = gradeData?.cursoBase || null;
   const disciplinasConfig = gradeData?.disciplinasConfig || {};
@@ -114,82 +66,14 @@ const TurmaGrade = ({
   const professores = gradeData?.professores || [];
   const metricasGrade = gradeData?.metricasGrade || [];
   const planosCursoQuery = useGestaoPlanosCurso(turma.id);
-  const planoCursoDocumentQuery = usePlanoCursoDocumento(
-    planoCursoPreview?.planoId || '',
-    planoCursoPreview?.revisao || 0,
-    planoCursoPreview?.templateRevision ?? null,
-    planoCursoPreview?.documentoFingerprint || '',
-  );
   const planosCurso = useMemo(() => Object.fromEntries(
     (planosCursoQuery.data || []).map((plano) => [plano.disciplinaId, plano]),
   ), [planosCursoQuery.data]);
-  const isPlanoCursoPreparationOpen = Boolean(
-    planoCursoPreview && !planoCursoDocumentQuery.data,
-  );
+  const { openPlanoCurso, preview: planoCursoPreview } = useTurmaGradePlanoCursoPreview(planosCurso);
   usePlanoCursoRealtime({ turmaId: turma.id });
   const theme = getTurmaGradeTheme(colorTheme);
 
   const closeDocenteModal = useCallback(() => setShowDocenteModal(CLOSED_DOCENTE_MODAL), []);
-
-  const openPlanoCurso = useCallback((disciplinaId: string) => {
-    const plano = planosCurso[disciplinaId];
-    if (
-      !plano?.planoId
-      || plano.status !== 'CONCLUIDO'
-      || plano.templateRevision === null
-      || !plano.documentoFingerprint
-    ) return;
-    setPlanoCursoPreview({
-      planoId: plano.planoId,
-      revisao: plano.revisao,
-      templateRevision: plano.templateRevision,
-      documentoFingerprint: plano.documentoFingerprint,
-    });
-  }, [planosCurso]);
-
-  useEffect(() => {
-    if (!isPlanoCursoPreparationOpen) return undefined;
-    const returnFocus = document.activeElement instanceof HTMLElement
-      ? document.activeElement
-      : null;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    const focusFrame = window.requestAnimationFrame(() => {
-      const initial = planoCursoDialogRef.current?.querySelector<HTMLElement>('[data-plano-initial-focus]');
-      (initial || planoCursoDialogRef.current)?.focus();
-    });
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setPlanoCursoPreview(null);
-        return;
-      }
-      if (event.key !== 'Tab') return;
-      const focusable = [...(planoCursoDialogRef.current?.querySelectorAll<HTMLElement>(
-        'button:not([disabled]), [tabindex]:not([tabindex="-1"])',
-      ) || [])];
-      if (focusable.length === 0) {
-        event.preventDefault();
-        planoCursoDialogRef.current?.focus();
-        return;
-      }
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first.focus();
-      }
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => {
-      window.cancelAnimationFrame(focusFrame);
-      window.removeEventListener('keydown', onKeyDown);
-      document.body.style.overflow = previousOverflow;
-      if (returnFocus?.isConnected) returnFocus.focus();
-    };
-  }, [isPlanoCursoPreparationOpen]);
 
   const assignProfessorMutation = useAssignProfessorMutation(
     turma.id,
@@ -303,7 +187,9 @@ const TurmaGrade = ({
     },
     (error) => {
       console.error('Erro ao remover aula:', error);
-      toast.error('Aula não excluída', 'Não consegui remover esta aula do planejamento. Tente novamente.');
+      toast.error('Aula não excluída', error?.code === '23503'
+        ? 'Esta aula possui atividades extra-classe vinculadas. Ajuste os vínculos antes de excluir a aula.'
+        : 'Não consegui remover esta aula do planejamento. Tente novamente.');
     },
   );
   const updateAulaMutation = useUpdateTurmaAulaMutation(
@@ -383,7 +269,7 @@ const TurmaGrade = ({
     }
   };
 
-  const handleAddAula = async (disciplinaId: string) => {
+  const handleAddAula = async (disciplinaId: string, aulaOrigemId?: string) => {
     const horasStr = newAulaHoras[disciplinaId]?.trim();
     const dataStr = newAulaData[disciplinaId]?.trim();
     const isExtraClasse = Boolean(newAulaExtraClasse[disciplinaId]);
@@ -407,11 +293,16 @@ const TurmaGrade = ({
     }
 
     if (isExtraClasse) {
+      if (!aulaOrigemId || !(aulas[disciplinaId] || []).some((aula) => aula.id === aulaOrigemId)) {
+        toast.info('Selecione a aula de origem', 'A atividade extra-classe deve complementar uma aula desta disciplina.');
+        return;
+      }
       const turmaStatus = String(turma.status || '').toUpperCase();
       const isPreparacao = turmaStatus === 'PLANEJADA' || turmaStatus === 'INSCRICOES_ABERTAS';
       try {
         await addAtividadeExtraClasseMutation.mutateAsync({
           disciplinaId,
+          aulaOrigemId,
           titulo: tituloInformado!,
           horas,
           prazoEntrega: dataStr,
@@ -594,30 +485,7 @@ const TurmaGrade = ({
           isDeleting={removeAulaMutation.isPending}
         />
       )}
-      {isPlanoCursoPreparationOpen ? (
-        <div ref={planoCursoDialogRef} tabIndex={-1} className="fixed inset-0 z-[2147482999] flex items-center justify-center bg-slate-950/80 p-4 outline-none" role="dialog" aria-modal="true" aria-busy={planoCursoDocumentQuery.isLoading} aria-label={planoCursoDocumentQuery.isError ? 'Plano de Curso indisponível' : 'Preparando Plano de Curso'}>
-          {planoCursoDocumentQuery.isError ? (
-            <div className="w-full max-w-md rounded-3xl bg-white p-6 text-center shadow-2xl">
-              <AlertTriangle size={32} className="mx-auto text-amber-500" />
-              <h4 className="mt-3 text-sm font-black uppercase tracking-wide text-[#001a33]">Prévia indisponível</h4>
-              <p className="mt-2 text-xs font-medium leading-relaxed text-slate-500">O servidor não retornou um Plano de Curso canônico pronto para visualização.</p>
-              <div className="mt-5 flex justify-center gap-2">
-                <button type="button" data-plano-initial-focus onClick={() => { void planoCursoDocumentQuery.refetch(); }} className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-[10px] font-black uppercase tracking-wider text-slate-700">Tentar novamente</button>
-                <button type="button" onClick={() => setPlanoCursoPreview(null)} className="rounded-xl bg-[#001a33] px-5 py-2.5 text-[10px] font-black uppercase tracking-wider text-white">Fechar</button>
-              </div>
-            </div>
-          ) : (
-          <div className="relative rounded-3xl border border-white/10 bg-slate-900 px-10 py-9 text-center text-white shadow-2xl">
-            <button type="button" data-plano-initial-focus onClick={() => setPlanoCursoPreview(null)} aria-label="Cancelar prévia" className="absolute right-3 top-3 rounded-lg p-1.5 text-slate-400 hover:bg-white/10 hover:text-white"><X size={16} /></button>
-            <Loader2 size={34} className="mx-auto animate-spin text-emerald-300" />
-            <p className="mt-4 text-xs font-black uppercase tracking-wider">Preparando PDF vetorial...</p>
-          </div>
-          )}
-        </div>
-      ) : null}
-      {planoCursoPreview && planoCursoDocumentQuery.data ? (
-        <PlanoCursoPdfPreview payload={planoCursoDocumentQuery.data} onClose={() => setPlanoCursoPreview(null)} />
-      ) : null}
+      {planoCursoPreview}
       <ToastNotification toasts={toasts} onRemove={removeToast} />
     </div>
   );

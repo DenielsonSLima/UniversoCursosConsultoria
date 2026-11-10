@@ -129,6 +129,7 @@ const mapAtividadesByDisciplina = (
     if (!result[atividade.disciplina_id]) result[atividade.disciplina_id] = [];
     result[atividade.disciplina_id].push({
       id: atividade.id,
+      aulaOrigemId: atividade.aula_origem_id || null,
       titulo: atividade.titulo,
       tema: atividade.tema,
       cargaHoraria: parseFloat(atividade.carga_horaria_compensacao || 0),
@@ -212,7 +213,7 @@ export const turmaGradeService = {
         .eq('turma_id', turmaId),
       supabase
         .from('atividades_extra_classe')
-        .select('id, disciplina_id, titulo, tema, carga_horaria_compensacao, prazo_entrega, status, status_antes_arquivo, updated_at, turma:turmas(status), respostas:atividade_extra_classe_respostas(count)')
+        .select('id, disciplina_id, aula_origem_id, titulo, tema, carga_horaria_compensacao, prazo_entrega, status, status_antes_arquivo, updated_at, turma:turmas(status), respostas:atividade_extra_classe_respostas(count)')
         .eq('turma_id', turmaId),
       getProfessoresDaTurma(turmaId),
       academicLifecycleService.getDiarios(turmaId),
@@ -345,6 +346,7 @@ export const turmaGradeService = {
     turmaId: string,
     input: TurmaAtividadeExtraClasseInput,
   ): Promise<TurmaAtividadeExtraClasse> {
+    if (!input.aulaOrigemId) throw new Error('Selecione a aula de origem da atividade extra-classe.');
     const perguntas = Array.isArray(input.perguntas)
       ? input.perguntas.filter((item) => item.pergunta?.trim())
       : [];
@@ -354,6 +356,7 @@ export const turmaGradeService = {
       .insert({
         turma_id: turmaId,
         disciplina_id: input.disciplinaId,
+        aula_origem_id: input.aulaOrigemId,
         titulo: input.titulo,
         tema: input.titulo,
         tipo_resposta: perguntas.length > 0 ? 'MISTO' : 'TEXTO',
@@ -373,6 +376,7 @@ export const turmaGradeService = {
 
     return {
       id: data.id,
+      aulaOrigemId: data.aula_origem_id || null,
       titulo: data.titulo,
       tema: data.tema,
       cargaHoraria: parseFloat(data.carga_horaria_compensacao || 0),

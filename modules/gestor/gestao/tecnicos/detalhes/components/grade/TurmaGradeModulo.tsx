@@ -46,7 +46,7 @@ interface TurmaGradeModuloProps {
   onHoraInicioChange: (disciplinaId: string, value: string) => void;
   onHoraFimChange: (disciplinaId: string, value: string) => void;
   onExtraClasseChange: (disciplinaId: string, value: boolean) => void;
-  onAddPlanejamento: (disciplinaId: string) => void;
+  onAddPlanejamento: (disciplinaId: string, aulaOrigemId?: string) => void;
 }
 
 const TurmaGradeModulo: React.FC<TurmaGradeModuloProps> = ({
@@ -170,7 +170,7 @@ const TurmaGradeModulo: React.FC<TurmaGradeModuloProps> = ({
                 onHoraInicioChange={(value) => onHoraInicioChange(disciplina.id, value)}
                 onHoraFimChange={(value) => onHoraFimChange(disciplina.id, value)}
                 onExtraClasseChange={(value) => onExtraClasseChange(disciplina.id, value)}
-                onAddPlanejamento={() => onAddPlanejamento(disciplina.id)}
+                onAddPlanejamento={(aulaOrigemId) => onAddPlanejamento(disciplina.id, aulaOrigemId)}
               />
             ))}
           </div>

@@ -91,6 +91,7 @@ export const drawStandardPage = (
     {
       orientation: "landscape",
       alias: "diario-institutional-logo",
+      metaAppearance: "plain",
       meta: {
         eyebrow: "DIÁRIO DE CLASSE",
         title,

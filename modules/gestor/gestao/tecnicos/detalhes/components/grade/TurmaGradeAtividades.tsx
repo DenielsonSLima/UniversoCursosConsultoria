@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { ArchiveRestore, ClipboardCheck, Loader2, Pencil, Trash2 } from 'lucide-react';
+import { ArchiveRestore, ClipboardCheck, Link2, Loader2, Pencil, Trash2 } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { TurmaAtividadeExtraClasse, TurmaAulaPlanejada } from '../../turma-grade.types';
 import type { Turma } from '../../../../gestao.types';
@@ -14,6 +14,7 @@ import { getTurmaAtividadeCapabilities } from './turma-grade-atividade.utils';
 import { manageTurmaAtividade, type TurmaAtividadeManagementInput } from './turma-grade-atividade.service';
 import TurmaGradeAtividadeEditor from './TurmaGradeAtividadeEditor';
 import { buildGradeChronology } from './turma-grade-cronologia';
+import { resolveAulaOrigem } from './turma-grade-aula-origem';
 
 interface Props {
   atividades: TurmaAtividadeExtraClasse[];
@@ -39,6 +40,7 @@ const TurmaGradeAtividades: React.FC<Props> = ({ atividades, aulas = [], renderA
       queryClient.invalidateQueries({ queryKey: atividadesExtraClasseKeys.turma(contexto.turmaId) }),
       queryClient.invalidateQueries({ queryKey: diarioClasseKeys.resultadosByTurma(contexto.turmaId) }),
       queryClient.invalidateQueries({ queryKey: diarioClasseKeys.praticasByTurma(contexto.turmaId) }),
+      queryClient.invalidateQueries({ queryKey: ['diario-extra-classe-credito', contexto.turmaId] }),
       queryClient.invalidateQueries({ queryKey: gestaoQueryKeys.classesByModality(contexto.modalidade as Turma['modalidade']) }),
       queryClient.invalidateQueries({ queryKey: gestaoQueryKeys.activeClassesRoot() }),
     ]);
@@ -50,7 +52,7 @@ const TurmaGradeAtividades: React.FC<Props> = ({ atividades, aulas = [], renderA
       setEditingActivity(null);
       setArchiveActivity(null);
       toast.success(
-        input.acao === 'EDITAR' ? 'Atividade atualizada' : input.acao === 'ARQUIVAR' ? 'Atividade arquivada' : 'Atividade restaurada',
+        input.acao === 'VINCULAR_ORIGEM' ? 'Aula de origem vinculada' : input.acao === 'EDITAR' ? 'Atividade atualizada' : input.acao === 'ARQUIVAR' ? 'Atividade arquivada' : 'Atividade restaurada',
         input.acao === 'ARQUIVAR'
           ? 'Você pode recuperá-la em Atividades arquivadas. Respostas e notas foram preservadas.'
           : 'A grade foi atualizada com os dados confirmados pelo servidor.',
@@ -72,11 +74,15 @@ const TurmaGradeAtividades: React.FC<Props> = ({ atividades, aulas = [], renderA
   const renderRow = (atividade: TurmaAtividadeExtraClasse, index: number) => {
     const isArchived = atividade.status === 'ARQUIVADA';
     const capabilities = getTurmaAtividadeCapabilities(atividade);
-    if (editingActivity?.id === atividade.id && capabilities.canEdit) {
-      return <TurmaGradeAtividadeEditor key={atividade.id} atividade={atividade} pending={busy} revisionChanged={editingActivity.updatedAt !== atividade.updatedAt} onCancel={() => setEditingActivity(null)} onSave={(draft) => manage({ atividade: editingActivity, acao: 'EDITAR', draft })} />;
+    const origem = resolveAulaOrigem(aulas, atividade.aulaOrigemId);
+    const canLinkOrigin = capabilities.canManage && !isArchived && !atividade.aulaOrigemId;
+    if (editingActivity?.id === atividade.id && (capabilities.canEdit || canLinkOrigin)) {
+      return <TurmaGradeAtividadeEditor key={atividade.id} aulas={aulas} atividade={atividade} pending={busy} originOnly={!capabilities.canEdit} revisionChanged={editingActivity.updatedAt !== atividade.updatedAt} onCancel={() => setEditingActivity(null)} onSave={(draft) => !capabilities.canEdit
+        ? manage({ atividade: editingActivity, acao: 'VINCULAR_ORIGEM', aulaOrigemId: draft.aulaOrigemId })
+        : manage({ atividade: editingActivity, acao: 'EDITAR', draft })} />;
     }
     return (
-      <div key={atividade.id} className={`space-y-1 rounded-r-xl border-y border-r border-l-2 px-3 py-2 shadow-sm ${isArchived ? 'border-slate-200 bg-slate-50' : 'border-emerald-100 border-l-emerald-400 bg-emerald-50/50'}`}>
+      <div key={atividade.id} className={`ml-4 space-y-1 rounded-r-xl border-y border-r border-l-2 px-3 py-2 shadow-sm ${isArchived ? 'border-slate-200 bg-slate-50' : 'border-emerald-100 border-l-emerald-400 bg-emerald-50/50'}`}>
         <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
             <ClipboardCheck size={13} className="shrink-0 text-emerald-600" />
@@ -92,12 +98,16 @@ const TurmaGradeAtividades: React.FC<Props> = ({ atividades, aulas = [], renderA
               </button>
             ) : (
               <>
+                {!capabilities.canEdit && canLinkOrigin && <button type="button" disabled={busy} onClick={() => { setArchiveActivity(null); setEditingActivity(atividade); }} title="Vincular somente a aula de origem" aria-label={`Vincular aula de origem da atividade ${atividade.titulo}`} className="inline-flex items-center gap-1 rounded p-1 text-emerald-700 hover:bg-emerald-100 disabled:opacity-40"><Link2 size={14} /> Vincular origem</button>}
                 <button type="button" disabled={busy || !capabilities.canEdit} onClick={() => { setArchiveActivity(null); setEditingActivity(atividade); }} title={capabilities.canEdit ? 'Editar atividade' : 'Atividade com respostas: conteúdo, prazo e carga estão protegidos'} aria-label={`Editar atividade ${atividade.titulo}`} className="rounded p-1 text-emerald-700 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-40"><Pencil size={14} /></button>
                 <button type="button" disabled={busy} onClick={() => { setEditingActivity(null); setArchiveActivity(atividade); }} title="Excluir da grade (arquivar)" aria-label={`Excluir atividade ${atividade.titulo} da grade`} aria-expanded={archiveActivity?.id === atividade.id} className="rounded p-1 text-slate-400 hover:bg-red-50 hover:text-red-500 disabled:opacity-50"><Trash2 size={14} /></button>
               </>
             ) : <span className="text-[10px] text-slate-500">{isArchived && !atividade.statusAnterior ? 'Origem não registrada: restauração indisponível' : 'Somente consulta'}</span>}
           </div>
         </div>
+        <p className={`pl-5 text-xs font-medium ${origem ? 'text-emerald-800' : 'text-amber-700'}`}>
+          {origem?.label || 'Aula de origem não vinculada — selecione na edição.'}
+        </p>
         <div className="break-words pl-5 text-xs leading-relaxed text-slate-700">{atividade.titulo}</div>
         {!isArchived && Boolean(atividade.respostasCount) && <p className="pl-5 text-[10px] text-slate-500">{atividade.respostasCount} resposta(s) registrada(s). A edição está protegida.</p>}
         {archiveActivity?.id === atividade.id && capabilities.canManage && (

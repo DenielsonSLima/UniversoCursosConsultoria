@@ -225,8 +225,24 @@ const drawDocumentMeta = (
   right: number,
   top: number,
   pageWidth: number,
+  appearance: "card" | "plain" = "card",
 ) => {
   const width = pageWidth - left - right;
+  if (appearance === "plain") {
+    pdf.setFont("helvetica", "bold");
+    pdf.setTextColor(7, 26, 51);
+    if (meta.eyebrow) {
+      pdf.setFontSize(7);
+      drawSingleLinePdfText(pdf, meta.eyebrow.toUpperCase(), pageWidth / 2, top, {
+        align: "center", maxWidth: width,
+      });
+    }
+    pdf.setFontSize(12);
+    drawSingleLinePdfText(pdf, meta.title.toUpperCase(), pageWidth / 2, top + 4.5, {
+      align: "center", maxWidth: width,
+    });
+    return;
+  }
   const rightWidth = meta.label || meta.value ? Math.min(54, width * 0.34) : 0;
   const leftWidth = width - rightWidth - (rightWidth ? 5 : 0);
   const rightX = pageWidth - right;
@@ -289,6 +305,7 @@ export const drawCanonicalInstitutionalHeader = (
     orientation?: "portrait" | "landscape";
     alias?: string;
     meta?: InstitutionalDocumentMeta;
+    metaAppearance?: "card" | "plain";
     /** @deprecated A razão social não é mais renderizada. */
     showLegalName?: boolean;
   } = {},
@@ -385,7 +402,7 @@ export const drawCanonicalInstitutionalHeader = (
 
   const metaTop = bottom + 2;
   if (options.meta) {
-    drawDocumentMeta(pdf, options.meta, left, right, metaTop, pageWidth);
+    drawDocumentMeta(pdf, options.meta, left, right, metaTop, pageWidth, options.metaAppearance);
   }
 
   return {

@@ -1,5 +1,6 @@
-import type { DiarioPdfGradeSnapshot } from "./diario-pdf.contract.types.ts";
+import type { DiarioPdfGradeSnapshot, DiarioPdfLessonSnapshot } from "./diario-pdf.contract.types.ts";
 import { assertExtraClassCredit } from './diario-pdf.contract.validation-extra-class.ts';
+import { findOriginLesson, orderedDiaryContent } from './diario-content-order.ts';
 import {
   asRecord,
   assertExactKeys,
@@ -188,6 +189,17 @@ export const assertAcademicCollections = (
     snapshot.extraClassCredit, studentIds, snapshot.generatedAt as string,
   );
   const { lessonIds, sessionIds, sessionHours } = assertLessons(snapshot);
+  if (extra) {
+    const aulas = snapshot.aulas as DiarioPdfLessonSnapshot[];
+    extra.credit.activities.forEach((activity) => {
+      if (activity.aulaOrigemId && !findOriginLesson(aulas, activity.aulaOrigemId)) {
+        fail('extraClassCredit.activities.aulaOrigemId', 'aula de origem desconhecida');
+      }
+    });
+    try { orderedDiaryContent(aulas, extra.credit); } catch (error) {
+      fail('extraClassCredit.contentOrder', error instanceof Error ? error.message : 'cronologia inválida');
+    }
+  }
   const attendanceMap = asRecord(snapshot.attendanceMap, "attendanceMap");
   const gradesMap = asRecord(snapshot.gradesMap, "gradesMap");
   const practicesMap = asRecord(snapshot.praticasMap, "praticasMap");
