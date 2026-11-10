@@ -14,6 +14,10 @@ on:
       - 'supabase/tests/nfse*'
       - 'supabase/functions/_shared/nfse-national/**'
       - 'supabase/functions/nfse-certificate-upload/**'
+      - 'supabase/functions/nfse-national-preflight/**'
+      - 'supabase/functions/nfse-national-pilot/**'
+      - 'api/nfse-homologation-relay.js'
+      - 'internal/integracoes/nfse-relay/**'
       - 'package*.json'
   push:
     branches: [main]
@@ -29,6 +33,10 @@ on:
       - 'supabase/tests/nfse*'
       - 'supabase/functions/_shared/nfse-national/**'
       - 'supabase/functions/nfse-certificate-upload/**'
+      - 'supabase/functions/nfse-national-preflight/**'
+      - 'supabase/functions/nfse-national-pilot/**'
+      - 'api/nfse-homologation-relay.js'
+      - 'internal/integracoes/nfse-relay/**'
       - 'package*.json'
   workflow_dispatch:
 
@@ -66,6 +74,14 @@ jobs:
         env:
           NFSE_TEST_JSDOM_MODULE: ${{ runner.temp }}/nfse-certificate-ui/node_modules/jsdom/lib/api.js
         run: node --test modules/gestor/emissor-nfse/pendentes/PendentesNfseTab.interaction.test.mjs
+      - name: Validar revisão e recuperação do piloto sintético
+        env:
+          NFSE_TEST_JSDOM_MODULE: ${{ runner.temp }}/nfse-certificate-ui/node_modules/jsdom/lib/api.js
+        run: node --test modules/gestor/emissor-nfse/homologacao/NfseHomologationPanel.interaction.test.mjs
+      - name: Exercitar revisão fiscal da fila sem transmissão
+        env:
+          NFSE_TEST_JSDOM_MODULE: ${{ runner.temp }}/nfse-certificate-ui/node_modules/jsdom/lib/api.js
+        run: node --test modules/gestor/emissor-nfse/fila/fiscal-review/NfseFiscalReviewModal.interaction.test.mjs
       - run: node --test scripts/check-file-line-limits.test.mjs
       - run: node --test modules/gestor/emissor-nfse/visualizador/danfse.pdf.test.mjs
       - name: Instalar PostgreSQL isolado para os contratos fiscais
@@ -83,6 +99,9 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '>=24.22.1 <25'
       - uses: denoland/setup-deno@v2
         with:
           deno-version: v2.x
@@ -104,6 +123,18 @@ jobs:
         run: >-
           deno check --config supabase/functions/nfse-certificate-upload/deno.json
           --frozen supabase/functions/nfse-certificate-upload/index.ts
+      - name: Validar preflight e executor sem credenciais reais
+        run: >-
+          deno test --no-config --allow-read
+          supabase/functions/nfse-national-preflight/preflight.test.ts
+          supabase/functions/nfse-national-preflight/routes.test.ts
+          supabase/functions/nfse-national-pilot/handler.test.ts
+      - name: Conferir tipos do executor de homologação
+        run: >-
+          deno check --config supabase/functions/nfse-national-pilot/deno.json
+          --frozen supabase/functions/nfse-national-pilot/index.ts
+      - name: Validar canal privado Node com credenciais sintéticas
+        run: node --test internal/integracoes/nfse-relay/*.test.mjs
 
   nfse-certificate-edge-runtime:
     name: Cadastro A1 no runtime Deno 2.1.4

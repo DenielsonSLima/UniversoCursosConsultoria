@@ -1,5 +1,5 @@
 import React, { lazy, Suspense, useMemo, useRef, useState } from 'react';
-import { AlertCircle, BriefcaseBusiness, Building2, CheckCheck, ClipboardList, FileText, Layers, ShieldCheck } from 'lucide-react';
+import { AlertCircle, BriefcaseBusiness, Building2, CheckCheck, ClipboardList, FileText, FlaskConical, Layers, ShieldCheck } from 'lucide-react';
 import FinancialUnderlineTabs from '../financeiro/components/FinancialUnderlineTabs';
 import { useNfseWorkspace } from './hooks/useNfseQueries';
 import { useNfseRealtime } from './hooks/useNfseRealtime';
@@ -22,7 +22,8 @@ const EmitidasNfseTab = lazy(() => import('./emitidas/EmitidasNfseTab'));
 const ErrosNfseTab = lazy(() => import('./erros/ErrosNfseTab'));
 const ModelosNfseTab = lazy(() => import('./modelos/ModelosNfseTab'));
 const ServicosParceirosNfseTab = lazy(() => import('./parceiros/ServicosParceirosNfseTab'));
-type NfseWorkspaceTab = NfseTab | 'servicos';
+const NfseHomologationPanel = lazy(() => import('./homologacao/NfseHomologationPanel'));
+type NfseWorkspaceTab = NfseTab | 'servicos' | 'homologacao';
 
 export interface EmissorNfsePageProps {
   poloId?: string | null;
@@ -63,6 +64,8 @@ const NfseWorkspace: React.FC<EmissorNfsePageProps> = ({ poloId, poloName, isMat
   } };
   const summary = workspace?.summary;
   const selectedPolo = Boolean(poloId && poloId !== 'todos');
+  const availableTabs = isMatriz ? [...tabs,
+    { id: 'homologacao' as const, label: 'Homologação', icon: <FlaskConical size={15} /> }] : tabs;
 
   return (
     <div className="nfse-workspace">
@@ -86,7 +89,7 @@ const NfseWorkspace: React.FC<EmissorNfsePageProps> = ({ poloId, poloName, isMat
         <div className="nfse-metric"><span>Emitidas</span><strong>{summary?.issuedCount ?? '—'}</strong></div>
         <div className="nfse-metric"><span>Com erro</span><strong>{summary?.errorCount ?? '—'}</strong></div>
       </div>
-      <FinancialUnderlineTabs items={tabs} value={tab} onChange={setTab} ariaLabel="Abas do Emissor NFS-e" idPrefix="nfse" compact />
+      <FinancialUnderlineTabs items={availableTabs} value={tab} onChange={setTab} ariaLabel="Abas do Emissor NFS-e" idPrefix="nfse" compact />
       <div role="tabpanel" id={`nfse-${tab}-panel`} aria-labelledby={`nfse-${tab}-tab`} tabIndex={0} className="nfse-tab-panel">
         <NfseTabContext.Provider key={`${poloId}:${contextKey}:${month}`} value={context}>
           <NfsePreparationDraftProvider>
@@ -97,6 +100,7 @@ const NfseWorkspace: React.FC<EmissorNfsePageProps> = ({ poloId, poloName, isMat
             {tab === 'emitidas' && <EmitidasNfseTab />}
             {tab === 'erros' && <ErrosNfseTab />}
             {tab === 'modelos' && <ModelosNfseTab />}
+            {tab === 'homologacao' && isMatriz && scope && <NfseHomologationPanel scope={scope} />}
           </Suspense>
           </NfsePreparationDraftProvider>
         </NfseTabContext.Provider>

@@ -1,0 +1,27 @@
+.nfse-homologation .nfse-section-heading h2 { align-items: center; display: flex; gap: 8px; }
+.nfse-homologation-content { display: grid; gap: 16px; padding: 16px; }
+.nfse-homologation-step { align-items: center; border-top: 1px solid #edf0f5; display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; padding-top: 14px; }
+.nfse-homologation h3 { color: #18334b; font-size: 13px; font-weight: 500; margin: 0; }
+.nfse-homologation-checks { display: grid; gap: 9px; list-style: none; margin: 0 0 10px; padding: 0; }
+.nfse-homologation-checks li { align-items: flex-start; display: flex; gap: 10px; line-height: 1.55; }
+.nfse-homologation-checks .nfse-status { flex: 0 0 auto; }
+.nfse-homologation-review { background: #f8fafc; border: 1px solid #e3e9ee; border-radius: 8px; padding: 14px; }
+.nfse-homologation-grid { display: grid; gap: 14px; grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 14px 0; }
+.nfse-homologation-grid dt { color: #64748b; font-size: 12px; margin-bottom: 4px; }
+.nfse-homologation-grid dd { line-height: 1.55; margin: 0; overflow-wrap: anywhere; white-space: pre-wrap; }
+.nfse-homologation-grid small { color: #64748b; display: block; font-size: 12px; }
+.nfse-homologation-wide { grid-column: 1 / -1; }
+.nfse-homologation-confirm { align-items: flex-start; display: flex; gap: 9px; line-height: 1.55; }
+.nfse-homologation-confirm input { accent-color: #4169e1; flex: 0 0 auto; height: 16px; margin-top: 2px; width: 16px; }
+.nfse-homologation-state { background: #f7faff; border: 1px solid #dce7fa; border-radius: 8px; color: #36527a; font-size: 12px; line-height: 1.6; margin: 0; padding: 12px; }
+.nfse-homologation-state p { margin: 5px 0 10px; }
+.nfse-homologation-state strong { font-weight: 600; }
+.nfse-homologation-state[data-state="AUTHORIZED"] { background: #f0fdf7; border-color: #ccebdc; color: #18714c; }
+.nfse-homologation-state[data-state="REJECTED"] { background: #fff4f4; border-color: #f4d4d4; color: #ad3a3a; }
+.nfse-homologation-state[data-tone="error"] { background: #fff4f4; border-color: #f4d4d4; color: #ad3a3a; }
+.nfse-homologation-key { overflow-wrap: anywhere; }
+@media (max-width: 760px) {
+  .nfse-homologation-grid { grid-template-columns: minmax(0, 1fr); }
+  .nfse-homologation-step > button { width: 100%; }
+  .nfse-homologation-checks li { flex-direction: column; gap: 4px; }
+}

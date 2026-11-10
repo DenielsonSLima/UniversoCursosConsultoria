@@ -24,6 +24,13 @@ Histórico arquivado: [10/10/2026 — versão 4.8.204](./changelog/2026-10-10-ve
 
 Histórico arquivado: [10/10/2026 a 13/10/2026 — versões 4.8.208 a 4.8.214](./changelog/2026-10-10-a-13-versoes-4-8-208-a-214.md).
 
+## [4.8.285] - 2026-11-10
+
+- NFS-e recebe painel de homologação com revisão do teste individual, retorno fiscal e consulta da mesma DPS após resposta incerta.
+- Pendentes permite revisar os dados fiscais com modelo ativo 080201, confirmação do aluno como tomador e datas explícitas, preservando preparações e recebimentos.
+- Rejeição E0037 mostra explicação sobre o convênio municipal no ambiente consultado, sem concluir a situação em produção ou reenviar automaticamente.
+- A transmissão de notas reais continua bloqueada; esta entrega não libera emissão fiscal em produção.
+
 ## [4.8.284] - 2026-11-10
 
 - Extra-classe exige selecionar a aula de origem e aparece como complemento, com vínculo validado na mesma turma e disciplina.

@@ -46,15 +46,19 @@ function totalTaxes(value: NationalDpsInput['values']['totalTaxes']): string {
 /** Verified subset of the downloaded national DPS v1.01 schema. Not a fiscal eligibility engine. */
 export function buildNationalDps(input: NationalDpsInput): UnsignedFiscalXml {
   exactKeys(input, ['environment', 'purpose', 'issuedAt', 'applicationVersion', 'series', 'number',
-    'competence', 'issuerMunicipalityCode', 'issuer', 'recipient', 'service', 'values', 'substitution', 'review']);
+    'competence', 'issuerMunicipalityCode', 'issuer', 'recipient', 'service', 'values', 'ibscbs', 'substitution', 'review']);
   requireContract(input.environment === 'HOMOLOGACAO' || input.environment === 'PRODUCAO', 'INVALID_ENVIRONMENT');
   requireContract(input.purpose === 'REGULAR', 'UNSUPPORTED_NFSE_PURPOSE');
   requireContract(input.review?.recipientConfirmed === true && input.review.competenceConfirmed === true &&
-    input.review.classificationConfirmed === true && input.review.ibscbs === 'NOT_APPLICABLE_CONFIRMED' &&
+    input.review.classificationConfirmed === true &&
     input.review.federalRetentions === 'NONE_CONFIRMED' &&
     input.review.deductionsAndDiscounts === 'NONE_CONFIRMED', 'FISCAL_REVIEW_REQUIRED');
   exactKeys(input.review, ['recipientConfirmed', 'competenceConfirmed', 'classificationConfirmed',
     'ibscbs', 'federalRetentions', 'deductionsAndDiscounts']);
+  const declaredIbs = input.review.ibscbs === 'DECLARED_CONFIRMED' && input.ibscbs !== undefined;
+  const omittedIbs = input.ibscbs === undefined && (input.review.ibscbs === 'NOT_APPLICABLE_CONFIRMED' ||
+    (input.environment === 'HOMOLOGACAO' && input.review.ibscbs === 'SYNTHETIC_PILOT_OMISSION'));
+  requireContract(declaredIbs || omittedIbs, 'IBSCBS_REVIEW_REQUIRED');
   requireContract(/^\d{1,5}$/.test(input.series), 'INVALID_DPS_SERIES');
   requireContract(input.environment !== 'HOMOLOGACAO' || /^(?:\d{1,4}|[0-8]\d{4})$/.test(input.series),
     'INVALID_HOMOLOGATION_DPS_SERIES');
@@ -89,10 +93,12 @@ export function buildNationalDps(input: NationalDpsInput): UnsignedFiscalXml {
   const service = input.service;
   exactKeys(service, ['municipalityCode', 'nationalTaxCode', 'municipalTaxCode', 'nbs', 'description']);
   xmlText(service.description, 1, 2000);
+  const nbsXml = service.nbs ? tag('cNBS', digits(service.nbs, 9)) : '';
   xml += `<serv><locPrest>${tag('cLocPrestacao', digits(service.municipalityCode, 7))}</locPrest>` +
     `<cServ>${tag('cTribNac', digits(service.nationalTaxCode, 6))}` +
     (service.municipalTaxCode ? tag('cTribMun', digits(service.municipalTaxCode, 3)) : '') +
-    tag('xDescServ', service.description) + (service.nbs ? tag('cNBS', digits(service.nbs, 9)) : '') + '</cServ></serv>';
+    (input.environment === 'HOMOLOGACAO' ? nbsXml : '') + tag('xDescServ', service.description) +
+    (input.environment === 'PRODUCAO' ? nbsXml : '') + '</cServ></serv>';
   const v = input.values;
   exactKeys(v, ['serviceAmount', 'receivedAmount', 'issTaxation', 'immunityType', 'issRetention', 'issRate', 'totalTaxes']);
   requireContract(['1', '2', '4'].includes(v.issTaxation) && ['1', '2'].includes(v.issRetention), 'UNSUPPORTED_ISS_SCENARIO');
@@ -119,6 +125,16 @@ export function buildNationalDps(input: NationalDpsInput): UnsignedFiscalXml {
     (v.immunityType ? tag('tpImunidade', v.immunityType) : '') + tag('tpRetISSQN', v.issRetention) +
     (v.issRate !== undefined ? tag('pAliq', decimal(v.issRate, 1)) : '') +
     `</tribMun><totTrib>${totalTaxes(v.totalTaxes)}</totTrib></trib></valores>`;
+  if (input.ibscbs) {
+    requireContract(input.environment === 'HOMOLOGACAO', 'IBSCBS_PRODUCTION_CONTRACT_UNVERIFIED');
+    const ibs = input.ibscbs;
+    exactKeys(ibs, ['personalUse', 'operationCode', 'recipientIsAcquirer', 'cst', 'classificationCode']);
+    requireContract(['0', '1'].includes(ibs.personalUse) && ibs.recipientIsAcquirer === true,
+      'UNSUPPORTED_IBSCBS_SCENARIO');
+    xml += `<IBSCBS>${tag('indFinal', ibs.personalUse)}${tag('cIndOp', digits(ibs.operationCode, 6))}` +
+      `<indDest>0</indDest><valores><trib>${tag('CST', digits(ibs.cst, 3))}` +
+      `${tag('cClassTrib', digits(ibs.classificationCode, 6))}</trib></valores></IBSCBS>`;
+  }
   return { kind: 'DPS', environment: input.environment, schemaVersion: '1.01', referenceId,
     xml: `<?xml version="1.0" encoding="UTF-8"?><DPS xmlns="${NFSE_NAMESPACE}" versao="1.01">` +
       `<infDPS Id="${referenceId}">${xml}</infDPS></DPS>` };

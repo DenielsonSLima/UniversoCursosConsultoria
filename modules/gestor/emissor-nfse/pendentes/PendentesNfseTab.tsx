@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
-import { Play, Trash2 } from 'lucide-react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
+import { ClipboardCheck, Play, Trash2 } from 'lucide-react';
 import ConfirmModal from '../../components/ConfirmModal';
 import ToastNotification, { useToast } from '../../components/ToastNotification';
 import { useNfseTabContext } from '../components/NfseTabContext';
@@ -13,11 +13,14 @@ import { formatNfseMonth } from '../preparar/nfse-month.presentation';
 import { nfseQueueBlockingLabel } from '../fila/nfse-queue.presentation';
 import './nfse-queue-selection.css';
 
+const NfseFiscalReviewModal = lazy(() => import('../fila/fiscal-review/NfseFiscalReviewModal'));
+
 export default function PendentesNfseTab() {
   const { scope } = useNfseTabContext();
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<string[]>([]);
   const [confirmation, setConfirmation] = useState<string[] | null>(null);
+  const [reviewId, setReviewId] = useState<string | null>(null);
   const query = useNfseQueue(scope, page);
   const remove = useRemoveNfseQueue(scope);
   const attempt = useRef(createNfseQueueRemovalAttempt());
@@ -68,7 +71,7 @@ export default function PendentesNfseTab() {
         <thead><tr><th className="nfse-selection-cell"><input type="checkbox" aria-label="Selecionar todos desta página"
           checked={allSelected} ref={element => { if (element) element.indeterminate = selectedIds.length > 0 && !allSelected; }}
           disabled={busy || query.isFetching} onChange={() => setSelected(allSelected ? [] : visibleIds)} /></th>
-          <th>Aluno / turma</th><th>Modelo</th><th>Recebimentos</th><th>Valor do serviço</th><th>Situação</th></tr></thead>
+          <th>Aluno / turma</th><th>Modelo</th><th>Recebimentos</th><th>Valor do serviço</th><th>Situação</th><th>Conferência fiscal</th></tr></thead>
         <tbody>{data.rows.map(item => <tr key={item.id} data-selected={selectedIds.includes(item.id)}>
           <td className="nfse-selection-cell"><input type="checkbox" aria-label={`Selecionar preparação de ${item.studentName}, ${item.classLabel}`}
             checked={selectedIds.includes(item.id)} disabled={busy || query.isFetching}
@@ -79,6 +82,9 @@ export default function PendentesNfseTab() {
           <td className="nfse-amount">{formatNfseMoney(item.amount)}</td>
           <td><span className="nfse-status" data-tone="warning">Preparado</span>
             {item.blockingReasons.map(reason => <small key={reason}>{nfseQueueBlockingLabel(reason)}</small>)}</td>
+          <td><button type="button" className="nfse-button nfse-button-secondary" disabled={busy || query.isFetching}
+            aria-label={`Revisar dados fiscais de ${item.studentName}`} onClick={() => setReviewId(item.id)}>
+            <ClipboardCheck size={15} />Revisar</button></td>
         </tr>)}</tbody>
       </table></div>
       <footer className="nfse-footer"><span>{data.totalItems} documento(s)</span><span>Total preparado: <strong>{formatNfseMoney(data.totalAmount)}</strong></span></footer>
@@ -88,6 +94,10 @@ export default function PendentesNfseTab() {
     {data && (page > 1 || data.totalItems > data.pageSize) && <NfsePager page={page} busy={busy || query.isFetching}
       hasNext={page * data.pageSize < data.totalItems} onChange={next => { setSelected([]); setConfirmation(null); setPage(next); }} />}
     <div className="nfse-footer"><p>A preparação não emite nota. Excluir da fila preserva os recebimentos e o histórico, sem cancelar NFS-e.</p></div>
+    {reviewId && scope && <Suspense fallback={<p className="nfse-footer" role="status">Abrindo revisão fiscal…</p>}>
+      <NfseFiscalReviewModal key={reviewId} scope={scope} documentId={reviewId} onClose={() => setReviewId(null)}
+        onSaved={message => toast.success('Revisão fiscal salva', message)} />
+    </Suspense>}
     <ConfirmModal isOpen={Boolean(confirmation)} onClose={() => setConfirmation(null)} onConfirm={() => void confirmRemoval()}
       title="Excluir preparações?" confirmText="Excluir da fila" cancelText="Voltar"
       message={`Excluir ${confirmation?.length ?? 0} preparação(ões) selecionada(s) desta fila? Os recebimentos serão preservados e poderão ser preparados novamente. O histórico será mantido. Esta ação não cancela nem exclui notas fiscais emitidas.`} />

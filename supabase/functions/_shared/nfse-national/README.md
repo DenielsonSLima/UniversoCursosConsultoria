@@ -3,9 +3,47 @@
 Esta pasta contém builders DPS/eventos, assinatura XMLDSig offline e transporte HTTPS mTLS.
 Não há Edge pública, certificado real, transmissão ou integração ativa com a fila.
 
+## Piloto técnico isolado
+
+`pilot.ts` fornece uma factory sem armazenamento nem autorização própria. O caller deve
+reautorizar o operador, fixar o ambiente HOMOLOGACAO no servidor e persistir identidade DPS,
+snapshot, trava de execução e resultado. A factory exige um gate de contrato servidor e
+transporte injetado; não remove o bloqueio de produção em `live-contract.ts`/`mtls.ts`.
+
+`homologation-live-contract.ts` avalia o preflight obtido pelo executor, nunca uma prova
+enviada pelo navegador. Exige consulta mTLS de um Swagger oficial com menos de cinco minutos,
+certificado validado, rotas e envelope JSON compatíveis. O perfil experimental é RSA-SHA1
+documentado no Manual Integrado 1.00.02 de setembro/2022, seção6.1.4; a aceitação vigente
+permanece `TO_BE_TESTED`. Não se exige emissão anterior para fazer o primeiro teste.
+Se o Swagger declarar exclusivamente SHA256, o gate rejeita o perfil legado em vez de ignorar
+a divergência. O resultado permite apenas o experimento sintético em homologação.
+
+Antes de cada POST, consulta a identidade DPS estável. Consulta incerta impede o envio;
+timeout, erro de transporte ou resposta divergente nunca geram novo POST automático.
+A autorização exige ambiente2, DPS e chave coerentes, XML NFSe validado pelo XSD oficial,
+emitente/número consistentes com a chave e conteúdo integral da infDPS igual ao enviado.
+Mensagens brutas do provedor não são devolvidas: rejeições conservam somente códigos.
+O XML autorizado e a DPS assinada são resultados privados para o ledger, não respostas públicas.
+
+`homologation-schema.ts` usa `libxml2-wasm@0.7.2`, fixado no lock, sem subprocessos nem rede.
+O bundle gerado em `schemas/homologation.generated.ts` conserva os bytes dos sete XSDs
+oficiais de 20/10/2026 em base64 e SHA256; `generate-homologation-bundle.mjs` reproduz o
+bundle a partir das fontes originais. Imports XSD atendem somente essa allowlist em memória.
+DTD/entidades são rejeitados antes de parse; gzip e JSON possuem limites de expansão/tamanho.
+
+O builder aceita uma declaração mínima IBS/CBS doméstica revisada, sem escolher CST,
+cClassTrib ou cIndOp pelo contribuinte. O valor `SYNTHETIC_PILOT_OMISSION` permite omissão
+explícita apenas no teste técnico HOMOLOGACAO; ele falha em PRODUCAO e não comprova
+conformidade tributária. A ordem de cNBS/xDescServ respeita o XSD específico do ambiente.
+Fixtures sintéticas usam identidades nulas exclusivamente offline e não podem ser transmitidas.
+
+Validação do piloto: acrescentar `pilot.test.ts` ao comando Deno abaixo. Os testes validam
+os XSDs completos em WASM, assinatura real com certificado efêmero, retorno autorizado,
+recuperação por DPS, rejeição, divergência de ambiente/payload e limite de expansão gzip.
+
 - `dps.ts`: subconjunto doméstico do schema 1.01, com emitente prestador, tomador identificado,
   valores canônicos e revisão fiscal explícita. Competência, enquadramento e tributos não são
-  inferidos de recebimentos. IBS/CBS, deduções, descontos, retenções federais e demais cenários
+  inferidos de recebimentos. Demais cenários IBS/CBS, deduções, descontos, retenções federais
   não implementados exigem evolução do contrato; dados extras são rejeitados. CNPJ alfanumérico
   permanece explicitamente sem suporte neste subconjunto. Homologação inclui `finNFSe=0`
   para finalidade REGULAR, conforme seu XSD, sem inserir esse campo no leiaute de produção.
