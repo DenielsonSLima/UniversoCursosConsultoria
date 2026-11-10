@@ -143,7 +143,9 @@ Total: 112 arquivos.
 - Conferência remota dos catálogos:338 serviços,917 NBS,26 indicadores,73 classificações e13 créditos. Nenhuma classificação inexistente vira código válido por texto de busca.
 - Smoke Safari anterior: desktop e375×744; navegação, seletores, cancelamento e consulta real do estabelecimento aprovados. Um único modelo sintético inativo foi salvo/reaberto, versão2, sem emitir e sem alterar os dois modelos ativos.
 
-A conferência final do formulário corrigido para Peoplev2 aguarda janela acessível: Safari eChrome retornaram cgWindowNotFound. O usuário recebeu pedido para manter o Mac desbloqueado e a aba local visível. Os testes DOM já provam ausência de formulário de tomador, localizações/IDs de pessoa e placeholders de cálculo. Não substituir essa pendência por declaração de smoke visual concluído.
+- Smoke final autenticado no Safari local: quatro etapas navegadas; Configuração sem formulário de tomador; Serviço/Valores e revisão com origens preservadas. Layout desktop e375×744 conferidos, com as quatro abas e ações acessíveis. Rodapé fixo e rolagem interna aprovados; troca de etapa retorna ao início do conteúdo.
+- Salvamento/reabertura final do mesmo modelo sintético inativo: versão3, Peoplev2. Conferência via MCP confirmou recipientSource=AT_ISSUANCE, recipientAddressSource=FROM_PARTNER, intermediarySource=NONE e ausência de chaves de participante fixo. Os dois modelos ativos permanecem nas versões1 e2. Modal fechado ao terminar; sem transmissão.
+- CI do commit61b5fea67ff54669673af0ff3f529fa6ee7c16e3:16/16 verificações aprovadas, incluindo TypeScript, lint, testes, build e Vercel. Preview pronto. PR379 permanece em rascunho; esta conclusão não habilita o executor fiscal.
 
 ## Limites de emissão
 
