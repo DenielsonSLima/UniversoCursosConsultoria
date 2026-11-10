@@ -74,4 +74,16 @@ Usuário autorizou rever todos os sete lançamentos existentes. Conteúdo e data
 
 O comando global local de teto encontrou somente o manifesto do piloto NFS-e paralelo ainda não registrado; ele não pertence a esta entrega. A publicação usa o registro remoto vigente acrescido apenas deste manifesto, preservando o lote local de NFS-e. CI e Preview do commit exato validarão esse registro isoladamente.
 
-Teste adicional do rodapé aprovado: ausência da identificação no cabeçalho e posição vetorial no canto inferior direito. Migrations, redeploy do compositor da Edge de assinatura e smoke autenticado final serão conferidos no fechamento remoto. Artefatos temporários e fontes do piloto fiscal não integram a publicação.
+Teste adicional do rodapé aprovado: ausência da identificação no cabeçalho e posição vetorial no canto inferior direito. Artefatos temporários e fontes do piloto fiscal não integram a publicação.
+
+## Operação remota
+
+PR 378, commit de produto `84c8aa95270c060f9625db432b34b5ef158c5e71`: 16 verificações e Preview aprovadas. Produção usa novo build desse mesmo produto com ambiente de produção.
+
+As quatro fontes SQL do manifesto foram aplicadas via MCP. Ledger remoto, na mesma ordem: `20261110184353_extra_class_lesson_origin`, `20261110184356_extra_class_diary_chronology`, `20261110184358_extra_class_snapshot_chronology`, `20261110184400_diary_remove_instructions`. Fontes aplicadas permanecem imutáveis.
+
+Contrato transacional real aprovado com rollback integral. A verificação de ator ausente foi ajustada para limpar tanto o claim individual quanto o JSON de claims, como exige o ambiente remoto; não houve mudança na autorização do produto. RPC operacional confirmou sete vínculos e zero extras sem origem, com comparação antes/depois de conteúdo, respostas, frequência e crédito. A identidade do gestor da sessão foi validada e usada na auditoria, sem alternativa para outro gestor.
+
+Edge `assinatura-eletronica-diario-artefatos` publicada na versão 17, ativa e com JWT obrigatório. Pacote derivado da versão remota 16, preservando quatro diferenças fora deste lote: 61 testes do pacote exato aprovados, sete arquivos do compositor conferidos contra a fonte final. Modelos Técnico, Livre e Especialização com instruções desativadas. Os cinco tipos de avisos de segurança preexistentes permaneceram iguais.
+
+Smoke autenticado final do site em conferência. Documentos já assinados e seus snapshots não foram reescritos.

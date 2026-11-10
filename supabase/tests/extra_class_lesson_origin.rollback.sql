@@ -86,6 +86,7 @@ begin
     raise exception 'Existing origin unexpectedly replaced';
   exception when check_violation then null; end;
   perform set_config('request.jwt.claim.sub','',true);
+  perform set_config('request.jwt.claims','{}',true);
   begin
     perform public.gerenciar_atividade_extra_classe(
       v_activity.id,'VINCULAR_ORIGEM',null,null,null,v_linked.updated_at,v_origin);
