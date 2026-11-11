@@ -7,7 +7,10 @@ export type EadEnrollmentResult =
   | { mode: 'GERAR_COBRANCA'; checkout: PublicCheckoutResult }
   | { mode: 'SEM_COBRANCA'; matriculaId: string; status: 'ATIVO'; replayed: boolean };
 
-// Financeiro is an effective module permission. Caixa alone is insufficient.
+// Academic staff may enroll with a mandatory charge. Only Financeiro may waive it.
 // The server additionally authorizes profile, write permission and the class polo.
 export const canAddAlunoEad = (permissions: GestorPermissions) =>
-  canAccessGestorModule(permissions, 'financeiro') && canAccessGestaoTurmaTab(permissions, 'alunos');
+  canAccessGestaoTurmaTab(permissions, 'alunos');
+
+export const canChooseEadFinancial = (permissions: GestorPermissions) =>
+  canAddAlunoEad(permissions) && canAccessGestorModule(permissions, 'financeiro');

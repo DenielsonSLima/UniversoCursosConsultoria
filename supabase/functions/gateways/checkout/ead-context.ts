@@ -343,6 +343,7 @@ export const buildEadCheckoutContext = async (
   if (!course) throw new Error("Curso nao localizado.");
 
   if (String(course.modalidade || "").toUpperCase() !== "EAD") {
+    if (managerEnrollment) throw new Error("A matrícula manual EAD exige um curso EAD.");
     await assertNonEadCheckoutRequestIsRoutable(
       runtime.admin,
       course,
@@ -410,7 +411,7 @@ export const buildEadCheckoutContext = async (
     aluno = authenticatedAluno;
     if (requestedAlunoId && requestedAlunoId !== authenticatedAluno?.id) {
       gestor = gestor || await requireGestorAtivo(runtime.req, runtime.admin);
-      requireFinanceWriteAccess(gestor);
+      if (!managerEnrollment) requireFinanceWriteAccess(gestor);
       const { data: requestedAluno, error: requestedAlunoError } = await runtime
         .admin.from("parceiros").select("*").eq("tipo", "Aluno")
         .eq("id", requestedAlunoId).maybeSingle();
