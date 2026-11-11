@@ -28,6 +28,13 @@ Histórico arquivado: [13/10/2026 — versões 4.8.215 a 4.8.217](./changelog/20
 
 Histórico arquivado: [14/10/2026 — versões 4.8.218 a 4.8.226](./changelog/2026-10-14-versoes-4-8-218-a-226.md).
 
+## [4.8.294] - 2026-11-11
+
+- Emitidas abre com início e fim do mês atual e mostra o total emitido nos filtros aplicados, calculado no servidor antes da paginação.
+- Exportar na linha das abas abre a pasta Modelo interno com prévia e download do mesmo PDF vetorial A4 retrato, duas linhas por nota e resumo de valores no topo.
+- Relatório inclui todas as notas filtradas em snapshot único, preservando permissões, unidade, ambiente e exclusão das canceladas confirmadas.
+- Exportação é somente leitura, com limite explícito de 10.000 notas e sem alterar documentos, XML, contas ou situação fiscal.
+
 ## [4.8.293] - 2026-11-11
 
 - Serviços deixa de repetir notas com cancelamento fiscal confirmado, preservando sua consulta na aba Canceladas.
@@ -461,5 +468,6 @@ Histórico arquivado: [14/10/2026 — versões 4.8.218 a 4.8.226](./changelog/20
 
 - Corrige timeout na prestação de contas do Caixa com busca limitada ao vínculo financeiro da parcela, preservando evidências e cálculos.
 - Cancela consultas de relatório ao fechar e impede repetição automática de timeout PostgreSQL.
+
 
 

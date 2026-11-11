@@ -2,11 +2,14 @@ import InstitutionalSelect from '../../../shared/components/InstitutionalSelect'
 import { useEffect, useState } from 'react';
 export interface NfseIssuedFilterValues { dateFrom: string; dateTo: string; courseType: string; origin: '' | 'ALUNO' | 'SERVICO' }
 interface Props { value: NfseIssuedFilterValues; courseTypes: { value: string; label: string }[]; disabled: boolean; onChange: (value: Partial<NfseIssuedFilterValues>) => void;
-  search: string; searchDisabled: boolean; onSearch: (value: string) => void }
-export default function NfseIssuedFilters({ value, courseTypes, disabled, onChange, search, searchDisabled, onSearch }: Props) {
+  search: string; searchDisabled: boolean; onSearch: (value: string) => void; onDraftChange?: (pending: boolean) => void }
+export default function NfseIssuedFilters({ value, courseTypes, disabled, onChange, search, searchDisabled, onSearch, onDraftChange }: Props) {
   const [from, setFrom] = useState(value.dateFrom), [to, setTo] = useState(value.dateTo), [hint, setHint] = useState('');
   useEffect(() => setFrom(value.dateFrom), [value.dateFrom]);
   useEffect(() => setTo(value.dateTo), [value.dateTo]);
+  useEffect(() => { onDraftChange?.(from !== value.dateFrom || to !== value.dateTo); },
+    [from, to, value.dateFrom, value.dateTo, onDraftChange]);
+  useEffect(() => () => { onDraftChange?.(false); }, [onDraftChange]);
   const valid = (date: string) => !date || /^(19[0-9]{2}|20[0-9]{2}|21[0-9]{2})-[0-9]{2}-[0-9]{2}$/.test(date)
     && Number.isFinite(Date.parse(date)) && new Date(date).toISOString().slice(0, 10) === date;
   const commit = () => {
@@ -29,3 +32,4 @@ export default function NfseIssuedFilters({ value, courseTypes, disabled, onChan
     {hint && <p className="nfse-issued-filter-hint" role="alert">{hint}</p>}
   </div>;
 }
+

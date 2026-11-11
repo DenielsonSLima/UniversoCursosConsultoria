@@ -1,8 +1,8 @@
 {
-  "version": "4.8.293",
+  "version": "4.8.294",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 302,
+  "revision": 303,
   "releasedAt": "2026-11-11",
-  "summary": "Notas canceladas confirmadas ficam somente na aba Canceladas, sem duplicar Serviços"
+  "summary": "Emitidas com exportação PDF interna, período mensal inicial e total canônico dos filtros"
 }

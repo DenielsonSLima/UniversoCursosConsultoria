@@ -12,6 +12,9 @@ import { formatNfseMoney } from './components/nfse.presentation';
 import NfseMonthPicker from './preparar/NfseMonthPicker';
 import { NfsePreparationDraftProvider } from './preparar/hooks/NfsePreparationDraft';
 import './nfse.css';
+import { NfseIssuedPeriodProvider } from './emitidas/NfseIssuedPeriodContext';
+import NfseIssuedTotalMetric from './emitidas/NfseIssuedTotalMetric';
+import NfseIssuedExportAction from './emitidas/exportacao/NfseIssuedExportAction';
 import ToastNotification, { useToast } from '../components/ToastNotification';
 import { useNfseQueue } from './fila/useNfseQueue';
 import { useNfseQueueRealtime } from './fila/useNfseQueueRealtime';
@@ -74,6 +77,7 @@ const NfseWorkspace: React.FC<EmissorNfsePageProps> = ({ poloId, poloName, isMat
 
 
   return (
+    <NfseIssuedPeriodProvider key={`${poloId}:${contextKey}:${environment}:${month}`} month={month}>
     <div className="nfse-workspace">
       <ToastNotification toasts={toasts} onRemove={removeToast} />
       <header className="nfse-header">
@@ -89,13 +93,17 @@ const NfseWorkspace: React.FC<EmissorNfsePageProps> = ({ poloId, poloName, isMat
       {!selectedPolo ? <div className="nfse-notice"><Building2 size={18} /><div><strong>Selecione um polo</strong><p>Use o seletor de unidade no cabeçalho para preparar e acompanhar as notas do estabelecimento.</p></div></div>
         : !scope ? <div className="nfse-notice"><AlertCircle size={18} /><div><strong>{!month ? 'Escolha o mês dos recebimentos' : 'Contexto de acesso indisponível'}</strong><p>{!month ? 'Informe um mês válido para consultar os recebimentos e as notas deste polo.' : 'Selecione novamente a unidade no cabeçalho antes de consultar os registros fiscais.'}</p></div></div>
 : query.error && !unavailable ? <NfseDataState error={query.error} onRetry={() => void query.refetch()} /> : null}
-      <div className="nfse-summary" aria-label="Resumo fiscal do período">
+      <div className="nfse-summary nfse-summary-with-issued-total" aria-label="Resumo fiscal do período">
         <div className="nfse-metric"><span>Recebido no mês</span><strong>{formatNfseMoney(summary?.receivedAmount)}</strong></div>
         <div className="nfse-metric"><span>Pendentes</span><strong>{!queue.error && queue.data ? queue.data.summary.preparedCount : summary?.pendingCount ?? '—'}</strong></div>
         <div className="nfse-metric"><span>Emitidas</span><strong>{summary?.issuedCount ?? '—'}</strong></div>
+        <NfseIssuedTotalMetric scope={scope} enabled={canRead} />
         <div className="nfse-metric"><span>Com erro</span><strong>{summary?.errorCount ?? '—'}</strong></div>
       </div>
-      <FinancialUnderlineTabs items={tabs} value={tab} onChange={setTab} ariaLabel="Abas do Emissor NFS-e" idPrefix="nfse" compact />
+      <div className="nfse-tabs-with-actions">
+        <FinancialUnderlineTabs items={tabs} value={tab} onChange={setTab} ariaLabel="Abas do Emissor NFS-e" idPrefix="nfse" compact />
+        {tab === 'emitidas' && <NfseIssuedExportAction scope={scope} enabled={canRead} />}
+      </div>
       <div role="tabpanel" id={`nfse-${tab}-panel`} aria-labelledby={`nfse-${tab}-tab`} tabIndex={0} className="nfse-tab-panel">
         <NfseTabContext.Provider key={`${poloId}:${contextKey}:${environment}:${month}`} value={context}>
           <NfsePreparationDraftProvider>
@@ -112,6 +120,7 @@ const NfseWorkspace: React.FC<EmissorNfsePageProps> = ({ poloId, poloName, isMat
         </NfseTabContext.Provider>
       </div>
     </div>
+    </NfseIssuedPeriodProvider>
   );
 };
 
@@ -120,4 +129,5 @@ const EmissorNfsePage: React.FC<EmissorNfsePageProps> = (props) => {
 };
 
 export default EmissorNfsePage;
+
 

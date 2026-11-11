@@ -10,6 +10,8 @@ import NfseDocumentOperationAction from '../emissao/NfseDocumentOperationAction'
 import NfseIssuedFilters, { type NfseIssuedFilterValues } from '../emitidas/NfseIssuedFilters';
 import NfseIssuedRows from '../emitidas/NfseIssuedRows';
 import { NfseAccessError } from '../services/nfse.errors';
+import { useNfseIssuedPeriod } from '../emitidas/NfseIssuedPeriodContext';
+import { createNfseIssuedPeriod } from '../emitidas/nfse-issued-period';
 
 const labels: Record<NfseDocumentStatus, string> = {
   PENDENTE: 'Pendente', EM_PROCESSAMENTO: 'Em processamento', AGUARDANDO_CONFIRMACAO: 'Aguardando confirmação', EMITIDA: 'Emitida', ERRO: 'Com erro',
@@ -39,12 +41,20 @@ interface Props {
 export default function NfseDocumentsList({ status, issuedState, errorArchiveMode, title, description, emptyTitle, emptyDescription, actions,
   documentActions, operationActions, selection, selectionActions }: Props) {
   const { scope, unavailable, canRead, loading } = useNfseTabContext();
-  const [search, setSearch] = useState('');
+  const period = useNfseIssuedPeriod();
+  const sharedPeriod = status === 'EMITIDA' && issuedState !== 'CANCELLED' ? period : null;
+  const [localSearch, setLocalSearch] = useState('');
+  const search = sharedPeriod?.filters.search ?? localSearch;
+  const setSearch = (value: string) => sharedPeriod ? sharedPeriod.setFilters({ search: value }) : setLocalSearch(value);
   const [page, setPage] = useState(1);
-  const [filters, setFilters] = useState<NfseIssuedFilterValues>({ dateFrom: '', dateTo: '', courseType: '', origin: '' });
+  const [localFilters, setLocalFilters] = useState<NfseIssuedFilterValues>(() => status === 'EMITIDA' && issuedState !== 'CANCELLED'
+    ? createNfseIssuedPeriod(scope?.month) : { dateFrom: '', dateTo: '', courseType: '', origin: '' });
+  const filters = sharedPeriod?.filters ?? localFilters;
+  const setFilters = (next: Partial<NfseIssuedFilterValues>) => sharedPeriod ? sharedPeriod.setFilters(next)
+    : setLocalFilters(previous => ({ ...previous, ...next }));
   const deferredSearch = useDeferredValue(search.trim());
   const invalidDates = status === 'EMITIDA' && Boolean(filters.dateFrom && filters.dateTo && filters.dateFrom > filters.dateTo);
-  const query = useNfseDocuments(canRead ? scope : null, { status, search: deferredSearch, page, ...(status === 'EMITIDA' ? { ...filters, issuedState } : {}),
+  const query = useNfseDocuments(canRead ? scope : null, { status, page, ...(status === 'EMITIDA' ? { ...filters, issuedState } : {}), search: deferredSearch,
     ...(status === 'ERRO' ? { errorArchiveMode } : {}) }, !invalidDates);
   const scopeKey = JSON.stringify([scope, status, issuedState, errorArchiveMode]), accessDenied = query.error instanceof NfseAccessError;
   const lastSuccess = useRef<{ scopeKey: string; data: typeof query.data } | null>(null);
@@ -53,7 +63,7 @@ export default function NfseDocumentsList({ status, issuedState, errorArchiveMod
   const previousData = status === 'EMITIDA' && lastSuccess.current?.scopeKey === scopeKey ? lastSuccess.current.data : undefined;
   const data = accessDenied ? undefined : query.error || !query.data ? previousData : query.data;
   const rows = data?.rows || [];
-  const available = canRead && !invalidDates && !query.error && !query.isFetching;
+  const available = canRead && !invalidDates && !query.error && !query.isFetching && !sharedPeriod?.isSettling;
   const selectableRows = rows.filter(item => selection?.isSelectable ? selection.isSelectable(item)
     : item.status === 'EMITIDA' && /^\d{50}$/.test(item.accessKey ?? '') && /^\d{1,15}$/.test(item.number ?? ''));
   const allSelected = selectableRows.length > 0 && selectableRows.every(item => selection?.ids.has(item.id));
@@ -72,9 +82,9 @@ export default function NfseDocumentsList({ status, issuedState, errorArchiveMod
       {status !== 'EMITIDA' && <div className="nfse-toolbar"><div className="nfse-field"><label htmlFor={`nfse-search-${status}`}>Buscar registros</label><input id={`nfse-search-${status}`} type="search" value={search} disabled={!canRead || selection?.disabled} placeholder="Buscar aluno ou nota…" onChange={(event) => { selection?.onReset(); setSearch(event.target.value); setPage(1); }} /></div><span className="nfse-inline-help">{!query.error && query.data ? `${query.data.totalItems} registro(s)` : 'Registros do polo e período selecionados'}</span>
         {selectionActions?.(rows.filter(item => selection?.ids.has(item.id)), available)}
       </div>}
-      {status === 'EMITIDA' && <NfseIssuedFilters value={filters} courseTypes={data?.courseTypes || []} disabled={!canRead || accessDenied || Boolean(selection?.disabled)}
+      {status === 'EMITIDA' && <NfseIssuedFilters onDraftChange={sharedPeriod?.setDatesPending} value={filters} courseTypes={data?.courseTypes || []} disabled={!canRead || accessDenied || Boolean(selection?.disabled)}
         search={search} searchDisabled={!canRead || accessDenied || Boolean(selection?.disabled)} onSearch={next => { selection?.onReset(); setSearch(next); setPage(1); }}
-        onChange={next => { selection?.onReset(); setFilters(previous => ({ ...previous, ...next })); setPage(1); }} />}
+        onChange={next => { selection?.onReset(); setFilters(next); setPage(1); }} />}
       {status === 'EMITIDA' && <div className="nfse-issued-utility">
         {selection && rows.length > 0 && <label className="nfse-issued-page-selection"><input type="checkbox" aria-label="Selecionar todas as notas desta página"
         checked={allSelected} ref={node => { if (node) node.indeterminate = someSelected && !allSelected; }} disabled={!available || selection.disabled || !selectableRows.length}
@@ -111,3 +121,4 @@ export default function NfseDocumentsList({ status, issuedState, errorArchiveMod
     </section>
   );
 }
+

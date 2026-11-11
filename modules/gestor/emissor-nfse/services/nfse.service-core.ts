@@ -7,7 +7,7 @@ import {
   mapNfseCandidate, mapNfseConfiguration, mapNfseDocument,
   mapNfseMutation, mapNfsePage, mapNfseWorkspace,
 } from './nfse.mappers';
-import { assertScope, assertUniqueIds, integer, list, oneOf, record, string, unwrapNfseEnvelope } from './nfse.validation';
+import { assertScope, assertUniqueIds, integer, list, money, oneOf, record, string, unwrapNfseEnvelope } from './nfse.validation';
 import { nfseDocumentFilterArgs } from './nfse-document-filters';
 
 export type NfseRpcTransport = (name: string, args: Record<string, unknown>, signal?: AbortSignal) => Promise<unknown>;
@@ -79,7 +79,7 @@ export function createNfseService(
       if (filters.errorArchiveMode && result.rows.some(row => filters.errorArchiveMode === 'ARCHIVED'
         ? !row.archivedAt : Boolean(row.archivedAt))) throw new NfseContractError();
       if (filters.status === 'EMITIDA' && new Set(result.rows.map(row => row.accessKey)).size !== result.rows.length) throw new NfseContractError();
-      return { ...result, supportsFilters: value.courseTypes !== undefined, courseTypes: courseTypes.map(({ value, label }) => ({ value, label })) };
+      return { ...result, totalAmount: value.totalAmount === undefined ? null : money(value.totalAmount), supportsFilters: value.courseTypes !== undefined, courseTypes: courseTypes.map(({ value, label }) => ({ value, label })) };
     },
     async configuration(scope: NfseScope, signal?: AbortSignal) {
       const config = mapNfseConfiguration(await call(NFSE_RPC.configuration, scope, {}, signal));
@@ -107,3 +107,4 @@ export function createNfseService(
     },
   };
 }
+

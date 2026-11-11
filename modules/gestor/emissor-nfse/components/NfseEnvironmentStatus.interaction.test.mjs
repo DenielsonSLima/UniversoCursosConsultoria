@@ -25,7 +25,7 @@ test('environment indicator preserves scope and never turns internal reads into 
   const output = resolve(temp, 'page.mjs');
   const mocks = {
     useNfseEnvironment: 'export const useNfseEnvironment=()=>[globalThis.__nfseEnvironmentFixture.environment,()=>{throw new Error("Must not change environment") }];',
-    useNfseQueries: 'export const useNfseWorkspace=(scope)=>{const f=globalThis.__nfseEnvironmentFixture;f.scopes.push(scope);return f.query;};',
+    useNfseQueries: 'export const useNfseWorkspace=(scope)=>{const f=globalThis.__nfseEnvironmentFixture;f.scopes.push(scope);return f.query;};export const useNfseDocuments=()=>({data:undefined,error:null,isPending:false,isFetching:false});',
     useNfseQueue: 'export const useNfseQueue=()=>globalThis.__nfseEnvironmentFixture.queue;',
     useNfseNationalHealth: 'export const useNfseNationalHealth=()=>globalThis.__nfseEnvironmentFixture.health;',
     useNfseRealtime: 'export const useNfseRealtime=()=>{};',
@@ -36,6 +36,7 @@ test('environment indicator preserves scope and never turns internal reads into 
     ToastNotification: 'export const useToast=()=>({toasts:[],removeToast:()=>{},toast:{success:()=>{}}});export default ()=>null;',
     'nfse.presentation': 'export const formatNfseMoney=()=>"—";',
     FinancialUnderlineTabs: 'export default ()=>null;',
+    NfseIssuedExportAction: 'export default ()=>null;',
     NfseDataState: 'export default ()=>null;',
     NfseMonthPicker: 'export default ()=>null;',
   };
@@ -149,3 +150,4 @@ test('environment indicator preserves scope and never turns internal reads into 
     await rm(temp, { recursive: true, force: true });
   }
 });
+

@@ -107,6 +107,8 @@ jobs:
           modules/gestor/emissor-nfse/emissao/NfseDailyFlow.interaction.test.mjs
           modules/gestor/emissor-nfse/emissao/NfseBatchEmissionModal.interaction.test.mjs
           modules/gestor/emissor-nfse/emitidas/NfseIssuedList.interaction.test.mjs
+          modules/gestor/emissor-nfse/emitidas/NfseIssuedPeriod.interaction.test.mjs
+          modules/gestor/emissor-nfse/emitidas/exportacao/NfseIssuedExportModal.interaction.test.mjs
           modules/gestor/emissor-nfse/visualizador/NfseXmlViewerModal.interaction.test.mjs
           modules/gestor/emissor-nfse/parceiros/ServicosParceirosNfseTab.interaction.test.mjs
           modules/gestor/emissor-nfse/preparar/NfseStudentGroups.interaction.test.mjs
@@ -123,6 +125,11 @@ jobs:
           modules/gestor/emissor-nfse/visualizador/danfse.pdf.test.mjs
           modules/gestor/emissor-nfse/visualizador/services/nfse-cancelled-downloads.test.mjs
       - run: node --test modules/gestor/emissor-nfse/modelos/exportacao/nfse-model-export.test.mjs
+      - name: Validar relatório interno de emitidas e snapshot completo
+        run: >-
+          node --test
+          modules/gestor/emissor-nfse/emitidas/exportacao/nfse-issued-export.service.test.mjs
+          modules/gestor/emissor-nfse/exportacao/interno/nfse-issued-export.pdf.test.mjs
       - name: Instalar PostgreSQL isolado para os contratos fiscais
         run: npm install --prefix "$RUNNER_TEMP/nfse-sql" --no-save --package-lock=false --ignore-scripts @electric-sql/pglite@0.3.14
       - name: Validar recebimentos, modelos e serviços em banco isolado
@@ -233,5 +240,6 @@ jobs:
           deno test --no-config --no-lock --no-check --node-modules-dir=none --allow-env
           supabase/functions/nfse-certificate-upload/certificate.test.ts
           supabase/functions/nfse-certificate-upload/pkcs12-reader.test.ts
+
 
 
