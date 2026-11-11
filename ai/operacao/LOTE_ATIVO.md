@@ -1,7 +1,7 @@
 # Lote ativo
 
-## Lote: 2026-11-10-nfse-producao-individual-cancelamento
+## Lote: 2026-11-11-nfse-erros-arquivo-ambiente
 
-Objetivo: emissão real de R$1 e cancelamento por erro no valor, pelo fluxo diário do sistema.
-Status: testes reais concluídos: NFS-e nº 2 e nº 3 de R$ 1,00 autorizadas e cancelamentos confirmados por eventos fiscais íntegros. Modelo v5 de ensino técnico com CST 200/200028 e transparência do Simples 12% verificado no XML. Realtime, Vault A1 imutável e competência por regra do modelo aplicados via MCP; XML, PDF e exportação revisados. Versão 4.8.287 preserva EAD 4.8.286; publicação/CI/Preview vinculados ao PR 379. Evidências e limites de smoke estão detalhados no registro do lote. Nenhuma emissão em outro polo; filiais pertencem à próxima etapa.
-Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-10-nfse-producao-individual-cancelamento.md`.
+Objetivo: permitir arquivar/restaurar rejeições definitivas na aba Erros e alinhar o ambiente fiscal entre Emissor e Configurações.
+Status: implementação e validações focadas/build concluídas para 4.8.288; candidato para CI/Preview e publicação autorizada. Smoke nativo final pendente por cgWindowNotFound. Arquivamento é metadado reversível, sem excluir operação fiscal, origem ou financeiro. Ambiente compartilhado por contexto/unidade, Produção por padrão; histórico autorizado não é promovido a habilitação corrente. A emissão e o cancelamento anteriores permanecem preservados. Aceite, manifesto, evidência remota e publicação serão registrados no lote; nenhuma nova emissão ou remoção de registro real é necessária nesta entrega.
+Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-11-nfse-erros-arquivo-ambiente.md`.

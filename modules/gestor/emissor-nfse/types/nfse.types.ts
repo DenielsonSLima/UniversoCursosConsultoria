@@ -108,6 +108,9 @@ export interface NfseDocument extends NfseOperationReference {
   origin?: 'ALUNO' | 'SERVICO' | null;
   courseType?: string | null;
   courseTypeLabel?: string | null;
+  archivedAt?: string | null;
+  canArchive?: boolean;
+  canRestore?: boolean;
 }
 
 export interface NfsePage<T> {
@@ -126,6 +129,7 @@ export interface NfseCandidateFilters {
 
 export interface NfseDocumentFilters {
   issuedState?: 'ACTIVE' | 'CANCELLED';
+  errorArchiveMode?: 'ACTIVE' | 'ARCHIVED';
   status: 'PENDENTE' | 'EMITIDA' | 'ERRO';
   search?: string;
   page?: number;

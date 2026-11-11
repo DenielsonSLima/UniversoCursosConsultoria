@@ -1,8 +1,8 @@
 {
-  "version": "4.8.287",
+  "version": "4.8.288",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 296,
+  "revision": 297,
   "releasedAt": "2026-11-11",
-  "summary": "NFS-e pelo fluxo de alunos e serviços, emissão durável, consulta, cancelamento auditado e atualização fiscal em tempo real"
+  "summary": "NFS-e com arquivamento reversível de erros e ambiente compartilhado entre emissor e configurações"
 }

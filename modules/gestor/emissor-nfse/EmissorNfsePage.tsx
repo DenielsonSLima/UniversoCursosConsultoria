@@ -16,6 +16,7 @@ import './nfse.css';
 import ToastNotification, { useToast } from '../components/ToastNotification';
 import { useNfseQueue } from './fila/useNfseQueue';
 import { useNfseQueueRealtime } from './fila/useNfseQueueRealtime';
+import { useNfseEnvironment } from './hooks/useNfseEnvironment';
 
 const PrepararNfseTab = lazy(() => import('./preparar/PrepararNfseTab'));
 const PendentesNfseTab = lazy(() => import('./pendentes/PendentesNfseTab'));
@@ -45,7 +46,7 @@ const tabs = [
 
 const NfseWorkspace: React.FC<EmissorNfsePageProps> = ({ poloId, poloName, isMatriz, contextKey }) => {
   const [tab, setTab] = useState<NfseWorkspaceTab>('preparar');
-  const [environment, setEnvironment] = useState<NfseScope['environment']>('PRODUCAO');
+  const [environment, setEnvironment] = useNfseEnvironment({ poloId, contextKey });
   const [month, setMonth] = useState(getNfseCurrentMonth);
   const monthInputRef = useRef<HTMLInputElement>(null);
   const scope = useMemo<NfseScope | null>(() => {

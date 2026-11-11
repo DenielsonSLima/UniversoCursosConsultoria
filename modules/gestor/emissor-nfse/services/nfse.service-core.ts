@@ -67,7 +67,7 @@ export function createNfseService(
       const value = record(await call(NFSE_RPC.documents, scope, {
         p_status: oneOf(filters.status, ['PENDENTE', 'EMITIDA', 'ERRO']),
         p_search: optionalText(filters.search?.trim()), p_page: page, p_page_size: 25,
-        ...(filters.dateFrom || filters.dateTo || filters.courseType || filters.origin || filters.issuedState ? filterArgs : {}),
+        ...(filters.dateFrom || filters.dateTo || filters.courseType || filters.origin || filters.issuedState || filters.errorArchiveMode ? filterArgs : {}),
       }, signal));
       const courseTypes = value.courseTypes === undefined ? [] : list(value.courseTypes, item => {
         const row = record(item); return { id: string(row.value), value: string(row.value), label: string(row.label) };
@@ -76,6 +76,8 @@ export function createNfseService(
       const result = mapNfsePage(value, mapNfseDocument, page);
       if (filters.issuedState && result.rows.some(row => filters.issuedState === 'CANCELLED'
         ? row.state !== 'CANCELLED' : row.state === 'CANCELLED')) throw new NfseContractError();
+      if (filters.errorArchiveMode && result.rows.some(row => filters.errorArchiveMode === 'ARCHIVED'
+        ? !row.archivedAt : Boolean(row.archivedAt))) throw new NfseContractError();
       if (filters.status === 'EMITIDA' && new Set(result.rows.map(row => row.accessKey)).size !== result.rows.length) throw new NfseContractError();
       return { ...result, supportsFilters: value.courseTypes !== undefined, courseTypes: courseTypes.map(({ value, label }) => ({ value, label })) };
     },

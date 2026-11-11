@@ -1,4 +1,4 @@
-import { useDeferredValue, useRef, useState, type ReactNode } from 'react';
+import { useDeferredValue, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useNfseDocuments } from '../hooks/useNfseQueries';
 import type { NfseDocument, NfseDocumentStatus } from '../types/nfse.types';
 import { useNfseTabContext } from './NfseTabContext';
@@ -18,31 +18,35 @@ const labels: Record<NfseDocumentStatus, string> = {
 interface Props {
   status: 'PENDENTE' | 'EMITIDA' | 'ERRO';
   issuedState?: 'ACTIVE' | 'CANCELLED';
+  errorArchiveMode?: 'ACTIVE' | 'ARCHIVED';
   title: string;
   description: string;
   emptyTitle: string;
   emptyDescription: string;
   actions?: ReactNode;
   documentActions?: (document: NfseDocument, available: boolean) => ReactNode;
+  operationActions?: (document: NfseDocument, available: boolean) => ReactNode;
   selection?: {
     ids: ReadonlySet<string>; disabled: boolean;
     onToggle: (document: NfseDocument, checked: boolean) => void;
     onTogglePage: (documents: NfseDocument[], checked: boolean) => void;
     onReset: () => void;
+    isSelectable?: (document: NfseDocument) => boolean;
   };
   selectionActions?: (documents: NfseDocument[], available: boolean) => ReactNode;
 }
 
-export default function NfseDocumentsList({ status, issuedState, title, description, emptyTitle, emptyDescription, actions,
-  documentActions, selection, selectionActions }: Props) {
+export default function NfseDocumentsList({ status, issuedState, errorArchiveMode, title, description, emptyTitle, emptyDescription, actions,
+  documentActions, operationActions, selection, selectionActions }: Props) {
   const { scope, unavailable, canRead, loading } = useNfseTabContext();
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [filters, setFilters] = useState<NfseIssuedFilterValues>({ dateFrom: '', dateTo: '', courseType: '', origin: '' });
   const deferredSearch = useDeferredValue(search.trim());
   const invalidDates = status === 'EMITIDA' && Boolean(filters.dateFrom && filters.dateTo && filters.dateFrom > filters.dateTo);
-  const query = useNfseDocuments(canRead ? scope : null, { status, search: deferredSearch, page, ...(status === 'EMITIDA' ? { ...filters, issuedState } : {}) }, !invalidDates);
-  const scopeKey = JSON.stringify([scope, status, issuedState]), accessDenied = query.error instanceof NfseAccessError;
+  const query = useNfseDocuments(canRead ? scope : null, { status, search: deferredSearch, page, ...(status === 'EMITIDA' ? { ...filters, issuedState } : {}),
+    ...(status === 'ERRO' ? { errorArchiveMode } : {}) }, !invalidDates);
+  const scopeKey = JSON.stringify([scope, status, issuedState, errorArchiveMode]), accessDenied = query.error instanceof NfseAccessError;
   const lastSuccess = useRef<{ scopeKey: string; data: typeof query.data } | null>(null);
   if (query.data && !query.error && !query.isPending) lastSuccess.current = { scopeKey, data: query.data };
   if (accessDenied) lastSuccess.current = null;
@@ -50,9 +54,15 @@ export default function NfseDocumentsList({ status, issuedState, title, descript
   const data = accessDenied ? undefined : query.error || !query.data ? previousData : query.data;
   const rows = data?.rows || [];
   const available = canRead && !invalidDates && !query.error && !query.isFetching;
-  const selectableRows = rows.filter(item => item.status === 'EMITIDA' && /^\d{50}$/.test(item.accessKey ?? '') && /^\d{1,15}$/.test(item.number ?? ''));
+  const selectableRows = rows.filter(item => selection?.isSelectable ? selection.isSelectable(item)
+    : item.status === 'EMITIDA' && /^\d{50}$/.test(item.accessKey ?? '') && /^\d{1,15}$/.test(item.number ?? ''));
   const allSelected = selectableRows.length > 0 && selectableRows.every(item => selection?.ids.has(item.id));
   const someSelected = selectableRows.some(item => selection?.ids.has(item.id));
+  useEffect(() => {
+    if (!query.data || query.error) return;
+    const lastPage = Math.max(1, Math.ceil(query.data.totalItems / query.data.pageSize));
+    if (page > lastPage) { selection?.onReset(); setPage(lastPage); }
+  }, [page, query.data, query.error, selection]);
 
   return (
     <section className={`nfse-panel${status === 'EMITIDA' ? ' nfse-issued-panel' : ''}`} aria-label={title}>
@@ -78,21 +88,22 @@ export default function NfseDocumentsList({ status, issuedState, title, descript
         : rows.length ? status === 'EMITIDA' ? <NfseIssuedRows rows={rows} available={available} disabled={Boolean(selection?.disabled)} selected={selection?.ids}
           onToggle={selection?.onToggle} actions={documentActions} />
         : <div className="nfse-table-wrap"><table className="nfse-table">
-        <thead><tr>{selection && <th className="nfse-issued-check"><input type="checkbox" aria-label="Selecionar todas as notas desta página"
+        <thead><tr>{selection && <th className="nfse-issued-check"><input type="checkbox" aria-label={status === 'ERRO' ? 'Selecionar erros desta página' : 'Selecionar todas as notas desta página'}
           checked={allSelected} ref={node => { if (node) node.indeterminate = someSelected && !allSelected; }}
           disabled={!available || selection.disabled || !selectableRows.length}
           onChange={event => selection.onTogglePage(selectableRows, event.target.checked)} /></th>}
           <th>Aluno ou parceiro / turma</th><th>Modelo</th><th>Valor do serviço</th><th>Situação</th><th>{status === 'ERRO' ? 'Motivo e correção' : 'Nota fiscal'}</th><th>Ações</th></tr></thead>
         <tbody>{rows.map((item) => <tr key={item.id}>
-          {selection && <td><input type="checkbox" aria-label={`Selecionar nota ${item.number ?? ''} de ${item.studentName}`}
+          {selection && <td><input type="checkbox" aria-label={status === 'ERRO' ? `Selecionar erro de ${item.studentName}` : `Selecionar nota ${item.number ?? ''} de ${item.studentName}`}
             checked={selection.ids.has(item.id)} disabled={!available || selection.disabled || !selectableRows.includes(item)}
             onChange={event => selection.onToggle(item, event.target.checked)} /></td>}
           <td>{item.studentName}<small>{item.classLabel}</small></td><td>{item.modelLabel}</td><td className="nfse-amount">{formatNfseMoney(item.amount)}</td>
           <td><span className="nfse-status" data-tone={item.state === 'CANCELLED' ? 'warning' : item.status === 'EMITIDA' ? 'success' : item.status === 'ERRO' ? 'error' : 'warning'}>{item.state ? operationLabel(item.state) : labels[item.status]}</span>
             {item.state === 'CANCELLED' && <small>Autorização histórica preservada; cancelamento confirmado.</small>}
+            {item.archivedAt && <small>Arquivado · histórico preservado</small>}
             {item.message && <small>{item.message}</small>}</td>
           <td>{status === 'ERRO' ? <div className="nfse-error-detail">{item.errorCode && <strong>{item.errorCode} · </strong>}{item.errorMessage || 'Consulte o retorno fiscal antes de tentar novamente.'}<small>{item.retryable ? 'Pode ser reprocessada após correção.' : 'Requer conferência antes de nova tentativa.'}</small></div> : <>{item.number || 'Ainda não emitida'}{item.accessKey && <small className="break-all">Chave: {item.accessKey}</small>}{item.status === 'AGUARDANDO_CONFIRMACAO' && <small>Aguardando a consulta de confirmação para evitar duplicidade.</small>}</>}</td>
-          <td>{documentActions?.(item, available)}<NfseDocumentOperationAction document={item} disabled={!available} /></td>
+          <td>{documentActions?.(item, available)}{operationActions ? operationActions(item, available) : <NfseDocumentOperationAction document={item} disabled={!available} />}</td>
         </tr>)}</tbody>
       </table></div> : <NfseDataState loading={loading || (canRead && query.isPending)} unavailable={unavailable} error={query.error} onRetry={() => void query.refetch()} emptyTitle={emptyTitle} emptyDescription={emptyDescription} />}
       {!query.error && query.data && <NfsePager page={query.data.page} hasNext={query.data.page * query.data.pageSize < query.data.totalItems} busy={query.isFetching || selection?.disabled} onChange={next => { selection?.onReset(); setPage(next); }} />}
