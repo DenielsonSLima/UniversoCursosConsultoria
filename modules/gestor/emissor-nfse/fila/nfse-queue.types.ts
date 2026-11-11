@@ -1,7 +1,8 @@
+import type { NfseOperationReference } from '../emissao/nfse-operation.contract';
 import type { NfseScope } from '../types/nfse.types';
 
 /** Preparation only. These records never attest fiscal authorization. */
-export interface NfseQueueRow {
+export interface NfseQueueRow extends NfseOperationReference {
   id: string;
   batchId: string;
   studentId: string;

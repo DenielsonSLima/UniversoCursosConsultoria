@@ -19,7 +19,7 @@ export function useNfseReceiptRealtime(scope: NfseReceiptScope | null, enabled: 
       if (disposed || timer) return;
       timer = setTimeout(() => {
         timer = undefined;
-        void client.invalidateQueries({ queryKey: nfseStudentKeys.scope(captured) });
+        if (!disposed) void client.invalidateQueries({ queryKey: nfseStudentKeys.scope(captured) });
       }, 300);
     };
     void import('../../../../../lib/supabase').then(({ supabase }) => {
@@ -35,7 +35,7 @@ export function useNfseReceiptRealtime(scope: NfseReceiptScope | null, enabled: 
           subscribed = true;
         });
       cleanup = () => { void supabase.removeChannel(channel); };
-    });
+    }).catch(() => { /* Queries recover on focus/reconnect; no polling. */ });
     return () => { disposed = true; if (timer) clearTimeout(timer); cleanup?.(); };
   }, [client, enabled, contextId, poloId, paymentMonth]);
 }

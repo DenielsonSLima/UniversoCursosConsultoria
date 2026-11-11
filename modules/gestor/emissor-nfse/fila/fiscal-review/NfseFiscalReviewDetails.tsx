@@ -37,7 +37,7 @@ export default function NfseFiscalReviewDetails({ review }: { review: NfseFiscal
       <ul className="nfse-fiscal-review-checks">{review.checks.map(check => <li key={check.code}>
         <span className="nfse-status" data-tone={check.status === 'PASSED' ? 'success' : 'warning'}>{checkStatus[check.status]}</span>
         <span>{check.message}</span></li>)}</ul>
-      <p className="nfse-inline-help">A revisão salva registra a conferência fiscal. A emissão continua aguardando homologação e nova validação dos recebimentos antes da transmissão.</p>
+      <p className="nfse-inline-help">A revisão salva registra a conferência fiscal. A prontidão para emitir é verificada na prévia da emissão, com revalidação dos dados e recebimentos.</p>
     </section>
   </>;
 }

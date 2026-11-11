@@ -7,7 +7,7 @@ import type { NfseHomologationService } from './nfse-homologation.types';
 
 export type NfseHomologationTransport = (endpoint: string, body: Record<string, unknown>) => Promise<unknown>;
 
-export function createNfseHomologationService(transport: NfseHomologationTransport): NfseHomologationService {
+export function createNfseHomologationService(transport: NfseHomologationTransport, now = () => new Date()): NfseHomologationService {
   const call = async (endpoint: string, scope: NfseScope, args: Record<string, unknown>) => {
     assertScope(scope); queueUuid(scope.contextKey);
     if (scope.environment !== 'HOMOLOGACAO') throw new NfseContractError();
@@ -19,9 +19,17 @@ export function createNfseHomologationService(transport: NfseHomologationTranspo
       action, requestId: queueUuid(requestId), previewId: queueUuid(previewId), ...(action === 'ISSUE' ? { confirmed: true } : {}),
     }));
   return {
-    async preflight(scope) { return parseNfseHomologationPreflight(await call('nfse-national-preflight', scope, {})); },
-    async preview(scope, requestId) { return parseNfseHomologationPreview(await call('nfse-national-pilot', scope,
-      { action: 'PREVIEW', requestId: queueUuid(requestId) })); },
+    async preflight(scope) {
+      const referenceDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Maceio', year: 'numeric', month: '2-digit', day: '2-digit' }).format(now());
+      return parseNfseHomologationPreflight(await call('nfse-national-preflight', scope, { referenceDate, serviceCode: '080201' }));
+    },
+    async preview(scope, requestId, recipientPartnerId) {
+      const partnerId = recipientPartnerId === undefined ? undefined : queueUuid(recipientPartnerId);
+      const preview = parseNfseHomologationPreview(await call('nfse-national-pilot', scope,
+        { action: 'PREVIEW', requestId: queueUuid(requestId), ...(partnerId ? { recipientPartnerId: partnerId } : {}) }));
+      if (preview.payload && (partnerId ? preview.payload.recipientSource !== 'PARTNER' || preview.payload.recipientPartnerId !== partnerId : preview.payload.synthetic !== true)) throw new NfseContractError();
+      return preview;
+    },
     issue: (scope, requestId, previewId) => result(scope, 'ISSUE', requestId, previewId),
     reconcile: (scope, requestId, previewId) => result(scope, 'RECONCILE', requestId, previewId),
   };

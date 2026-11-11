@@ -72,6 +72,28 @@ test('DANFSe is one native A4 page with selectable values, fixed official QR and
       assert.equal((text.match(/R\$ 0,00/g) || []).length, 2, 'Only server-confirmed retained PIS/COFINS have zero own-debit amounts');
       assert.doesNotMatch(text, /R\$ (1,20|2,30)/, 'Retained amounts are not mislabeled as own-debit amounts');
     } finally { await retainedTask.destroy(); }
+    for (const [taxFields, expected, forbidden] of [
+      [{ 'pTotTribSN': '12.00' }, /alíquota do Simples Nacional: 12,00%\./, /Federais:|R\$ 12,00/],
+      [{ 'vTotTrib/vTotTribFed': '1.20', 'vTotTrib/vTotTribEst': '2.30', 'vTotTrib/vTotTribMun': '3.40' },
+        /Federais: R\$ 1,20; Estaduais: R\$ 2,30; Municipais: R\$ 3,40;/, /alíquota do Simples Nacional/],
+      [{ 'pTotTrib/pTotTribFed': '1.20', 'pTotTrib/pTotTribEst': '2.30', 'pTotTrib/pTotTribMun': '3.40' },
+        /Federais: 1,20%; Estaduais: 2,30%; Municipais: 3,40%;/, /alíquota do Simples Nacional/],
+    ]) {
+      const taxValues = Object.fromEntries(Object.entries(taxFields)
+        .map(([path, value]) => [`DPS/infDPS/valores/trib/totTrib/${path}`, [value]]));
+      const taxBlob = createDanfsePdf({ accessKey: '1'.repeat(50), number: '25', environment: '2',
+        fields: { ...fields, ...taxValues } }, assets);
+      const taxTask = getDocument({ data: new Uint8Array(await taxBlob.arrayBuffer()) });
+      try {
+        const pdf = await taxTask.promise;
+        assert.equal(pdf.numPages, 1);
+        const content = await (await pdf.getPage(1)).getTextContent();
+        const text = content.items.map(item => item.str).join(' ').replace(/\s+/g, ' ');
+        assert.match(text, expected);
+        assert.doesNotMatch(text, forbidden);
+        assert.equal((await (await pdf.getPage(1)).getAnnotations()).length, 0);
+      } finally { await taxTask.destroy(); }
+    }
     assert.throws(() => createDanfsePdf({ accessKey: '1'.repeat(50), number: '25', environment: '2',
       fields: { ...fields, 'DPS/infDPS/serv/cServ/xDescServ': ['conteúdo '.repeat(10000)] } }, assets), /espaço|uma página/);
     assert.throws(() => createDanfsePdf({ accessKey: '1'.repeat(50), number: '25', environment: '2',

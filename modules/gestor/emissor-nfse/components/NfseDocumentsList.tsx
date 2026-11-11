@@ -1,11 +1,15 @@
-import { useDeferredValue, useState, type ReactNode } from 'react';
-import { Play, RotateCcw } from 'lucide-react';
+import { useDeferredValue, useRef, useState, type ReactNode } from 'react';
 import { useNfseDocuments } from '../hooks/useNfseQueries';
 import type { NfseDocument, NfseDocumentStatus } from '../types/nfse.types';
 import { useNfseTabContext } from './NfseTabContext';
 import NfseDataState from './NfseDataState';
 import NfsePager from './NfsePager';
 import { formatNfseMoney } from './nfse.presentation';
+import { operationLabel } from '../emissao/nfse-operation.contract';
+import NfseDocumentOperationAction from '../emissao/NfseDocumentOperationAction';
+import NfseIssuedFilters, { type NfseIssuedFilterValues } from '../emitidas/NfseIssuedFilters';
+import NfseIssuedRows from '../emitidas/NfseIssuedRows';
+import { NfseAccessError } from '../services/nfse.errors';
 
 const labels: Record<NfseDocumentStatus, string> = {
   PENDENTE: 'Pendente', EM_PROCESSAMENTO: 'Em processamento', AGUARDANDO_CONFIRMACAO: 'Aguardando confirmação', EMITIDA: 'Emitida', ERRO: 'Com erro',
@@ -33,41 +37,65 @@ export default function NfseDocumentsList({ status, title, description, emptyTit
   const { scope, unavailable, canRead, loading } = useNfseTabContext();
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
+  const [filters, setFilters] = useState<NfseIssuedFilterValues>({ dateFrom: '', dateTo: '', courseType: '', origin: '' });
   const deferredSearch = useDeferredValue(search.trim());
-  const query = useNfseDocuments(canRead ? scope : null, { status, search: deferredSearch, page });
-  const rows = query.error ? [] : query.data?.rows || [];
-  const available = canRead && !query.error && !query.isFetching;
+  const invalidDates = status === 'EMITIDA' && Boolean(filters.dateFrom && filters.dateTo && filters.dateFrom > filters.dateTo);
+  const query = useNfseDocuments(canRead ? scope : null, { status, search: deferredSearch, page, ...(status === 'EMITIDA' ? filters : {}) }, !invalidDates);
+  const scopeKey = JSON.stringify([scope, status]), accessDenied = query.error instanceof NfseAccessError;
+  const lastSuccess = useRef<{ scopeKey: string; data: typeof query.data } | null>(null);
+  if (query.data && !query.error && !query.isPending) lastSuccess.current = { scopeKey, data: query.data };
+  if (accessDenied) lastSuccess.current = null;
+  const previousData = status === 'EMITIDA' && lastSuccess.current?.scopeKey === scopeKey ? lastSuccess.current.data : undefined;
+  const data = accessDenied ? undefined : query.error || !query.data ? previousData : query.data;
+  const rows = data?.rows || [];
+  const available = canRead && !invalidDates && !query.error && !query.isFetching;
   const selectableRows = rows.filter(item => item.status === 'EMITIDA' && /^\d{50}$/.test(item.accessKey ?? '') && /^\d{1,15}$/.test(item.number ?? ''));
   const allSelected = selectableRows.length > 0 && selectableRows.every(item => selection?.ids.has(item.id));
   const someSelected = selectableRows.some(item => selection?.ids.has(item.id));
 
   return (
-    <section className="nfse-panel" aria-label={title}>
-      <div className="nfse-section-heading"><div><h2>{title}</h2><p>{description}</p></div>
+    <section className={`nfse-panel${status === 'EMITIDA' ? ' nfse-issued-panel' : ''}`} aria-label={title}>
+      {status !== 'EMITIDA' && <div className="nfse-section-heading"><div><h2>{title}</h2><p>{description}</p></div>
         {actions}
-        {status !== 'EMITIDA' && <button type="button" className="nfse-button nfse-button-primary" disabled title="Disponível após a habilitação da emissão fiscal">{status === 'ERRO' ? <RotateCcw size={15} /> : <Play size={15} />}{status === 'ERRO' ? 'Reprocessar corrigidas' : 'Emitir lote'}</button>}
-      </div>
-      <div className="nfse-toolbar"><div className="nfse-field"><label htmlFor={`nfse-search-${status}`}>Buscar registros</label><input id={`nfse-search-${status}`} type="search" value={search} disabled={!canRead || selection?.disabled} placeholder="Buscar aluno ou nota…" onChange={(event) => { selection?.onReset(); setSearch(event.target.value); setPage(1); }} /></div><span className="nfse-inline-help">{!query.error && query.data ? `${query.data.totalItems} registro(s)` : 'Registros do polo e período selecionados'}</span>
+      </div>}
+      {status !== 'EMITIDA' && <div className="nfse-toolbar"><div className="nfse-field"><label htmlFor={`nfse-search-${status}`}>Buscar registros</label><input id={`nfse-search-${status}`} type="search" value={search} disabled={!canRead || selection?.disabled} placeholder="Buscar aluno ou nota…" onChange={(event) => { selection?.onReset(); setSearch(event.target.value); setPage(1); }} /></div><span className="nfse-inline-help">{!query.error && query.data ? `${query.data.totalItems} registro(s)` : 'Registros do polo e período selecionados'}</span>
         {selectionActions?.(rows.filter(item => selection?.ids.has(item.id)), available)}
-      </div>
-      {rows.length ? <div className="nfse-table-wrap"><table className="nfse-table">
+      </div>}
+      {status === 'EMITIDA' && <NfseIssuedFilters value={filters} courseTypes={data?.courseTypes || []} disabled={!canRead || accessDenied || Boolean(selection?.disabled)}
+        search={search} searchDisabled={!canRead || accessDenied || Boolean(selection?.disabled)} onSearch={next => { selection?.onReset(); setSearch(next); setPage(1); }}
+        onChange={next => { selection?.onReset(); setFilters(previous => ({ ...previous, ...next })); setPage(1); }} />}
+      {status === 'EMITIDA' && <div className="nfse-issued-utility">
+        {selection && rows.length > 0 && <label className="nfse-issued-page-selection"><input type="checkbox" aria-label="Selecionar todas as notas desta página"
+        checked={allSelected} ref={node => { if (node) node.indeterminate = someSelected && !allSelected; }} disabled={!available || selection.disabled || !selectableRows.length}
+        onChange={event => selection.onTogglePage(selectableRows, event.target.checked)} />Selecionar página</label>}
+        <span className="nfse-inline-help">{data ? `${data.totalItems} registro(s)` : 'Registros do período'}</span>
+        <div className="nfse-issued-utility-actions">{actions}{selectionActions?.(rows.filter(item => selection?.ids.has(item.id)), available)}</div>
+      </div>}
+      {status === 'EMITIDA' && query.error && <p className="nfse-issued-filter-hint" role="alert">Não foi possível atualizar esta consulta. Corrija os filtros e tente novamente.{data ? ' Exibindo a última lista carregada neste estabelecimento e ambiente.' : ''}
+        <button type="button" className="nfse-button nfse-button-secondary" disabled={query.isFetching} onClick={() => void query.refetch()}>Tentar novamente</button></p>}
+      {invalidDates ? <p className="nfse-download-error" role="alert">A data inicial deve ser anterior ou igual à data final.</p>
+        : rows.length ? status === 'EMITIDA' ? <NfseIssuedRows rows={rows} available={available} disabled={Boolean(selection?.disabled)} selected={selection?.ids}
+          onToggle={selection?.onToggle} actions={documentActions} />
+        : <div className="nfse-table-wrap"><table className="nfse-table">
         <thead><tr>{selection && <th className="nfse-issued-check"><input type="checkbox" aria-label="Selecionar todas as notas desta página"
           checked={allSelected} ref={node => { if (node) node.indeterminate = someSelected && !allSelected; }}
           disabled={!available || selection.disabled || !selectableRows.length}
           onChange={event => selection.onTogglePage(selectableRows, event.target.checked)} /></th>}
-          <th>Aluno / turma</th><th>Modelo</th><th>Valor do serviço</th><th>Situação</th><th>{status === 'ERRO' ? 'Motivo e correção' : 'Nota fiscal'}</th>{documentActions && <th>Ações</th>}</tr></thead>
+          <th>Aluno ou parceiro / turma</th><th>Modelo</th><th>Valor do serviço</th><th>Situação</th><th>{status === 'ERRO' ? 'Motivo e correção' : 'Nota fiscal'}</th><th>Ações</th></tr></thead>
         <tbody>{rows.map((item) => <tr key={item.id}>
           {selection && <td><input type="checkbox" aria-label={`Selecionar nota ${item.number ?? ''} de ${item.studentName}`}
             checked={selection.ids.has(item.id)} disabled={!available || selection.disabled || !selectableRows.includes(item)}
             onChange={event => selection.onToggle(item, event.target.checked)} /></td>}
           <td>{item.studentName}<small>{item.classLabel}</small></td><td>{item.modelLabel}</td><td className="nfse-amount">{formatNfseMoney(item.amount)}</td>
-          <td><span className="nfse-status" data-tone={item.status === 'EMITIDA' ? 'success' : item.status === 'ERRO' ? 'error' : 'warning'}>{labels[item.status]}</span></td>
+          <td><span className="nfse-status" data-tone={item.state === 'CANCELLED' ? 'warning' : item.status === 'EMITIDA' ? 'success' : item.status === 'ERRO' ? 'error' : 'warning'}>{item.state ? operationLabel(item.state) : labels[item.status]}</span>
+            {item.state === 'CANCELLED' && <small>Autorização histórica preservada; cancelamento confirmado.</small>}
+            {item.message && <small>{item.message}</small>}</td>
           <td>{status === 'ERRO' ? <div className="nfse-error-detail">{item.errorCode && <strong>{item.errorCode} · </strong>}{item.errorMessage || 'Consulte o retorno fiscal antes de tentar novamente.'}<small>{item.retryable ? 'Pode ser reprocessada após correção.' : 'Requer conferência antes de nova tentativa.'}</small></div> : <>{item.number || 'Ainda não emitida'}{item.accessKey && <small className="break-all">Chave: {item.accessKey}</small>}{item.status === 'AGUARDANDO_CONFIRMACAO' && <small>Aguardando a consulta de confirmação para evitar duplicidade.</small>}</>}</td>
-          {documentActions && <td>{documentActions(item, available)}</td>}
+          <td>{documentActions?.(item, available)}<NfseDocumentOperationAction document={item} disabled={!available} /></td>
         </tr>)}</tbody>
       </table></div> : <NfseDataState loading={loading || (canRead && query.isPending)} unavailable={unavailable} error={query.error} onRetry={() => void query.refetch()} emptyTitle={emptyTitle} emptyDescription={emptyDescription} />}
       {!query.error && query.data && <NfsePager page={query.data.page} hasNext={query.data.page * query.data.pageSize < query.data.totalItems} busy={query.isFetching || selection?.disabled} onChange={next => { selection?.onReset(); setPage(next); }} />}
-      {status !== 'EMITIDA' && <div className="nfse-footer"><p>{status === 'ERRO' ? 'As notas já autorizadas são preservadas. Cada falha é tratada individualmente.' : 'A emissão em lote será liberada após a validação da integração fiscal.'}</p></div>}
+      {status !== 'EMITIDA' && <div className="nfse-footer"><p>Consulte a operação vinculada antes de qualquer nova tentativa. As notas já autorizadas são preservadas.</p></div>}
     </section>
   );
 }

@@ -4,6 +4,7 @@ import { isNfseScopeValid } from '../../types/nfse.scope';
 import { NfseAccessError } from '../../services/nfse.errors';
 import type { NfsePartnerServiceInput } from '../types/nfse-partner-services.types';
 import { nfsePartnerServices } from '../services/nfse-partner-services.service';
+import { invalidateNfseCache } from '../../queries/nfse-cache';
 import { nfsePartnerServicesKeys } from '../queries/nfse-partner-services.keys';
 
 const required = (scope: NfseScope | null) => {
@@ -30,6 +31,6 @@ export function useSaveNfsePartnerService(scope: NfseScope | null) {
       return { result: await nfsePartnerServices.save(captured, input), scope: captured };
     },
     retry: false,
-    onSuccess: ({ scope: captured }) => client.invalidateQueries({ queryKey: nfsePartnerServicesKeys.scope(captured) }),
+    onSuccess: ({ scope: captured }) => invalidateNfseCache(client, captured, 'services'),
   });
 }

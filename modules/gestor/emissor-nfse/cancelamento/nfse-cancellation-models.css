@@ -1,0 +1,8 @@
+.nfse-cancel-model-dialog { max-width: 680px; }
+.nfse-cancel-model-dialog > form { display: flex; flex-direction: column; min-height: 0; }
+.nfse-cancel-model-text { min-width: 220px; max-width: 420px; overflow-wrap: anywhere; white-space: pre-wrap; }
+.nfse-cancel-template-picker { display: flex; align-items: end; flex-wrap: wrap; gap: 8px; }
+.nfse-cancel-template-picker > .nfse-field { min-width: 220px; }
+.nfse-cancel-template-picker > .nfse-inline-help { flex-basis: 100%; }
+.nfse-model-kind-tabs { margin-bottom: 10px; }
+@media (max-width: 760px) { .nfse-cancel-template-picker > .nfse-field { min-width: 0; flex-basis: 100%; } }

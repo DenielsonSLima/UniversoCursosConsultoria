@@ -24,7 +24,7 @@ Histórico arquivado: [10/10/2026 — versão 4.8.204](./changelog/2026-10-10-ve
 
 Histórico arquivado: [10/10/2026 a 13/10/2026 — versões 4.8.208 a 4.8.214](./changelog/2026-10-10-a-13-versoes-4-8-208-a-214.md).
 
-## [4.8.285] - 2026-11-10
+## [4.8.287] - 2026-11-11
 
 - Pré-modelos NFS-e têm Configuração, Serviço, Valores e Revisão, com regras reutilizáveis do Guia Web oficial.
 - Tomador e demais participantes são escolhidos ao emitir cada nota; o modelo não cadastra pessoas, documentos concretos ou campos vazios de cálculos da emissão.
@@ -32,10 +32,25 @@ Histórico arquivado: [10/10/2026 a 13/10/2026 — versões 4.8.208 a 4.8.214](.
 - Emitente usa o cadastro fiscal da unidade; códigos e opções vêm de catálogos oficiais validados no salvamento. Códigos municipais fixos dependem de fonte municipal validada.
 - Valores configuram origens, descontos, ISSQN, tributos federais, IBS/CBS e transparência. A revisão mostra escolhas, origens e pendências sem simular emissão autorizada.
 - Descrições de modelos e serviços aceitam até 2.000 caracteres, inclusive após preenchimento do mês de referência.
-- NFS-e recebe painel de homologação com revisão do teste individual, retorno fiscal e consulta da mesma DPS após resposta incerta.
+- Ambiente fiscal fica no cabeçalho, com emissão pela preparação real de alunos ou Serviços, sem abas técnicas paralelas.
 - Pendentes permite revisar os dados fiscais com modelo ativo 080201, confirmação do aluno como tomador e datas explícitas, preservando preparações e recebimentos.
 - Rejeição E0037 mostra explicação sobre o convênio municipal no ambiente consultado, sem concluir a situação em produção ou reenviar automaticamente.
-- A transmissão de notas reais continua bloqueada; esta entrega não libera emissão fiscal em produção.
+- Emissão de produção usa dados canônicos da preparação, A1 privado e uma DPS durável; respostas incertas são recuperadas por consulta sem reenvio automático.
+- Cancelamento opera somente sobre a nota própria autorizada e exige evento fiscal confirmado, preservando histórico e reservas financeiras.
+- Modelos oferecem Exportar com prévia e PDF completo para conferência da contabilidade; configurações mostram última NFS-e local e sequência DPS sem alterar contadores.
+- Emitidas reúne os filtros em uma linha compacta, apresenta três linhas por nota com fundos alternados e mantém Visualizar, PDF, XML e seleção para ZIP visíveis.
+- Período, origem e modalidade são filtrados no servidor antes da paginação; datas incompletas permanecem editáveis até a confirmação do campo.
+- Descrição acadêmica usa curso, matrícula, parcelas e meses efetivos dos pagamentos, vinculados à preparação; serviços preservam a descrição confirmada.
+- Modelos formais de cancelamento podem ser consultados e copiados para versões personalizadas, com motivo oficial e justificativa específica da operação.
+- Alterações de modelos, configuração, serviços e resultados fiscais atualizam as projeções do mesmo escopo por eventos sanitizados, com recuperação na reconexão e sem polling da fila.
+- Cada novo upload A1 cria uma versão privada de material no Vault, preservando referências usadas por outro ambiente ou por operações anteriores.
+- Competência de Serviços segue a regra salva no pré-modelo e fica congelada na operação; percentual do Simples aparece na revisão e no DANFSe a partir dos dados fiscais dessa nota.
+
+## [4.8.286] - 2026-11-10
+
+- Gestão/Alunos permite matrícula EAD com cobrança obrigatória mesmo sem acesso ao Financeiro, com aviso explícito antes da confirmação.
+- A opção de dispensar cobrança permanece exclusiva de usuários com Financeiro autorizado; servidor preserva perfil, turma e polo.
+- Inclusão não informa sucesso sem confirmação do lançamento financeiro, e a matrícula genérica não pode liberar EAD sem o fluxo próprio.
 
 ## [4.8.284] - 2026-11-10
 
@@ -469,3 +484,4 @@ Histórico arquivado: [10/10/2026 a 13/10/2026 — versões 4.8.208 a 4.8.214](.
 - Revisão 8 do contrato técnico disponibilizada no cadastro para aprovação própria, com plano financeiro individual completo e identificação corrigida.
 - Prévia estrutural do editor passa a respeitar a tipografia V4 e a informar que a paginação é estimada; valores reais continuam vindo da matrícula na emissão.
 - Segunda via conserva o documento original; a versão corrigida requer nova emissão após aprovação da revisão.
+

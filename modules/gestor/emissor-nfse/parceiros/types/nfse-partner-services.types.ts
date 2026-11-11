@@ -1,9 +1,10 @@
+import type { NfseOperationReference } from '../../emissao/nfse-operation.contract';
 export interface NfseServicePartner {
   id: string;
   name: string;
   tradeName: string | null;
   document: string | null;
-  type: 'PF' | 'PJ';
+  type: 'PF' | 'PJ' | 'ALUNO';
 }
 
 export interface NfseExistingReceivable {
@@ -25,7 +26,7 @@ export interface NfsePartnerServiceOptions {
 
 export type NfseReceivableAction = 'NONE' | 'CREATED' | 'LINKED';
 
-export interface NfsePartnerServiceRow {
+export interface NfsePartnerServiceRow extends NfseOperationReference {
   id: string;
   partnerId: string;
   partnerName: string;

@@ -36,6 +36,7 @@ export interface NationalDpsInput {
     municipalTaxCode?: string;
     nbs?: string;
     description: string;
+    complementaryInfo?: string;
   };
   values: {
     serviceAmount: string;

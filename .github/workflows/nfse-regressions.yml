@@ -16,8 +16,11 @@ on:
       - 'supabase/functions/nfse-certificate-upload/**'
       - 'supabase/functions/nfse-national-preflight/**'
       - 'supabase/functions/nfse-national-pilot/**'
+      - 'supabase/functions/nfse-national-individual/**'
       - 'api/nfse-homologation-relay.js'
+      - 'api/nfse-production-relay.js'
       - 'internal/integracoes/nfse-relay/**'
+      - 'internal/integracoes/nfse-production-relay/**'
       - 'package*.json'
   push:
     branches: [main]
@@ -35,8 +38,11 @@ on:
       - 'supabase/functions/nfse-certificate-upload/**'
       - 'supabase/functions/nfse-national-preflight/**'
       - 'supabase/functions/nfse-national-pilot/**'
+      - 'supabase/functions/nfse-national-individual/**'
       - 'api/nfse-homologation-relay.js'
+      - 'api/nfse-production-relay.js'
       - 'internal/integracoes/nfse-relay/**'
+      - 'internal/integracoes/nfse-production-relay/**'
       - 'package*.json'
   workflow_dispatch:
 
@@ -74,10 +80,6 @@ jobs:
         env:
           NFSE_TEST_JSDOM_MODULE: ${{ runner.temp }}/nfse-certificate-ui/node_modules/jsdom/lib/api.js
         run: node --test modules/gestor/emissor-nfse/pendentes/PendentesNfseTab.interaction.test.mjs
-      - name: Validar revisão e recuperação do piloto sintético
-        env:
-          NFSE_TEST_JSDOM_MODULE: ${{ runner.temp }}/nfse-certificate-ui/node_modules/jsdom/lib/api.js
-        run: node --test modules/gestor/emissor-nfse/homologacao/NfseHomologationPanel.interaction.test.mjs
       - name: Exercitar revisão fiscal da fila sem transmissão
         env:
           NFSE_TEST_JSDOM_MODULE: ${{ runner.temp }}/nfse-certificate-ui/node_modules/jsdom/lib/api.js
@@ -91,9 +93,23 @@ jobs:
           modules/gestor/emissor-nfse/modelos/NfseModelValuesFields.interaction.test.mjs
           modules/gestor/emissor-nfse/modelos/NfseModelAdditionalFields.interaction.test.mjs
           modules/gestor/emissor-nfse/modelos/NfseModelLocationPicker.interaction.test.mjs
+          modules/gestor/emissor-nfse/modelos/NfseModelDescriptionEditor.interaction.test.mjs
+          modules/gestor/emissor-nfse/modelos/exportacao/NfseModelExportModal.interaction.test.mjs
           modules/gestor/emissor-nfse/parceiros/NfsePartnerServiceModal.interaction.test.mjs
+      - name: Exercitar emissão, recuperação e consulta de numeração sem transmissão
+        env:
+          NFSE_TEST_JSDOM_MODULE: ${{ runner.temp }}/nfse-certificate-ui/node_modules/jsdom/lib/api.js
+        run: >-
+          node --test
+          modules/gestor/emissor-nfse/emissao/NfseSourceEmissionModal.interaction.test.mjs
+          modules/gestor/emissor-nfse/emissao/NfseDailyFlow.interaction.test.mjs
+          modules/gestor/emissor-nfse/emissao/NfseBatchEmissionModal.interaction.test.mjs
+          modules/gestor/emissor-nfse/emitidas/NfseIssuedList.interaction.test.mjs
+          modules/gestor/emissor-nfse/cancelamento/NfseCancellationModels.interaction.test.mjs
+          modules/gestor/configuracoes/nfse-portal-contribuinte/components/NfseNumberingPanel.interaction.test.mjs
       - run: node --test scripts/check-file-line-limits.test.mjs
       - run: node --test modules/gestor/emissor-nfse/visualizador/danfse.pdf.test.mjs
+      - run: node --test modules/gestor/emissor-nfse/modelos/exportacao/nfse-model-export.test.mjs
       - name: Instalar PostgreSQL isolado para os contratos fiscais
         run: npm install --prefix "$RUNNER_TEMP/nfse-sql" --no-save --package-lock=false --ignore-scripts @electric-sql/pglite@0.3.14
       - name: Validar recebimentos, modelos e serviços em banco isolado
@@ -122,7 +138,19 @@ jobs:
           deno test --no-config
           --lock=supabase/functions/_shared/nfse-national/deno.lock --frozen
           --allow-read --allow-write=/tmp --allow-run=openssl,xmllint
-          supabase/functions/_shared/nfse-national/
+          supabase/functions/_shared/nfse-national/provider.test.ts
+          supabase/functions/_shared/nfse-national/pilot.test.ts
+          supabase/functions/_shared/nfse-national/cancellation-policy.test.ts
+          supabase/functions/_shared/nfse-national/homologation-live-contract.test.ts
+          supabase/functions/_shared/nfse-national/relay.test.ts
+          supabase/functions/_shared/nfse-national/production-relay.test.ts
+          supabase/functions/_shared/nfse-national/production-live-contract.test.ts
+          supabase/functions/_shared/nfse-national/production-diagnostics.test.ts
+          supabase/functions/_shared/nfse-national/production-event-detail.test.ts
+          supabase/functions/_shared/nfse-national/production-event-archive.test.ts
+          supabase/functions/_shared/nfse-national/production-event-representation.test.ts
+          supabase/functions/_shared/nfse-national/production-optional-json-id.test.ts
+          supabase/functions/_shared/nfse-national/production.test.ts
       - name: Validar cadastro A1 sem credenciais reais
         run: >-
           deno test --config supabase/functions/nfse-certificate-upload/deno.json
@@ -139,12 +167,32 @@ jobs:
           supabase/functions/nfse-national-preflight/preflight.test.ts
           supabase/functions/nfse-national-preflight/routes.test.ts
           supabase/functions/nfse-national-pilot/handler.test.ts
+          supabase/functions/nfse-national-pilot/contract.test.ts
+          supabase/functions/nfse-national-pilot/scenario.test.ts
       - name: Conferir tipos do executor de homologação
         run: >-
           deno check --config supabase/functions/nfse-national-pilot/deno.json
           --frozen supabase/functions/nfse-national-pilot/index.ts
+      - name: Validar contrato, adapter e runtime da emissão individual de produção sem rede fiscal
+        run: >-
+          deno test --config supabase/functions/nfse-national-individual/deno.json
+          --frozen --allow-read
+          supabase/functions/nfse-national-individual/handler.test.ts
+          supabase/functions/nfse-national-individual/adapter.test.ts
+          supabase/functions/nfse-national-individual/adapter-ibscbs.test.ts
+          supabase/functions/nfse-national-individual/cancellation-review.test.ts
+          supabase/functions/nfse-national-individual/queue-bridge.test.ts
+          supabase/functions/nfse-national-individual/runtime.test.ts
+      - name: Conferir tipos do executor individual de produção
+        run: >-
+          deno check --config supabase/functions/nfse-national-individual/deno.json
+          --frozen supabase/functions/nfse-national-individual/index.ts
       - name: Validar canal privado Node com credenciais sintéticas
-        run: node --test internal/integracoes/nfse-relay/*.test.mjs
+        run: >-
+          node --test
+          internal/integracoes/nfse-relay/relay.test.mjs
+          internal/integracoes/nfse-relay/renegotiation.test.mjs
+          internal/integracoes/nfse-production-relay/relay.test.mjs
 
   nfse-certificate-edge-runtime:
     name: Cadastro A1 no runtime Deno 2.1.4

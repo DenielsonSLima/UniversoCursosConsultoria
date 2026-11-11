@@ -16,10 +16,14 @@ export function useNfseFiscalReview(scope: NfseScope, documentId: string, modelI
   const query = useQuery({ queryKey: nfseFiscalReviewKeys.detail(scope, documentId, modelId),
     queryFn: ({ signal }) => service.get(scope, documentId, modelId || undefined, signal),
     retry: false, staleTime: 0, gcTime: 0, refetchOnWindowFocus: false });
-  const save = useMutation({ retry: false, mutationFn: (input: SaveNfseFiscalReview) => service.save({ ...scope }, documentId, input),
-    onSuccess: () => Promise.all([
-      client.invalidateQueries({ queryKey: nfseFiscalReviewKeys.scope(scope) }),
-      client.invalidateQueries({ queryKey: nfseQueueKeys.scope(scope) }),
-    ]) });
+  const save = useMutation({ retry: false, mutationFn: async (input: SaveNfseFiscalReview) => {
+    const captured = { ...scope };
+    const result = await service.save(captured, documentId, input);
+    await Promise.all([
+      client.invalidateQueries({ queryKey: nfseFiscalReviewKeys.scope(captured) }),
+      client.invalidateQueries({ queryKey: nfseQueueKeys.scope(captured) }),
+    ]);
+    return result;
+  } });
   return { query, save };
 }

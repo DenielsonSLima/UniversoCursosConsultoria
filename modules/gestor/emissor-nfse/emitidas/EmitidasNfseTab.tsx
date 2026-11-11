@@ -18,7 +18,7 @@ export default function EmitidasNfseTab() {
   const downloads = useNfseDownloads(scope, canRead);
   const document = canRead && selected?.scopeKey === scopeKey ? selected.document : null;
   return <>
-    <NfseDocumentsList status="EMITIDA" title="Notas emitidas" description="Notas com autorização fiscal confirmada para este estabelecimento." emptyTitle="Nenhuma nota emitida neste período" emptyDescription="Cada emissão confirmada será identificada pelo número e pela chave de acesso."
+    <NfseDocumentsList status="EMITIDA" title="Notas emitidas" description="Autorizações deste estabelecimento, incluindo as notas com cancelamento registrado." emptyTitle="Nenhuma nota emitida neste período" emptyDescription="Cada emissão confirmada será identificada pelo número e pela chave de acesso."
       selection={{ ids, disabled: downloads.busy,
         onReset: () => { downloads.cancel(); setChecked({ scopeKey, ids: new Set() }); },
         onTogglePage: (rows, value) => setChecked({ scopeKey, ids: new Set(value ? rows.map(item => item.id) : []) }),

@@ -60,14 +60,14 @@ test('partner preparation preserves a complete 2000-character model description'
   assert.equal((await service.save(scope, { ...input, serviceDescription: description })).receivableAction, 'NONE');
 });
 
-test('partner options preserve only PF/PJ identities and reject duplicated choices', () => {
+test('partner options preserve PF/PJ/student identities and reject duplicated choices', () => {
   const options = { partners: [{ id: id(4), name: 'Parceiro sintético', tradeName: null, document: null, type: 'PJ' }],
     categories: [{ id: id(7), name: 'Serviços' }], existingReceivables: [{ id: id(8), partnerId: id(4), description: 'Conta sintética',
       amount: '1234.56', dueDate: '2026-11-30', categoryId: id(7), status: 'PENDENTE' }], capabilities: { canGenerateReceivable: true } };
   assert.deepEqual(parseNfsePartnerServiceOptions(options), options);
   assert.deepEqual(parseNfsePartnerServiceOptions({ ...options, partners: [{ ...options.partners[0], tradeName: ' ', document: '' }] }).partners, options.partners);
   assert.throws(() => parseNfsePartnerServiceOptions({ ...options, partners: [...options.partners, ...options.partners] }), NfseContractError);
-  assert.throws(() => parseNfsePartnerServiceOptions({ ...options, partners: [{ ...options.partners[0], type: 'ALUNO' }] }), NfseContractError);
+  assert.equal(parseNfsePartnerServiceOptions({ ...options, partners: [{ ...options.partners[0], type: 'ALUNO' }] }).partners[0].type, 'ALUNO');
 });
 
 test('list preserves the server total and fails on a foreign scope', async () => {
@@ -88,4 +88,20 @@ test('service cache and money presentation preserve scope and decimal digits', (
   }
   assert.equal(nfsePartnerInputAmount('1.234,56'), '1234.56');
   assert.equal(nfsePartnerAmountInput('987654321012345.67'), '987.654.321.012.345,67');
+});
+
+
+test('remote partner lookup is bounded, scoped and preserves students without fetching all identities', async () => {
+  const calls: { name: string; args: Record<string, unknown> }[] = [];
+  const student = { id: id(4), name: 'ALUNO SINTÉTICO', tradeName: null, document: null, type: 'Aluno' };
+  const service = createNfsePartnerServices(async (name, args) => {
+    calls.push({ name, args }); return envelope({ rows: [student], page: 1, pageSize: 20, totalItems: 1 });
+  });
+  assert.deepEqual(await service.searchPartners(scope, 'a'), []); assert.equal(calls.length, 0);
+  assert.deepEqual(await service.searchPartners(scope, 'Aluno'), [{ ...student, type: 'ALUNO' }]);
+  assert.equal(calls[0].name, 'search_nfse_service_partners_secure'); assert.equal(calls[0].args.p_search, 'Aluno');
+  assert.equal(calls[0].args.p_partner_id, null); assert.equal(calls[0].args.p_environment, scope.environment);
+  await service.searchPartners(scope, '', id(4)); assert.equal(calls[1].args.p_partner_id, id(4));
+  const crossed = createNfsePartnerServices(async () => envelope({ rows: [student], page: 1, pageSize: 20, totalItems: 1 }, { ...scope, poloId: id(99) }));
+  await assert.rejects(crossed.searchPartners(scope, 'Aluno'), NfseContractError);
 });

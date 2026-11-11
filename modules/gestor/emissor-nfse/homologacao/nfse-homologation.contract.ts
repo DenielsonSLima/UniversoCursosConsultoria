@@ -1,6 +1,7 @@
 import { NfseContractError } from '../services/nfse.errors';
 import { boolean, list, nullableString, oneOf, record, string } from '../services/nfse.validation';
 import { queueUuid } from '../fila/nfse-queue.contract';
+import { parseNfsePublicPreflightDetails } from './nfse-homologation.public-details';
 import type { NfseHomologationCapability, NfseHomologationPreflight,
   NfseHomologationPreview, NfseHomologationResult } from './nfse-homologation.types';
 
@@ -30,7 +31,8 @@ export function parseNfseHomologationPreflight(value: unknown): NfseHomologation
   if (!checks.length || new Set(checks.map(check => check.code)).size !== checks.length) throw new NfseContractError();
   return { checkedAt: timestamp(data.checkedAt), environment: oneOf(data.environment, ['HOMOLOGACAO']),
     referenceDate: date(data.referenceDate), checks, pilot: capability(data.pilot),
-    certificateExpiresAt: data.certificateExpiresAt === null ? null : timestamp(data.certificateExpiresAt) };
+    certificateExpiresAt: data.certificateExpiresAt === null ? null : timestamp(data.certificateExpiresAt),
+    ...parseNfsePublicPreflightDetails(data) };
 }
 
 export function parseNfseHomologationPreview(value: unknown): NfseHomologationPreview {
@@ -41,11 +43,14 @@ export function parseNfseHomologationPreview(value: unknown): NfseHomologationPr
     return { previewId, expiresAt, capability: allowed, payload: null };
   }
   const payload = record(data.payload);
-  if (payload.synthetic !== true || payload.serviceAmount !== '1.00' || !['1', '3'].includes(String(payload.opSimpNac))
-    || payload.issTreatment !== 'TRIBUTAVEL' || payload.recipientDocument !== payload.issuerDocument) throw new NfseContractError();
+  const partner = payload.technicalTest === true && payload.recipientSource === 'PARTNER' && payload.synthetic === undefined;
+  const legacy = payload.synthetic === true && payload.technicalTest === undefined && payload.recipientSource === undefined && payload.recipientPartnerId === undefined;
+  if ((!partner && !legacy) || payload.serviceAmount !== '1.00' || !['1', '3'].includes(String(payload.opSimpNac))
+    || payload.issTreatment !== 'TRIBUTAVEL' || (legacy ? payload.recipientDocument !== payload.issuerDocument
+      : typeof payload.recipientDocument !== 'string' || !/^(?:[0-9]{11}|[0-9]{14})$/.test(payload.recipientDocument))) throw new NfseContractError();
   return { previewId, expiresAt,
     capability: allowed, payload: {
-      synthetic: true, issuerName: string(payload.issuerName), issuerDocument: string(payload.issuerDocument),
+      ...(partner ? { technicalTest: true as const, recipientSource: 'PARTNER' as const, recipientPartnerId: queueUuid(payload.recipientPartnerId) } : { synthetic: true as const }), issuerName: string(payload.issuerName), issuerDocument: string(payload.issuerDocument),
       recipientName: string(payload.recipientName), recipientDocument: string(payload.recipientDocument),
       serviceDescription: string(payload.serviceDescription), nationalServiceCode: string(payload.nationalServiceCode),
       competence: date(payload.competence), serviceDate: date(payload.serviceDate), serviceAmount: payload.serviceAmount,

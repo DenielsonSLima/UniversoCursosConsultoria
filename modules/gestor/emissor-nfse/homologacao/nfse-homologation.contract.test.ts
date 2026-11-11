@@ -32,11 +32,11 @@ test('pilot sends only scoped intent and separates issue from reconciliation', a
   const service = createNfseHomologationService(async (endpoint, body) => {
     calls.push({ endpoint, body });
     return envelope(body.action === 'PREVIEW' ? preview : endpoint.endsWith('preflight') ? preflight : result);
-  });
+  }, () => new Date('2026-11-10T01:00:00Z'));
   await service.preflight(scope); await service.preview(scope, id(5));
   await service.issue(scope, id(5), preview.previewId); await service.reconcile(scope, id(5), preview.previewId);
   assert.deepEqual(calls, [
-    { endpoint: 'nfse-national-preflight', body: { scope } },
+    { endpoint: 'nfse-national-preflight', body: { scope, referenceDate: '2026-11-09', serviceCode: '080201' } },
     { endpoint: 'nfse-national-pilot', body: { scope, action: 'PREVIEW', requestId: id(5) } },
     { endpoint: 'nfse-national-pilot', body: { scope, action: 'ISSUE', requestId: id(5), previewId: id(3), confirmed: true } },
     { endpoint: 'nfse-national-pilot', body: { scope, action: 'RECONCILE', requestId: id(5), previewId: id(3) } },
@@ -94,4 +94,35 @@ test('E0037 explanation is limited to the rejected homologation result and prese
   assert.equal(nfseHomologationResultExplanation({ ...rejected, message: 'SEFIN: E00370.' }), null);
   assert.equal(nfseHomologationResultExplanation({ ...rejected, message: 'SEFIN: E0039.' }), null);
   assert.equal(nfseHomologationResultExplanation({ ...rejected, state: 'AUTHORIZED' }), null);
+});
+
+
+test('registered partner preview accepts only canonical partner identity and sends no personal data', async () => {
+  const payload = { ...preview.payload, synthetic: undefined, technicalTest: true, recipientSource: 'PARTNER',
+    recipientPartnerId: id(7), recipientName: 'PARCEIRO SINTÉTICO', recipientDocument: '00000000000' };
+  const calls: Record<string, unknown>[] = [];
+  const service = createNfseHomologationService(async (_endpoint, body) => { calls.push(body); return envelope({ ...preview, payload }); });
+  const parsed = await service.preview(scope, id(5), id(7));
+  assert.equal(parsed.payload?.recipientSource, 'PARTNER'); assert.equal(parsed.payload?.recipientPartnerId, id(7));
+  assert.equal('synthetic' in parsed.payload!, false);
+  assert.deepEqual(calls, [{ scope, action: 'PREVIEW', requestId: id(5), recipientPartnerId: id(7) }]);
+  await assert.rejects(service.preview(scope, id(5), 'not-an-id'), NfseContractError);
+  assert.equal(calls.length, 1);
+  for (const change of [{ recipientPartnerId: id(8) }, { recipientDocument: 'bad' }, { synthetic: true }, { recipientSource: 'FREE_TEXT' }]) {
+    const wrong = createNfseHomologationService(async () => envelope({ ...preview, payload: { ...payload, ...change } }));
+    await assert.rejects(wrong.preview(scope, id(5), id(7)), NfseContractError);
+  }
+  const old = createNfseHomologationService(async () => envelope(preview));
+  await assert.rejects(old.preview(scope, id(5), id(7)), NfseContractError);
+});
+
+test('public municipal evidence retains exact HTTP and flags while dropping identity or private metadata', () => {
+  const url = 'https://adn.producaorestrita.nfse.gov.br/parametrizacao/2803401/convenio';
+  const parsed = parseNfseHomologationPreflight({ ...preflight,
+    endpoints: [{ code: 'MUNICIPAL_CONVENIO', url, status: 404, tlsVerified: true, error: null }, { code: 'OTHER', url: 'https://untrusted.test', status: 200 }],
+    municipalParameters: [{ code: 'MUNICIPAL_CONVENIO', url, status: 200, diagnostic: 'PUBLIC_PARAMETERS_RETURNED',
+      parameters: { convenio: true, dtInicio: '2026-11-01', codigoMunicipio: '2803401', nome: 'PRIVATE_SENTINEL', cpf: '00000000000', privateKey: 'SECRET_SENTINEL', email: 'hidden@example.test' } }] });
+  assert.equal(parsed.endpoints?.length, 1); assert.equal(parsed.endpoints?.[0].status, 404);
+  assert.deepEqual(parsed.municipalParameters?.[0].parameters, { convenio: true, dtInicio: '2026-11-01', codigoMunicipio: '2803401' });
+  assert(!/SENTINEL|00000000000|example.test/.test(JSON.stringify(parsed)));
 });

@@ -30,7 +30,7 @@ export default function NfseModelValuesFields({ value, onChange, context, catalo
   return <fieldset disabled={disabled} className="nfse-model-fields">
     <section className="nfse-model-section"><h3>Valores do serviço prestado</h3><div className="nfse-model-grid">
       <NfseValuesChoice id={`${id}-service-source`} label="Origem do valor do serviço" value={value.serviceAmount.source}
-        options={[{ value: 'RECEIPTS', label: 'Recebimentos selecionados para a emissão' }, { value: 'FIXED', label: 'Valor fixo definido no modelo' }]}
+        options={[{ value: 'RECEIPTS', label: 'Valor da preparação: recebimentos ou serviço' }, { value: 'FIXED', label: 'Valor fixo definido no modelo' }]}
         onChange={next => patch({ serviceAmount: { source: next as 'RECEIPTS' | 'FIXED', fixedAmount: null }, rental: null })} />
       {value.serviceAmount.source === 'FIXED' && <NfseValuesDecimalField id={`${id}-service-amount`} label="Valor fixo do serviço (R$)"
         value={value.serviceAmount.fixedAmount} onChange={next => patch({ serviceAmount: { source: 'FIXED', fixedAmount: next } })} />}

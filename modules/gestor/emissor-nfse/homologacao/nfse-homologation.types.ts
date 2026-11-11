@@ -15,11 +15,12 @@ export interface NfseHomologationPreflight {
   checks: NfseHomologationCheck[];
   pilot: NfseHomologationCapability;
   certificateExpiresAt: string | null;
+  endpoints?: NfseHomologationEndpoint[];
+  municipalParameters?: NfseHomologationMunicipalParameter[];
 }
 
-/** Public synthetic data only; no queue, receipt, credential or private XML is retained. */
-export interface NfseHomologationPayload {
-  synthetic: true;
+/** Authenticated technical preview. Party snapshots stay out of storage and logs. */
+interface NfseHomologationPayloadFields {
   issuerName: string;
   issuerDocument: string;
   recipientName: string;
@@ -31,6 +32,16 @@ export interface NfseHomologationPayload {
   serviceAmount: string;
   opSimpNac: '1' | '3';
   issTreatment: string;
+}
+
+export type NfseHomologationPayload = NfseHomologationPayloadFields & (
+  { synthetic: true; technicalTest?: never; recipientSource?: never; recipientPartnerId?: never }
+  | { synthetic?: never; technicalTest: true; recipientSource: 'PARTNER'; recipientPartnerId: string }
+);
+export interface NfseHomologationEndpoint { code: string; url: string; status: number | null; tlsVerified: boolean; error: string | null }
+export type NfsePublicParameter = boolean | number | string | null | NfsePublicParameter[] | { [key: string]: NfsePublicParameter };
+export interface NfseHomologationMunicipalParameter {
+  code: string; url: string; status: number | null; diagnostic: string; parameters: NfsePublicParameter;
 }
 
 export interface NfseHomologationPreview {
@@ -50,7 +61,7 @@ export interface NfseHomologationResult {
 
 export interface NfseHomologationService {
   preflight(scope: NfseScope): Promise<NfseHomologationPreflight>;
-  preview(scope: NfseScope, requestId: string): Promise<NfseHomologationPreview>;
+  preview(scope: NfseScope, requestId: string, recipientPartnerId?: string): Promise<NfseHomologationPreview>;
   issue(scope: NfseScope, requestId: string, previewId: string): Promise<NfseHomologationResult>;
   reconcile(scope: NfseScope, requestId: string, previewId: string): Promise<NfseHomologationResult>;
 }

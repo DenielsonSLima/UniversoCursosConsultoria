@@ -4,6 +4,7 @@ import type {
 } from '../types/nfse.types';
 import { NfseContractError } from './nfse.errors';
 import { parseNfseStoredModel } from '../modelos/services/nfse-models.contract';
+import { operationReference } from '../emissao/nfse-operation.contract';
 import {
   assertUniqueIds, boolean, integer, list, money, nullableInteger, nullableString,
   oneOf, record, string,
@@ -67,9 +68,16 @@ export function mapNfseDocument(value: unknown): NfseDocument {
     number: nullableString(row.number), accessKey: nullableString(row.accessKey),
     errorCode: nullableString(row.errorCode), errorMessage: nullableString(row.errorMessage),
     retryable: boolean(row.retryable),
+    ...operationReference(row),
+    ...(row.emittedAt === undefined ? {} : { emittedAt: nullableString(row.emittedAt) }),
+    ...(row.dateSource === undefined ? {} : { dateSource: row.dateSource === null ? null : oneOf(row.dateSource, ['NFSE_DH_PROC']) }),
+    ...(row.origin === undefined ? {} : { origin: row.origin === null ? null : oneOf(row.origin, ['ALUNO', 'SERVICO']) }),
+    ...(row.courseType === undefined ? {} : { courseType: nullableString(row.courseType) }),
+    ...(row.courseTypeLabel === undefined ? {} : { courseTypeLabel: nullableString(row.courseTypeLabel) }),
   };
   if ((document.status === 'EMITIDA' && (!document.number || !document.accessKey || document.amount === null))
-    || (document.retryable && document.status !== 'ERRO')) throw new NfseContractError();
+    || (document.retryable && document.status !== 'ERRO')
+    || document.emittedAt && (!document.dateSource || !Number.isFinite(Date.parse(document.emittedAt)))) throw new NfseContractError();
   return document;
 }
 

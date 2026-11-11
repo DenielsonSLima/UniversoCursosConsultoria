@@ -36,7 +36,13 @@ function semantic(element: XmlElement): string {
 }
 
 export function assertHomologationEnvelope(envelope: Record<string, unknown>, dpsId?: string): void {
-  requireContract(envelope.tipoAmbiente === 2, 'RESPONSE_ENVIRONMENT_MISMATCH');
+  assertNationalEnvelope(envelope, 'HOMOLOGACAO', dpsId);
+}
+
+export function assertNationalEnvelope(envelope: Record<string, unknown>,
+  environment: 'HOMOLOGACAO' | 'PRODUCAO', dpsId?: string): void {
+  requireContract(envelope.tipoAmbiente === (environment === 'HOMOLOGACAO' ? 2 : 1),
+    'RESPONSE_ENVIRONMENT_MISMATCH');
   if (dpsId !== undefined) {
     const identifiers = [envelope.idDps, envelope.idDPS].filter(value => value !== undefined);
     requireContract(identifiers.length > 0 && identifiers.every(value => value === dpsId),
@@ -52,10 +58,11 @@ export function readAccessKey(envelope: Record<string, unknown>): string {
 
 export async function readAuthorizedXml(envelope: Record<string, unknown>, expected: {
   dpsId: string; accessKey: string; signedDpsXml: string;
-}, schema: HomologationSchemaValidator): Promise<{ authorizedXml: string; number: string }> {
-  assertHomologationEnvelope(envelope);
+}, schema: HomologationSchemaValidator,
+  environment: 'HOMOLOGACAO' | 'PRODUCAO' = 'HOMOLOGACAO'): Promise<{ authorizedXml: string; number: string }> {
+  assertNationalEnvelope(envelope, environment);
   const xml = decodeFiscalXml(envelope.nfseXmlGZipB64);
-  await schema.validate(xml, 'NFSe_v1.01.xsd', 'HOMOLOGACAO');
+  await schema.validate(xml, 'NFSe_v1.01.xsd', environment);
   const dom = parse(xml);
   const root = dom.documentElement;
   requireContract(root.localName === 'NFSe' && root.namespaceURI === NFSE_NAMESPACE &&
@@ -65,7 +72,8 @@ export async function readAuthorizedXml(envelope: Record<string, unknown>, expec
     'AUTHORIZATION_XML_IDENTITY_MISMATCH');
   const dps = one(info, 'DPS');
   const dpsInfo = one(dps, 'infDPS');
-  requireContract(dpsInfo.getAttribute('Id') === expected.dpsId && one(dpsInfo, 'tpAmb').textContent === '2',
+  requireContract(dpsInfo.getAttribute('Id') === expected.dpsId &&
+    one(dpsInfo, 'tpAmb').textContent === (environment === 'HOMOLOGACAO' ? '2' : '1'),
     'AUTHORIZATION_XML_IDENTITY_MISMATCH');
   const sentInfo = one(parse(expected.signedDpsXml).documentElement, 'infDPS');
   requireContract(semantic(dpsInfo) === semantic(sentInfo), 'AUTHORIZED_DPS_PAYLOAD_MISMATCH');
@@ -80,3 +88,5 @@ export async function readAuthorizedXml(envelope: Record<string, unknown>, expec
     expected.accessKey.slice(23, 36) === number.padStart(13, '0'), 'ACCESS_KEY_XML_MISMATCH');
   return { authorizedXml: xml, number };
 }
+
+export { parse as parseNationalFiscalXml, one as nationalFiscalChild, semantic as nationalFiscalSemantic };

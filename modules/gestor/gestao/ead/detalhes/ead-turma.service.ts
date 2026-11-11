@@ -65,6 +65,9 @@ export const eadTurmaService = {
     }
     if (data?.error) throw new Error(data.error);
     if (!data?.matriculaId) throw new Error('O checkout não confirmou a matrícula EAD.');
+    if (!data.receivableId && !data.alreadyPaid && !data.paymentReviewRequired) {
+      throw new Error('O servidor não confirmou o financeiro EAD. Atualize a turma antes de tentar novamente.');
+    }
     return data as PublicCheckoutResult;
   },
 };

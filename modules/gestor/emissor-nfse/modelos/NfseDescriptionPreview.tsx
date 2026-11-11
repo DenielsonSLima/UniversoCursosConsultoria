@@ -15,7 +15,8 @@ export default function NfseDescriptionPreview({ preview, label = 'Prévia da de
   </div>;
   if (!preview.data) return null;
   return <div className="nfse-description-preview" aria-live="polite">
-    <span className="nfse-description-preview-label">{label}{preview.data.usesReferenceMonth ? ` · ${preview.data.monthLabel}` : ''}</span>
+    <span className="nfse-description-preview-label">{preview.data.requiresAcademicContext ? 'Estrutura da descrição acadêmica' : label}{preview.data.usesReferenceMonth ? ` · ${preview.data.monthLabel}` : ''}</span>
     <p>{preview.data.description}</p>
+    {preview.data.requiresAcademicContext && <small>Os trechos entre colchetes indicam a origem dos dados. A preparação preencherá os dados reais e conferirá o limite de 2.000 caracteres.</small>}
   </div>;
 }

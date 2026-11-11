@@ -1,0 +1,183 @@
+import { useEffect, useId, useRef, useState, type ComponentRef } from 'react';
+import { createPortal } from 'react-dom';
+import { X } from 'lucide-react';
+import type { NfseScope } from '../types/nfse.types';
+import { useNfseStudentsDialog } from '../preparar/useNfseStudentsDialog';
+import { nfseIndividualService } from '../individual/nfse-individual.service';
+import { individualReason, individualRejectionExplanation } from '../individual/nfse-individual.contract';
+import { individualStorageKey, readIndividualAttempt } from '../individual/nfse-individual.attempt';
+import type { IndividualAttempt, IndividualPreview, IndividualIssueResult, IndividualCancelPreview,
+  IndividualCancelResult, NfseIndividualService } from '../individual/nfse-individual.types';
+import NfseIndividualSnapshot from '../individual/NfseIndividualSnapshot';
+import NfseIndividualCancellation from '../individual/NfseIndividualCancellation';
+import { formatNfseMoney } from '../components/nfse.presentation';
+import { operationLabel, type NfseEmissionSource, type NfseOperationReference } from './nfse-operation.contract';
+import '../individual/nfse-individual.css';
+import '../fila/fiscal-review/nfse-fiscal-review.css';
+import { individualCancelNotice, individualIssueNotice, type NfseFiscalNotice } from './nfse-fiscal-notice';
+import NfseCancellationReadOnlyResult from './NfseCancellationReadOnlyResult';
+import NfseCancellationRetry from './NfseCancellationRetry';
+import type { NfseCancellationModel } from '../cancelamento/nfse-cancellation-models.contract';
+interface Props { scope: NfseScope; source: NfseEmissionSource; label: string; amount: string;
+  operation?: NfseOperationReference; intent?: 'ISSUE' | 'CONSULT' | 'CANCEL'; onClose: () => void; onChanged: () => void; service?: NfseIndividualService; onNotice?: (notice: NfseFiscalNotice) => void }
+export default function NfseSourceEmissionModal({ scope, source, label, amount, operation, intent = 'ISSUE', onClose, onChanged, onNotice, service = nfseIndividualService }: Props) {
+  const title = useId(), storageKey = `${individualStorageKey(scope)}:${source.kind}:${source.id}`;
+  const [attempt, setAttempt] = useState<IndividualAttempt | null>(() => {
+    let stored: IndividualAttempt | null = null;
+    try { stored = readIndividualAttempt(window.sessionStorage, storageKey); } catch { /* Server reference remains authoritative. */ }
+    if (operation?.operationId && operation.requestId) return { requestId: operation.requestId, previewId: operation.operationId,
+      ...(operation.cancelPreviewId ? { cancelPreviewId: operation.cancelPreviewId }
+        : stored?.previewId === operation.operationId && stored.requestId === operation.requestId && stored.cancelPreviewId ? { cancelPreviewId: stored.cancelPreviewId } : {}),
+      ...(stored?.previewId === operation.operationId && stored.requestId === operation.requestId && stored.cancelPreviewId === operation.cancelPreviewId && stored.retryRequestId ? { retryRequestId: stored.retryRequestId } : {}) };
+    return stored;
+  });
+  const [preview, setPreview] = useState<IndividualPreview>();
+  const [issued, setIssued] = useState<IndividualIssueResult>(), [cancellation, setCancellation] = useState<IndividualCancelResult>();
+  const [cancelPreview, setCancelPreview] = useState<IndividualCancelPreview>();
+  const [confirmed, setConfirmed] = useState(false), [cancelConfirmed, setCancelConfirmed] = useState(false);
+  const [justification, setJustification] = useState('');
+  const [cancellationModel, setCancellationModel] = useState<NfseCancellationModel | null>(null), [detail, setDetail] = useState<string | null>(null);
+  const [error, setError] = useState<string>(), [busy, setBusy] = useState(false), [clock, setClock] = useState(Date.now);
+  const request = useRef<{ key: string; id: string } | null>(null), active = useRef(false), mounted = useRef(true), opened = useRef(false);
+  const close = () => { if (!active.current) onClose(); };
+  const { overlayRef, dialogRef, initialFocusRef } = useNfseStudentsDialog<ComponentRef<'button'>>(close);
+  const supported = scope.environment === 'PRODUCAO';
+  const run = async (action: () => Promise<void>) => {
+    if (active.current || !supported) return;
+    active.current = true; setBusy(true); setError(undefined);
+    try { await action(); } catch (failure) { if (mounted.current) {
+      const message = failure instanceof Error ? failure.message : 'Etapa não confirmada. Consulte esta operação.';
+      setError(message); onNotice?.({ type: 'error', title: 'Etapa não confirmada', message });
+    } }
+    finally { active.current = false; if (mounted.current) setBusy(false); }
+  };
+  const remember = (value: IndividualAttempt) => {
+    try { window.sessionStorage.setItem(storageKey, JSON.stringify(value)); setAttempt(value); return true; }
+    catch { setError('Não foi possível preservar os identificadores desta operação. O envio não foi iniciado.'); return false; }
+  };
+  const consult = (saved: IndividualAttempt) => void run(async () => {
+    const response = await service.reconcile(scope, saved.requestId, saved.previewId);
+    if (!mounted.current) return;
+    setIssued(response); setConfirmed(false); onChanged();
+    setPreview(response.state === 'PREVIEWED' && response.expiresAt && response.capability ? {
+      previewId: response.previewId, expiresAt: response.expiresAt, state: 'PREVIEWED', payload: response.payload, capability: response.capability } : undefined);
+    if (saved.cancelPreviewId) {
+      const result = await service.reconcileCancellation(scope, saved.requestId, saved.previewId, saved.cancelPreviewId);
+      if (mounted.current) { setCancellation(result); setJustification(result.payload.justification); setCancellationModel(result.payload.cancellationModel || null); setDetail(result.payload.detail ?? null); setCancelConfirmed(false); onChanged();
+        setCancelPreview(result.state === 'PREVIEWED' && result.expiresAt && result.capability ? { previewId: result.previewId,
+          cancelPreviewId: result.cancelPreviewId, expiresAt: result.expiresAt, state: 'PREVIEWED', payload: result.payload, capability: result.capability } : undefined); }
+    }
+  });
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
+  useEffect(() => { if (!opened.current && attempt) { opened.current = true; consult(attempt); } }, [attempt]);
+  useEffect(() => {
+    const times = [preview?.expiresAt, cancelPreview?.expiresAt].flatMap(value => value && Date.parse(value) > Date.now() ? [Date.parse(value)] : []);
+    if (!times.length) return;
+    const timer = setTimeout(() => setClock(Date.now()), Math.min(Math.max(1, Math.min(...times) - Date.now() + 1), 2_147_483_647)); return () => clearTimeout(timer);
+  }, [preview?.expiresAt, cancelPreview?.expiresAt, clock]);
+  const prepare = () => {
+    if (intent !== 'ISSUE' || attempt) return;
+    const key = JSON.stringify([scope, source]);
+    if (request.current?.key !== key) request.current = { key, id: crypto.randomUUID() };
+    const requestId = request.current.id;
+    void run(async () => { const response = await service.previewSource(scope, requestId, source);
+      if (mounted.current) { setPreview(response); setConfirmed(false); onChanged(); } });
+  };
+  const expired = Boolean(preview && Date.parse(preview.expiresAt) <= Date.now()), cancelExpired = Boolean(cancelPreview && Date.parse(cancelPreview.expiresAt) <= Date.now());
+  const renew = () => {
+    if (intent !== 'ISSUE' || !attempt || issued?.state !== 'PREVIEWED' || !expired || !preview?.payload) return;
+    void run(async () => {
+      const response = await service.previewSource(scope, attempt.requestId, source,
+        source.kind === 'PARTNER_SERVICE' ? preview.payload!.competenceDate : undefined);
+      if (response.previewId !== attempt.previewId) throw new Error('A revisão retornou outra operação. Consulte a preparação novamente.');
+      if (mounted.current) { setPreview(response); setConfirmed(false); onChanged(); }
+    });
+  };
+  const issue = () => {
+    if (intent !== 'ISSUE' || busy || attempt && issued?.state !== 'PREVIEWED' || !preview?.capability.available || !preview.payload || !confirmed || expired) return;
+    const requestId = attempt?.requestId || request.current?.id;
+    if (!requestId) return;
+    const saved = { requestId, previewId: preview.previewId };
+    if (!remember(saved)) return;
+    // The effect will not consult the same request while its first dispatch is being started.
+    opened.current = true;
+    setPreview(undefined); setIssued(undefined); setConfirmed(false);
+    void run(async () => { const response = await service.issue(scope, saved.requestId, saved.previewId); if (mounted.current) { setIssued(response); onChanged(); onNotice?.(individualIssueNotice(response)); } });
+  };
+  const prepareCancel = () => {
+    if (intent === 'CONSULT' || !attempt || issued?.state !== 'AUTHORIZED' || attempt.cancelPreviewId && cancellation?.state !== 'PREVIEWED') return;
+    void run(async () => {
+      const selected = attempt.cancelPreviewId ? cancellation?.payload.cancellationModel : cancellationModel;
+      const factualDetail = attempt.cancelPreviewId ? cancellation?.payload.detail ?? null : detail;
+      const response = selected ? await service.previewCancellationModel(scope, attempt.requestId, attempt.previewId, { id: selected.id, version: selected.version }, factualDetail)
+        : await service.previewCancellation(scope, attempt.requestId, attempt.previewId, attempt.cancelPreviewId ? cancellation!.payload.justification : justification);
+      if (attempt.cancelPreviewId && response.cancelPreviewId !== attempt.cancelPreviewId) throw new Error('A revalidação retornou outro evento. Consulte o cancelamento existente.');
+      if (mounted.current) {
+        onChanged(); if (!remember({ ...attempt, cancelPreviewId: response.cancelPreviewId })) return;
+        setCancelPreview(response); setJustification(response.payload.justification); setCancellationModel(response.payload.cancellationModel || null); setDetail(response.payload.detail ?? null); setCancelConfirmed(false);
+        setCancellation({ ...response, message: attempt.cancelPreviewId ? 'Prévia do mesmo cancelamento revalidada. Ainda não enviada.' : 'Prévia do cancelamento conferida. Ainda não enviada.' });
+      }
+    });
+  };
+  const cancel = () => {
+    if (intent === 'CONSULT' || !attempt || attempt.cancelPreviewId && cancellation?.state !== 'PREVIEWED' || !cancelPreview?.capability.available || !cancelConfirmed || cancelExpired || busy) return;
+    const saved = { ...attempt, cancelPreviewId: cancelPreview.cancelPreviewId };
+    if (!remember(saved)) return;
+    setCancelPreview(undefined); setCancellation(undefined); setCancelConfirmed(false);
+    void run(async () => { const response = await service.cancel(scope, saved.requestId, saved.previewId, saved.cancelPreviewId); if (mounted.current) { setCancellation(response); onChanged(); onNotice?.(individualCancelNotice(response)); } });
+  };
+  const retryCancel = () => {
+    if (intent === 'CONSULT' || active.current || busy || !attempt?.cancelPreviewId || cancellation?.state !== 'CANCELLATION_PENDING'
+      || !cancellation.retry?.availableAt || cancellation.retry.used || Date.parse(cancellation.retry.availableAt) > Date.now()) return;
+    const saved = { ...attempt, retryRequestId: attempt.retryRequestId || crypto.randomUUID() };
+    if (!remember(saved)) return;
+    void run(async () => {
+      const response = await service.retryCancellation(scope, saved.requestId, saved.previewId, saved.cancelPreviewId, saved.retryRequestId);
+      if (mounted.current) { setCancellation(response); onChanged(); onNotice?.(individualCancelNotice(response)); }
+    });
+  };
+  if (typeof document === 'undefined') return null;
+  return createPortal(<div ref={overlayRef} className="nfse-portal nfse-fiscal-review-overlay" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) close(); }}>
+    <div ref={dialogRef} className="nfse-fiscal-review-dialog" role="dialog" aria-modal="true" aria-labelledby={title} tabIndex={-1} aria-busy={busy}>
+      <header className="nfse-section-heading"><div><h2 id={title}>{intent === 'CANCEL' ? 'Cancelar NFS-e' : attempt ? 'Consultar NFS-e' : 'Revisar emissão'}</h2><p>{label} · {formatNfseMoney(amount)} · {scope.environment === 'PRODUCAO' ? 'Produção' : 'Homologação'}</p></div>
+        <button ref={initialFocusRef} type="button" className="nfse-button nfse-button-secondary" aria-label="Fechar emissão" disabled={busy} onClick={close}><X size={17} /></button></header>
+      <div className="nfse-fiscal-review-body nfse-individual-content">
+        {!supported && <p role="status">O executor de emissão deste ambiente ainda não está disponível. Os dados preparados foram preservados.</p>}
+        {error && <p className="nfse-individual-state" role="alert">{error}</p>}
+        {intent === 'ISSUE' && !attempt && supported && <>
+          <p>{source.kind === 'PARTNER_SERVICE' ? 'A competência seguirá a regra salva no pré-modelo. Confira as datas e a descrição final na prévia antes de emitir.'
+            : 'O tomador, o modelo e as datas serão conferidos pela revisão fiscal salva desta preparação.'}</p>
+          <button type="button" className="nfse-button nfse-button-secondary" disabled={busy} onClick={prepare}>Conferir dados para emissão</button>
+        </>}
+        {(issued?.payload || preview?.payload) && (intent === 'CANCEL'
+          ? <details><summary>Dados da NFS-e autorizada</summary><NfseIndividualSnapshot payload={(issued?.payload || preview?.payload)!} /></details>
+          : <NfseIndividualSnapshot payload={(issued?.payload || preview?.payload)!} />)}
+        {preview && !preview.capability.available && <p role="status">{individualReason(preview.capability.reason)}</p>}
+        {intent === 'ISSUE' && preview && (!attempt || issued?.state === 'PREVIEWED') && <>
+          {expired && <p role="status">A revisão expirou. Confira novamente os dados.</p>}
+          {expired && attempt && <button type="button" className="nfse-button nfse-button-secondary" disabled={busy} onClick={renew}>Renovar revisão desta operação</button>}
+          <label className="nfse-individual-confirm"><input type="checkbox" checked={confirmed} disabled={busy || expired || !preview.capability.available}
+            onChange={event => setConfirmed(event.target.checked)} />Conferi os dados apresentados e autorizo emitir esta NFS-e em produção.</label>
+        </>}
+        {attempt && <button type="button" className="nfse-button nfse-button-secondary" disabled={busy} onClick={() => consult(attempt)}>Consultar resultado da emissão</button>}
+        {operation?.state === 'CANCELLED' && !cancellation && <p role="status"><strong>Cancelada</strong> · {operation.message || 'O cancelamento desta nota está registrado.'}</p>}
+        {issued && <div className="nfse-individual-state" role="status"><strong>{operationLabel(issued.state)}</strong><p>{issued.message}</p>
+          {cancellation?.state === 'CANCELLED' && <p>Autorização histórica preservada. O cancelamento confirmado está registrado no evento abaixo.</p>}
+          {Boolean(issued.codes?.length) && <p>Código(s) retornado(s): {issued.codes!.join(', ')}</p>}
+          {issued.state === 'REJECTED' && individualRejectionExplanation(issued.codes) && <p>Orientação para o código: {individualRejectionExplanation(issued.codes)}</p>}
+          {issued.capability?.available === false && <p>{individualReason(issued.capability.reason)}</p>}
+          {issued.number && <p>NFS-e {issued.number} · Chave de acesso {issued.accessKey}</p>}</div>}
+        {intent === 'CONSULT' && cancellation && <NfseCancellationReadOnlyResult result={cancellation} />}
+        {intent !== 'CONSULT' && issued?.state === 'AUTHORIZED' && (operation?.state !== 'CANCELLED' || cancellation) && <NfseIndividualCancellation preview={cancelPreview} result={cancellation} busy={busy} existing={Boolean(attempt?.cancelPreviewId)} sent={Boolean(attempt?.cancelPreviewId) && cancellation?.state !== 'PREVIEWED'} expired={cancelExpired}
+          scope={scope} model={cancellationModel} detail={detail} onModel={model => { setCancellationModel(model); setDetail(model.requiresDetail ? '' : null); setCancelPreview(undefined); setCancelConfirmed(false); }}
+          onDetail={value => { setDetail(value); setCancelPreview(undefined); setCancelConfirmed(false); }}
+          justification={justification} confirmed={cancelConfirmed} onJustification={value => { setJustification(value); setCancelPreview(undefined); setCancelConfirmed(false); }} onConfirm={setCancelConfirmed} onPrepare={prepareCancel} onCancel={cancel} />}
+        {intent !== 'CONSULT' && cancellation && <NfseCancellationRetry result={cancellation} busy={busy} onRetry={retryCancel} />}
+      </div>
+      <footer className="nfse-footer"><span>{busy ? 'Consultando o serviço fiscal…' : 'Os dados fiscais vêm da preparação selecionada.'}</span><div className="nfse-queue-actions">
+        <button type="button" className="nfse-button nfse-button-secondary" disabled={busy} onClick={close}>Fechar</button>
+        {intent === 'ISSUE' && (!attempt || issued?.state === 'PREVIEWED') && <button type="button" className="nfse-button nfse-button-primary" disabled={!supported || busy || !confirmed || !preview?.capability.available || expired} onClick={issue}>Emitir NFS-e</button>}
+      </div></footer>
+    </div>
+  </div>, document.body);
+}

@@ -3,7 +3,7 @@ import type { NfseRpcTransport } from '../../services/nfse.service-core';
 import { assertScope, integer, unwrapNfseEnvelope } from '../../services/nfse.validation';
 import { NfseContractError } from '../../services/nfse.errors';
 import { NFSE_PARTNER_SERVICE_PAGE_SIZE, type NfsePartnerServiceInput } from '../types/nfse-partner-services.types';
-import { nfsePartnerServiceDefinition, parseNfsePartnerServiceOptions, parseNfsePartnerServiceSaved, parseNfsePartnerServicesPage, partnerServiceUuid } from './nfse-partner-services.contract';
+import { nfsePartnerServiceDefinition, parseNfsePartnerServiceOptions, parseNfsePartnerServiceSaved, parseNfsePartnerServicesPage, parseNfseServicePartnerSearch, partnerServiceUuid } from './nfse-partner-services.contract';
 
 export function createNfsePartnerServices(transport: NfseRpcTransport) {
   const call = async (name: string, scope: NfseScope, args: Record<string, unknown>, signal?: AbortSignal) => {
@@ -12,6 +12,13 @@ export function createNfsePartnerServices(transport: NfseRpcTransport) {
       p_environment: scope.environment, p_month: scope.month, ...args }, signal), scope);
   };
   return {
+    async searchPartners(scope: NfseScope, term: string, selectedId?: string | null, signal?: AbortSignal) {
+      const search = term.trim();
+      if (search.length > 100) throw new NfseContractError();
+      if (!selectedId && search.length < 2) return [];
+      return parseNfseServicePartnerSearch(await call('search_nfse_service_partners_secure', scope,
+        { p_search: search, p_partner_id: selectedId ? partnerServiceUuid(selectedId) : null }, signal));
+    },
     async options(scope: NfseScope, signal?: AbortSignal) {
       return parseNfsePartnerServiceOptions(await call('get_nfse_partner_service_options_secure', scope, {}, signal));
     },

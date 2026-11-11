@@ -62,6 +62,8 @@ export function buildNationalDps(input: NationalDpsInput): UnsignedFiscalXml {
   requireContract(/^\d{1,5}$/.test(input.series), 'INVALID_DPS_SERIES');
   requireContract(input.environment !== 'HOMOLOGACAO' || /^(?:\d{1,4}|[0-8]\d{4})$/.test(input.series),
     'INVALID_HOMOLOGATION_DPS_SERIES');
+  requireContract(input.environment !== 'PRODUCAO' || /^(?:[1-9]\d{0,3}|[1-4]\d{4})$/.test(input.series),
+    'PRODUCTION_API_SERIES_REQUIRED');
   requireContract(/^[1-9]\d{0,14}$/.test(input.number), 'INVALID_DPS_NUMBER');
   const issuer = input.issuer;
   const municipality = digits(input.issuerMunicipalityCode, 7);
@@ -91,14 +93,19 @@ export function buildNationalDps(input: NationalDpsInput): UnsignedFiscalXml {
     (issuer.simpleNationalAssessment ? tag('regApTribSN', issuer.simpleNationalAssessment) : '') +
     `${tag('regEspTrib', issuer.specialTaxRegime)}</regTrib></prest><toma>${party(input.recipient)}</toma>`;
   const service = input.service;
-  exactKeys(service, ['municipalityCode', 'nationalTaxCode', 'municipalTaxCode', 'nbs', 'description']);
+  exactKeys(service, ['municipalityCode', 'nationalTaxCode', 'municipalTaxCode', 'nbs', 'description', 'complementaryInfo']);
   xmlText(service.description, 1, 2000);
   const nbsXml = service.nbs ? tag('cNBS', digits(service.nbs, 9)) : '';
   xml += `<serv><locPrest>${tag('cLocPrestacao', digits(service.municipalityCode, 7))}</locPrest>` +
     `<cServ>${tag('cTribNac', digits(service.nationalTaxCode, 6))}` +
     (service.municipalTaxCode ? tag('cTribMun', digits(service.municipalTaxCode, 3)) : '') +
     (input.environment === 'HOMOLOGACAO' ? nbsXml : '') + tag('xDescServ', service.description) +
-    (input.environment === 'PRODUCAO' ? nbsXml : '') + '</cServ></serv>';
+    (input.environment === 'PRODUCAO' ? nbsXml : '') + '</cServ>';
+  if (service.complementaryInfo !== undefined) {
+    xmlText(service.complementaryInfo, 1, 2000);
+    xml += `<infoCompl>${tag('xInfComp', service.complementaryInfo)}</infoCompl>`;
+  }
+  xml += '</serv>';
   const v = input.values;
   exactKeys(v, ['serviceAmount', 'receivedAmount', 'issTaxation', 'immunityType', 'issRetention', 'issRate', 'totalTaxes']);
   requireContract(['1', '2', '4'].includes(v.issTaxation) && ['1', '2'].includes(v.issRetention), 'UNSUPPORTED_ISS_SCENARIO');
@@ -126,14 +133,16 @@ export function buildNationalDps(input: NationalDpsInput): UnsignedFiscalXml {
     (v.issRate !== undefined ? tag('pAliq', decimal(v.issRate, 1)) : '') +
     `</tribMun><totTrib>${totalTaxes(v.totalTaxes)}</totTrib></trib></valores>`;
   if (input.ibscbs) {
-    requireContract(input.environment === 'HOMOLOGACAO', 'IBSCBS_PRODUCTION_CONTRACT_UNVERIFIED');
     const ibs = input.ibscbs;
     exactKeys(ibs, ['personalUse', 'operationCode', 'recipientIsAcquirer', 'cst', 'classificationCode']);
     requireContract(['0', '1'].includes(ibs.personalUse) && ibs.recipientIsAcquirer === true,
       'UNSUPPORTED_IBSCBS_SCENARIO');
-    xml += `<IBSCBS>${tag('indFinal', ibs.personalUse)}${tag('cIndOp', digits(ibs.operationCode, 6))}` +
-      `<indDest>0</indDest><valores><trib>${tag('CST', digits(ibs.cst, 3))}` +
-      `${tag('cClassTrib', digits(ibs.classificationCode, 6))}</trib></valores></IBSCBS>`;
+    const production = input.environment === 'PRODUCAO';
+    xml += '<IBSCBS>' + (production ? tag('finNFSe', '0') : '') + tag('indFinal', ibs.personalUse) +
+      tag('cIndOp', digits(ibs.operationCode, 6)) + '<indDest>0</indDest><valores><trib>' +
+      (production ? '<gIBSCBS>' : '') + tag('CST', digits(ibs.cst, 3)) +
+      tag('cClassTrib', digits(ibs.classificationCode, 6)) +
+      (production ? '</gIBSCBS>' : '') + '</trib></valores></IBSCBS>';
   }
   return { kind: 'DPS', environment: input.environment, schemaVersion: '1.01', referenceId,
     xml: `<?xml version="1.0" encoding="UTF-8"?><DPS xmlns="${NFSE_NAMESPACE}" versao="1.01">` +

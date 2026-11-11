@@ -11,10 +11,10 @@ export default function NfseModelTransparencyValues({ id, value, onChange, conte
   const amounts = ['federal', 'state', 'municipal'] as const;
   const percentages = ['federalPercent', 'statePercent', 'municipalPercent'] as const;
   const names = ['federais', 'estaduais', 'municipais'];
-  return <section className="nfse-model-section"><h3>Valor aproximado dos tributos</h3><div className="nfse-model-grid">
+  return <section className="nfse-model-section"><h3>Tributos aproximados</h3><div className="nfse-model-grid">
     <NfseValuesChoice id={`${id}-mode`} label="Como informar a estimativa tributária?" value={value.mode}
       options={[{ value: 'AMOUNTS', label: 'Valores monetários' }, { value: 'PERCENTAGES', label: 'Percentuais' },
-        { value: 'SIMPLE_NATIONAL_PERCENTAGE', label: 'Alíquota nominal do Simples Nacional', disabled: context.simpleNationalOption !== '3' },
+        { value: 'SIMPLE_NATIONAL_PERCENTAGE', label: 'Percentual do Simples Nacional', disabled: context.simpleNationalOption !== '3' },
         { value: 'NOT_INFORMED', label: 'Não informar, quando permitido', disabled: context.simpleNationalOption !== '2' }]}
       onChange={next => onChange({ mode: next as typeof value.mode, federal: noNfseAmount(), state: noNfseAmount(), municipal: noNfseAmount(),
         federalPercent: null, statePercent: null, municipalPercent: null, simpleNationalPercent: null })} />
@@ -24,8 +24,8 @@ export default function NfseModelTransparencyValues({ id, value, onChange, conte
     {value.mode === 'PERCENTAGES' && percentages.map((key, index) => <div className="nfse-field" key={key}><NfseValuesDecimalField id={`${id}-${key}`}
       label={`Percentual aproximado de tributos ${names[index]} (%)`} kind="PERCENT" value={value[key]}
       onChange={next => patch({ [key]: next })} /></div>)}
-    {value.mode === 'SIMPLE_NATIONAL_PERCENTAGE' && <NfseValuesDecimalField id={`${id}-simple`} label="Alíquota nominal do Simples Nacional (%)"
+    {value.mode === 'SIMPLE_NATIONAL_PERCENTAGE' && <NfseValuesDecimalField id={`${id}-simple`} label="Percentual do Simples (%)"
       kind="PERCENT" value={value.simpleNationalPercent} onChange={next => patch({ simpleNationalPercent: next })} />}
-    <p className="nfse-wide nfse-portal-note">A estimativa tributária deve vir de uma fonte confirmada. A alíquota nominal do Simples não é a alíquota de ISSQN.</p>
+    <p className="nfse-wide nfse-portal-note">O percentual representa a estimativa total de tributos do Simples Nacional e deve vir de uma fonte confirmada.</p>
   </div></section>;
 }

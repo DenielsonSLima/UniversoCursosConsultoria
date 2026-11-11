@@ -1,8 +1,8 @@
 {
-  "version": "4.8.285",
+  "version": "4.8.287",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 294,
-  "releasedAt": "2026-11-10",
-  "summary": "Pré-modelos NFS-e em quatro etapas, visual compacto e catálogos oficiais; piloto de homologação"
+  "revision": 296,
+  "releasedAt": "2026-11-11",
+  "summary": "NFS-e pelo fluxo de alunos e serviços, emissão durável, consulta, cancelamento auditado e atualização fiscal em tempo real"
 }

@@ -13,6 +13,7 @@ import { useNfsePartnerServiceDialog } from './hooks/useNfsePartnerServiceDialog
 import NfsePartnerFinancialFields, { type NfsePartnerFinancialMode } from './NfsePartnerFinancialFields';
 import { nfsePartnerAmountInput, nfsePartnerInputAmount, nfsePartnerToday } from './nfse-partner-services.presentation';
 import type { NfsePartnerServiceInput } from './types/nfse-partner-services.types';
+import { useNfseServicePartnerSearch } from './hooks/useNfseServicePartnerSearch';
 
 interface Props { scope: NfseScope; onClose: () => void; onSaved: (message: string) => void }
 
@@ -23,6 +24,7 @@ export default function NfsePartnerServiceModal({ scope, onClose, onSaved }: Pro
   const save = useSaveNfsePartnerService(scope);
   const { overlayRef, dialogRef } = useNfsePartnerServiceDialog(onClose, save.isPending);
   const [partnerId, setPartnerId] = useState('');
+  const partners = useNfseServicePartnerSearch(scope, partnerId);
   const [modelId, setModelId] = useState('');
   const [serviceDescription, setServiceDescription] = useState('');
   const [serviceDate, setServiceDate] = useState(() => {
@@ -39,7 +41,7 @@ export default function NfsePartnerServiceModal({ scope, onClose, onSaved }: Pro
   const options = optionsQuery.error ? undefined : optionsQuery.data;
   const models = modelsQuery.error ? [] : modelsQuery.data?.rows || [];
   const selectedModel = models.find((model) => model.active && model.id === modelId);
-  const selectedPartner = options?.partners.find((partner) => partner.id === partnerId);
+  const selectedPartner = partners.rows.find((partner) => partner.id === partnerId);
   const receivables = options?.existingReceivables.filter((item) => item.partnerId === partnerId) || [];
   const linked = generate && mode === 'LINK';
   const selectedReceivable = linked ? receivables.find((item) => item.id === existingId) : undefined;
@@ -82,11 +84,14 @@ export default function NfsePartnerServiceModal({ scope, onClose, onSaved }: Pro
       <div className="nfse-partner-modal-body">
         <fieldset disabled={save.isPending} className="nfse-partner-fieldset">
           <section className="nfse-partner-form-section nfse-partner-form-grid">
-            <div className="nfse-field nfse-wide"><label htmlFor="nfse-service-partner">Parceiro</label>
-              <InstitutionalSelect id="nfse-service-partner" ariaLabel="Parceiro" required value={partnerId}
-                options={(options?.partners || []).map((partner) => ({ value: partner.id, label: `${partner.tradeName || partner.name} · ${partner.document || partner.type}`, keywords: `${partner.name} ${partner.tradeName || ''} ${partner.document || ''}` }))}
-                loading={optionsQuery.isPending} error={optionsQuery.error ? 'Não foi possível consultar os parceiros.' : undefined}
+            <div className="nfse-field nfse-wide"><label htmlFor="nfse-service-partner">Aluno ou parceiro</label>
+              <input type="search" aria-label="Buscar aluno ou parceiro" maxLength={100} placeholder="Pesquisar por nome, CPF ou CNPJ (mínimo 2 caracteres)"
+                onChange={event => partners.search(event.target.value)} />
+              <InstitutionalSelect id="nfse-service-partner" ariaLabel="Aluno ou parceiro" required value={partnerId}
+                options={partners.rows.map((partner) => ({ value: partner.id, label: `${partner.tradeName || partner.name} · ${partner.document || partner.type}`, keywords: `${partner.name} ${partner.tradeName || ''} ${partner.document || ''}` }))}
+                loading={partners.loading} error={partners.error ? 'Não foi possível consultar os parceiros.' : undefined}
                 placeholder="Buscar nome, CPF ou CNPJ" onValueChange={(value) => { setPartnerId(value); setExistingId(''); }} />
+              {partners.error && <button type="button" className="nfse-button nfse-button-secondary" onClick={partners.retry}>Consultar parceiros novamente</button>}
             </div>
             <div className="nfse-field nfse-wide"><label htmlFor="nfse-service-model">Modelo de emissão</label>
               <InstitutionalSelect id="nfse-service-model" ariaLabel="Modelo de emissão" required value={modelId}

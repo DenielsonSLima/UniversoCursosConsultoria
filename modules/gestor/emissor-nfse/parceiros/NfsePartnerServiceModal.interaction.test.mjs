@@ -32,6 +32,7 @@ test('partner preparation preserves the selected 2000-character model descriptio
         ? `export const nfseModelsService={list:async()=>({rows:[globalThis.__partnerModel]}),
           previewDescription:async(_scope,description)=>({description,monthLabel:'novembro de 2026',usesReferenceMonth:false})};`
         : args.path === 'partners' ? `export const nfsePartnerServices={options:async()=>globalThis.__partnerOptions,
+          searchPartners:async(_scope,query,id)=>id||query.length>=2?globalThis.__partnerOptions.partners:[],
           save:(...args)=>globalThis.__partnerSave(...args)};`
           : 'export const supabase=new Proxy({},{get(){throw new Error("Live client forbidden in UI smoke")}});', loader: 'js' }));
     } }] });
@@ -39,7 +40,7 @@ test('partner preparation preserves the selected 2000-character model descriptio
   const { default: Modal } = await import(pathToFileURL(bundle).href);
   const description = 'SERVIÇO SINTÉTICO '.padEnd(2000, 'x');
   globalThis.__partnerModel = { id: id(3), version: 2, name: 'Modelo sintético 2000', active: true, serviceDescription: description };
-  globalThis.__partnerOptions = { partners: [{ id: id(4), name: 'Parceiro sintético', tradeName: null, document: null, type: 'PJ' }],
+  globalThis.__partnerOptions = { partners: [{ id: id(4), name: 'Parceiro sintético', tradeName: null, document: null, type: 'ALUNO' }],
     categories: [], existingReceivables: [], capabilities: { canGenerateReceivable: false } };
   const calls = [], messages = [];
   globalThis.__partnerSave = async (scope, input) => {
@@ -63,7 +64,8 @@ test('partner preparation preserves the selected 2000-character model descriptio
     await act(async () => root.render(React.createElement(QueryClientProvider, { client },
       React.createElement(Modal, { scope, onClose() {}, onSaved: message => messages.push(message) }))));
     await settle();
-    await click(document.getElementById('nfse-service-partner')); await click(document.querySelector('[role="option"]'));
+    await setValue(document.querySelector('input[aria-label="Buscar aluno ou parceiro"]'), 'Parceiro'); await settle(250);
+    await click(document.getElementById('nfse-service-partner'));  await click(document.querySelector('[role="option"]'));
     await click(document.getElementById('nfse-service-model')); await click(document.querySelector('[role="option"]'));
     const textarea = document.querySelector('textarea');
     assert.equal(textarea.maxLength, 2000); assert.equal(textarea.value, description);

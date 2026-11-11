@@ -252,7 +252,17 @@ incluindo a checagem do teto de linhas e a prova de que a busca não altera o í
 - `supabase/tests/nfse_homologation_preflight.isolated.test.mjs`
 - `supabase/tests/nfse_homologation_relay.isolated.test.mjs`
 
-Total: 84 arquivos.
+- `modules/gestor/emissor-nfse/homologacao/NfseHomologationPublicDetails.tsx`
+- `modules/gestor/emissor-nfse/homologacao/NfseHomologationRecipientPicker.tsx`
+- `modules/gestor/emissor-nfse/homologacao/nfse-homologation.public-details.ts`
+- `supabase/functions/nfse-national-pilot/contract.test.ts`
+- `supabase/functions/nfse-national-pilot/scenario.test.ts`
+- `supabase/migrations/20261110235303_nfse_homologation_recipient.sql`
+- `supabase/migrations/20261110235311_nfse_homologation_partner_preview.sql`
+- `supabase/tests/nfse_homologation_partner.fixture.sql`
+- `supabase/tests/nfse_homologation_partner.isolated.test.mjs`
+
+Total: 93 arquivos.
 
 ## Validação e limites
 
@@ -298,3 +308,48 @@ anteriores v5/v1; não houve nova transmissão para repetir a rejeição E0037.
 ESLint final dos 63 arquivos JS/TS do manifesto passou sem erros ou avisos,
 incluindo os testes `.mjs`. Os quatro testes ajustados somaram 14 resultados
 aprovados, cobrindo contratos do relay, TLS sintético, modal DOM e ledger PGlite.
+
+## Retomada autorizada: tomador do cadastro
+
+Após a revisão dos pré-modelos, o usuário reiterou a emissão em homologação e
+indicou seu cadastro pessoal como tomador. A implementação passa a aceitar somente
+o identificador do parceiro no comando de revisão; documento e nome são relidos e
+validados no backend, preservados no snapshot da DPS e nunca recebidos livremente
+do navegador. O cenário técnico continua isolado, sem recebimentos reais.
+
+Novo preflight autenticado no Safari confirmou A1, TLS e contrato público SEFIN;
+a parametrização municipal permaneceu não comprovada. A consulta anterior usava
+01/11; a retomada passa a conferir a competência atual do teste e o serviço080201.
+Os retornos municipais públicos serão exibidos separadamente da disponibilidade
+do experimento técnico. Alterar o tomador não dispensa a regra municipal E0037.
+
+O [Guia do Painel Municipal1.2](https://www.gov.br/nfse/pt-br/biblioteca/documentacao-tecnica/documentacao-atual/guia-do-painel-administrativo-municipal-nfs-e-v1-2-out2025.pdf),
+páginas13 e17, atribui cadastro inicial ao Gestor Nacional e parametrização/ativação
+ao gestor municipal, com configuração de testes e produção conferida separadamente.
+O certificado do contribuinte não concede esse perfil. O [canal oficial](https://www.gov.br/nfse/pt-br/canais-de-atendimento),
+atualizado em10/11, orienta procurar a prefeitura; o antigo email federal foi desativado.
+Nenhuma mensagem externa ou alteração de convênio foi realizada.
+
+### Resultado da retomada
+
+- 14 verificações SQL,12 Edge,10 contratos frontend e smoke DOM aprovados;
+  TypeScript global, Deno check do executor e lint focado sem erros.
+- Aplicadas via MCP, em ordem:20261110235303 e20261110235311. Fontes locais
+  renomeadas para o ledger com bytes preservados. Getter indisponível para anon
+  e authenticated; somente o executor service_role possui execute.
+- Piloto Edgev3 ativo, JWT obrigatório. Relay privado permanece no mesmo Preview.
+- Safari autenticado confirmou busca/seleção do parceiro indicado, revisão canônica
+  deR$1,00 e transmissão de uma única tentativa, série49999/número3. A consulta
+  da SEFIN retornou REJECTED/E0037 às23:56:47Z; não há chave nem XML autorizado.
+- Preflight de10/11/2026 e080201 comprovou TLS nos dois hosts; Swagger municipal
+  OpenAPI e Swagger SEFIN retornaram200. A rota de convênio declarada no contrato
+  respondeu404; alíquota/regime responderam400 e retenções404. O404 isolado não
+  foi usado para inferir a causa; a rejeição fiscal E0037 é a evidência do envio.
+- Nenhum recebimento, preparação ou modelo foi consumido/alterado pelo teste.
+
+O usuário depois pediu emissão deR$1 em produção e cancelamento. Essa operação
+é distinta e ainda não foi executada. A confirmação da prestação real e das
+condições de cancelamento está em análise; as notas oficiais anteriores da Universo
+comprovam produção, sem eliminar a rejeição do ambiente de testes. Guia Web1.3,
+seção5.3, prevê solicitação por análise fiscal quando regras municipais impedem
+cancelamento direto; não há garantia prévia baseada só no valor ou na idade da nota.

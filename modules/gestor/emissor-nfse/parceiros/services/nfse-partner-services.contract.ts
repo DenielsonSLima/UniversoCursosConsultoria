@@ -1,3 +1,4 @@
+import { operationReference } from '../../emissao/nfse-operation.contract';
 import { NfseContractError } from '../../services/nfse.errors';
 import { assertUniqueIds, boolean, integer, list, money, oneOf, record, string } from '../../services/nfse.validation';
 import type { NfsePartnerServiceInput, NfsePartnerServiceOptions, NfsePartnerServiceRow, NfsePartnerServicesPage, NfsePartnerServiceSaved } from '../types/nfse-partner-services.types';
@@ -6,6 +7,11 @@ export function partnerServiceUuid(value: unknown): string {
   const id = string(value);
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) throw new NfseContractError();
   return id;
+}
+export function parseNfseServicePartner(value: unknown) {
+  const partner = record(value);
+  return { id: partnerServiceUuid(partner.id), name: string(partner.name), tradeName: optionalText(partner.tradeName),
+    document: optionalText(partner.document), type: oneOf(string(partner.type).trim().toUpperCase(), ['PF', 'PJ', 'ALUNO']) };
 }
 const nullableUuid = (value: unknown) => value === null ? null : partnerServiceUuid(value);
 const optionalText = (value: unknown) => value === null ? null : string(value, true).trim() || null;
@@ -28,12 +34,7 @@ const financialResult = (row: Record<string, unknown>) => {
 
 export function parseNfsePartnerServiceOptions(value: unknown): NfsePartnerServiceOptions {
   const row = record(value);
-  const partners = list(row.partners, (item) => {
-    const partner = record(item);
-    return { id: partnerServiceUuid(partner.id), name: string(partner.name),
-      tradeName: optionalText(partner.tradeName), document: optionalText(partner.document),
-      type: oneOf(partner.type, ['PF', 'PJ']) };
-  });
+  const partners = list(row.partners, parseNfseServicePartner);
   const categories = list(row.categories, (item) => {
     const category = record(item);
     return { id: partnerServiceUuid(category.id), name: string(category.name) };
@@ -48,6 +49,11 @@ export function parseNfsePartnerServiceOptions(value: unknown): NfsePartnerServi
   return { partners, categories, existingReceivables,
     capabilities: { canGenerateReceivable: boolean(record(row.capabilities).canGenerateReceivable) } };
 }
+export function parseNfseServicePartnerSearch(value: unknown) {
+  const payload = record(value), rows = list(payload.rows, parseNfseServicePartner);
+  if (integer(payload.page, 1) !== 1 || integer(payload.pageSize, 1) !== 20 || rows.length > 20 || rows.length > integer(payload.totalItems)) throw new NfseContractError();
+  assertUniqueIds(rows); return rows;
+}
 
 export function parseNfsePartnerServicesPage(value: unknown, expectedPage: number): NfsePartnerServicesPage {
   const payload = record(value);
@@ -56,7 +62,7 @@ export function parseNfsePartnerServicesPage(value: unknown, expectedPage: numbe
     return { id: partnerServiceUuid(row.id), partnerId: partnerServiceUuid(row.partnerId), partnerName: string(row.partnerName),
       modelId: partnerServiceUuid(row.modelId), modelName: string(row.modelName), serviceDate: date(row.serviceDate),
       serviceDescription: string(row.serviceDescription), amount: amount(row.amount), ...financialResult(row),
-      status: oneOf(row.status, ['PREPARADO']), createdAt: string(row.createdAt) };
+      status: oneOf(row.status, ['PREPARADO']), createdAt: string(row.createdAt), ...operationReference(row) };
   });
   const page = integer(payload.page, 1);
   const pageSize = integer(payload.pageSize, 1);

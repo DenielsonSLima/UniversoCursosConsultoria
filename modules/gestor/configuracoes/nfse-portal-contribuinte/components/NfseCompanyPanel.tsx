@@ -7,6 +7,9 @@ import { getNfseCurrentMonth } from '../../../emissor-nfse/types/nfse.scope';
 import type { NfseEnvironment, NfseScope } from '../../../emissor-nfse/types/nfse.types';
 import type { NfsePolo } from '../services/nfse-polos.service';
 import NfseConfigurationForm from './NfseConfigurationForm';
+import { useNfseRealtime } from '../../../emissor-nfse/hooks/useNfseRealtime';
+import { useNfseQueueRealtime } from '../../../emissor-nfse/fila/useNfseQueueRealtime';
+import NfseNumberingPanel from './NfseNumberingPanel';
 
 interface Props { polo: NfsePolo; contextKey: string }
 
@@ -16,6 +19,8 @@ const NfseCompanyPanel: React.FC<Props> = ({ polo, contextKey }) => {
     poloId: polo.id, contextKey, environment, month: getNfseCurrentMonth(),
   }), [polo.id, contextKey, environment]);
   const configQuery = useNfseConfigurationMetadata(scope);
+  useNfseRealtime(scope);
+  useNfseQueueRealtime(scope);
   const configuration = configQuery.error ? undefined : configQuery.data;
   const unavailable = configQuery.error instanceof NfseUnavailableError;
   const failed = configQuery.isError && !unavailable;
@@ -59,6 +64,7 @@ const NfseCompanyPanel: React.FC<Props> = ({ polo, contextKey }) => {
     </section>
 
     <NfseConfigurationForm key={`${polo.id}:${environment}`} scope={scope} configuration={configuration} activePolo={polo.status === 'ativo'} />
+    <NfseNumberingPanel scope={scope} />
 
     <div className="nfse-portal-actions">
       <a className="nfse-portal-button" href="https://www.nfse.gov.br/EmissorNacional" target="_blank" rel="noopener noreferrer">

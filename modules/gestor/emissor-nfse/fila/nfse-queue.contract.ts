@@ -1,3 +1,4 @@
+import { operationReference } from '../emissao/nfse-operation.contract';
 import { NfseContractError } from '../services/nfse.errors';
 import { assertUniqueIds, integer, list, oneOf, record, string } from '../services/nfse.validation';
 import type { NfseQueueInput, NfseQueuePage, NfseQueueSaved } from './nfse-queue.types';
@@ -38,7 +39,7 @@ export function parseQueuePage(value: unknown, expectedPage: number): NfseQueueP
       studentName: string(row.studentName), classId: queueUuid(row.classId), classLabel: string(row.classLabel),
       amount: amount(row.amount), modelLabel: string(row.modelLabel), status: oneOf(row.status, ['PREPARADO']),
       receiptCount: integer(row.receiptCount, 1), paymentMonth: queueMonth(row.paymentMonth),
-      createdAt: string(row.createdAt), blockingReasons: list(row.blockingReasons, item => string(item)) };
+      ...operationReference(row), createdAt: string(row.createdAt), blockingReasons: list(row.blockingReasons, item => string(item)) };
   });
   const page = integer(payload.page, 1), pageSize = integer(payload.pageSize, 1);
   const totalItems = integer(payload.totalItems);

@@ -2,6 +2,7 @@ import type { NfseModelServiceOptions } from '../modelos/services/nfse-model-ser
 import type { NfseModelPeopleOptions } from '../modelos/services/nfse-model-people-options';
 import type { NfseModelValuesOptions } from '../modelos/services/nfse-model-values.types';
 import type { NfseModelAdditionalOptions } from '../modelos/services/nfse-model-additional.types';
+import type { NfseOperationReference } from '../emissao/nfse-operation.contract';
 
 export type NfseEnvironment = 'HOMOLOGACAO' | 'PRODUCAO';
 export type NfseTab = 'preparar' | 'pendentes' | 'emitidas' | 'erros' | 'modelos';
@@ -60,6 +61,7 @@ export interface NfseModelDescriptionPreview {
   description: string;
   monthLabel: string;
   usesReferenceMonth: boolean;
+  requiresAcademicContext?: boolean;
 }
 
 export interface NfseWorkspace {
@@ -89,7 +91,7 @@ export interface NfseCandidate {
 }
 
 export type NfseDocumentStatus = 'PENDENTE' | 'EM_PROCESSAMENTO' | 'AGUARDANDO_CONFIRMACAO' | 'EMITIDA' | 'ERRO';
-export interface NfseDocument {
+export interface NfseDocument extends NfseOperationReference {
   id: string;
   studentName: string;
   classLabel: string;
@@ -101,6 +103,11 @@ export interface NfseDocument {
   errorCode: string | null;
   errorMessage: string | null;
   retryable: boolean;
+  emittedAt?: string | null;
+  dateSource?: 'NFSE_DH_PROC' | null;
+  origin?: 'ALUNO' | 'SERVICO' | null;
+  courseType?: string | null;
+  courseTypeLabel?: string | null;
 }
 
 export interface NfsePage<T> {
@@ -121,6 +128,10 @@ export interface NfseDocumentFilters {
   status: 'PENDENTE' | 'EMITIDA' | 'ERRO';
   search?: string;
   page?: number;
+  dateFrom?: string;
+  dateTo?: string;
+  courseType?: string;
+  origin?: 'ALUNO' | 'SERVICO' | '';
 }
 
 export interface NfseConfiguration {

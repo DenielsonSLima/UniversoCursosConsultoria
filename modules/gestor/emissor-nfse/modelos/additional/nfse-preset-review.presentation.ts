@@ -37,7 +37,7 @@ const values: Record<string, string> = {
   REQUIRE_NIF: 'Exigir NIF no cadastro', WITHOUT_NIF: 'Sem NIF, com justificativa', ISSUE_DATE: 'Data da emissão', FIXED_DATE: 'Competência fixa',
   AUTOMATIC: 'Gerar automaticamente', CUSTOM: 'Série personalizada', PROVIDER: 'Prestador', RECIPIENT: 'Tomador', INTERMEDIARY: 'Intermediário',
   BRASIL: 'Brasil', EXTERIOR: 'Exterior', NOT_INFORMED: 'Não informado', CIB: 'CIB', ADDRESS: 'Endereço', WORK_CODE: 'CNO/CEI', MUNICIPAL_ID: 'Identificador municipal',
-  RECEIPTS: 'Recebimentos selecionados', NONE: 'Não aplicar', PERCENTAGE: 'Percentual', FROM_RULES: 'Regras municipais', EXPLICIT: 'Informado explicitamente',
+  RECEIPTS: 'Valor da preparação: recebimentos ou serviço', NONE: 'Não aplicar', PERCENTAGE: 'Percentual', FROM_RULES: 'Regras municipais', EXPLICIT: 'Informado explicitamente',
   JUDICIAL: 'Decisão judicial', ADMINISTRATIVE: 'Processo administrativo', AMOUNTS: 'Valores monetários', PERCENTAGES: 'Percentuais', SIMPLE_NATIONAL_PERCENTAGE: 'Percentual do Simples',
   SERVICE: 'Valor do serviço', SERVICE_AFTER_UNCONDITIONAL: 'Serviço menos desconto incondicionado',
   SERVICE_AFTER_UNCONDITIONAL_AND_DEDUCTION: 'Serviço menos desconto incondicionado e dedução', TOTAL_OPERATION: 'Total da operação',

@@ -69,5 +69,6 @@ export function parseNfseModelDescriptionPreview(value: unknown): NfseModelDescr
     description: text(row.description, 2000),
     monthLabel: text(row.monthLabel, 30),
     usesReferenceMonth: boolean(row.usesReferenceMonth),
+    ...(row.requiresAcademicContext === undefined ? {} : { requiresAcademicContext: boolean(row.requiresAcademicContext) }),
   };
 }
