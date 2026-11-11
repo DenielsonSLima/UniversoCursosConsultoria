@@ -24,6 +24,13 @@ Histórico arquivado: [10/10/2026 — versão 4.8.204](./changelog/2026-10-10-ve
 
 Histórico arquivado: [10/10/2026 a 13/10/2026 — versões 4.8.208 a 4.8.214](./changelog/2026-10-10-a-13-versoes-4-8-208-a-214.md).
 
+## [4.8.288] - 2026-11-11
+
+- Erros de NFS-e permitem seleção individual ou em lote para remover rejeições definitivas da lista e restaurar pelo filtro Arquivados, preservando o histórico fiscal.
+- Elegibilidade, contagens e paginação são conferidas no servidor; operações incertas, autorizadas ou canceladas não podem ser arquivadas.
+- Emissor e Configurações compartilham o ambiente escolhido por unidade e contexto, com Produção como padrão e preservação da escolha explícita de testes na sessão.
+- A situação nas configurações distingue o histórico de emissão autorizada da validação atual; numeração e certificado seguem o ambiente selecionado.
+
 ## [4.8.287] - 2026-11-11
 
 - Pré-modelos NFS-e têm Configuração, Serviço, Valores e Revisão, com regras reutilizáveis do Guia Web oficial.

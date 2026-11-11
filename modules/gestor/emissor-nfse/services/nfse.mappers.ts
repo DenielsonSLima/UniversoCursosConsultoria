@@ -74,10 +74,19 @@ export function mapNfseDocument(value: unknown): NfseDocument {
     ...(row.origin === undefined ? {} : { origin: row.origin === null ? null : oneOf(row.origin, ['ALUNO', 'SERVICO']) }),
     ...(row.courseType === undefined ? {} : { courseType: nullableString(row.courseType) }),
     ...(row.courseTypeLabel === undefined ? {} : { courseTypeLabel: nullableString(row.courseTypeLabel) }),
+    ...(row.archivedAt === undefined ? {} : { archivedAt: nullableString(row.archivedAt) }),
+    ...(row.canArchive === undefined ? {} : { canArchive: boolean(row.canArchive) }),
+    ...(row.canRestore === undefined ? {} : { canRestore: boolean(row.canRestore) }),
   };
   if ((document.status === 'EMITIDA' && (!document.number || !document.accessKey || document.amount === null))
     || (document.retryable && document.status !== 'ERRO')
-    || document.emittedAt && (!document.dateSource || !Number.isFinite(Date.parse(document.emittedAt)))) throw new NfseContractError();
+    || document.emittedAt && (!document.dateSource || !Number.isFinite(Date.parse(document.emittedAt)))
+    || document.archivedAt && !Number.isFinite(Date.parse(document.archivedAt))
+    || document.canArchive && document.canRestore
+    || (document.canArchive || document.canRestore) && (document.status !== 'ERRO' || document.state !== 'REJECTED'
+      || document.number !== null || document.accessKey !== null)
+    || document.canArchive && document.archivedAt !== null
+    || document.canRestore && !document.archivedAt) throw new NfseContractError();
   return document;
 }
 

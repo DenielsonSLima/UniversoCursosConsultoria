@@ -105,6 +105,8 @@ jobs:
           modules/gestor/emissor-nfse/emissao/NfseDailyFlow.interaction.test.mjs
           modules/gestor/emissor-nfse/emissao/NfseBatchEmissionModal.interaction.test.mjs
           modules/gestor/emissor-nfse/emitidas/NfseIssuedList.interaction.test.mjs
+          modules/gestor/emissor-nfse/erros/ErrosNfseTab.interaction.test.mjs
+          modules/gestor/emissor-nfse/hooks/useNfseEnvironment.interaction.test.mjs
           modules/gestor/emissor-nfse/cancelamento/NfseCancellationModels.interaction.test.mjs
           modules/gestor/configuracoes/nfse-portal-contribuinte/components/NfseNumberingPanel.interaction.test.mjs
       - run: node --test scripts/check-file-line-limits.test.mjs

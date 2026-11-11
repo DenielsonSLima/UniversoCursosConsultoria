@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import { Building2, ExternalLink, Info, ShieldCheck } from 'lucide-react';
 import InstitutionalSelect from '../../../../shared/components/InstitutionalSelect';
 import { useNfseConfigurationMetadata } from '../../../emissor-nfse/services/configuration/useNfseConfigurationMetadata';
@@ -10,11 +10,13 @@ import NfseConfigurationForm from './NfseConfigurationForm';
 import { useNfseRealtime } from '../../../emissor-nfse/hooks/useNfseRealtime';
 import { useNfseQueueRealtime } from '../../../emissor-nfse/fila/useNfseQueueRealtime';
 import NfseNumberingPanel from './NfseNumberingPanel';
+import { useNfseEnvironment } from '../../../emissor-nfse/hooks/useNfseEnvironment';
+import { useNfseNumbering } from '../hooks/useNfseNumbering';
 
 interface Props { polo: NfsePolo; contextKey: string }
 
 const NfseCompanyPanel: React.FC<Props> = ({ polo, contextKey }) => {
-  const [environment, setEnvironment] = useState<NfseEnvironment>('HOMOLOGACAO');
+  const [environment, setEnvironment] = useNfseEnvironment({ poloId: polo.id, contextKey });
   const scope = useMemo<NfseScope>(() => ({
     poloId: polo.id, contextKey, environment, month: getNfseCurrentMonth(),
   }), [polo.id, contextKey, environment]);
@@ -22,6 +24,9 @@ const NfseCompanyPanel: React.FC<Props> = ({ polo, contextKey }) => {
   useNfseRealtime(scope);
   useNfseQueueRealtime(scope);
   const configuration = configQuery.error ? undefined : configQuery.data;
+  const numberingQuery = useNfseNumbering(scope);
+  const lastAuthorized = numberingQuery.error ? undefined : numberingQuery.data?.lastAuthorized;
+  const environmentLabel = environment === 'PRODUCAO' ? 'Produção' : 'Homologação';
   const unavailable = configQuery.error instanceof NfseUnavailableError;
   const failed = configQuery.isError && !unavailable;
 
@@ -49,15 +54,19 @@ const NfseCompanyPanel: React.FC<Props> = ({ polo, contextKey }) => {
             ariaLabel="Ambiente fiscal consultado"
           />
         </label>
-        <div><span className="block text-xs text-slate-600 mb-1">Situação da emissão</span>
-          <span className="nfse-portal-tag">{!configuration ? 'Situação não verificada' : configuration.readiness.status === 'READY' ? 'Habilitado no ambiente' : 'Aguardando habilitação'}</span>
+        <div><span className="block text-xs text-slate-600 mb-1">Situação da emissão · {environmentLabel}</span>
+          <span className="nfse-portal-tag">{!configuration || numberingQuery.isError ? 'Situação não verificada'
+            : numberingQuery.isPending ? 'Consultando histórico do ambiente…'
+            : lastAuthorized ? 'Histórico de emissão autorizada'
+              : configuration.readiness.status === 'READY' ? 'Habilitado no ambiente' : 'Sem emissão confirmada neste ambiente'}</span>
         </div>
       </div>
       <div className={failed ? 'nfse-portal-state' : 'nfse-portal-info'} data-tone={failed ? 'error' : undefined} role={failed ? 'alert' : 'status'}>
         <Info size={17} aria-hidden="true" />
         <p>{configQuery.isLoading ? 'Consultando configuração fiscal…'
           : failed ? 'Não foi possível consultar o acesso fiscal desta unidade. Atualize a consulta para tentar novamente.'
-            : configuration?.readiness.message || 'Configuração de acesso disponível na próxima etapa. O cadastro das unidades já está vinculado a esta tela.'}</p>
+            : lastAuthorized ? `Há emissão autorizada registrada em ${environmentLabel}. A última NFS-e nº ${lastAuthorized.number}${lastAuthorized.state === 'CANCELLED' ? ' está cancelada' : ' está autorizada'}. A numeração abaixo apresenta esse histórico.`
+              : configuration?.readiness.message || 'Configuração de acesso disponível na próxima etapa. O cadastro das unidades já está vinculado a esta tela.'}</p>
       </div>
       {failed ? <button type="button" className="nfse-portal-button mt-3" onClick={() => void configQuery.refetch()} disabled={configQuery.isFetching}>Atualizar consulta</button> : null}
       <p className="nfse-portal-note">O certificado da matriz poderá representar as filiais após a validação de acesso para cada CNPJ.</p>

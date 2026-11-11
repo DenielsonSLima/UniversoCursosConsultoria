@@ -1,8 +1,9 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Ban, MoreVertical, Search } from 'lucide-react';
-interface Props { number: string | null; disabled: boolean; canCancel: boolean; onConsult: () => void; onCancel: () => void }
-export default function NfseDocumentOperationMenu({ number, disabled, canCancel, onConsult, onCancel }: Props) {
+import { Archive, Ban, MoreVertical, Search } from 'lucide-react';
+export interface NfseDocumentExtraAction { label: string; onAction: () => void }
+interface Props { number: string | null; disabled: boolean; canCancel: boolean; canConsult?: boolean; onConsult: () => void; onCancel: () => void; extraAction?: NfseDocumentExtraAction }
+export default function NfseDocumentOperationMenu({ number, disabled, canCancel, canConsult = true, onConsult, onCancel, extraAction }: Props) {
   const id = useId(), trigger = useRef<globalThis.HTMLButtonElement>(null), panel = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
   const open = Boolean(position && !disabled);
@@ -39,8 +40,9 @@ export default function NfseDocumentOperationMenu({ number, disabled, canCancel,
         const index = event.key === 'Home' ? 0 : event.key === 'End' ? items.length - 1 : event.key === 'ArrowDown' ? (current + 1) % items.length : event.key === 'ArrowUp' ? (current - 1 + items.length) % items.length : null;
         if (index !== null) { event.preventDefault(); items[index]?.focus(); }
       }}>
-      <button type="button" role="menuitem" tabIndex={-1} onClick={() => act(onConsult)}><Search size={15} />Consultar</button>
+      {canConsult && <button type="button" role="menuitem" tabIndex={-1} onClick={() => act(onConsult)}><Search size={15} />Consultar</button>}
       {canCancel && <button type="button" role="menuitem" tabIndex={-1} onClick={() => act(onCancel)}><Ban size={15} />Cancelar</button>}
+      {extraAction && <button type="button" role="menuitem" tabIndex={-1} onClick={() => act(extraAction.onAction)}><Archive size={15} />{extraAction.label}</button>}
     </div>, document.body)}
   </>;
 }
