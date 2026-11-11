@@ -1,8 +1,8 @@
 {
-  "version": "4.8.292",
+  "version": "4.8.293",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 301,
+  "revision": 302,
   "releasedAt": "2026-11-11",
-  "summary": "Forma de pagamento sugerida pela conta com dinheiro no caixa e Pix em Banese ou Caixa Econômica"
+  "summary": "Notas canceladas confirmadas ficam somente na aba Canceladas, sem duplicar Serviços"
 }

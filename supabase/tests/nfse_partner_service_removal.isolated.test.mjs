@@ -29,11 +29,12 @@ test('service filters and logical removal preserve canonical data and fiscal saf
         state text, result jsonb, authorized_xml text, dps_id text, signed_dps_xml text, snapshot jsonb, command jsonb, created_at timestamptz default now());
       create table private.nfse_queue_operation_links(operation_id uuid primary key references private.nfse_individual_operations, source_kind text,source_id uuid,
         unique(source_kind,source_id));
-      create table private.nfse_individual_cancellations(id uuid,operation_id uuid,state text,result jsonb);
+      create table private.nfse_individual_cancellations(id uuid,operation_id uuid,state text,result jsonb,event_xml text);
       create table public.nfse_change_events(id uuid default gen_random_uuid(),polo_id uuid,environment text,month text,resource text);
       create table private.nfse_queue_documents(id uuid,polo_id uuid,environment text,queue_month text,amount numeric,class_id uuid,snapshot jsonb);
       create table private.nfse_queue_removals(document_id uuid);
-      create table private.nfse_confirmed_cancellations(operation_id uuid);
+      create view private.nfse_confirmed_cancellations as select operation_id from private.nfse_individual_cancellations
+        where state='CANCELLED' and result->>'code'='CONFIRMED' and result->>'eventCode'='101101' and nullif(btrim(event_xml),'') is not null;
       create table private.nfse_error_archives(operation_id uuid,archived_at timestamptz);
       insert into public.polos values('${id(1)}','ativo'),('${id(2)}','ativo');
       insert into public.test_context values('${id(10)}','${id(11)}',true,false,array['${id(1)}'::uuid]);
@@ -64,8 +65,38 @@ test('service filters and logical removal preserve canonical data and fiscal saf
         [id(+n+100), id(+n+200), id(1), state, result, state === 'AUTHORIZED' ? 'authorized synthetic' : null]);
       await db.query(`insert into private.nfse_queue_operation_links values($1,'PARTNER_SERVICE',$2)`, [id(+n+100),id(+n)]);
     }
-    await db.query('insert into private.nfse_individual_cancellations values($1,$2,\'CANCELLED\',\'{}\')',[id(503),id(203)]);
-    for (const name of ['20261111105000_nfse_partner_service_removal.sql','20261111105001_nfse_partner_service_filters.sql','20261111105002_nfse_removed_service_summary.sql']) await db.exec(await read(name));
+    await db.query('insert into private.nfse_individual_cancellations values($1,$2,\'CANCELLED\',\'{}\',NULL)',[id(503),id(203)]);
+    for (const name of ['20261111105000_nfse_partner_service_removal.sql','20261111105001_nfse_partner_service_filters.sql','20261111105002_nfse_removed_service_summary.sql','20261111114000_nfse_services_cancelled_partition.sql']) await db.exec(await read(name));
+    await t.test('confirmed cancellations leave Services before totals/paging without changing fiscal evidence', async () => {
+      const unconfirmed = (await list()).data;
+      assert(unconfirmed.rows.some(row => row.id === id(103)), 'Unproven cancellation must not hide the source');
+      await db.query(`update private.nfse_individual_cancellations set result='{"code":"CONFIRMED","eventCode":"101101"}',
+        event_xml='<evento>synthetic confirmed evidence</evento>' where operation_id=$1`, [id(203)]);
+      const immutable = await before();
+      const evidence = (await db.query('select * from private.nfse_individual_cancellations order by id')).rows;
+      const first = (await list([],scope,1,2)).data;
+      assert.equal(first.totalItems,8); assert.equal(first.totalAmount,'80.00'); assert.equal(first.rows.length,2);
+      assert(!(await list()).data.rows.some(row=>row.id===id(103)));
+      assert.equal((await list(['Serviço sintético 103'])).data.totalItems,0);
+      assert.equal((await list([null,null,null,'PJ'])).data.totalItems,6);
+      assert.equal((await list([],scope,5,2)).data.rows.length,0);
+      const legacy = await query('select public.get_nfse_partner_services_secure($1,$2,$3,$4) value',scope);
+      assert.equal(legacy.data.totalItems,8);
+      assert.deepEqual(await before(),immutable);
+      assert.deepEqual((await db.query('select * from private.nfse_individual_cancellations order by id')).rows,evidence);
+      assert.equal(await marks(),0);
+      // Pending, rejected, missing XML and non-cancellation events stay visible.
+      for (const state of ['CANCELLATION_PENDING','CANCELLATION_REJECTED']) {
+        await db.query('update private.nfse_individual_cancellations set state=$1 where operation_id=$2',[state,id(203)]);
+        assert.equal((await list()).data.totalItems,9);
+      }
+      await db.query(`update private.nfse_individual_cancellations set state='CANCELLED',event_xml=NULL where operation_id=$1`,[id(203)]);
+      assert.equal((await list()).data.totalItems,9);
+      await db.query(`update private.nfse_individual_cancellations set event_xml='<evento>other event</evento>',
+        result='{"code":"CONFIRMED","eventCode":"OTHER"}' where operation_id=$1`,[id(203)]);
+      assert.equal((await list()).data.totalItems,9);
+      await db.query(`update private.nfse_individual_cancellations set result='{}',event_xml=NULL where operation_id=$1`,[id(203)]);
+    });
     await t.test('default list preserves all partner types and server count/total before pagination', async () => {
       const result = (await list([],scope,1,2)).data;
       assert.equal(result.totalItems,9); assert.equal(result.totalAmount,'90.00'); assert.equal(result.rows.length,2);
@@ -88,7 +119,7 @@ test('service filters and logical removal preserve canonical data and fiscal saf
       for (const n of [103,105,106,107,108,110,111,999]) await assert.rejects(remove([id(100),id(n)]), e=>e.code==='40001');
       assert.equal(await marks(),0);
       for (const ids of [[],[id(100),id(100)],[null],Array.from({length:101},(_,i)=>id(i))]) await assert.rejects(remove(ids), e=>e.code==='22023');
-      await db.query('insert into private.nfse_individual_cancellations values($1,$2,\'CANCELLATION_PENDING\',\'{}\')',[id(504),id(204)]);
+      await db.query('insert into private.nfse_individual_cancellations values($1,$2,\'CANCELLATION_PENDING\',\'{}\',NULL)',[id(504),id(204)]);
       await assert.rejects(remove([id(104)]), e=>e.code==='40001');
       await db.query('delete from private.nfse_individual_cancellations where id=$1',[id(504)]);
     });
@@ -139,3 +170,4 @@ test('service filters and logical removal preserve canonical data and fiscal saf
     });
   } finally { await db.close(); }
 });
+

@@ -28,6 +28,11 @@ Histórico arquivado: [13/10/2026 — versões 4.8.215 a 4.8.217](./changelog/20
 
 Histórico arquivado: [14/10/2026 — versões 4.8.218 a 4.8.226](./changelog/2026-10-14-versoes-4-8-218-a-226.md).
 
+## [4.8.293] - 2026-11-11
+
+- Serviços deixa de repetir notas com cancelamento fiscal confirmado, preservando sua consulta na aba Canceladas.
+- Separação aplicada antes da paginação e dos totais, sem excluir registros ou alterar situação fiscal, XML ou contas.
+
 ## [4.8.292] - 2026-11-11
 
 - Forma de pagamento sugerida automaticamente pela conta: caixa interno em Dinheiro, Banese e Caixa Econômica em Pix.
@@ -456,4 +461,5 @@ Histórico arquivado: [14/10/2026 — versões 4.8.218 a 4.8.226](./changelog/20
 
 - Corrige timeout na prestação de contas do Caixa com busca limitada ao vínculo financeiro da parcela, preservando evidências e cálculos.
 - Cancela consultas de relatório ao fechar e impede repetição automática de timeout PostgreSQL.
+
 

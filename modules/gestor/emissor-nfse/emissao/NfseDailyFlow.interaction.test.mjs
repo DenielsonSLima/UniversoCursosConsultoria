@@ -22,9 +22,9 @@ test('daily workspace has seven operational tabs and preserves cancelled authori
   const { QueryClient, QueryClientProvider } = await import('@tanstack/react-query');
   const scopes = [], opened = [];
   const serviceRow = { id: id(10), partnerName: 'PARCEIRO SINTÉTICO', modelName: 'MODELO SINTÉTICO', serviceDescription: 'SERVIÇO SINTÉTICO', serviceDate: '2026-11-10',
-    amount: '260.00', partnerType: 'PJ', canRemove: false, receivableAction: 'NONE', state: 'CANCELLED', operationId: id(20), requestId: id(21), cancelPreviewId: id(22), number: '1' };
+    amount: '260.00', partnerType: 'PJ', canRemove: false, receivableAction: 'NONE', state: 'PROCESSING', operationId: id(20), requestId: id(21), cancelPreviewId: null, number: null };
   const documentRow = { ...serviceRow, id: id(20), studentName: serviceRow.partnerName, classLabel: 'Serviço', modelLabel: serviceRow.modelName,
-    status: 'EMITIDA', accessKey: '1'.repeat(50), sourceKind: 'PARTNER_SERVICE', sourceId: serviceRow.id, retryable: false, message: 'Cancelamento confirmado.' };
+    status: 'EMITIDA', state: 'CANCELLED', cancelPreviewId: id(22), number: '1', accessKey: '1'.repeat(50), sourceKind: 'PARTNER_SERVICE', sourceId: serviceRow.id, retryable: false, message: 'Cancelamento confirmado.' };
   const query = data => ({ data, error: null, isPending: false, isFetching: false, refetch: async () => {} });
   globalThis.__dailyWorkspace = scope => { scopes.push(scope); return query({ summary: {}, capabilities: {}, classes: [], models: [], readiness: { status: 'BLOCKED', message: '' } }); };
   const serviceData = { rows: [serviceRow], totalAmount: '260.00', totalItems: 1, pageSize: 25 };
@@ -72,10 +72,11 @@ test('daily workspace has seven operational tabs and preserves cancelled authori
     assert([...document.querySelectorAll('[role="tab"]')].some(tab => tab.textContent === 'Canceladas'));
     assert.equal(document.querySelector('[role="tab"][aria-label="Homologação"]'), null);
     await click([...document.querySelectorAll('[role="tab"]')].find(tab => tab.textContent === 'Serviços'));
-    assert(document.body.textContent.includes('Cancelada')); assert(document.body.textContent.includes('260,00'));
+    assert(document.body.textContent.includes('Em processamento')); assert(document.body.textContent.includes('260,00'));
+    assert(!document.querySelector('.nfse-partner-table').textContent.includes('Cancelada'));
     await click([...document.querySelectorAll('button')].find(button => button.textContent === 'Consultar NFS-e'));
     assert.deepEqual(opened.at(-1).source, { kind: 'PARTNER_SERVICE', id: serviceRow.id });
-    assert.equal(opened.at(-1).operation.cancelPreviewId, id(22));
+    assert.equal(opened.at(-1).operation.cancelPreviewId, null);
     await click([...document.querySelectorAll('button')].find(button => button.textContent === 'Fechar origem'));
     assert.equal(document.querySelector('input[aria-label="Ambiente fiscal"]'), null, 'Issuer uses compact status, not a second selector');
     await click([...document.querySelectorAll('button')].find(button => button.textContent === 'Alterar nas configurações'));
@@ -83,7 +84,7 @@ test('daily workspace has seven operational tabs and preserves cancelled authori
     assert.equal(document.querySelector('[role="dialog"]'), null, 'Environment change resets selected operation');
     const scope = { contextKey: id(1), poloId: id(2), environment: 'PRODUCAO', month: '2026-11' };
     await act(async () => root.render(wrap(React.createElement(NfseTabContext.Provider, { value: { scope, canRead: true } },
-      React.createElement(Documents, { status: 'EMITIDA', title: 'Notas emitidas', description: '', emptyTitle: '', emptyDescription: '' }))))); await settle();
+      React.createElement(Documents, { status: 'EMITIDA', issuedState: 'CANCELLED', title: 'Notas canceladas', description: '', emptyTitle: '', emptyDescription: '' }))))); await settle();
     assert(document.querySelector('[aria-label="NFS-e 1"]').textContent.includes('Cancelada'));
     assert(document.querySelector('[aria-label="NFS-e 1"]').textContent.includes('Autorização histórica preservada'));
     await click(document.querySelector('button[aria-label="Mais ações da NFS-e 1"]'));
@@ -96,4 +97,5 @@ test('daily workspace has seven operational tabs and preserves cancelled authori
     for (const key of ['__dailyWorkspace', '__dailyServices', '__dailyDocuments', '__dailyOpened']) delete globalThis[key];
     await rm(temp, { recursive: true, force: true }); }
 });
+
 
