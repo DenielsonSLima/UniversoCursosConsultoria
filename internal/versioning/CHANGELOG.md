@@ -24,6 +24,13 @@ Histórico arquivado: [10/10/2026 — versão 4.8.204](./changelog/2026-10-10-ve
 
 Histórico arquivado: [10/10/2026 a 13/10/2026 — versões 4.8.208 a 4.8.214](./changelog/2026-10-10-a-13-versoes-4-8-208-a-214.md).
 
+Histórico arquivado: [13/10/2026 — versões 4.8.215 a 4.8.217](./changelog/2026-10-13-versoes-4-8-215-a-217.md).
+
+## [4.8.289] - 2026-11-11
+
+- Visualização da NFS-e reúne Baixar PDF, Imprimir e Fechar na linha do título, com adaptação para telas pequenas.
+- Removida a faixa redundante “DANFSe da nota emitida · Produção/Homologação”, ampliando a área da prévia sem modificar o documento fiscal.
+
 ## [4.8.288] - 2026-11-11
 
 - Erros de NFS-e permitem seleção individual ou em lote para remover rejeições definitivas da lista e restaurar pelo filtro Arquivados, preservando o histórico fiscal.
@@ -475,22 +482,3 @@ Histórico arquivado: [10/10/2026 a 13/10/2026 — versões 4.8.208 a 4.8.214](.
 
 - Contratos: matrícula recebida presencialmente pode integrar o valor contratual por aluno, sem gerar boleto ou lançamento de caixa.
 - Leitura contratual de cancelamentos históricos compatível com novos campos vazios; financeiro e histórico emitido preservados.
-
-## [4.8.217] - 2026-10-13
-
-- Carnê avulso organizado em dados, financeiro editável e revisão final antes da criação.
-- Vencimentos mensais ou a cada 30 dias corridos, com valor e data próprios por parcela e taxas separadas.
-- Matrícula, rematrícula e parcelas recebem juros, multa e desconto próprios, refletidos nos totais, boletos e PDF.
-
-## [4.8.216] - 2026-10-13
-
-- Outros Créditos permite criar carnê sem turma, com 1–60 parcelas mensais e taxas opcionais de matrícula/rematrícula.
-- Prévia calcula valores no banco; juros/multa de atraso e desconto de pontualidade seguem o snapshot de cada boleto.
-- Emissão e recuperação preservam o mesmo pedido e os boletos confirmados; download privado utiliza o PDF Banese vetorial.
-
-## [4.8.215] - 2026-10-13
-
-- Revisão 8 do contrato técnico disponibilizada no cadastro para aprovação própria, com plano financeiro individual completo e identificação corrigida.
-- Prévia estrutural do editor passa a respeitar a tipografia V4 e a informar que a paginação é estimada; valores reais continuam vindo da matrícula na emissão.
-- Segunda via conserva o documento original; a versão corrigida requer nova emissão após aprovação da revisão.
-

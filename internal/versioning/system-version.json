@@ -1,8 +1,8 @@
 {
-  "version": "4.8.288",
+  "version": "4.8.289",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 297,
+  "revision": 298,
   "releasedAt": "2026-11-11",
-  "summary": "NFS-e com arquivamento reversível de erros e ambiente compartilhado entre emissor e configurações"
+  "summary": "Visualizador de NFS-e com ações no cabeçalho e mais espaço para a nota"
 }

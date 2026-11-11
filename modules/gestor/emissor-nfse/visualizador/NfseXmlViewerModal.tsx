@@ -73,17 +73,14 @@ export default function NfseXmlViewerModal({ document, onClose }: { document: Nf
     <div ref={dialogRef} className="nfse-xml-dialog" role="dialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1}>
       <header className="nfse-section-heading nfse-xml-heading">
         <h2 id={titleId}>NFS-e {document.number} · {document.studentName}</h2>
-        <button ref={initialFocusRef} type="button" className="nfse-button nfse-button-secondary" onClick={onClose} aria-label="Fechar visualizador"><X size={17} /></button>
-      </header>
-      <div className="nfse-xml-toolbar">
-        <span>DANFSe da nota emitida · {scope?.environment === 'HOMOLOGACAO' ? 'Homologação' : 'Produção'}</span>
         <div className="nfse-xml-actions">
           <button type="button" className="nfse-button nfse-button-secondary" disabled={!canUsePdf} onClick={() => canUsePdf && prepared && downloadPdfBlob(prepared.blob, prepared.filename)}><Download size={16} />Baixar PDF</button>
           <button type="button" className="nfse-button nfse-button-primary" disabled={!canUsePdf || printing} onClick={() => void print()}>
             {printing ? <Loader2 size={16} className="animate-spin" /> : <Printer size={16} />}Imprimir
           </button>
+          <button ref={initialFocusRef} type="button" className="nfse-button nfse-button-secondary" onClick={onClose} aria-label="Fechar visualizador"><X size={17} /></button>
         </div>
-      </div>
+      </header>
       {(error || query.error) && <p className="nfse-xml-error" role="alert">{error || query.error?.message}</p>}
       <div className="nfse-xml-preview" aria-busy={busy || query.isFetching}>
         {busy || query.isFetching ? <div className="nfse-xml-empty" role="status"><Loader2 className="animate-spin" size={24} /><p>Carregando nota emitida…</p></div>
@@ -93,3 +90,4 @@ export default function NfseXmlViewerModal({ document, onClose }: { document: Nf
     </div>
   </div>, globalThis.document.body);
 }
+

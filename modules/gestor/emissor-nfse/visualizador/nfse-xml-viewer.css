@@ -20,18 +20,16 @@
   background: #fff;
   box-shadow: 0 24px 70px rgb(0 26 47 / 22%);
 }
-.nfse-xml-heading { padding: 16px 20px; }
-.nfse-xml-heading h2 { margin: 0; color: #001a2f; font-size: 18px; }
-.nfse-xml-toolbar {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-  padding: 12px 20px;
-  border-bottom: 1px solid #e7edf3;
+.nfse-xml-heading { flex: 0 0 auto; padding: 16px 20px; }
+.nfse-xml-heading h2 {
+  flex: 1 1 220px;
+  min-width: 0;
+  margin: 0;
+  color: #001a2f;
+  font-size: 18px;
+  overflow-wrap: anywhere;
 }
-.nfse-xml-toolbar > span { color: #64748b; font-size: 13px; }
-.nfse-xml-actions { display: flex; gap: 8px; margin-left: auto; }
+.nfse-xml-actions { display: flex; flex: 0 0 auto; align-items: center; gap: 8px; margin-left: auto; }
 .nfse-xml-preview { flex: 1; min-height: 0; background: #e8edf2; }
 .nfse-xml-preview iframe { width: 100%; height: 100%; border: 0; }
 .nfse-xml-empty {
@@ -51,7 +49,7 @@
 @media (max-width: 640px) {
   .nfse-xml-overlay { padding: 8px; }
   .nfse-xml-dialog { height: calc(100dvh - 16px); }
-  .nfse-xml-heading, .nfse-xml-toolbar { padding: 12px; }
-  .nfse-xml-toolbar > span { width: 100%; order: 3; }
-  .nfse-xml-actions { margin-left: 0; }
+  .nfse-xml-heading { padding: 12px; }
+  .nfse-xml-heading h2 { flex-basis: 100%; font-size: 16px; }
 }
+
