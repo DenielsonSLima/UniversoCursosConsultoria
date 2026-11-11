@@ -28,9 +28,11 @@ await build({ entryPoints: [fileURLToPath(new URL('../ModelosNfseTab.tsx', base)
     build.onResolve({ filter: /^(react|react-dom)(\/|$)/ }, args => ({ path: require.resolve(args.path), external: true }));
     const mocks = [
       [/useNfseQueries$/, 'export const useNfseModels=()=>({data:{rows:[globalThis.__nfseExportHarness.model]},isPending:false,error:null});'],
+      [/hooks\/useNfseModels$/, 'export const useNfseModels=()=>({data:{rows:[globalThis.__nfseExportHarness.model]},isPending:false,error:null});export const useMutateNfseModel=()=>({reset(){},isPending:false,error:null,mutateAsync(){throw Error("Model mutations are not allowed in the export test")}});'],
       [/NfseTabContext$/, 'export const useNfseTabContext=()=>({scope:globalThis.__nfseExportHarness.scope});'],
       [/ToastNotification$/, 'export default()=>null;export const useToast=()=>({toasts:[],removeToast(){},toast:{success(){}}});'],
       [/NfseModelForm$/, 'export default()=>null;'],
+      [/NfseCancellationModelsSection$/, 'export default()=>null;'],
       [/useNfseModelIssuerMetadata$/, 'export const useNfseModelIssuerMetadata=()=>globalThis.__nfseExportHarness.issuer;'],
       [/useNfseFiscalCatalogs$/, 'export const useNfseFiscalCatalogs=()=>globalThis.__nfseExportHarness.catalogs;'],
       [/nfse-model-export\.pdf$/, 'export function prepareNfseModelExportPdf(report){const s=globalThis.__nfseExportHarness;s.reports.push(report);if(s.failPdf)throw Error("synthetic");return{blob:s.blob,fileName:"relatorio.pdf"}}'],

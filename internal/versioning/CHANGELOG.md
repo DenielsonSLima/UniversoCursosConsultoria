@@ -28,6 +28,13 @@ Histórico arquivado: [13/10/2026 — versões 4.8.215 a 4.8.217](./changelog/20
 
 Histórico arquivado: [14/10/2026 — versões 4.8.218 a 4.8.226](./changelog/2026-10-14-versoes-4-8-218-a-226.md).
 
+## [4.8.295] - 2026-11-11
+
+- Modelos de emissão da matriz ficam disponíveis nas filiais ativas da mesma empresa, sem recadastro e com identificação da origem.
+- Menu de três pontos permite clonar para a unidade selecionada ou inativar modelos próprios com confirmação; o original herdado é gerenciado na matriz.
+- Clonagem preserva configurações e histórico, com auditoria, versão esperada e repetição segura sem duplicar solicitações.
+- Herança preserva isolamento entre empresas e ambientes, participantes autorizados e validações de preparo/revisão fiscal.
+
 ## [4.8.294] - 2026-11-11
 
 - Emitidas abre com início e fim do mês atual e mostra o total emitido nos filtros aplicados, calculado no servidor antes da paginação.

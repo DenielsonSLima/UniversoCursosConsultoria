@@ -1,7 +1,7 @@
-import type { NfseModelInput, NfseScope } from '../../types/nfse.types';
+import type { NfseModelActionInput, NfseModelInput, NfseScope } from '../../types/nfse.types';
 import type { NfseRpcTransport } from '../../services/nfse.service-core';
-import { mapNfseMutation, mapNfsePage } from '../../services/nfse.mappers';
-import { assertScope, integer, string, unwrapNfseEnvelope } from '../../services/nfse.validation';
+import { mapNfseMutation } from '../../services/nfse.mappers';
+import { assertScope, assertUniqueIds, integer, list, oneOf, record, string, unwrapNfseEnvelope } from '../../services/nfse.validation';
 import { NfseContractError } from '../../services/nfse.errors';
 import { nfseModelDefinition, parseNfseModelDescriptionPreview, parseNfseStoredModel } from './nfse-models.contract';
 
@@ -22,7 +22,20 @@ export function createNfseModelsService(transport: NfseRpcTransport) {
   };
   return {
     async list(scope: NfseScope, signal?: AbortSignal) {
-      return mapNfsePage(await call('get_nfse_models_secure', scope, {}, signal), parseNfseStoredModel, 1);
+      const payload = record(await call('get_nfse_models_secure', scope, {}, signal));
+      const rows = list(payload.rows, parseNfseStoredModel);
+      const page = integer(payload.page, 1);
+      const pageSize = integer(payload.pageSize, 1);
+      const totalItems = integer(payload.totalItems);
+      if (page !== 1 || totalItems !== rows.length || pageSize < rows.length) throw new NfseContractError();
+      assertUniqueIds(rows);
+      return { rows, page, pageSize, totalItems };
+    },
+    async mutate(scope: NfseScope, input: NfseModelActionInput) {
+      return mapNfseMutation(await call('mutate_nfse_model_secure', scope, {
+        p_request_id: uuid(input.requestId), p_action: oneOf(input.action, ['CLONE', 'DEACTIVATE']),
+        p_id: uuid(input.id), p_expected_version: integer(input.expectedVersion, 1),
+      }));
     },
     async previewDescription(scope: NfseScope, description: string, signal?: AbortSignal) {
       return parseNfseModelDescriptionPreview(await call('preview_nfse_model_description_secure', scope, {
@@ -39,3 +52,4 @@ export function createNfseModelsService(transport: NfseRpcTransport) {
     },
   };
 }
+

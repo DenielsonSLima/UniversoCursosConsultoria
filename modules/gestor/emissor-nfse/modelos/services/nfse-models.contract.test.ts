@@ -144,3 +144,49 @@ test('description preview accepts static text but rejects malformed or foreign-s
   const otherMonth = createNfseModelsService(async () => envelope(canonical, { ...scope, month: '2026-10' }));
   await assert.rejects(otherMonth.previewDescription(scope, 'Texto'), NfseContractError);
 });
+
+
+test('shared models preserve origin and reject partial or contradictory ownership metadata', () => {
+  const stored = { ...nfseModelDefinition(input), id: id(5), version: 1 };
+  const shared = { ...stored, sourcePoloId: id(9), sourcePoloName: 'Matriz sintética', inherited: true, canManage: false };
+  assert.equal(parseNfseStoredModel(shared).sourcePoloId, id(9));
+  assert.equal(parseNfseStoredModel(shared).canManage, false);
+  assert.throws(() => parseNfseStoredModel({ ...shared, canManage: true }), NfseContractError);
+  assert.throws(() => parseNfseStoredModel({ ...stored, inherited: true }), NfseContractError);
+  const definition = nfseModelDefinition({ ...shared, requestId: id(6) });
+  assert.equal('inherited' in definition, false);
+  assert.equal('sourcePoloId' in definition, false);
+});
+
+test('model list accepts own plus inherited models beyond the old single-unit limit', async () => {
+  const rows = Array.from({ length: 150 }, (_, index) => ({ ...nfseModelDefinition(input), id: id(100 + index), version: 1 }));
+  const service = createNfseModelsService(async () => envelope({ rows, page: 1, pageSize: 150, totalItems: 150 }));
+  assert.equal((await service.list(scope)).rows.length, 150);
+  const truncated = createNfseModelsService(async () => envelope({ rows, page: 1, pageSize: 150, totalItems: 151 }));
+  await assert.rejects(truncated.list(scope), NfseContractError);
+});
+
+test('clone and deactivate send only explicit intent, scope, request id and expected version', async () => {
+  const actionInput = { requestId: id(3), action: 'CLONE' as const, id: id(5), expectedVersion: 7 };
+  const service = createNfseModelsService(async (name, args) => {
+    assert.equal(name, 'mutate_nfse_model_secure');
+    assert.deepEqual(args, { p_context_key: scope.contextKey, p_polo_id: scope.poloId,
+      p_environment: scope.environment, p_month: scope.month, p_request_id: id(3),
+      p_action: actionInput.action, p_id: id(5), p_expected_version: 7 });
+    return envelope({ id: id(10), version: 1, message: 'Modelo clonado.' });
+  });
+  assert.equal((await service.mutate(scope, actionInput)).id, id(10));
+  const deactivate = createNfseModelsService(async (name, args) => {
+    assert.equal(name, 'mutate_nfse_model_secure');
+    assert.equal(args.p_action, 'DEACTIVATE');
+    assert.equal(args.p_id, actionInput.id);
+    return envelope({ id: actionInput.id, version: 8, message: 'Modelo inativado.' });
+  });
+  assert.equal((await deactivate.mutate(scope, { ...actionInput, action: 'DEACTIVATE' })).version, 8);
+  const blocked = createNfseModelsService(async () => { throw new Error('Unexpected transport'); });
+  for (const change of [{ action: 'DELETE' }, { requestId: '' }, { id: 'invalid' }, { expectedVersion: 0 }]) {
+    await assert.rejects(blocked.mutate(scope, { ...actionInput, ...change } as typeof actionInput), NfseContractError);
+  }
+  const mismatch = createNfseModelsService(async () => envelope({}, { ...scope, poloId: id(99) }));
+  await assert.rejects(mismatch.mutate(scope, actionInput), NfseContractError);
+});

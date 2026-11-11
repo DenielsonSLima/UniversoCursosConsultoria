@@ -47,7 +47,14 @@ export function parseNfseModelFields(value: unknown): NfseModelServiceFields {
 
 export function parseNfseStoredModel(value: unknown): NfseModel {
   const row = record(value);
-  return { ...parseNfseModelFields(row), id: string(row.id), name: text(row.name, 120),
+  const origin = ['sourcePoloId', 'sourcePoloName', 'inherited', 'canManage'];
+  const hasOrigin = origin.some(key => row[key] !== undefined);
+  if (hasOrigin && origin.some(key => row[key] === undefined)) throw new NfseContractError();
+  const inherited = hasOrigin ? boolean(row.inherited) : undefined;
+  const canManage = hasOrigin ? boolean(row.canManage) : undefined;
+  if (inherited && canManage) throw new NfseContractError();
+  return { ...parseNfseModelFields(row),
+    ...(hasOrigin ? { sourcePoloId: string(row.sourcePoloId), sourcePoloName: text(row.sourcePoloName, 500), inherited, canManage } : {}), id: string(row.id), name: text(row.name, 120),
     active: boolean(row.active), version: integer(row.version, 1) };
 }
 
@@ -72,3 +79,4 @@ export function parseNfseModelDescriptionPreview(value: unknown): NfseModelDescr
     ...(row.requiresAcademicContext === undefined ? {} : { requiresAcademicContext: boolean(row.requiresAcademicContext) }),
   };
 }
+

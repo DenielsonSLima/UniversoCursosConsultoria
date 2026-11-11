@@ -4,7 +4,7 @@ import { invalidateNfseCache } from '../../queries/nfse-cache';
 import { nfseModelsKeys } from '../queries/nfse-models.keys';
 import { NfseAccessError } from '../../services/nfse.errors';
 import { isNfseScopeValid } from '../../types/nfse.scope';
-import type { NfseModelInput, NfseScope } from '../../types/nfse.types';
+import type { NfseModelActionInput, NfseModelInput, NfseScope } from '../../types/nfse.types';
 
 export function useNfseModels(scope: NfseScope | null, enabled = true) {
   return useQuery({
@@ -24,6 +24,20 @@ export function useSaveNfseModel(scope: NfseScope | null) {
       if (!isNfseScopeValid(scope)) throw new NfseAccessError();
       const captured = { ...scope };
       return { result: await nfseModelsService.save(captured, input), scope: captured };
+    },
+    retry: false,
+    onSuccess: ({ scope: captured }) => invalidateNfseCache(client, captured, 'models'),
+  });
+}
+
+
+export function useMutateNfseModel(scope: NfseScope | null) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: NfseModelActionInput) => {
+      if (!isNfseScopeValid(scope)) throw new NfseAccessError();
+      const captured = { ...scope };
+      return { result: await nfseModelsService.mutate(captured, input), scope: captured };
     },
     retry: false,
     onSuccess: ({ scope: captured }) => invalidateNfseCache(client, captured, 'models'),

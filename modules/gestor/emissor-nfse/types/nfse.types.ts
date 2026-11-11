@@ -51,6 +51,10 @@ export interface NfseModelServiceFields {
 }
 
 export interface NfseModel extends NfseModelServiceFields {
+  sourcePoloId?: string;
+  sourcePoloName?: string;
+  inherited?: boolean;
+  canManage?: boolean;
   id: string;
   name: string;
   active: boolean;
@@ -186,4 +190,12 @@ export interface NfseEnvelope<T> {
   version: 1;
   scope: NfseScope;
   data: T;
+}
+
+
+export interface NfseModelActionInput {
+  requestId: string;
+  action: 'CLONE' | 'DEACTIVATE';
+  id: string;
+  expectedVersion: number;
 }

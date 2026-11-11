@@ -92,6 +92,7 @@ jobs:
         run: >-
           node --test
           modules/gestor/emissor-nfse/modelos/NfseModelForm.interaction.test.mjs
+          modules/gestor/emissor-nfse/modelos/NfseModelActions.interaction.test.mjs
           modules/gestor/emissor-nfse/modelos/NfseModelValuesFields.interaction.test.mjs
           modules/gestor/emissor-nfse/modelos/NfseModelAdditionalFields.interaction.test.mjs
           modules/gestor/emissor-nfse/modelos/NfseModelLocationPicker.interaction.test.mjs
