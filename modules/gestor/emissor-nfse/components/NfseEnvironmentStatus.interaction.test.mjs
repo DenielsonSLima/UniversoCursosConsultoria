@@ -19,13 +19,15 @@ test('environment indicator preserves scope and never turns internal reads into 
   const { createRoot } = await import('react-dom/client');
   const fixture = { environment: 'PRODUCAO', scopes: [], query: { data: {
     summary: { errorCount: 1 }, readiness: { status: 'BLOCKED' } }, error: null, isPending: false, isFetching: false },
-    queue: { data: { summary: { preparedCount: 0 } }, error: null, isPending: false, isFetching: false } };
+    queue: { data: { summary: { preparedCount: 0 } }, error: null, isPending: false, isFetching: false },
+    health: { data: undefined, error: null, isFetching: false } };
   globalThis.__nfseEnvironmentFixture = fixture;
   const output = resolve(temp, 'page.mjs');
   const mocks = {
     useNfseEnvironment: 'export const useNfseEnvironment=()=>[globalThis.__nfseEnvironmentFixture.environment,()=>{throw new Error("Must not change environment") }];',
     useNfseQueries: 'export const useNfseWorkspace=(scope)=>{const f=globalThis.__nfseEnvironmentFixture;f.scopes.push(scope);return f.query;};',
     useNfseQueue: 'export const useNfseQueue=()=>globalThis.__nfseEnvironmentFixture.queue;',
+    useNfseNationalHealth: 'export const useNfseNationalHealth=()=>globalThis.__nfseEnvironmentFixture.health;',
     useNfseRealtime: 'export const useNfseRealtime=()=>{};',
     useNfseQueueRealtime: 'export const useNfseQueueRealtime=()=>{};',
     'nfse.scope': 'export const getNfseCurrentMonth=()=>"2026-11";export const isNfseScopeValid=s=>Boolean(s?.poloId && s?.contextKey && s?.month);',
@@ -74,6 +76,27 @@ test('environment indicator preserves scope and never turns internal reads into 
     fixture.query.data = { summary: { errorCount: 0 }, readiness: { status: 'READY' } };
     badge = await render();
     assert.equal(badge.dataset.nfseHealth, 'unknown', 'Even READY is eligibility, not a live provider check');
+    const health = (state, reason, checked = Date.now()) => ({ state, reason,
+      checkedAt: new Date(checked).toISOString(), expiresAt: new Date(checked + 60_000).toISOString() });
+    fixture.health.data = health('AVAILABLE', 'NATIONAL_QUERY_OK');
+    badge = await render();
+    assert.equal(badge.dataset.nfseHealth, 'ok');
+    assert.equal(badge.querySelector('circle').getAttribute('fill'), '#16a34a');
+    assert.match(badge.title, /não garante aprovação/);
+    fixture.health.data = health('AVAILABLE', 'NATIONAL_QUERY_OK', Date.now() - 59_950);
+    badge = await render();
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 80)); });
+    assert.equal(document.querySelector('[role="status"]').dataset.nfseHealth, 'unknown', 'Timer expires green without another query');
+    fixture.health.data = health('AVAILABLE', 'NATIONAL_QUERY_OK', Date.now() - 60_001);
+    badge = await render();
+    assert.equal(badge.dataset.nfseHealth, 'unknown', 'Stale government results expire to neutral');
+    fixture.health.data = health('UNAVAILABLE', 'NATIONAL_QUERY_ERROR');
+    badge = await render();
+    assert.equal(badge.dataset.nfseHealth, 'error');
+    fixture.health.error = new Error('Probe access denied');
+    badge = await render();
+    assert.equal(badge.dataset.nfseHealth, 'unknown', 'An old error is not reused after failed verification');
+    fixture.health.data = undefined; fixture.health.error = null;
 
     fixture.environment = 'HOMOLOGACAO';
     badge = await render();
@@ -103,8 +126,10 @@ test('environment indicator preserves scope and never turns internal reads into 
     assert.equal(badge.dataset.nfseHealth, 'unknown', 'Access denied is not an outage');
     assert.match(badge.title, /Acesso/);
     fixture.queue.error = Object.assign(new Error('Cancelled'), { name: 'AbortError' });
+    fixture.health.data = health('AVAILABLE', 'NATIONAL_QUERY_OK');
     badge = await render();
     assert.equal(badge.dataset.nfseHealth, 'unknown', 'Cancelled reads are not outages');
+    fixture.health.data = undefined;
     fixture.queue.error = null; fixture.query.isPending = true;
     badge = await render();
     assert.equal(badge.dataset.nfseHealth, 'unknown');

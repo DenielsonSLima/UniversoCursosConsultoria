@@ -1,8 +1,8 @@
 {
-  "version": "4.8.290",
+  "version": "4.8.291",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 299,
+  "revision": 300,
   "releasedAt": "2026-11-11",
-  "summary": "Serviços NFS-e com filtros e exclusão segura, identificação do aluno e ambiente simplificado"
+  "summary": "Indicador NFS-e baseado em consulta nacional somente leitura com validade e estado neutro"
 }

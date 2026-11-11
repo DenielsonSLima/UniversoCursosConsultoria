@@ -26,6 +26,12 @@ Histórico arquivado: [10/10/2026 a 13/10/2026 — versões 4.8.208 a 4.8.214](.
 
 Histórico arquivado: [13/10/2026 — versões 4.8.215 a 4.8.217](./changelog/2026-10-13-versoes-4-8-215-a-217.md).
 
+## [4.8.291] - 2026-11-11
+
+- Produção pode indicar resposta recente da consulta nacional de uma nota própria, sem emitir ou alterar documentos fiscais.
+- Verde expira em um minuto; falha técnica comprovada é vermelha e ausência de verificação permanece neutra.
+- O indicador descreve o alcance da consulta, sem prometer aprovação de novas notas ou disponibilidade de todos os serviços.
+
 ## [4.8.290] - 2026-11-11
 
 - Serviços NFS-e ganha busca, período, tipo de parceiro, paginação e exclusão lógica de não emitidos com confirmação e proteção fiscal.

@@ -17,6 +17,7 @@ import { useNfseQueue } from './fila/useNfseQueue';
 import { useNfseQueueRealtime } from './fila/useNfseQueueRealtime';
 import { useNfseEnvironment } from './hooks/useNfseEnvironment';
 import NfseEnvironmentStatus from './components/NfseEnvironmentStatus';
+import { useNfseNationalHealth } from './health/useNfseNationalHealth';
 
 const PrepararNfseTab = lazy(() => import('./preparar/PrepararNfseTab'));
 const PendentesNfseTab = lazy(() => import('./pendentes/PendentesNfseTab'));
@@ -55,6 +56,7 @@ const NfseWorkspace: React.FC<EmissorNfsePageProps> = ({ poloId, poloName, isMat
   }, [poloId, contextKey, month, environment]);
   const query = useNfseWorkspace(scope);
   const queue = useNfseQueue(scope);
+  const health = useNfseNationalHealth(scope);
   const { toasts, removeToast, toast } = useToast();
   useNfseRealtime(scope);
   useNfseQueueRealtime(scope);
@@ -81,7 +83,7 @@ const NfseWorkspace: React.FC<EmissorNfsePageProps> = ({ poloId, poloName, isMat
             <NfseMonthPicker id="nfse-workspace-month" value={month} onChange={setMonth} inputRef={monthInputRef} />
           </div>
           <NfseEnvironmentStatus environment={environment} enabled={Boolean(scope)}
-            workspace={query} queue={queue} />
+            workspace={query} queue={queue} health={health} />
         </div>
       </header>
       {!selectedPolo ? <div className="nfse-notice"><Building2 size={18} /><div><strong>Selecione um polo</strong><p>Use o seletor de unidade no cabeçalho para preparar e acompanhar as notas do estabelecimento.</p></div></div>
