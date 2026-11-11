@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { Eye, EyeOff, KeyRound, ShieldCheck, X } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
+import { invalidateNfseCache } from '../../../emissor-nfse/queries/nfse-cache';
 import type { NfseScope } from '../../../emissor-nfse/types/nfse.types';
 import { useNfseStudentsDialog } from '../../../emissor-nfse/preparar/useNfseStudentsDialog';
 import { uploadNfseCertificate } from '../../../emissor-nfse/services/configuration/certificate-upload.service';
@@ -38,7 +39,7 @@ export default function NfseCertificateModal({ scope,onClose,onSaved }: Props) {
     setBusy(true); setError(''); setShowPassword(false);
     try {
       const result=await uploadNfseCertificate(scope,file,passwordInput.current.value,requestId.current);
-      await client.invalidateQueries({queryKey:['nfse-configuration-metadata',scope.contextKey,scope.poloId,scope.environment]});
+      await invalidateNfseCache(client,scope,'configuration');
       onSaved(result);
     } catch(cause) {
       setError(cause instanceof Error?cause.message:'Não foi possível cadastrar o certificado.');

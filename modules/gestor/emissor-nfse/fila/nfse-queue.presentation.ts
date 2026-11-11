@@ -3,7 +3,7 @@ const blockingLabels: Record<string, string> = {
   RECIPIENT_CONFIRMATION_REQUIRED: 'Confirmar quem é o tomador do serviço.',
   COMPETENCE_REQUIRED: 'Informar a competência fiscal.',
   SERVICE_DATE_REQUIRED: 'Informar a data da prestação.',
-  PROVIDER_NOT_ENABLED: 'Integração fiscal aguardando homologação.',
+  PROVIDER_NOT_ENABLED: 'Verificar a disponibilidade da emissão na prévia.',
   SOURCE_REVALIDATION_REQUIRED: 'Conferir os recebimentos antes da transmissão.',
   ISSUER_DOCUMENT_REQUIRED: 'Completar o CNPJ do estabelecimento.',
   RECIPIENT_DOCUMENT_REQUIRED: 'Completar o documento do tomador.',

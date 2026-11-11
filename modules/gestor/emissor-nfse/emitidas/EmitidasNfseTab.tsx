@@ -6,19 +6,21 @@ import type { NfseDocument } from '../types/nfse.types';
 import NfseDocumentActions from './NfseDocumentActions';
 import { useNfseDownloads } from './useNfseDownloads';
 import './nfse-issued-downloads.css';
+import { useNfseIssuedSelection } from '../visualizador/hooks/useNfseIssuedSelection';
 
 const NfseXmlViewerModal = lazy(() => import('../visualizador/NfseXmlViewerModal'));
 
-export default function EmitidasNfseTab() {
+export default function EmitidasNfseTab({ issuedState = 'ACTIVE' }: { issuedState?: 'ACTIVE' | 'CANCELLED' }) {
   const { scope, canRead } = useNfseTabContext();
-  const scopeKey = JSON.stringify(scope);
+  const scopeKey = JSON.stringify([scope, issuedState]);
   const [selected, setSelected] = useState<{ document: NfseDocument; scopeKey: string } | null>(null);
   const [checked, setChecked] = useState<{ scopeKey: string; ids: ReadonlySet<string> }>({ scopeKey, ids: new Set() });
   const ids = checked.scopeKey === scopeKey ? checked.ids : new Set<string>();
   const downloads = useNfseDownloads(scope, canRead);
-  const document = canRead && selected?.scopeKey === scopeKey ? selected.document : null;
+  const document = useNfseIssuedSelection(scope, canRead && selected?.scopeKey === scopeKey ? selected.document : null);
   return <>
-    <NfseDocumentsList status="EMITIDA" title="Notas emitidas" description="Notas com autorização fiscal confirmada para este estabelecimento." emptyTitle="Nenhuma nota emitida neste período" emptyDescription="Cada emissão confirmada será identificada pelo número e pela chave de acesso."
+    <NfseDocumentsList status="EMITIDA" issuedState={issuedState} title={issuedState === 'CANCELLED' ? 'Notas canceladas' : 'Notas emitidas'} description="Autorizações deste estabelecimento, com a situação fiscal confirmada."
+      emptyTitle={issuedState === 'CANCELLED' ? 'Nenhuma nota cancelada neste período' : 'Nenhuma nota emitida neste período'} emptyDescription="Cada emissão confirmada será identificada pelo número e pela chave de acesso."
       selection={{ ids, disabled: downloads.busy,
         onReset: () => { downloads.cancel(); setChecked({ scopeKey, ids: new Set() }); },
         onTogglePage: (rows, value) => setChecked({ scopeKey, ids: new Set(value ? rows.map(item => item.id) : []) }),
@@ -43,7 +45,7 @@ export default function EmitidasNfseTab() {
         onPreview={() => setSelected({ document: item, scopeKey })}
         onPdf={() => downloads.download([item], 'pdf')} onXml={() => downloads.download([item], 'xml')} />} />
     {document && <Suspense fallback={<p role="status">Abrindo visualizador…</p>}>
-      <NfseXmlViewerModal key={`${scopeKey}:${document.id}`} document={document} onClose={() => setSelected(null)} />
+      <NfseXmlViewerModal key={`${scopeKey}:${document.id}:${document.state || ''}:${document.cancelPreviewId || ''}`} document={document} onClose={() => setSelected(null)} />
     </Suspense>}
   </>;
 }

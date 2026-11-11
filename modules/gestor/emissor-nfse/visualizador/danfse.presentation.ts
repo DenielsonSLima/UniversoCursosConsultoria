@@ -76,6 +76,10 @@ export function danfseComplements(document: DanfseDocument): string {
     ['Item Ped.', document.fields['DPS/infDPS/serv/infoCompl/gItemPed/xItemPed']?.join(', ') ?? ''],
     ['Inf. A. T. Mun.', xmlValue(document, 'xOutInf')],
   ].filter(([, value]) => value).map(([label, value]) => `${label}: ${value}`).join(' | ');
+  const simpleNational = dpsValue(document, 'valores/trib/totTrib/pTotTribSN');
+  if (simpleNational) return [parts,
+    `Valor percentual aproximado do total dos tributos da alíquota do Simples Nacional: ${danfsePercent(simpleNational)}.`,
+  ].filter(Boolean).join('\n');
   const approximate = ['Fed', 'Est', 'Mun'].map(suffix => {
     const amount = dpsValue(document, `valores/trib/totTrib/vTotTrib/vTotTrib${suffix}`);
     const percentage = dpsValue(document, `valores/trib/totTrib/pTotTrib/pTotTrib${suffix}`);

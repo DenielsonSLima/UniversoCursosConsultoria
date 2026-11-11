@@ -1,0 +1,58 @@
+{
+  "reviewedAt": "2026-11-10",
+  "classificationUrl": "https://dfe-portal.svrs.rs.gov.br/CFF/ClassificacaoTributaria",
+  "classificationSourceSha256": "0bc584c60039708f62a7240201352924da5d6c94fd92761d89dc0fefbe77f41c",
+  "normalizedClassificationSha256": "83db57138a1d0c5f87f975d83425e0a802055f51035ddec121cea993107a6b1b",
+  "creditUrl": "https://dfe-portal.svrs.rs.gov.br/CFF/TabelaCreditoPresumido",
+  "creditHtmlSha256": "7a5d0ef054337af425d60a78ac197f9680a10db41931240219a335f63a006f96",
+  "normalizedCreditSha256": "f32d99b1dddcb2ae3dcef65afcc9759b637dc60cb1aa70ed33035d9731c5e30d",
+  "cstCount": 12,
+  "classificationCount": 73,
+  "creditCount": 13,
+  "files": [
+    {
+      "path": "classifications-01.json",
+      "sha256": "eab37b010ce11e057ca1e3d24a20ba488ace5d96225417bd2b1dcac5f86d2f44"
+    },
+    {
+      "path": "classifications-02.json",
+      "sha256": "01f1a724091cafb1678e6678a59429538e019bde357ee0f7a933fafe4a2e2f8a"
+    },
+    {
+      "path": "classifications-03.json",
+      "sha256": "3d50b96655a6a4331159a1a4b86db56d25ea5f97ce286c69a585caf39aa2e2f4"
+    },
+    {
+      "path": "classifications-04.json",
+      "sha256": "3684e95800a5204970d7d20315bfc03dadb0075de2ea09f9543a010fc9733046"
+    },
+    {
+      "path": "classifications-05.json",
+      "sha256": "774eea67c2443f6619d10725244c78c8c9f021cdefcce4f449777594ecbf7980"
+    },
+    {
+      "path": "classifications-06.json",
+      "sha256": "dbfd22e5e9adc694ab8ddd0b44bdd50f777266a8f93bc9b3d4740bbb11e66672"
+    },
+    {
+      "path": "classifications-07.json",
+      "sha256": "b9dbb356ed1e9053991bbd37410936cd2ac93bb46da6c44496f18ffc7af0778e"
+    },
+    {
+      "path": "classifications-08.json",
+      "sha256": "61a1d9248fb73f51512db6f1036c970e4d1e3b50e3f09a862805b1f5c9ddc86c"
+    },
+    {
+      "path": "classifications-09.json",
+      "sha256": "8614ba6d0a314e282a0e96ee57dacd4fcfc93342bd79697bfcacc2c04acb1ac9"
+    },
+    {
+      "path": "classifications-10.json",
+      "sha256": "cb552fb70eca9d888fcda02e00180a5c1e9427c9b69e694efc1a0707fc8b325e"
+    },
+    {
+      "path": "presumed-credits.json",
+      "sha256": "f32d99b1dddcb2ae3dcef65afcc9759b637dc60cb1aa70ed33035d9731c5e30d"
+    }
+  ]
+}

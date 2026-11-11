@@ -1,0 +1,35 @@
+.nfse-fiscal-review-overlay { align-items: center; backdrop-filter: blur(4px); background: rgb(0 26 51 / 60%); color: #18334b; display: flex; font-size: 13px; inset: 0; justify-content: center; padding: 16px; position: fixed; z-index: 10000; }
+.nfse-fiscal-review-dialog { background: #fff; border: 1px solid #e3e9ee; border-radius: 12px; box-shadow: 0 20px 60px rgb(0 26 51 / 18%); display: flex; flex-direction: column; max-height: min(92dvh, 920px); max-width: 860px; min-width: 0; overflow: hidden; width: 100%; }
+.nfse-fiscal-review-dialog .nfse-section-heading h2 { font-size: 18px; font-weight: 600; }
+.nfse-fiscal-review-body { min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.nfse-fiscal-review-section { border: 0; border-bottom: 1px solid #edf0f5; display: grid; gap: 12px; margin: 0; min-width: 0; padding: 16px; }
+.nfse-fiscal-review-section h3, .nfse-fiscal-review-section legend { color: #18334b; font-size: 13px; font-weight: 500; margin: 0; }
+.nfse-fiscal-review-section h4 { color: #536579; font-size: 12px; font-weight: 500; margin: 0; }
+.nfse-fiscal-review-section > .nfse-status { justify-self: start; margin: 0; }
+.nfse-fiscal-review-grid { display: grid; gap: 12px 16px; grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 0; }
+.nfse-fiscal-review-grid dt { color: #64748b; font-size: 12px; margin-bottom: 4px; }
+.nfse-fiscal-review-grid dd { line-height: 1.55; margin: 0; overflow-wrap: anywhere; }
+.nfse-fiscal-review-grid small { color: #64748b; display: block; font-size: 12px; margin-top: 3px; }
+.nfse-fiscal-review-wide { grid-column: 1 / -1; }
+.nfse-fiscal-review-description { white-space: pre-wrap; }
+.nfse-fiscal-review-fields { border: 0; display: grid; gap: 12px; grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 0; min-width: 0; padding: 0; }
+.nfse-fiscal-review-confirmations legend { float: left; margin-bottom: 12px; padding: 0; width: 100%; }
+.nfse-fiscal-review-confirmations label { align-items: flex-start; display: flex; gap: 9px; line-height: 1.55; }
+.nfse-fiscal-review-confirmations input { accent-color: #4169e1; flex: 0 0 auto; height: 16px; margin-top: 2px; width: 16px; }
+.nfse-fiscal-review-checks { display: grid; gap: 8px; list-style: none; margin: 0; padding: 0; }
+.nfse-fiscal-review-checks li { align-items: flex-start; display: flex; gap: 10px; line-height: 1.55; }
+.nfse-fiscal-review-checks .nfse-status { flex: 0 0 auto; }
+.nfse-fiscal-review-state { align-items: center; background: #f7faff; border: 1px solid #dce7fa; border-radius: 8px; color: #36527a; display: flex; flex-wrap: wrap; gap: 10px; line-height: 1.6; margin: 12px 16px; padding: 12px; }
+.nfse-fiscal-review-state p { margin: 0; }
+.nfse-fiscal-review-state[role="alert"] { background: #fff4f4; border-color: #f4d4d4; color: #ad3a3a; }
+.nfse-fiscal-review-dialog .nfse-footer > p { flex: 1 1 240px; margin: 0; }
+@media (max-width: 760px) {
+  .nfse-fiscal-review-overlay { padding: 10px; }
+  .nfse-fiscal-review-dialog { max-height: calc(100dvh - 20px); }
+  .nfse-fiscal-review-grid, .nfse-fiscal-review-fields { grid-template-columns: minmax(0, 1fr); }
+  .nfse-fiscal-review-section { padding: 12px; }
+  .nfse-fiscal-review-checks li { flex-direction: column; gap: 4px; }
+  .nfse-fiscal-review-dialog .nfse-footer { align-items: stretch; flex-direction: column; }
+  .nfse-fiscal-review-dialog .nfse-footer > p { flex-basis: auto; }
+  .nfse-fiscal-review-dialog .nfse-footer .nfse-queue-actions { justify-content: flex-end; }
+}

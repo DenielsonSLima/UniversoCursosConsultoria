@@ -1,9 +1,10 @@
 import React, { lazy, Suspense, useMemo, useRef, useState } from 'react';
-import { AlertCircle, BriefcaseBusiness, Building2, CheckCheck, ClipboardList, FileText, Layers, ShieldCheck } from 'lucide-react';
+import { AlertCircle, BriefcaseBusiness, Building2, CheckCheck, ClipboardList, FileText, FileX2, Layers } from 'lucide-react';
+import InstitutionalSelect from '../../shared/components/InstitutionalSelect';
 import FinancialUnderlineTabs from '../financeiro/components/FinancialUnderlineTabs';
 import { useNfseWorkspace } from './hooks/useNfseQueries';
 import { useNfseRealtime } from './hooks/useNfseRealtime';
-import { NfseUnavailableError } from './services/nfse.errors';
+import { NfseAccessError, NfseUnavailableError } from './services/nfse.errors';
 import { getNfseCurrentMonth, isNfseScopeValid } from './types/nfse.scope';
 import type { NfseScope, NfseTab } from './types/nfse.types';
 import { NfseTabContext } from './components/NfseTabContext';
@@ -19,6 +20,7 @@ import { useNfseQueueRealtime } from './fila/useNfseQueueRealtime';
 const PrepararNfseTab = lazy(() => import('./preparar/PrepararNfseTab'));
 const PendentesNfseTab = lazy(() => import('./pendentes/PendentesNfseTab'));
 const EmitidasNfseTab = lazy(() => import('./emitidas/EmitidasNfseTab'));
+const CanceladasNfseTab = lazy(() => import('./canceladas/CanceladasNfseTab'));
 const ErrosNfseTab = lazy(() => import('./erros/ErrosNfseTab'));
 const ModelosNfseTab = lazy(() => import('./modelos/ModelosNfseTab'));
 const ServicosParceirosNfseTab = lazy(() => import('./parceiros/ServicosParceirosNfseTab'));
@@ -36,26 +38,29 @@ const tabs = [
   { id: 'servicos' as const, label: 'Serviços', icon: <BriefcaseBusiness size={15} /> },
   { id: 'pendentes' as const, label: 'Pendentes', icon: <Layers size={15} /> },
   { id: 'emitidas' as const, label: 'Emitidas', icon: <CheckCheck size={15} /> },
+  { id: 'canceladas' as const, label: 'Canceladas', icon: <FileX2 size={15} /> },
   { id: 'erros' as const, label: 'Erros', icon: <AlertCircle size={15} /> },
   { id: 'modelos' as const, label: 'Modelos', icon: <FileText size={15} /> },
 ];
 
 const NfseWorkspace: React.FC<EmissorNfsePageProps> = ({ poloId, poloName, isMatriz, contextKey }) => {
   const [tab, setTab] = useState<NfseWorkspaceTab>('preparar');
+  const [environment, setEnvironment] = useState<NfseScope['environment']>('PRODUCAO');
   const [month, setMonth] = useState(getNfseCurrentMonth);
   const monthInputRef = useRef<HTMLInputElement>(null);
   const scope = useMemo<NfseScope | null>(() => {
-    const candidate = { poloId: poloId || '', contextKey: contextKey || '', environment: 'HOMOLOGACAO' as const, month };
+    const candidate = { poloId: poloId || '', contextKey: contextKey || '', environment, month };
     return isNfseScopeValid(candidate) ? candidate : null;
-  }, [poloId, contextKey, month]);
+  }, [poloId, contextKey, month, environment]);
   const query = useNfseWorkspace(scope);
   const queue = useNfseQueue(scope);
   const { toasts, removeToast, toast } = useToast();
   useNfseRealtime(scope);
   useNfseQueueRealtime(scope);
-  const workspace = query.error ? undefined : query.data;
+  const accessDenied = query.error instanceof NfseAccessError;
+  const workspace = accessDenied ? undefined : query.data;
   const unavailable = !scope || query.error instanceof NfseUnavailableError;
-  const canRead = Boolean(scope && workspace && !query.error);
+  const canRead = Boolean(scope && workspace && !accessDenied);
   const context = { scope, workspace, unavailable, canRead, loading: Boolean(scope && query.isPending),
     canPrepareQueue: Boolean(!queue.error && queue.data), onPrepared: (message?: string) => {
     setTab('pendentes');
@@ -63,6 +68,7 @@ const NfseWorkspace: React.FC<EmissorNfsePageProps> = ({ poloId, poloName, isMat
   } };
   const summary = workspace?.summary;
   const selectedPolo = Boolean(poloId && poloId !== 'todos');
+
 
   return (
     <div className="nfse-workspace">
@@ -73,13 +79,15 @@ const NfseWorkspace: React.FC<EmissorNfsePageProps> = ({ poloId, poloName, isMat
           <div className="nfse-field min-w-[185px]">
             <NfseMonthPicker id="nfse-workspace-month" value={month} onChange={setMonth} inputRef={monthInputRef} />
           </div>
-          <span className="nfse-environment"><ShieldCheck size={14} />Homologação</span>
+          <div className="nfse-field min-w-[185px]"><label htmlFor="nfse-workspace-environment">Ambiente fiscal</label>
+            <InstitutionalSelect id="nfse-workspace-environment" ariaLabel="Ambiente fiscal" value={environment}
+              options={[{ value: 'PRODUCAO', label: 'Produção' }, { value: 'HOMOLOGACAO', label: 'Homologação' }]}
+              onValueChange={value => { if (value === 'PRODUCAO' || value === 'HOMOLOGACAO') setEnvironment(value); }} /></div>
         </div>
       </header>
       {!selectedPolo ? <div className="nfse-notice"><Building2 size={18} /><div><strong>Selecione um polo</strong><p>Use o seletor de unidade no cabeçalho para preparar e acompanhar as notas do estabelecimento.</p></div></div>
         : !scope ? <div className="nfse-notice"><AlertCircle size={18} /><div><strong>{!month ? 'Escolha o mês dos recebimentos' : 'Contexto de acesso indisponível'}</strong><p>{!month ? 'Informe um mês válido para consultar os recebimentos e as notas deste polo.' : 'Selecione novamente a unidade no cabeçalho antes de consultar os registros fiscais.'}</p></div></div>
-        : workspace?.readiness.status === 'BLOCKED' ? <div className="nfse-notice"><AlertCircle size={18} /><div><strong>Este estabelecimento precisa de configuração</strong><p>{workspace.readiness.message}</p></div></div>
-        : query.error && !unavailable ? <NfseDataState error={query.error} onRetry={() => void query.refetch()} /> : null}
+: query.error && !unavailable ? <NfseDataState error={query.error} onRetry={() => void query.refetch()} /> : null}
       <div className="nfse-summary" aria-label="Resumo fiscal do período">
         <div className="nfse-metric"><span>Recebido no mês</span><strong>{formatNfseMoney(summary?.receivedAmount)}</strong></div>
         <div className="nfse-metric"><span>Pendentes</span><strong>{!queue.error && queue.data ? queue.data.summary.preparedCount : summary?.pendingCount ?? '—'}</strong></div>
@@ -88,13 +96,14 @@ const NfseWorkspace: React.FC<EmissorNfsePageProps> = ({ poloId, poloName, isMat
       </div>
       <FinancialUnderlineTabs items={tabs} value={tab} onChange={setTab} ariaLabel="Abas do Emissor NFS-e" idPrefix="nfse" compact />
       <div role="tabpanel" id={`nfse-${tab}-panel`} aria-labelledby={`nfse-${tab}-tab`} tabIndex={0} className="nfse-tab-panel">
-        <NfseTabContext.Provider key={`${poloId}:${contextKey}:${month}`} value={context}>
+        <NfseTabContext.Provider key={`${poloId}:${contextKey}:${environment}:${month}`} value={context}>
           <NfsePreparationDraftProvider>
           <Suspense fallback={<NfseDataState loading />}>
             {tab === 'preparar' && <PrepararNfseTab />}
             {tab === 'servicos' && <ServicosParceirosNfseTab />}
             {tab === 'pendentes' && <PendentesNfseTab />}
             {tab === 'emitidas' && <EmitidasNfseTab />}
+            {tab === 'canceladas' && <CanceladasNfseTab />}
             {tab === 'erros' && <ErrosNfseTab />}
             {tab === 'modelos' && <ModelosNfseTab />}
           </Suspense>

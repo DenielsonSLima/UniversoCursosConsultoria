@@ -10,7 +10,7 @@ const required = (scope: NfseScope | null) => {
   if (!isNfseScopeValid(scope)) throw new NfseAccessError();
   return scope;
 };
-const options = { retry: false, staleTime: 30_000, gcTime: 0, refetchOnWindowFocus: false } as const;
+const options = { retry: false, staleTime: 30_000, gcTime: 0, refetchOnWindowFocus: true, refetchOnReconnect: true } as const;
 
 export function useNfseWorkspace(scope: NfseScope | null) {
   return useQuery({

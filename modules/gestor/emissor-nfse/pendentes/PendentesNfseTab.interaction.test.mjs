@@ -48,7 +48,7 @@ test('pending queue supports page selection, cancellation, repeated clicks, erro
     }}]});
   await writeFile(bundle,result.outputFiles[0].contents);
   const {Page,NfseTabContext}=await import(pathToFileURL(bundle).href);
-  const client=new QueryClient({defaultOptions:{queries:{retry:false},mutations:{retry:false}}});
+  const client=new QueryClient({defaultOptions:{queries:{retry:false,gcTime:0},mutations:{retry:false,gcTime:0}}});
   const root=createRoot(document.getElementById('root'));
   const settle=async()=>act(async()=>{await new Promise(r=>setTimeout(r,30));});
   const button=text=>[...document.querySelectorAll('button')].find(b=>b.textContent.includes(text) || b.getAttribute('aria-label')?.includes(text));
@@ -60,7 +60,7 @@ test('pending queue supports page selection, cancellation, repeated clicks, erro
     await settle();
     assert.equal(checkboxes().length,26);
     assert.equal(button('Atualizar'),undefined);
-    assert.equal(button('Emitir notas').disabled,true);
+    assert.equal(button('Emitir / consultar nota').disabled,true);
     assert.equal(button('Excluir selecionados').disabled,true);
     await click(checkboxes()[1]);
     assert.equal(checkboxes()[0].indeterminate,true);

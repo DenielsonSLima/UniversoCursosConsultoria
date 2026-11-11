@@ -1,0 +1,80 @@
+{
+  "version": 1,
+  "retiredPaths": [
+    {
+      "path": "modules/gestor/patrimonio/patrimonio.constants.ts",
+      "retiredInManifest": "ai/operacao/registros/alteracoes/2026-08-23-sincronizacao-completa-4-7-2.md",
+      "reason": "Constante sem qualquer importação ou uso após a adoção do cadastro dinâmico de tipos de patrimônio."
+    },
+    {
+      "path": "modules/gestor/gestao/tecnicos/detalhes/components/diarios/DiarioPrintBackCover.tsx",
+      "retiredInManifest": "ai/operacao/registros/alteracoes/2026-08-23-fidelidade-diario-assinaturas-acessos-4-7-3.md",
+      "reason": "Compositor raster genérico removido em favor do gerador vetorial canônico orientado pelo modelo salvo."
+    },
+    {
+      "path": "modules/gestor/gestao/tecnicos/detalhes/components/diarios/DiarioPrintCover.tsx",
+      "retiredInManifest": "ai/operacao/registros/alteracoes/2026-08-23-fidelidade-diario-assinaturas-acessos-4-7-3.md",
+      "reason": "Compositor raster genérico removido em favor do gerador vetorial canônico orientado pelo modelo salvo."
+    },
+    {
+      "path": "modules/gestor/gestao/tecnicos/detalhes/components/diarios/DiarioPrintDocument.tsx",
+      "retiredInManifest": "ai/operacao/registros/alteracoes/2026-08-23-fidelidade-diario-assinaturas-acessos-4-7-3.md",
+      "reason": "Compositor raster genérico removido em favor do gerador vetorial canônico orientado pelo modelo salvo."
+    },
+    {
+      "path": "modules/gestor/gestao/tecnicos/detalhes/components/diarios/DiarioPrintPage.tsx",
+      "retiredInManifest": "ai/operacao/registros/alteracoes/2026-08-23-fidelidade-diario-assinaturas-acessos-4-7-3.md",
+      "reason": "Compositor raster genérico removido em favor do gerador vetorial canônico orientado pelo modelo salvo."
+    },
+    {
+      "path": "modules/gestor/gestao/tecnicos/detalhes/components/diarios/DiarioPrintSections.tsx",
+      "retiredInManifest": "ai/operacao/registros/alteracoes/2026-08-23-fidelidade-diario-assinaturas-acessos-4-7-3.md",
+      "reason": "Compositor raster genérico removido em favor do gerador vetorial canônico orientado pelo modelo salvo."
+    },
+    {
+      "path": "modules/gestor/gestao/tecnicos/detalhes/components/diarios/DiarioPrintStyles.tsx",
+      "retiredInManifest": "ai/operacao/registros/alteracoes/2026-08-23-fidelidade-diario-assinaturas-acessos-4-7-3.md",
+      "reason": "Compositor raster genérico removido em favor do gerador vetorial canônico orientado pelo modelo salvo."
+    },
+    {
+      "path": "supabase/functions/gateways/api/banese.test.ts",
+      "retiredInManifest": "ai/operacao/registros/alteracoes/2026-08-27-bolepix-rematricula.md",
+      "reason": "Suíte monolítica repartida em harness e testes temáticos menores, preservando a cobertura da conciliação Banese."
+    },
+    {
+      "path": "supabase/functions/banese/core/adapter.test.ts",
+      "retiredInManifest": "ai/operacao/registros/alteracoes/2026-08-27-bolepix-rematricula.md",
+      "reason": "Suíte monolítica do adaptador repartida em fixtures e testes temáticos menores, preservando a cobertura da emissão e consulta Banese."
+    },
+    {
+      "path": "modules/gestor/emissor-nfse/homologacao/NfseHomologationPanel.interaction.test.mjs",
+      "retiredInManifest": "ai/operacao/registros/alteracoes/2026-11-10-nfse-producao-individual-cancelamento.md",
+      "reason": "Interface técnica paralela retirada por solicitação do usuário; emissão integrada às preparações reais de Serviços e alunos."
+    },
+    {
+      "path": "modules/gestor/emissor-nfse/homologacao/NfseHomologationPanel.tsx",
+      "retiredInManifest": "ai/operacao/registros/alteracoes/2026-11-10-nfse-producao-individual-cancelamento.md",
+      "reason": "Interface técnica paralela retirada por solicitação do usuário; emissão integrada às preparações reais de Serviços e alunos."
+    },
+    {
+      "path": "modules/gestor/emissor-nfse/homologacao/NfseHomologationPreview.tsx",
+      "retiredInManifest": "ai/operacao/registros/alteracoes/2026-11-10-nfse-producao-individual-cancelamento.md",
+      "reason": "Interface técnica paralela retirada por solicitação do usuário; emissão integrada às preparações reais de Serviços e alunos."
+    },
+    {
+      "path": "modules/gestor/emissor-nfse/homologacao/NfseHomologationPublicDetails.tsx",
+      "retiredInManifest": "ai/operacao/registros/alteracoes/2026-11-10-nfse-producao-individual-cancelamento.md",
+      "reason": "Interface técnica paralela retirada por solicitação do usuário; emissão integrada às preparações reais de Serviços e alunos."
+    },
+    {
+      "path": "modules/gestor/emissor-nfse/homologacao/NfseHomologationRecipientPicker.tsx",
+      "retiredInManifest": "ai/operacao/registros/alteracoes/2026-11-10-nfse-producao-individual-cancelamento.md",
+      "reason": "Interface técnica paralela retirada por solicitação do usuário; emissão integrada às preparações reais de Serviços e alunos."
+    },
+    {
+      "path": "modules/gestor/emissor-nfse/homologacao/nfse-homologation.css",
+      "retiredInManifest": "ai/operacao/registros/alteracoes/2026-11-10-nfse-producao-individual-cancelamento.md",
+      "reason": "Interface técnica paralela retirada por solicitação do usuário; emissão integrada às preparações reais de Serviços e alunos."
+    }
+  ]
+}

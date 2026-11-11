@@ -1,5 +1,11 @@
+import type { NfseModelServiceOptions } from '../modelos/services/nfse-model-service-options';
+import type { NfseModelPeopleOptions } from '../modelos/services/nfse-model-people-options';
+import type { NfseModelValuesOptions } from '../modelos/services/nfse-model-values.types';
+import type { NfseModelAdditionalOptions } from '../modelos/services/nfse-model-additional.types';
+import type { NfseOperationReference } from '../emissao/nfse-operation.contract';
+
 export type NfseEnvironment = 'HOMOLOGACAO' | 'PRODUCAO';
-export type NfseTab = 'preparar' | 'pendentes' | 'emitidas' | 'erros' | 'modelos';
+export type NfseTab = 'preparar' | 'pendentes' | 'emitidas' | 'canceladas' | 'erros' | 'modelos';
 
 /** Cache/request correlation only. The server must authorize the actual session. */
 export interface NfseScope {
@@ -28,6 +34,10 @@ export type NfseMoney = string | null;
 export type NfseIssTreatment = 'TRIBUTAVEL' | 'IMUNIDADE' | 'EXPORTACAO' | 'NAO_INCIDENCIA';
 
 export interface NfseModelServiceFields {
+  serviceOptions?: NfseModelServiceOptions | null;
+  peopleOptions?: NfseModelPeopleOptions | null;
+  valuesOptions?: NfseModelValuesOptions | null;
+  additionalOptions?: NfseModelAdditionalOptions | null;
   serviceDescription: string;
   nationalServiceCode: string;
   nbsCode: string;
@@ -51,6 +61,7 @@ export interface NfseModelDescriptionPreview {
   description: string;
   monthLabel: string;
   usesReferenceMonth: boolean;
+  requiresAcademicContext?: boolean;
 }
 
 export interface NfseWorkspace {
@@ -80,7 +91,7 @@ export interface NfseCandidate {
 }
 
 export type NfseDocumentStatus = 'PENDENTE' | 'EM_PROCESSAMENTO' | 'AGUARDANDO_CONFIRMACAO' | 'EMITIDA' | 'ERRO';
-export interface NfseDocument {
+export interface NfseDocument extends NfseOperationReference {
   id: string;
   studentName: string;
   classLabel: string;
@@ -92,6 +103,11 @@ export interface NfseDocument {
   errorCode: string | null;
   errorMessage: string | null;
   retryable: boolean;
+  emittedAt?: string | null;
+  dateSource?: 'NFSE_DH_PROC' | null;
+  origin?: 'ALUNO' | 'SERVICO' | null;
+  courseType?: string | null;
+  courseTypeLabel?: string | null;
 }
 
 export interface NfsePage<T> {
@@ -109,9 +125,14 @@ export interface NfseCandidateFilters {
 }
 
 export interface NfseDocumentFilters {
+  issuedState?: 'ACTIVE' | 'CANCELLED';
   status: 'PENDENTE' | 'EMITIDA' | 'ERRO';
   search?: string;
   page?: number;
+  dateFrom?: string;
+  dateTo?: string;
+  courseType?: string;
+  origin?: 'ALUNO' | 'SERVICO' | '';
 }
 
 export interface NfseConfiguration {

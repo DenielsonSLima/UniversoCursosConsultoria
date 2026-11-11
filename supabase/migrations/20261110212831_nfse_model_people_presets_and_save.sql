@@ -1,0 +1,259 @@
+BEGIN;
+
+CREATE FUNCTION private.nfse_model_partner_label(p_polo_id uuid,p_partner_id uuid)
+RETURNS text LANGUAGE sql STABLE SET search_path='' AS $function$
+  SELECT nullif(btrim(p.nome),'') FROM public.parceiros p WHERE p.id=p_partner_id
+    AND public.is_active_status(p.status)
+    AND (p.polo_id=p_polo_id OR p_polo_id=ANY(coalesce(p.polo_ids,ARRAY[]::uuid[]))
+      OR (p.polo_id IS NULL AND upper(btrim(p.tipo))<>'ALUNO'));
+$function$;
+REVOKE ALL ON FUNCTION private.nfse_model_partner_label(uuid,uuid) FROM PUBLIC,anon,authenticated,service_role;
+
+CREATE FUNCTION private.normalize_nfse_model_people_options(p_options jsonb,p_service_options jsonb,p_polo_id uuid)
+RETURNS jsonb LANGUAGE plpgsql STABLE SET search_path='' AS $function$
+DECLARE v_date text; v_series text; v_assessment text; v_same boolean; v_destination uuid; v_intermediary uuid;
+  v_ibs boolean:=p_service_options->'includeIbsCbs'='true'::jsonb; v_key text;
+  v_uuid constant text:='^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$';
+BEGIN
+  IF p_options IS NULL OR p_options='null'::jsonb THEN RETURN 'null'::jsonb; END IF;
+  IF jsonb_typeof(p_options)<>'object' OR NOT (p_options ?& ARRAY['version','competenceMode','competenceDate',
+    'dpsSeriesMode','dpsSeries','issuerRole','simpleNationalOption','simpleNationalAssessment','recipientLocation',
+    'recipientIncludeAddress','recipientIsDestination','destinationPartnerId','intermediaryLocation','intermediaryPartnerId'])
+    OR EXISTS(SELECT 1 FROM jsonb_object_keys(p_options) f(key) WHERE key NOT IN
+      ('version','competenceMode','competenceDate','dpsSeriesMode','dpsSeries','issuerRole','simpleNationalOption',
+       'simpleNationalAssessment','recipientLocation','recipientIncludeAddress','recipientIsDestination',
+       'destinationPartnerId','intermediaryLocation','intermediaryPartnerId'))
+    OR p_options->'version' IS DISTINCT FROM '1'::jsonb THEN
+    RAISE EXCEPTION 'Preferências de Pessoas inválidas.' USING ERRCODE='22023'; END IF;
+  FOREACH v_key IN ARRAY ARRAY['competenceMode','dpsSeriesMode','issuerRole','simpleNationalOption',
+    'recipientLocation','intermediaryLocation'] LOOP
+    IF jsonb_typeof(p_options->v_key) IS DISTINCT FROM 'string' THEN
+      RAISE EXCEPTION 'Seleção de Pessoas inválida.' USING ERRCODE='22023'; END IF;
+  END LOOP;
+  IF p_options->>'competenceMode' NOT IN ('ISSUE_DATE','FIXED_DATE')
+    OR p_options->>'dpsSeriesMode' NOT IN ('AUTOMATIC','CUSTOM')
+    OR p_options->>'issuerRole' NOT IN ('PROVIDER','RECIPIENT','INTERMEDIARY')
+    OR p_options->>'simpleNationalOption' NOT IN ('FROM_ESTABLISHMENT','1','2','3')
+    OR p_options->>'recipientLocation' NOT IN ('BRASIL','EXTERIOR','NOT_INFORMED')
+    OR p_options->>'intermediaryLocation' NOT IN ('BRASIL','EXTERIOR','NOT_INFORMED')
+    OR jsonb_typeof(p_options->'recipientIncludeAddress') IS DISTINCT FROM 'boolean'
+    OR jsonb_typeof(p_options->'recipientIsDestination') NOT IN ('boolean','null') THEN
+    RAISE EXCEPTION 'Seleção de Pessoas inválida.' USING ERRCODE='22023'; END IF;
+  IF p_options->>'competenceMode'='FIXED_DATE' THEN
+    v_date:=p_options->>'competenceDate';
+    IF jsonb_typeof(p_options->'competenceDate') IS DISTINCT FROM 'string'
+      OR v_date !~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$' THEN
+      RAISE EXCEPTION 'Informe a competência fixa explicitamente.' USING ERRCODE='22023'; END IF;
+    BEGIN PERFORM v_date::date;
+    EXCEPTION WHEN invalid_datetime_format OR datetime_field_overflow THEN
+      RAISE EXCEPTION 'Competência fixa inválida.' USING ERRCODE='22023'; END;
+    IF v_ibs IS TRUE AND v_date::date<DATE '2026-01-01' THEN
+      RAISE EXCEPTION 'O preenchimento IBS/CBS exige competência a partir de 01/01/2026.' USING ERRCODE='22023'; END IF;
+  ELSIF p_options->'competenceDate' IS DISTINCT FROM 'null'::jsonb THEN
+    RAISE EXCEPTION 'A regra de data de emissão não armazena uma data concreta.' USING ERRCODE='22023'; END IF;
+  IF p_options->>'dpsSeriesMode'='CUSTOM' THEN
+    v_series:=p_options->>'dpsSeries';
+    IF jsonb_typeof(p_options->'dpsSeries') IS DISTINCT FROM 'string' OR v_series !~ '^[0-9]{1,5}$' THEN
+      RAISE EXCEPTION 'Série DPS inválida.' USING ERRCODE='22023'; END IF;
+    IF v_series::integer NOT BETWEEN 1 AND 49999 THEN
+      RAISE EXCEPTION 'A série de integração deve estar entre 1 e 49999.' USING ERRCODE='22023'; END IF;
+  ELSIF p_options->'dpsSeries' IS DISTINCT FROM 'null'::jsonb THEN
+    RAISE EXCEPTION 'A regra automática não armazena uma série concreta.' USING ERRCODE='22023'; END IF;
+  v_assessment:=p_options->>'simpleNationalAssessment';
+  IF p_options->'simpleNationalAssessment'<>'null'::jsonb AND
+    (jsonb_typeof(p_options->'simpleNationalAssessment') IS DISTINCT FROM 'string'
+      OR v_assessment NOT IN ('FROM_ESTABLISHMENT','1','2','3')) THEN
+    RAISE EXCEPTION 'Apuração do Simples inválida.' USING ERRCODE='22023'; END IF;
+  IF (p_options->>'simpleNationalOption' NOT IN ('3','FROM_ESTABLISHMENT') AND v_assessment IS NOT NULL)
+    OR (p_options->>'simpleNationalOption'='3' AND v_assessment IS NULL) THEN
+    RAISE EXCEPTION 'Apuração incompatível ou não confirmada para a opção do Simples.' USING ERRCODE='22023'; END IF;
+  IF p_options->>'recipientLocation'='NOT_INFORMED' AND p_options->'recipientIncludeAddress'='true'::jsonb THEN
+    RAISE EXCEPTION 'Tomador não informado não inclui endereço.' USING ERRCODE='22023'; END IF;
+  IF p_service_options->'governmentPurchase'='true'::jsonb AND p_options->>'recipientLocation'<>'BRASIL' THEN
+    RAISE EXCEPTION 'Compra governamental exige tomador localizado no Brasil.' USING ERRCODE='22023'; END IF;
+  FOREACH v_key IN ARRAY ARRAY['destinationPartnerId','intermediaryPartnerId'] LOOP
+    IF p_options->v_key<>'null'::jsonb AND
+      (jsonb_typeof(p_options->v_key) IS DISTINCT FROM 'string' OR p_options->>v_key !~* v_uuid) THEN
+      RAISE EXCEPTION 'Referência de parceiro inválida.' USING ERRCODE='22023'; END IF;
+  END LOOP;
+  v_same:=(p_options->>'recipientIsDestination')::boolean;
+  v_destination:=(p_options->>'destinationPartnerId')::uuid;
+  v_intermediary:=(p_options->>'intermediaryPartnerId')::uuid;
+  IF v_ibs IS TRUE THEN
+    IF v_same IS NULL OR (v_same AND v_destination IS NOT NULL) OR (NOT v_same AND v_destination IS NULL) THEN
+      RAISE EXCEPTION 'Confirme o destinatário IBS/CBS e seu vínculo cadastral.' USING ERRCODE='22023'; END IF;
+  ELSIF v_same IS NOT NULL OR v_destination IS NOT NULL THEN
+    RAISE EXCEPTION 'Destinatário adicional permitido somente com IBS/CBS.' USING ERRCODE='22023'; END IF;
+  IF (p_options->>'intermediaryLocation'='NOT_INFORMED' AND v_intermediary IS NOT NULL)
+    OR (p_options->>'intermediaryLocation'<>'NOT_INFORMED' AND v_intermediary IS NULL) THEN
+    RAISE EXCEPTION 'Confirme a referência cadastral do intermediário.' USING ERRCODE='22023'; END IF;
+  IF (v_destination IS NOT NULL AND private.nfse_model_partner_label(p_polo_id,v_destination) IS NULL)
+    OR (v_intermediary IS NOT NULL AND private.nfse_model_partner_label(p_polo_id,v_intermediary) IS NULL) THEN
+    RAISE EXCEPTION 'Parceiro indisponível neste polo.' USING ERRCODE='22023'; END IF;
+  -- Preferences and references only: no partner identity/address snapshot or DPS number.
+  RETURN p_options||jsonb_build_object('version',1,'destinationPartnerId',v_destination,'intermediaryPartnerId',v_intermediary);
+END;
+$function$;
+REVOKE ALL ON FUNCTION private.normalize_nfse_model_people_options(jsonb,jsonb,uuid) FROM PUBLIC,anon,authenticated,service_role;
+
+CREATE FUNCTION private.nfse_model_people_option_labels(p_definition jsonb,p_polo_id uuid)
+RETURNS jsonb LANGUAGE sql STABLE SET search_path='' AS $function$
+  SELECT CASE WHEN jsonb_typeof(p_definition->'peopleOptions')='object' THEN
+    p_definition||jsonb_build_object('peopleOptions',(p_definition->'peopleOptions')||jsonb_build_object(
+      'destinationPartnerLabel',private.nfse_model_partner_label(p_polo_id,(p_definition#>>'{peopleOptions,destinationPartnerId}')::uuid),
+      'intermediaryPartnerLabel',private.nfse_model_partner_label(p_polo_id,(p_definition#>>'{peopleOptions,intermediaryPartnerId}')::uuid)))
+    ELSE p_definition END;
+$function$;
+REVOKE ALL ON FUNCTION private.nfse_model_people_option_labels(jsonb,uuid) FROM PUBLIC,anon,authenticated,service_role;
+
+CREATE FUNCTION public.search_nfse_model_partners_secure(
+  p_context_key uuid,p_polo_id uuid,p_environment text,p_month text,p_search text,p_partner_id uuid DEFAULT NULL
+) RETURNS jsonb LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path=''
+SET statement_timeout='8s' AS $function$
+DECLARE v_rows jsonb:='[]'; v_search text:=btrim(coalesce(p_search,''));
+BEGIN
+  PERFORM private.authorize_nfse_model_scope(p_context_key,p_polo_id,p_environment,p_month);
+  IF length(v_search)>100 THEN RAISE EXCEPTION 'Busca de parceiro inválida.' USING ERRCODE='22023'; END IF;
+  IF p_partner_id IS NOT NULL OR length(v_search)>=2 THEN
+    SELECT coalesce(jsonb_agg(jsonb_build_object('id',p.id,'label',p.nome) ORDER BY lower(p.nome),p.id),'[]')
+    INTO v_rows FROM (SELECT p.id,p.nome FROM public.parceiros p
+      WHERE public.is_active_status(p.status) AND nullif(btrim(p.nome),'') IS NOT NULL
+        AND (p.polo_id=p_polo_id OR p_polo_id=ANY(coalesce(p.polo_ids,ARRAY[]::uuid[]))
+          OR (p.polo_id IS NULL AND upper(btrim(p.tipo))<>'ALUNO'))
+        AND ((p_partner_id IS NOT NULL AND p.id=p_partner_id)
+          OR (p_partner_id IS NULL AND position(lower(v_search) IN lower(p.nome))>0))
+      ORDER BY lower(p.nome),p.id LIMIT 20) p;
+  END IF;
+  RETURN jsonb_build_object('version',1,'scope',jsonb_build_object('contextKey',p_context_key,'poloId',p_polo_id,
+    'environment',p_environment,'month',p_month),'data',jsonb_build_object('rows',v_rows,
+    'page',1,'pageSize',20,'totalItems',jsonb_array_length(v_rows)));
+END;
+$function$;
+REVOKE ALL ON FUNCTION public.search_nfse_model_partners_secure(uuid,uuid,text,text,text,uuid)
+  FROM PUBLIC,anon,authenticated,service_role;
+GRANT EXECUTE ON FUNCTION public.search_nfse_model_partners_secure(uuid,uuid,text,text,text,uuid) TO authenticated;
+
+CREATE OR REPLACE FUNCTION public.get_nfse_models_secure(
+  p_context_key uuid,p_polo_id uuid,p_environment text,p_month text
+) RETURNS jsonb LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path=''
+SET statement_timeout='8s' AS $function$
+DECLARE v_rows jsonb;
+BEGIN
+  PERFORM private.authorize_nfse_model_scope(p_context_key,p_polo_id,p_environment,p_month);
+  SELECT coalesce(jsonb_agg(private.nfse_model_people_option_labels(
+    private.nfse_model_service_option_labels(model.definition),p_polo_id)
+    ||jsonb_build_object('id',model.id,'version',model.version)
+    ORDER BY lower(model.definition->>'name'),model.id),'[]'::jsonb) INTO v_rows
+  FROM private.nfse_models model WHERE model.polo_id=p_polo_id AND model.environment=p_environment;
+  RETURN jsonb_build_object('version',1,'scope',jsonb_build_object('contextKey',p_context_key,'poloId',p_polo_id,
+    'environment',p_environment,'month',p_month),'data',jsonb_build_object('rows',v_rows,'page',1,'pageSize',100,
+    'totalItems',jsonb_array_length(v_rows)));
+END;
+$function$;
+REVOKE ALL ON FUNCTION public.get_nfse_models_secure(uuid,uuid,text,text) FROM PUBLIC,anon,authenticated,service_role;
+GRANT EXECUTE ON FUNCTION public.get_nfse_models_secure(uuid,uuid,text,text) TO authenticated;
+
+CREATE OR REPLACE FUNCTION public.save_nfse_model_secure(
+  p_context_key uuid,p_polo_id uuid,p_environment text,p_month text,
+  p_request_id uuid,p_id uuid,p_expected_version integer,p_definition jsonb
+) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=''
+SET statement_timeout='8s' AS $function$
+DECLARE v_actor uuid; v_definition jsonb:='{}'; v_payload jsonb; v_response jsonb;
+  v_previous private.nfse_model_requests%ROWTYPE; v_model private.nfse_models%ROWTYPE;
+  v_field record; v_text text; v_partner uuid;
+  v_uuid constant text:='^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$';
+BEGIN
+  PERFORM private.authorize_nfse_model_scope(p_context_key,p_polo_id,p_environment,p_month);
+  v_actor:=auth.uid();
+  IF p_request_id IS NULL OR (p_id IS NULL)<>(p_expected_version IS NULL)
+    OR (p_expected_version IS NOT NULL AND p_expected_version<1)
+    OR p_definition IS NULL OR jsonb_typeof(p_definition)<>'object' OR octet_length(p_definition::text)>32000 THEN
+    RAISE EXCEPTION 'Dados do modelo NFS-e inválidos.' USING ERRCODE='22023'; END IF;
+  IF EXISTS(SELECT 1 FROM jsonb_object_keys(p_definition) f(key) WHERE key NOT IN
+    ('name','active','nationalServiceCode','nbsCode','operationIndicatorCode','serviceDescription','issTreatment',
+     'immunityType','technicalResponsibilityDocument','referenceDocument','complementaryInfo','orderReference',
+     'serviceOptions','peopleOptions')) THEN
+    RAISE EXCEPTION 'Campo desconhecido no modelo NFS-e.' USING ERRCODE='22023'; END IF;
+  FOR v_field IN SELECT * FROM (VALUES ('name',120,true),('nationalServiceCode',6,true),('nbsCode',9,true),
+    ('operationIndicatorCode',6,false),('serviceDescription',2000,true),('issTreatment',20,true),
+    ('technicalResponsibilityDocument',40,false),('referenceDocument',255,false),('complementaryInfo',2000,false),
+    ('orderReference',60,false)) field(key,max_length,required) LOOP
+    IF jsonb_typeof(p_definition->v_field.key) IS DISTINCT FROM 'string' THEN
+      RAISE EXCEPTION 'Texto obrigatório ou inválido no modelo NFS-e.' USING ERRCODE='22023'; END IF;
+    v_text:=btrim(p_definition->>v_field.key);
+    IF length(v_text)>v_field.max_length OR (v_field.required AND v_text='') THEN
+      RAISE EXCEPTION 'Comprimento de campo do modelo NFS-e inválido.' USING ERRCODE='22023'; END IF;
+    v_definition:=v_definition||jsonb_build_object(v_field.key,v_text);
+  END LOOP;
+  IF v_definition->>'nationalServiceCode' !~ '^[0-9]{6}$' OR v_definition->>'nbsCode' !~ '^[0-9]{9}$'
+    OR v_definition->>'operationIndicatorCode' !~ '^([0-9]{6})?$'
+    OR v_definition->>'issTreatment' NOT IN ('TRIBUTAVEL','IMUNIDADE','EXPORTACAO','NAO_INCIDENCIA')
+    OR jsonb_typeof(p_definition->'active') IS DISTINCT FROM 'boolean' OR NOT(p_definition ? 'immunityType') THEN
+    RAISE EXCEPTION 'Classificação do serviço NFS-e inválida.' USING ERRCODE='22023'; END IF;
+  IF v_definition->>'issTreatment'='IMUNIDADE' THEN
+    IF jsonb_typeof(p_definition->'immunityType') IS DISTINCT FROM 'string'
+      OR p_definition->>'immunityType' NOT IN ('1','2','3','4','5') THEN
+      RAISE EXCEPTION 'Informe o tipo de imunidade.' USING ERRCODE='22023'; END IF;
+  ELSIF p_definition->'immunityType' IS DISTINCT FROM 'null'::jsonb THEN
+    RAISE EXCEPTION 'Tipo de imunidade permitido somente para imunidade.' USING ERRCODE='22023'; END IF;
+  v_definition:=v_definition||jsonb_build_object('active',p_definition->'active','immunityType',p_definition->'immunityType');
+  IF p_definition ? 'serviceOptions' THEN v_definition:=v_definition||jsonb_build_object('serviceOptions',p_definition->'serviceOptions'); END IF;
+  IF p_definition ? 'peopleOptions' THEN v_definition:=v_definition||jsonb_build_object('peopleOptions',p_definition->'peopleOptions'); END IF;
+  -- Keep the historical request shape. New option objects are immutable intent;
+  -- catalog/partner availability is checked only for a new write, never on replay.
+  v_payload:=jsonb_build_object('contextKey',p_context_key,'poloId',p_polo_id,'environment',p_environment,'month',p_month,
+    'id',p_id,'expectedVersion',p_expected_version,'definition',v_definition);
+  PERFORM pg_advisory_xact_lock(hashtextextended('nfse-model-request:'||v_actor::text||':'||p_request_id::text,0));
+  SELECT * INTO v_previous FROM private.nfse_model_requests WHERE actor_id=v_actor AND request_id=p_request_id;
+  IF FOUND THEN
+    IF v_previous.payload IS DISTINCT FROM v_payload THEN
+      RAISE EXCEPTION 'Solicitação já utilizada com outros dados.' USING ERRCODE='22023'; END IF;
+    RETURN v_previous.response;
+  END IF;
+  PERFORM pg_advisory_xact_lock(hashtextextended('nfse-model-polo:'||p_polo_id::text||':'||p_environment,0));
+  IF p_id IS NOT NULL THEN
+    SELECT * INTO v_model FROM private.nfse_models WHERE id=p_id AND polo_id=p_polo_id
+      AND environment=p_environment AND version=p_expected_version FOR UPDATE;
+    IF NOT FOUND THEN RAISE EXCEPTION 'O modelo mudou. Atualize os modelos.' USING ERRCODE='40001'; END IF;
+    IF (jsonb_typeof(v_model.definition->'serviceOptions')='object' AND jsonb_typeof(p_definition->'serviceOptions') IS DISTINCT FROM 'object')
+      OR (jsonb_typeof(v_model.definition->'peopleOptions')='object' AND jsonb_typeof(p_definition->'peopleOptions') IS DISTINCT FROM 'object') THEN
+      RAISE EXCEPTION 'Atualize o formulário para preservar as preferências já cadastradas.' USING ERRCODE='40001'; END IF;
+  ELSIF (SELECT count(*) FROM private.nfse_models WHERE polo_id=p_polo_id AND environment=p_environment)>=100 THEN
+    RAISE EXCEPTION 'Limite de 100 modelos por estabelecimento e ambiente atingido.' USING ERRCODE='22023';
+  END IF;
+  PERFORM 1 FROM public.catalogo_paises_nacionalidades WHERE codigo_iso3 IN
+    (upper(btrim(p_definition#>>'{serviceOptions,countryCode}')),upper(btrim(p_definition#>>'{serviceOptions,exportResultCountryCode}')))
+    ORDER BY codigo_iso3 FOR SHARE;
+  PERFORM 1 FROM public.catalogo_municipios_ibge WHERE codigo_ibge::text=btrim(p_definition#>>'{serviceOptions,municipalityCode}') FOR SHARE;
+  FOR v_partner IN SELECT DISTINCT CASE WHEN ref ~* v_uuid THEN ref::uuid ELSE NULL END AS id
+    FROM unnest(ARRAY[p_definition#>>'{peopleOptions,destinationPartnerId}',p_definition#>>'{peopleOptions,intermediaryPartnerId}']) refs(ref)
+    ORDER BY id LOOP
+    IF v_partner IS NOT NULL THEN PERFORM 1 FROM public.parceiros WHERE id=v_partner FOR SHARE; END IF;
+  END LOOP;
+  IF p_definition ? 'serviceOptions' THEN
+    v_definition:=v_definition||jsonb_build_object('serviceOptions',private.normalize_nfse_model_service_options(
+      p_definition->'serviceOptions',v_definition->>'issTreatment',v_definition->>'nationalServiceCode',v_definition->>'operationIndicatorCode'));
+  END IF;
+  IF p_definition ? 'peopleOptions' THEN
+    v_definition:=v_definition||jsonb_build_object('peopleOptions',private.normalize_nfse_model_people_options(
+      p_definition->'peopleOptions',v_definition->'serviceOptions',p_polo_id));
+  END IF;
+  IF p_id IS NULL THEN
+    INSERT INTO private.nfse_models(polo_id,environment,definition,created_by,updated_by)
+      VALUES(p_polo_id,p_environment,v_definition,v_actor,v_actor) RETURNING * INTO v_model;
+  ELSE
+    UPDATE private.nfse_models SET definition=v_definition,version=version+1,updated_by=v_actor,updated_at=now()
+      WHERE id=p_id RETURNING * INTO v_model;
+  END IF;
+  v_response:=jsonb_build_object('version',1,'scope',jsonb_build_object('contextKey',p_context_key,'poloId',p_polo_id,
+    'environment',p_environment,'month',p_month),'data',jsonb_build_object('id',v_model.id,'version',v_model.version,'message','Modelo salvo.'));
+  INSERT INTO private.nfse_model_requests(actor_id,request_id,context_id,polo_id,environment,payload,response)
+    VALUES(v_actor,p_request_id,p_context_key,p_polo_id,p_environment,v_payload,v_response);
+  RETURN v_response;
+END;
+$function$;
+REVOKE ALL ON FUNCTION public.save_nfse_model_secure(uuid,uuid,text,text,uuid,uuid,integer,jsonb)
+  FROM PUBLIC,anon,authenticated,service_role;
+GRANT EXECUTE ON FUNCTION public.save_nfse_model_secure(uuid,uuid,text,text,uuid,uuid,integer,jsonb) TO authenticated;
+NOTIFY pgrst,'reload schema';
+COMMIT;

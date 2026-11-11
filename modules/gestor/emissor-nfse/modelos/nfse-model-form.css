@@ -1,32 +1,182 @@
-.nfse-model-dialog { display: flex; flex-direction: column; max-height: calc(100dvh - 24px); }
-.nfse-model-dialog > .nfse-section-heading, .nfse-model-dialog > .nfse-footer { flex: 0 0 auto; }
-.nfse-model-dialog .nfse-section-heading h2 { font-size: 18px; font-weight: 600; }
-.nfse-model-body { min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+/* The same compact dialog proportions used by Contas a Pagar / Receber. */
+.nfse-model-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgb(15 23 42 / 48%);
+  color: #334155;
+  font: 13px/1.55 -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+.nfse-model-dialog {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-width: 0;
+  max-width: 960px;
+  max-height: calc(100dvh - 40px);
+  overflow: hidden;
+  border: 1px solid #dbe3ec;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 24px 80px -24px rgb(15 23 42 / 35%);
+  font-variant-numeric: tabular-nums;
+}
+.nfse-model-header {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 20px;
+  border-bottom: 1px solid #e2e8f0;
+}
+.nfse-model-heading { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.nfse-model-heading-icon {
+  display: grid;
+  flex: 0 0 40px;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border: 1px solid #dce5fc;
+  border-radius: 10px;
+  background: #f1f5ff;
+  color: #4169e1;
+}
+.nfse-model-heading h2 { margin: 0; color: #122b42; font-size: 18px; font-weight: 600; line-height: 1.35; }
+.nfse-model-heading p { margin: 3px 0 0; color: #607286; font-size: 12px; }
+.nfse-model-close {
+  display: grid;
+  flex: 0 0 36px;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f1f5f9;
+  color: #526175;
+}
+.nfse-model-close:hover { background: #e9eff5; }
+.nfse-model-close:focus-visible { outline: 2px solid #4169e1; outline-offset: 2px; }
+.nfse-model-body { min-height: 0; padding: 20px; overflow-y: auto; overscroll-behavior: contain; background: #f8fafc; }
 .nfse-model-fields { border: 0; margin: 0; min-width: 0; padding: 0; }
-.nfse-model-section { border-top: 1px solid #edf0f5; padding: 16px; }
-.nfse-model-section:first-child { border-top: 0; }
+.nfse-model-section {
+  min-width: 0;
+  margin: 0 0 14px;
+  padding: 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #fff;
+}
+.nfse-model-section:last-child { margin-bottom: 0; }
 .nfse-model-section h3 { color: #18334b; font-size: 13px; font-weight: 600; margin: 0 0 14px; }
-.nfse-model-grid { align-items: end; display: grid; gap: 14px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.nfse-model-grid { align-items: end; display: grid; gap: 14px 16px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .nfse-model-grid .nfse-wide { grid-column: 1 / -1; }
+.nfse-model-dialog .nfse-field { min-width: 0; }
+.nfse-model-dialog .nfse-field > :is(label, span), .nfse-model-choices legend { color: #536579; font-size: 12px; font-weight: 500; line-height: 1.5; }
+.nfse-model-dialog .nfse-field :is(input:not([type='checkbox']):not([type='radio']), textarea) { font-size: 13px; line-height: 1.5; }
+.nfse-model-dialog .nfse-field input:read-only { background: #f8fafc; color: #526175; }
+.nfse-model-dialog .nfse-field input:read-only::placeholder { color: #718096; font-size: 12px; }
+.nfse-model-dialog .nfse-field input:focus-visible, .nfse-model-dialog .nfse-field textarea:focus-visible { outline: 2px solid #4169e1; outline-offset: 1px; }
+.nfse-model-party-details { margin-top: 16px; padding-top: 16px; border-top: 1px solid #edf0f5; }
+.nfse-model-issuer-details { margin-top: 16px; }
+.nfse-model-issuer-details summary { width: fit-content; color: #4169e1; cursor: pointer; font-size: 12px; font-weight: 500; }
+.nfse-model-issuer-details summary:focus-visible { outline: 2px solid #4169e1; outline-offset: 4px; }
+.nfse-model-issuer-detail { align-self: start; min-width: 0; }
+.nfse-model-issuer-detail dt { margin-bottom: 3px; color: #607286; font-size: 12px; }
+.nfse-model-issuer-detail dd { margin: 0; color: #18334b; overflow-wrap: anywhere; }
+.nfse-model-party-origin { margin: 16px 0 0; padding: 12px 14px; border-left: 2px solid #a5b8f2; background: #f7f9ff; color: #536579; font-size: 12px; line-height: 1.6; }
 .nfse-model-required { color: #a33e3e; }
 .nfse-model-choices { border: 0; margin: 0; min-width: 0; padding: 0; }
-.nfse-model-choices legend { color: #536579; font-size: 12px; font-weight: 500; line-height: 1.5; margin-bottom: 9px; }
+.nfse-model-choices legend { margin-bottom: 9px; }
 .nfse-model-radio-group { align-items: center; display: flex; flex-wrap: wrap; gap: 22px; }
 .nfse-model-radio-group label, .nfse-model-active { align-items: center; display: inline-flex; font-size: 13px; gap: 8px; }
 .nfse-model-radio-group input, .nfse-model-active input { accent-color: #4169e1; height: 16px; margin: 0; width: 16px; }
 .nfse-model-active { align-self: end; min-height: 38px; }
+.nfse-model-identity {
+  flex: 0 0 auto;
+  grid-template-columns: minmax(0, 1fr) auto;
+  margin: 0;
+  padding: 16px 20px;
+  border: 0;
+  border-radius: 0;
+}
+.nfse-model-status { align-self: end; gap: 10px; padding: 5px 12px; border: 1px solid #e2e8f0; border-radius: 8px; }
+.nfse-model-status small { display: block; color: #607286; font-size: 11px; line-height: 1.4; }
 .nfse-model-complementary summary { color: #36506b; cursor: pointer; font-size: 13px; font-weight: 500; }
 .nfse-model-complementary summary:focus-visible { outline: 2px solid #4169e1; outline-offset: 4px; }
 .nfse-model-complementary[open] summary { margin-bottom: 14px; }
 .nfse-model-counter { color: #64748b; font-size: 11px; text-align: right; }
-.nfse-model-dialog .nfse-notice { margin: 0 16px 16px; }
-.nfse-model-dialog .nfse-footer { gap: 8px; }
+.nfse-model-dialog .nfse-notice { margin: 0 0 14px; }
+.nfse-model-steps { border-bottom: 1px solid #e2e8f0; flex: 0 0 auto; padding: 0 20px; }
+.nfse-model-steps ol { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); list-style: none; margin: 0; padding: 0; }
+.nfse-model-steps button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 42px;
+  gap: 8px;
+  padding: 10px 8px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: #607286;
+  font-size: 13px;
+}
+.nfse-model-steps button:hover { background: #f8fafc; color: #18334b; }
+.nfse-model-steps button[aria-current='step'] { border-bottom-color: #4169e1; color: #4169e1; font-weight: 500; }
+.nfse-model-steps button:focus-visible { outline: 2px solid #4169e1; outline-offset: -3px; }
+.nfse-model-steps button:disabled { cursor: wait; opacity: .6; }
+.nfse-model-step-notice { min-height: 160px; }
+.nfse-model-step-notice p { color: #536579; font-size: 13px; line-height: 1.6; margin: 0 0 8px; }
+.nfse-model-step-actions, .nfse-model-save-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.nfse-model-save-actions { margin-left: auto; }
+.nfse-model-progress { padding: 0 4px; color: #607286; font-size: 12px; }
+.nfse-model-dialog .nfse-model-footer { flex: 0 0 auto; gap: 12px; padding: 14px 20px; border-top: 1px solid #e2e8f0; background: #fff; }
+.nfse-model-dialog .nfse-button { min-height: 36px; border-radius: 8px; font-size: 12px; font-weight: 500; box-shadow: none; }
+.nfse-model-dialog .nfse-button-primary { background: #4169e1; border-color: #4169e1; }
+.nfse-model-dialog .nfse-button-primary:hover:not(:disabled) { background: #3357c5; border-color: #3357c5; }
+.nfse-model-help, .nfse-model-dialog .nfse-portal-note { color: #607286; font-size: 12px; line-height: 1.6; margin: 0 0 14px; }
+.nfse-model-dialog .nfse-portal-note:last-child { margin-bottom: 0; }
 .nfse-model-field-error { color: #a33e3e; font-size: 12px; line-height: 1.5; }
 .nfse-fiscal-code-invalid input[role='combobox'] { border-color: #c86b6b; }
 .nfse-model-catalog-retry { align-items: center; color: #a33e3e; display: flex; flex-wrap: wrap; font-size: 12px; gap: 10px; }
+.nfse-model-review-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.nfse-model-review-heading h3 { margin: 0; }
+.nfse-model-review-list { margin: 0; }
+.nfse-model-review-row { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); gap: 16px; padding: 10px 0; border-top: 1px solid #edf0f5; }
+.nfse-model-review-key { color: #607286; font-size: 12px; }
+.nfse-model-review-value { margin: 0; color: #18334b; white-space: pre-wrap; overflow-wrap: anywhere; }
+.nfse-model-pending { border-color: #e8dbb9; background: #fffcf4; }
+.nfse-model-dialog .nfse-model-section ul { margin: 0; padding-left: 18px; }
+.nfse-model-dialog .nfse-model-section li + li { margin-top: 5px; }
 @media (max-width: 760px) {
+  .nfse-model-overlay { padding: 10px; }
+  .nfse-model-dialog { max-height: calc(100dvh - 20px); }
+  .nfse-model-header, .nfse-model-identity { padding: 14px 16px; }
+  .nfse-model-heading-icon { display: none; }
+  .nfse-model-close { flex-basis: 44px; width: 44px; height: 44px; }
+  .nfse-model-body { padding: 16px; }
   .nfse-model-grid { grid-template-columns: minmax(0, 1fr); }
   .nfse-model-section { padding: 14px; }
   .nfse-model-active { min-height: 44px; }
-  .nfse-model-dialog .nfse-footer { padding: 12px 14px; }
+  .nfse-model-status { justify-self: start; }
+  .nfse-model-dialog .nfse-model-footer { padding: 12px 16px; }
+  .nfse-model-dialog .nfse-button { min-height: 44px; }
+  .nfse-model-dialog .nfse-field :is(input:not([type='checkbox']):not([type='radio']), textarea) { min-height: 44px; font-size: 16px; }
+  .nfse-model-steps { padding: 0 8px; }
+  .nfse-model-steps button { gap: 5px; padding: 10px 3px; min-height: 44px; font-size: 12px; }
+  .nfse-model-progress { margin-left: auto; }
+  .nfse-model-step-actions, .nfse-model-save-actions { width: 100%; }
+  .nfse-model-step-actions > button:last-child { margin-left: auto; }
+  .nfse-model-save-actions > button { flex: 1; justify-content: center; }
+  .nfse-model-review-heading { flex-wrap: wrap; }
+  .nfse-model-review-row { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+}
+@media (max-width: 430px) {
+  .nfse-model-steps button svg { display: none; }
 }

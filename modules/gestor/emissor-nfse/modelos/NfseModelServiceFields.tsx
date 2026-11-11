@@ -4,6 +4,12 @@ import type { NfseModelInput } from '../types/nfse.types';
 import NfseFiscalCodeField, { type NfseFiscalCodeOption } from './NfseFiscalCodeField';
 import NfseModelDescriptionEditor from './NfseModelDescriptionEditor';
 import type { NfseDescriptionPreviewState } from './NfseDescriptionPreview';
+import type { NfseModelServiceOptions } from './services/nfse-model-service-options';
+import type { NfseModelPeopleOptions } from './services/nfse-model-people-options';
+import NfseModelLocationPicker from './NfseModelLocationPicker';
+import { emptyNfseModelServiceOptions } from './nfse-model-options-form';
+import type { NfseModelValuesDraft } from './services/nfse-model-values.types';
+import type { NfseModelAdditionalDraft } from './services/nfse-model-additional.types';
 
 export interface NfseModelFormValues {
   name: string;
@@ -18,6 +24,10 @@ export interface NfseModelFormValues {
   complementaryInfo: string;
   orderReference: string;
   active: boolean;
+  serviceOptions: NfseModelServiceOptions | null;
+  peopleOptions: NfseModelPeopleOptions | null;
+  valuesOptions: NfseModelValuesDraft | null;
+  additionalOptions: NfseModelAdditionalDraft | null;
 }
 
 export type SetNfseModelField = <K extends keyof NfseModelFormValues>(
@@ -60,6 +70,7 @@ export default function NfseModelServiceFields({
   fields, setField, specialTreatment, onSpecialTreatmentChange,
   catalogs, catalogsLoading, catalogsError, onRetryCatalogs, descriptionPreview,
 }: Props) {
+  const serviceOptions = fields.serviceOptions || emptyNfseModelServiceOptions();
   return (
     <section className="nfse-model-section" aria-labelledby="nfse-model-service-heading">
       <h3 id="nfse-model-service-heading">Serviço/fornecimento prestado</h3>
@@ -67,9 +78,6 @@ export default function NfseModelServiceFields({
         <NfseFiscalCodeField id="nfse-model-national-code" label="Código de Tributação Nacional" required
           value={fields.nationalServiceCode} onChange={(value) => setField('nationalServiceCode', value)}
           options={catalogs?.nationalServices} loading={catalogsLoading} error={catalogsError} />
-        <NfseFiscalCodeField id="nfse-model-nbs-code" label="Item da NBS correspondente ao serviço/fornecimento prestado" required
-          value={fields.nbsCode} onChange={(value) => setField('nbsCode', value)}
-          options={catalogs?.nbs} loading={catalogsLoading} error={catalogsError} />
         {catalogsError && <div className="nfse-wide nfse-model-catalog-retry" role="alert">
           <span>Catálogos indisponíveis.</span>
           <button type="button" className="nfse-button nfse-button-secondary" onClick={onRetryCatalogs}>Tentar novamente</button>
@@ -97,9 +105,17 @@ export default function NfseModelServiceFields({
             if (option) setField('immunityType', option.value);
           }} />
         </div>}
-        <NfseFiscalCodeField id="nfse-model-operation-code" label="Código indicador da operação"
+        {fields.issTreatment === 'EXPORTACAO' && <NfseModelLocationPicker id="nfse-model-export-country"
+          label="País onde se verificou o resultado da exportação" kind="country"
+          value={serviceOptions.exportResultCountryCode || ''} selectedLabel={serviceOptions.exportResultCountryLabel}
+          onChange={option => setField('serviceOptions', { ...serviceOptions,
+            exportResultCountryCode: option.value, exportResultCountryLabel: option.label })} />}
+        <NfseFiscalCodeField id="nfse-model-nbs-code" label="Item da NBS correspondente ao serviço/fornecimento prestado" required
+          value={fields.nbsCode} onChange={(value) => setField('nbsCode', value)}
+          options={catalogs?.nbs} loading={catalogsLoading} error={catalogsError} />
+        {serviceOptions.includeIbsCbs === true && <NfseFiscalCodeField id="nfse-model-operation-code" label="Código indicador da operação" required
           value={fields.operationIndicatorCode} onChange={(value) => setField('operationIndicatorCode', value)}
-          options={catalogs?.operationIndicators} loading={catalogsLoading} error={catalogsError} />
+          options={catalogs?.operationIndicators} loading={catalogsLoading} error={catalogsError} />}
         <NfseModelDescriptionEditor value={fields.serviceDescription} onChange={(value) => setField('serviceDescription', value)} preview={descriptionPreview} />
       </div>
     </section>

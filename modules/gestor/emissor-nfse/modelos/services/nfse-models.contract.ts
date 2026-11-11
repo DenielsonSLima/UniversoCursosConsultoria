@@ -1,6 +1,10 @@
 import type { NfseModel, NfseModelDescriptionPreview, NfseModelInput, NfseModelServiceFields } from '../../types/nfse.types';
 import { NfseContractError } from '../../services/nfse.errors';
 import { boolean, integer, oneOf, record, string } from '../../services/nfse.validation';
+import { parseNfseModelServiceOptions, serializeNfseModelServiceOptions } from './nfse-model-service-options';
+import { parseNfseModelPeopleOptions, serializeNfseModelPeopleOptions } from './nfse-model-people-options';
+import { parseNfseModelValuesOptions, serializeNfseModelValuesOptions } from './nfse-model-values-options';
+import { parseNfseModelAdditionalOptions, serializeNfseModelAdditionalOptions } from './nfse-model-additional-options';
 
 const text = (value: unknown, max: number, optional = false) => {
   const result = string(value, optional).trim();
@@ -18,16 +22,26 @@ export function parseNfseModelFields(value: unknown): NfseModelServiceFields {
   const issTreatment = oneOf(row.issTreatment, ['TRIBUTAVEL', 'IMUNIDADE', 'EXPORTACAO', 'NAO_INCIDENCIA']);
   const immunityType = row.immunityType === null ? null : oneOf(row.immunityType, ['1', '2', '3', '4', '5']);
   if ((issTreatment === 'IMUNIDADE') !== (immunityType !== null)) throw new NfseContractError();
+  const serviceOptions = row.serviceOptions === undefined ? undefined : parseNfseModelServiceOptions(row.serviceOptions);
+  const peopleOptions = row.peopleOptions === undefined ? undefined
+    : parseNfseModelPeopleOptions(row.peopleOptions, serviceOptions?.includeIbsCbs ?? null);
+  if (serviceOptions?.governmentPurchase === true && peopleOptions?.version === 1 && peopleOptions.recipientLocation !== 'BRASIL') {
+    throw new NfseContractError();
+  }
   return {
     nationalServiceCode: code(row.nationalServiceCode, 6),
     nbsCode: code(row.nbsCode, 9),
     operationIndicatorCode: code(row.operationIndicatorCode, 6, true),
-    serviceDescription: text(row.serviceDescription, 1000),
+    serviceDescription: text(row.serviceDescription, 2000),
     issTreatment, immunityType,
     technicalResponsibilityDocument: text(row.technicalResponsibilityDocument, 40, true),
     referenceDocument: text(row.referenceDocument, 255, true),
     complementaryInfo: text(row.complementaryInfo, 2000, true),
     orderReference: text(row.orderReference, 60, true),
+    ...(serviceOptions !== undefined ? { serviceOptions } : {}),
+    ...(peopleOptions !== undefined ? { peopleOptions } : {}),
+    ...(row.valuesOptions === undefined ? {} : { valuesOptions: parseNfseModelValuesOptions(row.valuesOptions) }),
+    ...(row.additionalOptions === undefined ? {} : { additionalOptions: parseNfseModelAdditionalOptions(row.additionalOptions) }),
   };
 }
 
@@ -38,14 +52,23 @@ export function parseNfseStoredModel(value: unknown): NfseModel {
 }
 
 export function nfseModelDefinition(input: NfseModelInput) {
-  return { ...parseNfseModelFields(input), name: text(input.name, 120), active: boolean(input.active) };
+  const fields = parseNfseModelFields(input);
+  return { ...fields, name: text(input.name, 120), active: boolean(input.active),
+    ...(fields.serviceOptions !== undefined ? { serviceOptions: serializeNfseModelServiceOptions(fields.serviceOptions,
+      fields.issTreatment, fields.nationalServiceCode, fields.operationIndicatorCode) } : {}),
+    ...(fields.peopleOptions !== undefined ? { peopleOptions: serializeNfseModelPeopleOptions(fields.peopleOptions,
+      fields.serviceOptions?.includeIbsCbs ?? null) } : {}),
+    ...(fields.valuesOptions === undefined ? {} : { valuesOptions: serializeNfseModelValuesOptions(fields.valuesOptions) }),
+    ...(fields.additionalOptions === undefined ? {} : { additionalOptions: serializeNfseModelAdditionalOptions(fields.additionalOptions) }),
+  };
 }
 
 export function parseNfseModelDescriptionPreview(value: unknown): NfseModelDescriptionPreview {
   const row = record(value);
   return {
-    description: text(row.description, 1000),
+    description: text(row.description, 2000),
     monthLabel: text(row.monthLabel, 30),
     usesReferenceMonth: boolean(row.usesReferenceMonth),
+    ...(row.requiresAcademicContext === undefined ? {} : { requiresAcademicContext: boolean(row.requiresAcademicContext) }),
   };
 }

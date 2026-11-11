@@ -7,7 +7,8 @@ import {
   mapNfseCandidate, mapNfseConfiguration, mapNfseDocument,
   mapNfseMutation, mapNfsePage, mapNfseWorkspace,
 } from './nfse.mappers';
-import { assertScope, integer, oneOf, string, unwrapNfseEnvelope } from './nfse.validation';
+import { assertScope, assertUniqueIds, integer, list, oneOf, record, string, unwrapNfseEnvelope } from './nfse.validation';
+import { nfseDocumentFilterArgs } from './nfse-document-filters';
 
 export type NfseRpcTransport = (name: string, args: Record<string, unknown>, signal?: AbortSignal) => Promise<unknown>;
 
@@ -62,10 +63,21 @@ export function createNfseService(
     },
     async documents(scope: NfseScope, filters: NfseDocumentFilters, signal?: AbortSignal) {
       const page = pageNumber(filters.page);
-      return mapNfsePage(await call(NFSE_RPC.documents, scope, {
+      const filterArgs = nfseDocumentFilterArgs(filters);
+      const value = record(await call(NFSE_RPC.documents, scope, {
         p_status: oneOf(filters.status, ['PENDENTE', 'EMITIDA', 'ERRO']),
         p_search: optionalText(filters.search?.trim()), p_page: page, p_page_size: 25,
-      }, signal), mapNfseDocument, page);
+        ...(filters.dateFrom || filters.dateTo || filters.courseType || filters.origin || filters.issuedState ? filterArgs : {}),
+      }, signal));
+      const courseTypes = value.courseTypes === undefined ? [] : list(value.courseTypes, item => {
+        const row = record(item); return { id: string(row.value), value: string(row.value), label: string(row.label) };
+      });
+      assertUniqueIds(courseTypes);
+      const result = mapNfsePage(value, mapNfseDocument, page);
+      if (filters.issuedState && result.rows.some(row => filters.issuedState === 'CANCELLED'
+        ? row.state !== 'CANCELLED' : row.state === 'CANCELLED')) throw new NfseContractError();
+      if (filters.status === 'EMITIDA' && new Set(result.rows.map(row => row.accessKey)).size !== result.rows.length) throw new NfseContractError();
+      return { ...result, supportsFilters: value.courseTypes !== undefined, courseTypes: courseTypes.map(({ value, label }) => ({ value, label })) };
     },
     async configuration(scope: NfseScope, signal?: AbortSignal) {
       const config = mapNfseConfiguration(await call(NFSE_RPC.configuration, scope, {}, signal));

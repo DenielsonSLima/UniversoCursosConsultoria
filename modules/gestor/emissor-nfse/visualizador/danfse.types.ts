@@ -12,6 +12,11 @@ export interface DanfseAssets {
   boldFont: string;
 }
 
+/** Authenticated backend status, independent from the immutable authorization XML. */
+export interface DanfseRenderOptions {
+  cancellationState?: 'CONFIRMED' | null;
+}
+
 export const DANFSE_XML_NAMESPACE = 'http://www.sped.fazenda.gov.br/nfse';
 export const DANFSE_XML_MAX_BYTES = 2 * 1024 * 1024;
 export const DPS = 'DPS/infDPS/';

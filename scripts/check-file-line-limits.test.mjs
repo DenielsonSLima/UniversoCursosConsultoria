@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { Buffer } from 'node:buffer';
 import test from 'node:test';
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdtempSync, mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -25,8 +25,8 @@ function fixture(run) {
   const config = changes => write('ai/operacao/qualidade/limite-linhas.json', JSON.stringify({
     version: 1, maxLines: 500, manifests: ['manifest.md'], thirdPartyRegistry: NFSE_THIRD_PARTY_REGISTRY, ...changes,
   }));
-  const check = () => {
-    const result = spawnSync(process.execPath, [checker], { cwd: directory, encoding: 'utf8' });
+  const check = (args = [], env = {}) => {
+    const result = spawnSync(process.execPath, [checker, ...args], { cwd: directory, encoding: 'utf8', env: { ...process.env, ...env } });
     return { status: result.status, output: result.stdout + result.stderr };
   };
   try {
@@ -82,4 +82,57 @@ test('a symlink cannot replace the registered upstream file', () => fixture(({ d
   symlinkSync(join(directory, 'manual-source.xsd'), join(directory, source.path));
   const result = check(); assert.equal(result.status, 1);
   assert.match(result.output, /Fonte de terceiros ausente ou não regular/);
+}));
+
+const retiredRegistryPath = 'ai/operacao/qualidade/limite-linhas-retired-paths.json';
+const retired = { path: 'retired.ts', retiredInManifest: 'manifest.md', reason: 'Substituído por implementação com histórico preservado.' };
+
+test('retired paths registry preserves inline compatibility and rejects missing, invalid, duplicate or still-existing entries', () => fixture(({ write, manifest, config, check }) => {
+  manifest([source.path, retired.path]);
+  config({ retiredPathsRegistry: retiredRegistryPath });
+  assert.match(check().output, /Registro de paths retirados não encontrado/);
+  write(retiredRegistryPath, JSON.stringify({ version: 2, retiredPaths: [retired] }));
+  assert.match(check().output, /exige version 1/);
+  write(retiredRegistryPath, JSON.stringify({ version: 1, retiredPaths: [retired] }));
+  assert.equal(check().status, 0);
+  config({ retiredPaths: [retired], retiredPathsRegistry: retiredRegistryPath });
+  assert.match(check().output, /Registro de path retirado duplicado/);
+  config({ retiredPaths: [retired] });
+  assert.equal(check().status, 0, 'Historic inline registries remain supported');
+  write(retired.path, 'still present\n');
+  assert.match(check().output, /path marcado como retirado ainda existe/);
+}));
+
+// A synthetic read-only git executable supplies base file bytes without creating
+// repositories, commits, branches or relying on the checkout's unrelated history.
+function baseReader(directory, write, files) {
+  write('bin/git', '#!/usr/bin/env node\nconst fs=require("node:fs");const files=JSON.parse(fs.readFileSync(process.env.NFSE_TEST_BASE_FILES,"utf8"));'
+    + 'const value=files[process.argv[3]];if(process.argv[2]!=="show"||typeof value!=="string")process.exit(1);process.stdout.write(value);\n');
+  chmodSync(join(directory, 'bin/git'), 0o755);
+  write('base-files.json', JSON.stringify(files));
+  return { PATH: `${join(directory, 'bin')}:${process.env.PATH}`, NFSE_TEST_BASE_FILES: join(directory, 'base-files.json') };
+}
+
+test('diff guard preserves inline base entries when moved into the new registry and refuses mutation', () => fixture(({ directory, write, manifest, config, check }) => {
+  manifest([source.path, retired.path]);
+  config({ retiredPathsRegistry: retiredRegistryPath });
+  write(retiredRegistryPath, JSON.stringify({ version: 1, retiredPaths: [retired] }));
+  const env = baseReader(directory, write, { 'base:ai/operacao/qualidade/limite-linhas.json': JSON.stringify({ manifests: ['manifest.md'], retiredPaths: [retired] }) });
+  assert.equal(check(['--check-diff', 'base', 'head'], env).status, 0);
+  write(retiredRegistryPath, JSON.stringify({ version: 1, retiredPaths: [{ ...retired, reason: 'Changed history' }] }));
+  assert.match(check(['--check-diff', 'base', 'head'], env).output, /Registro de path retirado foi removido ou alterado/);
+}));
+
+test('diff guard reads the registry from the base and refuses missing registry or removed entries', () => fixture(({ directory, write, manifest, config, check }) => {
+  manifest([source.path, retired.path]);
+  config({ retiredPathsRegistry: retiredRegistryPath });
+  write(retiredRegistryPath, JSON.stringify({ version: 1, retiredPaths: [retired] }));
+  const baseFiles = { 'base:ai/operacao/qualidade/limite-linhas.json': JSON.stringify({ manifests: ['manifest.md'], retiredPathsRegistry: retiredRegistryPath }),
+    [`base:${retiredRegistryPath}`]: JSON.stringify({ version: 1, retiredPaths: [retired] }) };
+  const env = baseReader(directory, write, baseFiles);
+  assert.equal(check(['--check-diff', 'base', 'head'], env).status, 0);
+  write(retiredRegistryPath, JSON.stringify({ version: 1, retiredPaths: [] }));
+  assert.match(check(['--check-diff', 'base', 'head'], env).output, /Registro de path retirado foi removido ou alterado/);
+  delete baseFiles[`base:${retiredRegistryPath}`]; write('base-files.json', JSON.stringify(baseFiles));
+  assert.match(check(['--check-diff', 'base', 'head'], env).output, /Registro de paths retirados não encontrado na base/);
 }));

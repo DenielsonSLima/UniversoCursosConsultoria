@@ -4,11 +4,11 @@ import { isNfseScopeValid } from '../../types/nfse.scope';
 import type { NfseScope } from '../../types/nfse.types';
 import type { IssuedNfseIdentity } from '../services/nfse-issued-xml.service-core';
 import { readNfseIssuedXml } from '../services/nfse-issued-xml.service';
+import { nfseIssuedXmlQueryKey } from '../services/nfse-issued-presentation';
 
 export function useNfseIssuedXml(scope: NfseScope | null, document: IssuedNfseIdentity) {
   return useQuery({
-    queryKey: ['nfse-issued-xml', scope?.contextKey, scope?.poloId, scope?.environment, scope?.month,
-      document.id, document.accessKey, document.number],
+    queryKey: nfseIssuedXmlQueryKey(scope, document),
     enabled: isNfseScopeValid(scope) && document.status === 'EMITIDA',
     retry: false, staleTime: 0, gcTime: 0, refetchOnWindowFocus: false,
     queryFn: ({ signal }) => {

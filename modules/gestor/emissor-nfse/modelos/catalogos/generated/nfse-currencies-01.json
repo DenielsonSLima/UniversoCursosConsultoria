@@ -1,0 +1,443 @@
+[
+  {
+    "code": "005",
+    "name": "AFEGANE AFEGANIST",
+    "symbol": "AFN",
+    "excludedDate": null,
+    "aliases": [
+      "AFEGANE AFEGANIST AFN"
+    ]
+  },
+  {
+    "code": "008",
+    "name": "BIRR",
+    "symbol": "ETB",
+    "excludedDate": "28/07/1998",
+    "aliases": [
+      "BIRR ETB"
+    ]
+  },
+  {
+    "code": "009",
+    "name": "BIRR/ETIOPIA",
+    "symbol": "ETB",
+    "excludedDate": null,
+    "aliases": [
+      "BIRR/ETIOPIA ETB"
+    ]
+  },
+  {
+    "code": "010",
+    "name": "AUSTRAL",
+    "symbol": "ARG",
+    "excludedDate": "16/12/2009",
+    "aliases": [
+      "AUSTRAL ARG"
+    ]
+  },
+  {
+    "code": "015",
+    "name": "BATH/TAILANDIA",
+    "symbol": "THB",
+    "excludedDate": null,
+    "aliases": [
+      "BATH/TAILANDIA THB"
+    ]
+  },
+  {
+    "code": "020",
+    "name": "BALBOA/PANAMA",
+    "symbol": "PAB",
+    "excludedDate": null,
+    "aliases": [
+      "BALBOA/PANAMA PAB"
+    ]
+  },
+  {
+    "code": "025",
+    "name": "BOLIVAR/VENZUELA",
+    "symbol": "VEB",
+    "excludedDate": "17/12/2009",
+    "aliases": [
+      "BOLIVAR/VENZUELA VEB"
+    ]
+  },
+  {
+    "code": "026",
+    "name": "BOLIVAR VENEZUELANO",
+    "symbol": "VEF",
+    "excludedDate": "19/08/2018",
+    "aliases": [
+      "BOLIVAR VENEZUELANO VEF"
+    ]
+  },
+  {
+    "code": "027",
+    "name": "BOLIVAR SOBERANO VENEZUELANO",
+    "symbol": "VES",
+    "excludedDate": null,
+    "aliases": [
+      "BOLIVAR SOBERANO VENEZUELANO VES"
+    ]
+  },
+  {
+    "code": "030",
+    "name": "BOLIVIANO/BOLIVIA",
+    "symbol": "BOB",
+    "excludedDate": null,
+    "aliases": [
+      "BOLIVIANO/BOLIVIA BOB"
+    ]
+  },
+  {
+    "code": "035",
+    "name": "CEDI GANA",
+    "symbol": "GHS",
+    "excludedDate": null,
+    "aliases": [
+      "CEDI GANA GHS"
+    ]
+  },
+  {
+    "code": "040",
+    "name": "COLON/COSTA RICA",
+    "symbol": "CRC",
+    "excludedDate": null,
+    "aliases": [
+      "COLON/COSTA RICA CRC"
+    ]
+  },
+  {
+    "code": "045",
+    "name": "COLON/EL SALVADOR",
+    "symbol": "SVC",
+    "excludedDate": null,
+    "aliases": [
+      "COLON/EL SALVADOR SVC"
+    ]
+  },
+  {
+    "code": "050",
+    "name": "CORDOBA/NICARAGUA",
+    "symbol": "NIC",
+    "excludedDate": "31/07/1998",
+    "aliases": [
+      "CORDOBA/NICARAGUA NIC"
+    ]
+  },
+  {
+    "code": "051",
+    "name": "CORDOBA OURO",
+    "symbol": "NIO",
+    "excludedDate": null,
+    "aliases": [
+      "CORDOBA OURO NIO"
+    ]
+  },
+  {
+    "code": "055",
+    "name": "COROA DINAMARQUESA",
+    "symbol": "DKK",
+    "excludedDate": null,
+    "aliases": [
+      "COROA DINAMARQUESA DKK"
+    ]
+  },
+  {
+    "code": "057",
+    "name": "COROA ESTONIA",
+    "symbol": "EEK",
+    "excludedDate": "17/01/2011",
+    "aliases": [
+      "COROA ESTONIA EEK"
+    ]
+  },
+  {
+    "code": "058",
+    "name": "COROA ESLOVACA",
+    "symbol": "SKK",
+    "excludedDate": "03/03/2009",
+    "aliases": [
+      "COROA ESLOVACA SKK"
+    ]
+  },
+  {
+    "code": "060",
+    "name": "COROA ISLND/ISLAN",
+    "symbol": "ISK",
+    "excludedDate": null,
+    "aliases": [
+      "COROA ISLND/ISLAN ISK"
+    ]
+  },
+  {
+    "code": "065",
+    "name": "COROA NORUEGUESA",
+    "symbol": "NOK",
+    "excludedDate": null,
+    "aliases": [
+      "COROA NORUEGUESA NOK"
+    ]
+  },
+  {
+    "code": "070",
+    "name": "COROA SUECA",
+    "symbol": "SEK",
+    "excludedDate": null,
+    "aliases": [
+      "COROA SUECA SEK"
+    ]
+  },
+  {
+    "code": "075",
+    "name": "COROA TCHECA",
+    "symbol": "CZK",
+    "excludedDate": null,
+    "aliases": [
+      "COROA TCHECA CZK"
+    ]
+  },
+  {
+    "code": "078",
+    "name": "CRUZADO NOVO",
+    "symbol": "NCZ$",
+    "excludedDate": "15/03/1990",
+    "aliases": [
+      "CRUZADO NOVO NCZ$"
+    ]
+  },
+  {
+    "code": "079",
+    "name": "CRUZADO",
+    "symbol": "CZ$",
+    "excludedDate": "15/01/1989",
+    "aliases": [
+      "CRUZADO CZ$"
+    ]
+  },
+  {
+    "code": "080",
+    "name": "CRUZEIRO",
+    "symbol": "CR$",
+    "excludedDate": "27/02/1986",
+    "aliases": [
+      "CRUZEIRO CR$"
+    ]
+  },
+  {
+    "code": "083",
+    "name": "CRUZEIRO",
+    "symbol": "CR$",
+    "excludedDate": "31/07/1993",
+    "aliases": [
+      "CRUZEIRO CR$"
+    ]
+  },
+  {
+    "code": "085",
+    "name": "CRUZEIRO REAL",
+    "symbol": "CR$",
+    "excludedDate": "30/06/1994",
+    "aliases": [
+      "CRUZEIRO REAL CR$"
+    ]
+  },
+  {
+    "code": "088",
+    "name": "CUPON GEORGIANO",
+    "symbol": "RUR",
+    "excludedDate": "04/08/1998",
+    "aliases": [
+      "CUPON GEORGIANO RUR"
+    ]
+  },
+  {
+    "code": "090",
+    "name": "DALASI/GAMBIA",
+    "symbol": "GMD",
+    "excludedDate": null,
+    "aliases": [
+      "DALASI/GAMBIA GMD"
+    ]
+  },
+  {
+    "code": "095",
+    "name": "DINAR ARGELINO",
+    "symbol": "DZD",
+    "excludedDate": null,
+    "aliases": [
+      "DINAR ARGELINO DZD"
+    ]
+  },
+  {
+    "code": "100",
+    "name": "DINAR/KWAIT",
+    "symbol": "KWD",
+    "excludedDate": null,
+    "aliases": [
+      "DINAR/KWAIT KWD"
+    ]
+  },
+  {
+    "code": "105",
+    "name": "DINAR/BAHREIN",
+    "symbol": "BHD",
+    "excludedDate": null,
+    "aliases": [
+      "DINAR/BAHREIN BHD"
+    ]
+  },
+  {
+    "code": "110",
+    "name": "DINAR IEMENITA",
+    "symbol": "YD",
+    "excludedDate": "31/07/1998",
+    "aliases": [
+      "DINAR IEMENITA YD"
+    ]
+  },
+  {
+    "code": "115",
+    "name": "DINAR/IRAQUE",
+    "symbol": "IQD",
+    "excludedDate": null,
+    "aliases": [
+      "DINAR/IRAQUE IQD"
+    ]
+  },
+  {
+    "code": "120",
+    "name": "DINAR IUGOSLAVO",
+    "symbol": "DIN",
+    "excludedDate": "04/08/1998",
+    "aliases": [
+      "DINAR IUGOSLAVO DIN"
+    ]
+  },
+  {
+    "code": "125",
+    "name": "DINAR/JORDANIA",
+    "symbol": "JOD",
+    "excludedDate": null,
+    "aliases": [
+      "DINAR/JORDANIA JOD"
+    ]
+  },
+  {
+    "code": "130",
+    "name": "DINAR/LIBIA",
+    "symbol": "LYD",
+    "excludedDate": null,
+    "aliases": [
+      "DINAR/LIBIA LYD"
+    ]
+  },
+  {
+    "code": "132",
+    "name": "DINAR/MACEDONIA",
+    "symbol": "MKD",
+    "excludedDate": null,
+    "aliases": [
+      "DINAR/MACEDONIA MKD"
+    ]
+  },
+  {
+    "code": "133",
+    "name": "DINAR SERVIO SERVIA",
+    "symbol": "RSD",
+    "excludedDate": null,
+    "aliases": [
+      "DINAR SERVIO SERVIA RSD"
+    ]
+  },
+  {
+    "code": "134",
+    "name": "NOVA LIBRA SUDANESA",
+    "symbol": "SDG",
+    "excludedDate": null,
+    "aliases": [
+      "NOVA LIBRA SUDANESA SDG"
+    ]
+  },
+  {
+    "code": "135",
+    "name": "DINAR/TUNISIA",
+    "symbol": "TND",
+    "excludedDate": null,
+    "aliases": [
+      "DINAR/TUNISIA TND"
+    ]
+  },
+  {
+    "code": "136",
+    "name": "LIBRA SUL SUDANESA",
+    "symbol": "SSP",
+    "excludedDate": null,
+    "aliases": [
+      "LIBRA SUL SUDANESA SSP"
+    ]
+  },
+  {
+    "code": "138",
+    "name": "DIREITO ESPECIAL",
+    "symbol": "SDR",
+    "excludedDate": null,
+    "aliases": [
+      "DIREITO ESPECIAL SDR"
+    ]
+  },
+  {
+    "code": "139",
+    "name": "DIRHAM/MARROCOS",
+    "symbol": "MAD",
+    "excludedDate": null,
+    "aliases": [
+      "DIRHAM/MARROCOS MAD"
+    ]
+  },
+  {
+    "code": "145",
+    "name": "DIRHAM/EMIR.ARABE",
+    "symbol": "AED",
+    "excludedDate": null,
+    "aliases": [
+      "DIRHAM/EMIR.ARABE AED"
+    ]
+  },
+  {
+    "code": "148",
+    "name": "DOBRA S TOME PRIN",
+    "symbol": "STD",
+    "excludedDate": "31/12/2017",
+    "aliases": [
+      "DOBRA S TOME PRIN STD"
+    ]
+  },
+  {
+    "code": "149",
+    "name": "DOBRA SÃO TOMÉ E PRÍNCIPE",
+    "symbol": "STN",
+    "excludedDate": null,
+    "aliases": [
+      "DOBRA SÃO TOMÉ E PRÍNCIPE STN"
+    ]
+  },
+  {
+    "code": "150",
+    "name": "DOLAR AUSTRALIANO",
+    "symbol": "AUD",
+    "excludedDate": null,
+    "aliases": [
+      "DOLAR AUSTRALIANO AUD"
+    ]
+  },
+  {
+    "code": "155",
+    "name": "DOLAR/BAHAMAS",
+    "symbol": "BSD",
+    "excludedDate": null,
+    "aliases": [
+      "DOLAR/BAHAMAS BSD"
+    ]
+  }
+]

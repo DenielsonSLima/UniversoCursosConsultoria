@@ -21,7 +21,7 @@ export function useNfsePartnerServicesRealtime(scope: NfseScope | null) {
       if (disposed || timer) return;
       timer = setTimeout(() => {
         timer = undefined;
-        void client.invalidateQueries({ queryKey: nfsePartnerServicesKeys.scope(captured) });
+        if (!disposed) void client.invalidateQueries({ queryKey: nfsePartnerServicesKeys.scope(captured) });
       }, 300);
     };
     void import('../../../../../lib/supabase').then(({ supabase }) => {
@@ -35,7 +35,7 @@ export function useNfsePartnerServicesRealtime(scope: NfseScope | null) {
           subscribed = true;
         });
       cleanup = () => { void supabase.removeChannel(channel); };
-    });
+    }).catch(() => { /* Queries recover on focus/reconnect; no polling. */ });
     return () => { disposed = true; if (timer) clearTimeout(timer); cleanup?.(); };
   }, [client, contextKey, poloId, environment, month]);
 }

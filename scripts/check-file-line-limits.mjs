@@ -135,7 +135,18 @@ for (const exemption of exemptionEntries) {
 }
 
 const retiredPaths = new Map();
-for (const retired of config.retiredPaths ?? []) {
+const retiredPathsRegistryPath = config.retiredPathsRegistry;
+const retiredRegistryContent = retiredPathsRegistryPath && existsSync(retiredPathsRegistryPath)
+  ? read(retiredPathsRegistryPath) : null;
+if (retiredPathsRegistryPath && !retiredRegistryContent) {
+  failures.push(`Registro de paths retirados não encontrado: ${retiredPathsRegistryPath}`);
+}
+const retiredRegistry = retiredRegistryContent ? JSON.parse(retiredRegistryContent) : { version: 1, retiredPaths: [] };
+if (retiredRegistry.version !== 1 || !Array.isArray(retiredRegistry.retiredPaths)) {
+  failures.push(`${retiredPathsRegistryPath}: exige version 1 e retiredPaths como lista.`);
+}
+const retiredEntries = [...(config.retiredPaths ?? []), ...(Array.isArray(retiredRegistry.retiredPaths) ? retiredRegistry.retiredPaths : [])];
+for (const retired of retiredEntries) {
   if (!retired.path || !retired.retiredInManifest || !retired.reason) {
     failures.push(`${CONFIG_PATH}: retirada exige path, retiredInManifest e reason.`);
     continue;
@@ -146,6 +157,7 @@ for (const retired of config.retiredPaths ?? []) {
   if (existsSync(retired.path)) {
     failures.push(`${CONFIG_PATH}: path marcado como retirado ainda existe (${retired.path}).`);
   }
+  if (retiredPaths.has(retired.path)) failures.push(`Registro de path retirado duplicado: ${retired.path}`);
   retiredPaths.set(retired.path, retired);
 }
 
@@ -268,9 +280,20 @@ if (diffIndex >= 0) {
           failures.push(`Manifesto auditado foi removido da cobertura incremental: ${baseManifest}`);
         }
       }
-      const currentRetiredPaths = new Map((config.retiredPaths ?? []).map(item => [item.path, item]));
-      for (const baseRetired of baseConfig.retiredPaths ?? []) {
-        const currentRetired = currentRetiredPaths.get(baseRetired.path);
+      const baseRetiredRegistryContent = baseConfig.retiredPathsRegistry
+        ? readGitFile(base, baseConfig.retiredPathsRegistry) : null;
+      if (baseConfig.retiredPathsRegistry && !baseRetiredRegistryContent) {
+        failures.push(`Registro de paths retirados não encontrado na base: ${baseConfig.retiredPathsRegistry}`);
+      }
+      const baseRetiredRegistry = baseRetiredRegistryContent
+        ? JSON.parse(baseRetiredRegistryContent) : { version: 1, retiredPaths: [] };
+      if (baseRetiredRegistry.version !== 1 || !Array.isArray(baseRetiredRegistry.retiredPaths)) {
+        failures.push(`${baseConfig.retiredPathsRegistry}: registro de paths retirados inválido na base.`);
+      }
+      const baseRetiredEntries = [...(baseConfig.retiredPaths ?? []),
+        ...(Array.isArray(baseRetiredRegistry.retiredPaths) ? baseRetiredRegistry.retiredPaths : [])];
+      for (const baseRetired of baseRetiredEntries) {
+        const currentRetired = retiredPaths.get(baseRetired.path);
         if (!currentRetired || ['retiredInManifest', 'reason'].some(field => currentRetired[field] !== baseRetired[field])) {
           failures.push(`Registro de path retirado foi removido ou alterado: ${baseRetired.path}`);
         }

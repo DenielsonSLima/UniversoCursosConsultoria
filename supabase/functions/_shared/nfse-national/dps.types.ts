@@ -36,6 +36,7 @@ export interface NationalDpsInput {
     municipalTaxCode?: string;
     nbs?: string;
     description: string;
+    complementaryInfo?: string;
   };
   values: {
     serviceAmount: string;
@@ -49,6 +50,14 @@ export interface NationalDpsInput {
       | { mode: 'PERCENTAGES'; federal: string; state: string; municipal: string }
       | { mode: 'SIMPLE_NATIONAL_PERCENTAGE'; percentage: string };
   };
+  /** Minimal domestic IBS/CBS declaration; classifications must be reviewed, never inferred. */
+  ibscbs?: {
+    personalUse: '0' | '1';
+    operationCode: string;
+    recipientIsAcquirer: true;
+    cst: string;
+    classificationCode: string;
+  };
   substitution?: {
     originalAccessKey: string;
     reasonCode: '01' | '02' | '03' | '04' | '05' | '99';
@@ -58,7 +67,7 @@ export interface NationalDpsInput {
     recipientConfirmed: true;
     competenceConfirmed: true;
     classificationConfirmed: true;
-    ibscbs: 'NOT_APPLICABLE_CONFIRMED';
+    ibscbs: 'NOT_APPLICABLE_CONFIRMED' | 'DECLARED_CONFIRMED' | 'SYNTHETIC_PILOT_OMISSION';
     federalRetentions: 'NONE_CONFIRMED';
     deductionsAndDiscounts: 'NONE_CONFIRMED';
   };

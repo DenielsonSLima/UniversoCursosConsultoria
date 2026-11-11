@@ -2,8 +2,11 @@ import { useEffect, useRef, useState } from 'react';
 import type { NfseDocument, NfseScope } from '../types/nfse.types';
 import { isNfseScopeValid } from '../types/nfse.scope';
 import type { NfseDownloadFormat, NfseDownloadProgress } from './nfse-download.core';
+import { useQueryClient } from '@tanstack/react-query';
+import { resolveNfseIssuedDocument } from '../visualizador/services/nfse-issued-presentation';
 
 export function useNfseDownloads(scope: NfseScope | null, canRead: boolean) {
+  const client = useQueryClient();
   const controller = useRef<AbortController | null>(null);
   const generation = useRef(0);
   const [busy, setBusy] = useState(false);
@@ -40,8 +43,14 @@ export function useNfseDownloads(scope: NfseScope | null, canRead: boolean) {
         if (!operation.signal.aborted && current === generation.current) setMessage(value.phase === 'zip'
           ? 'Compactando ZIP…' : `Preparando arquivos: ${value.completed} de ${value.total}`);
       };
-      const file = archive ? await createNfseZip(captured, selection, format, operation.signal, progress)
-        : await createNfseDownloadFile(captured, selection[0], format, operation.signal);
+      const resolveIdentity = (identity: Pick<NfseDocument, 'id' | 'accessKey' | 'number'>) => {
+        const selected = selection.find(item => item.id === identity.id && item.accessKey === identity.accessKey && item.number === identity.number);
+        const current = selected && resolveNfseIssuedDocument(client, captured, selected);
+        if (!current || !currentAccess.current.canRead || currentAccess.current.scopeKey !== JSON.stringify(captured)) throw new Error('A consulta fiscal mudou. Atualize a lista antes de baixar.');
+        return current;
+      };
+      const file = archive ? await createNfseZip(captured, selection, format, operation.signal, progress, resolveIdentity)
+        : await createNfseDownloadFile(captured, selection[0], format, operation.signal, resolveIdentity);
       operation.signal.throwIfAborted();
       if (current !== generation.current || !currentAccess.current.canRead
         || currentAccess.current.scopeKey !== JSON.stringify(captured)) return;
