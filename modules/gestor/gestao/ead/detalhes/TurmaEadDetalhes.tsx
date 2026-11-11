@@ -25,7 +25,7 @@ import { useTurmaEadRealtime } from './hooks/useTurmaEadRealtime';
 import useDebouncedValue from './hooks/useDebouncedValue';
 import { EadFinanceiroPanel } from './components/EadFinanceiroPanel';
 import { EadEnrollmentAction } from './components/EadEnrollmentAction';
-import { canAddAlunoEad } from './ead-enrollment.model';
+import { canAddAlunoEad, canChooseEadFinancial } from './ead-enrollment.model';
 import AdicionarAlunoEadModal from './components/AdicionarAlunoEadModal';
 import StatCard from './components/EadStatCard';
 import { formatCurrency, statusStyle, statusLabel, normalizeStatus, isEadEnrollmentActive, isEadEnrollmentPending } from './ead-turma.presentation';
@@ -44,6 +44,7 @@ const TurmaEadDetalhes: React.FC<TurmaEadDetalhesProps> = ({ turma, onBack, perm
   const { toasts, removeToast, toast } = useToast();
   const [activeTab, setActiveTab] = useState<'resumo' | 'alunos' | 'financeiro' | 'configuracoes'>('resumo');
   const canManageEnrollment = canAddAlunoEad(permissions);
+  const canChooseFinancial = canChooseEadFinancial(permissions);
   const canViewFinanceiro = canAccessGestaoTurmaTab(permissions, 'financeiro');
   const [searchAluno, setSearchAluno] = useState('');
   const [showAddAluno, setShowAddAluno] = useState(false);
@@ -64,6 +65,7 @@ const TurmaEadDetalhes: React.FC<TurmaEadDetalhesProps> = ({ turma, onBack, perm
     turma.cursoId,
     (alunosDisponiveisQuery.data || []) as AlunoDisponivel[],
     canManageEnrollment,
+    canChooseFinancial,
     {
       onSuccess: (alunoNome, result) => {
         if (result.mode === 'SEM_COBRANCA') {
@@ -288,6 +290,7 @@ const TurmaEadDetalhes: React.FC<TurmaEadDetalhesProps> = ({ turma, onBack, perm
 
       <AdicionarAlunoEadModal
         open={showAddAluno && canManageEnrollment}
+        canChooseFinancial={canChooseFinancial}
         cursoNome={resumo?.cursoNome || turma.cursoNome || turma.nome}
         valor={resumo?.valor}
         search={searchAluno}

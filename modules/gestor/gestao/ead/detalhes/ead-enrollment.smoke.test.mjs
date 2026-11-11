@@ -10,7 +10,7 @@ import { build, stop } from 'esbuild';
 const require = createRequire(import.meta.url);
 const rootDirectory = fileURLToPath(new URL('../../../../../', import.meta.url));
 
-test('React DOM: Financeiro escolhe sem cobrança ou BolePix; só a confirmação executa uma operação', async () => {
+test('React DOM: Financeiro pode dispensar; Gestão sem Financeiro exige aviso e cobrança', async () => {
   const { JSDOM } = require(process.env.EAD_JSDOM_PATH ? resolve(process.env.EAD_JSDOM_PATH) : 'jsdom');
   const temporary = await mkdtemp(join(tmpdir(), 'ead-enrollment-smoke-'));
   const dom = new JSDOM('<!doctype html><html><body></body></html>', { url: 'http://localhost', pretendToBeVisual: true });
@@ -39,6 +39,7 @@ test('React DOM: Financeiro escolhe sem cobrança ou BolePix; só a confirmaçã
       export { default as Modal } from './modules/gestor/gestao/ead/detalhes/components/AdicionarAlunoEadModal';
       export { EadEnrollmentAction } from './modules/gestor/gestao/ead/detalhes/components/EadEnrollmentAction';
       export { EadFinanceiroPanel } from './modules/gestor/gestao/ead/detalhes/components/EadFinanceiroPanel';
+      export { canAddAlunoEad, canChooseEadFinancial } from './modules/gestor/gestao/ead/detalhes/ead-enrollment.model';
       export { useMatricularAlunoEadMutation } from './modules/gestor/gestao/ead/detalhes/hooks/useTurmaEadMutations';
     `, resolveDir: rootDirectory, loader: 'ts' }, outfile: output, bundle: true, platform: 'node', format: 'cjs', logLevel: 'silent', plugins: [{
       name: 'synthetic-client', setup(builder) {
@@ -56,18 +57,24 @@ test('React DOM: Financeiro escolhe sem cobrança ou BolePix; só a confirmaçã
     let outcome;
     let lastError;
     let canEnroll = true;
+    let canChooseFinancial = true;
     let courseValue = 129.9;
     let unsafeMutation;
     const permissions = { modules: ['gestao', 'financeiro'], financeiroTabs: [], allPolos: false };
+    const academic = { ...permissions, modules: ['gestao'], tabs: { gestao: ['alunos'] } };
+    assert.equal(components.canAddAlunoEad(academic), true);
+    assert.equal(components.canChooseEadFinancial(academic), false);
+    assert.equal(components.canChooseEadFinancial(permissions), true);
+    assert.equal(components.canAddAlunoEad({ ...academic, tabs: { gestao: [] } }), false);
     function Harness() {
       const [open, setOpen] = React.useState(true);
-      const mutation = useMatricularAlunoEadMutation(turma, curso, [aluno], canEnroll, {
+      const mutation = useMatricularAlunoEadMutation(turma, curso, [aluno], canEnroll, canChooseFinancial, {
         onSuccess: (_name, result) => { outcome = result; setOpen(false); }, onError: error => { lastError = error; },
       });
       unsafeMutation = mutation;
       return h(React.Fragment, null, h('button', { onClick: () => setOpen(true) }, 'Abrir'),
-        h(EadEnrollmentAction, { permissions: canEnroll ? permissions : { ...permissions, modules: ['gestao', 'caixa'] }, onClick: () => setOpen(true) }), h(Modal, {
-        open: open && canEnroll, cursoNome: 'Curso sintético', valor: courseValue, search: '', alunos: [aluno],
+        h(EadEnrollmentAction, { permissions: { ...permissions, modules: canEnroll ? (canChooseFinancial ? ['gestao', 'financeiro'] : ['gestao', 'caixa']) : ['caixa'] }, onClick: () => setOpen(true) }), h(Modal, {
+        open: open && canEnroll, canChooseFinancial, cursoNome: 'Curso sintético', valor: courseValue, search: '', alunos: [aluno],
         isLoading: false, isFetching: false, isSearchSettling: false, isError: false,
         pendingAlunoId: mutation.isPending ? mutation.variables?.alunoId : null, onSearchChange() {},
         onClose: () => setOpen(false), onRetry() {}, onMatricular: input => mutation.mutate(input),
@@ -127,6 +134,12 @@ test('React DOM: Financeiro escolhe sem cobrança ou BolePix; só a confirmaçã
     assert.equal(fake.calls.length, 3, 'Escolher sem cobrança ainda não executa nada');
     assert.match(document.body.textContent, /Acesso imediato, sem cobrança/);
     assert.match(document.body.textContent, /Nenhum valor será lançado/);
+    canChooseFinancial = false;
+    await act(async () => { reactRoot.render(h(QueryClientProvider, { client }, h(Harness))); await flush(); });
+    assert.equal(document.querySelector('input[value="SEM_COBRANCA"]'), null);
+    assert.ok(button('Confirmar e gerar cobrança').disabled, 'Revogar Financeiro invalida a dispensa já selecionada; curso sem preço bloqueia a cobrança');
+    canChooseFinancial = true;
+    await act(async () => { reactRoot.render(h(QueryClientProvider, { client }, h(Harness))); await flush(); });
     const freeConfirm = button('Confirmar sem cobrança');
     assert.equal(freeConfirm.disabled, false, 'Sem cobrança funciona no curso sem preço');
     await act(async () => { freeConfirm.click(); freeConfirm.click(); await flush(); });
@@ -140,12 +153,33 @@ test('React DOM: Financeiro escolhe sem cobrança ou BolePix; só a confirmaçã
     await act(async () => { fake.finish({ data: { success: true, mode: 'SEM_COBRANCA', status: 'ATIVO', matriculaId: 'matricula-gratuita' }, error: null }); await flush(); });
     assert.equal(outcome.mode, 'SEM_COBRANCA');
     assert.equal(document.querySelector('[role="dialog"]'), null);
+    canChooseFinancial = false;
+    courseValue = 129.9;
+    await act(async () => { reactRoot.render(h(QueryClientProvider, { client }, h(Harness))); await flush(); });
+    assert.ok(button('Adicionar aluno'), 'Gestão sem Financeiro permite inclusão com cobrança obrigatória');
+    await click(button('Adicionar aluno'));
+    await click(button('Selecionar'));
+    assert.equal(document.querySelector('input[value="SEM_COBRANCA"]'), null);
+    assert.match(document.body.textContent, /cobrança será gerada automaticamente/);
+    await act(async () => { unsafeMutation.mutate({ alunoId: aluno.id, mode: 'SEM_COBRANCA', requestId: crypto.randomUUID() }); await flush(); });
+    assert.match(lastError.message, /Financeiro.*sem cobrança/);
+    assert.equal(fake.calls.length, 4, 'Sem Financeiro não pode solicitar dispensa programaticamente');
+    await click(button('Confirmar e gerar cobrança'));
+    assert.equal(fake.calls[4].name, 'payment-checkout');
+    await act(async () => { fake.finish({ data: { matriculaId: 'matricula', receivableId: 'titulo' }, error: null }); await flush(); });
+    assert.equal(outcome.mode, 'GERAR_COBRANCA');
+    await click(button('Adicionar aluno'));
+    await click(button('Selecionar'));
+    await click(button('Confirmar e gerar cobrança'));
+    await act(async () => { fake.finish({ data: { matriculaId: 'sem-financeiro' }, error: null }); await flush(); });
+    assert.match(lastError.message, /não confirmou o financeiro/);
+    assert.ok(document.querySelector('[role="dialog"]'), 'Resposta sem título financeiro não encerra a inclusão como sucesso');
     canEnroll = false;
     await act(async () => { reactRoot.render(h(QueryClientProvider, { client }, h(Harness))); await flush(); });
-    assert.equal(button('Adicionar aluno'), undefined, 'Caixa/gestão sem Financeiro não oferecem matrícula');
+    assert.equal(button('Adicionar aluno'), undefined, 'Caixa isolado não permite matrícula');
     await act(async () => { unsafeMutation.mutate({ alunoId: aluno.id, mode: 'SEM_COBRANCA', requestId: crypto.randomUUID() }); await flush(); });
-    assert.match(lastError.message, /Financeiro obrigatório/);
-    assert.equal(fake.calls.length, 4, 'A mutação também bloqueia disparo programático sem permissão');
+    assert.match(lastError.message, /turma EAD/);
+    assert.equal(fake.calls.length, 6, 'A mutação também bloqueia disparo programático sem permissão');
     await act(async () => { reactRoot.render(h(EadFinanceiroPanel, { resumo: { valor: 129.9 }, alunos: [{ matriculaId: 'sem-cobranca', nome: 'Aluno sintético', status: 'ATIVO' }], pagamentos: [], isLoading: false, isError: false })); await flush(); });
     assert.match(container.textContent, /Sem cobrança vinculada/);
     assert.doesNotMatch(container.textContent, /129,90|Manual/);

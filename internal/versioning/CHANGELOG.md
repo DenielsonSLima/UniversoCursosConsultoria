@@ -24,6 +24,12 @@ Histórico arquivado: [10/10/2026 — versão 4.8.204](./changelog/2026-10-10-ve
 
 Histórico arquivado: [10/10/2026 a 13/10/2026 — versões 4.8.208 a 4.8.214](./changelog/2026-10-10-a-13-versoes-4-8-208-a-214.md).
 
+## [4.8.286] - 2026-11-10
+
+- Gestão/Alunos permite matrícula EAD com cobrança obrigatória mesmo sem acesso ao Financeiro, com aviso explícito antes da confirmação.
+- A opção de dispensar cobrança permanece exclusiva de usuários com Financeiro autorizado; servidor preserva perfil, turma e polo.
+- Inclusão não informa sucesso sem confirmação do lançamento financeiro, e a matrícula genérica não pode liberar EAD sem o fluxo próprio.
+
 ## [4.8.284] - 2026-11-10
 
 - Extra-classe exige selecionar a aula de origem e aparece como complemento, com vínculo validado na mesma turma e disciplina.

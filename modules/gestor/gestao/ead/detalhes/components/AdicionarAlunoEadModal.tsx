@@ -7,6 +7,7 @@ import { generateSafeUuid } from '../../../../../../lib/randomUuid';
 
 interface AdicionarAlunoEadModalProps {
   open: boolean;
+  canChooseFinancial: boolean;
   cursoNome: string;
   valor?: number;
   search: string;
@@ -24,6 +25,7 @@ interface AdicionarAlunoEadModalProps {
 
 const AdicionarAlunoEadModal: React.FC<AdicionarAlunoEadModalProps> = ({
   open,
+  canChooseFinancial,
   cursoNome,
   valor,
   search,
@@ -40,7 +42,8 @@ const AdicionarAlunoEadModal: React.FC<AdicionarAlunoEadModalProps> = ({
 }) => {
   const titleId = useId();
   const [selectedAluno, setSelectedAluno] = useState<AlunoDisponivel | null>(null);
-  const [mode, setMode] = useState<EadEnrollmentMode>('GERAR_COBRANCA');
+  const [selectedMode, setMode] = useState<EadEnrollmentMode>('GERAR_COBRANCA');
+  const mode = canChooseFinancial ? selectedMode : 'GERAR_COBRANCA';
   const [requestId, setRequestId] = useState(generateSafeUuid);
   const chargeAvailable = Number.isFinite(valor) && Number(valor) > 0;
   const descriptionId = useId();
@@ -143,7 +146,9 @@ const AdicionarAlunoEadModal: React.FC<AdicionarAlunoEadModalProps> = ({
               Adicionar aluno à turma EAD
             </h2>
             <p id={descriptionId} className="mt-1 text-sm font-medium leading-5 text-slate-600">
-              Selecione o aluno e confirme se deseja gerar cobrança ou liberar o acesso sem cobrança.
+              {canChooseFinancial
+                ? 'Selecione o aluno e confirme se deseja gerar cobrança ou liberar o acesso sem cobrança.'
+                : 'Selecione o aluno e confirme a inclusão com geração automática da cobrança.'}
             </p>
           </div>
 
@@ -161,9 +166,9 @@ const AdicionarAlunoEadModal: React.FC<AdicionarAlunoEadModalProps> = ({
         {selectedAluno ? (
           <div className="space-y-5 overflow-y-auto px-5 py-6 sm:px-7">
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
-              <h3 className="font-bold">Como deseja adicionar o aluno?</h3>
+              <h3 className="font-bold">{canChooseFinancial ? 'Como deseja adicionar o aluno?' : 'Confirmação da matrícula'}</h3>
               <p className="mt-2"><strong>{selectedAluno.nome}</strong> · {cursoNome}</p>
-              <fieldset disabled={Boolean(pendingAlunoId)} className="mt-4 space-y-3">
+              {canChooseFinancial ? <fieldset disabled={Boolean(pendingAlunoId)} className="mt-4 space-y-3">
                 <legend className="sr-only">Cobrança da matrícula</legend>
                 {([
                   ['GERAR_COBRANCA', 'Gerar cobrança', 'Cria a cobrança BolePix e mantém o acesso bloqueado até o pagamento confirmado.'],
@@ -174,7 +179,9 @@ const AdicionarAlunoEadModal: React.FC<AdicionarAlunoEadModalProps> = ({
                     onChange={() => { setMode(value); setRequestId(generateSafeUuid()); }} className="mt-1" />
                   <span><span className="block font-bold text-[#001a33]">{label}</span><span className="mt-1 block leading-5">{description}</span></span>
                 </label>)}
-              </fieldset>
+              </fieldset> : <p role="note" className="mt-4 font-medium text-amber-900">
+                A cobrança será gerada automaticamente. Seu perfil não tem acesso ao Financeiro para adicionar sem cobrança.
+              </p>}
             </div>
             <div role="status" className={`rounded-xl border p-4 text-sm ${mode === 'GERAR_COBRANCA' ? 'border-amber-200 bg-amber-50 text-amber-900' : 'border-emerald-200 bg-emerald-50 text-emerald-900'}`}>
               {mode === 'GERAR_COBRANCA' ? <>

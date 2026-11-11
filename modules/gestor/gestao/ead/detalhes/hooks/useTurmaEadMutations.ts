@@ -18,6 +18,7 @@ export const useMatricularAlunoEadMutation = (
   cursoId: string,
   alunosDisponiveis: AlunoDisponivel[],
   canManageEnrollment: boolean,
+  canChooseFinancial: boolean,
   callbacks: {
     onSuccess: (alunoNome: string, result: EadEnrollmentResult) => void;
     onError: (error: any) => void;
@@ -27,7 +28,10 @@ export const useMatricularAlunoEadMutation = (
 
   return useMutation({
     mutationFn: (input: EadEnrollmentInput) => {
-      if (!canManageEnrollment) throw new Error('Acesso ao Financeiro obrigatório para adicionar alunos EAD.');
+      if (!canManageEnrollment) throw new Error('Acesso aos alunos da turma EAD obrigatório para adicionar alunos.');
+      if (input.mode === 'SEM_COBRANCA' && !canChooseFinancial) {
+        throw new Error('Acesso ao Financeiro obrigatório para adicionar sem cobrança.');
+      }
       return eadTurmaService.adicionarAluno(turmaId, cursoId, input);
     },
     onSuccess: (result, input) => {

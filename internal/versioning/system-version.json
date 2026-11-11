@@ -1,8 +1,8 @@
 {
-  "version": "4.8.284",
+  "version": "4.8.286",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 293,
+  "revision": 295,
   "releasedAt": "2026-11-10",
-  "summary": "Extra-classe vinculada à aula de origem e diário cronológico com títulos sem moldura"
+  "summary": "Matrícula EAD com cobrança obrigatória para administradores sem acesso ao Financeiro"
 }
