@@ -22,7 +22,7 @@ test('issued list keeps three horizontal rows per note, visible actions and serv
   const rows = [2, 3].map(number => ({ id: `synthetic-note-${number}`, studentName: 'PARCEIRO SINTÉTICO', classLabel: 'Turma sintética', modelLabel: 'MODELO SINTÉTICO', amount: '260.00',
     status: 'EMITIDA', state: number === 2 ? 'CANCELLED' : 'AUTHORIZED', number: String(number), accessKey: String(number).repeat(50),
     emittedAt: '2026-11-11T01:00:00Z', dateSource: 'NFSE_DH_PROC', origin: 'SERVICO', courseTypeLabel: null }));
-  globalThis.__issuedQuery = (_scope, filters) => { requested.push(filters); if (globalThis.__issuedFail) return { data: undefined, error: new Error('Synthetic query failure'), isPending: false, isFetching: false, refetch: async () => {} }; return { data: { rows, page: filters.page, pageSize: 25, totalItems: 26,
+  globalThis.__issuedQuery = (_scope, filters) => { requested.push(filters); if (globalThis.__issuedFail) return { data: undefined, error: new Error('Synthetic query failure'), isPending: false, isFetching: false, refetch: async () => {} }; const serverRows = filters.issuedState === 'CANCELLED' ? rows.filter(row => row.state === 'CANCELLED') : filters.issuedState === 'ACTIVE' ? rows.filter(row => row.state !== 'CANCELLED') : rows; return { data: { rows: serverRows, page: filters.page, pageSize: 25, totalItems: 26,
     supportsFilters: true, courseTypes: [{ value: 'TECNICO', label: 'Técnico' }, { value: 'EAD', label: 'EAD' }] }, error: null, isPending: false, isFetching: false, refetch: async () => {} }; };
   const compiled = await build({ stdin: { contents: `export {default as List} from './modules/gestor/emissor-nfse/components/NfseDocumentsList';
     export {default as Actions} from './modules/gestor/emissor-nfse/emitidas/NfseDocumentActions';
@@ -36,8 +36,8 @@ test('issued list keeps three horizontal rows per note, visible actions and serv
     } }] });
   await writeFile(output, compiled.outputFiles[0].contents); const { List, Actions, NfseTabContext } = await import(pathToFileURL(output).href);
   const client = new QueryClient({ defaultOptions: { queries: { gcTime: 0 }, mutations: { gcTime: 0 } } });
-  function App() { const [ids, setIds] = useState(new Set()); return React.createElement(QueryClientProvider, { client }, React.createElement(NfseTabContext.Provider, { value: { scope, canRead: true, unavailable: false, loading: false } },
-    React.createElement(List, { status: 'EMITIDA', title: 'Notas emitidas', description: '', emptyTitle: '', emptyDescription: '', selection: { ids, disabled: false,
+  function App({ issuedState } = {}) { const [ids, setIds] = useState(new Set()); return React.createElement(QueryClientProvider, { client }, React.createElement(NfseTabContext.Provider, { value: { scope, canRead: true, unavailable: false, loading: false } },
+    React.createElement(List, { status: 'EMITIDA', issuedState, title: issuedState === 'CANCELLED' ? 'Notas canceladas' : 'Notas emitidas', description: '', emptyTitle: '', emptyDescription: '', selection: { ids, disabled: false,
       onReset: () => setIds(new Set()), onTogglePage: (items, value) => setIds(new Set(value ? items.map(item => item.id) : [])),
       onToggle: (item, checked) => setIds(previous => { const next = new Set(previous); if (checked) next.add(item.id); else next.delete(item.id); return next; }) },
       selectionActions: items => React.createElement('button', { onClick: () => actions.push({ action: 'ZIP', ids: items.map(item => item.id) }) }, `ZIP (${items.length})`),
@@ -87,5 +87,17 @@ test('issued list keeps three horizontal rows per note, visible actions and serv
     await setValue(document.querySelector('input[aria-label="Data inicial de emissão"]'), '2026-11-11');
     assert(document.querySelector('[role="alert"]').textContent.includes('data inicial'));
     assert.equal(document.querySelector('select,datalist'), null);
+    await act(async () => root.render(React.createElement(App, { key: 'cancelled', issuedState: 'CANCELLED' }))); await settle();
+    assert.equal(requested.at(-1).issuedState, 'CANCELLED'); assert.equal(requested.at(-1).page, 1);
+    assert.equal(document.querySelectorAll('.nfse-issued-note').length, 1);
+    assert(document.querySelector('[aria-label="NFS-e 2"]').textContent.includes('Cancelada'));
+    await click(document.querySelector('input[aria-label="Selecionar todas as notas desta página"]')); await click(button('ZIP (1)'));
+    assert.deepEqual(actions.at(-1).ids, ['synthetic-note-2']);
+    await click(button('Visualizar')); await click(button('PDF')); await click(button('XML'));
+    rows[1].state = 'CANCELLATION_PENDING';
+    await act(async () => root.render(React.createElement(App, { key: 'active', issuedState: 'ACTIVE' }))); await settle();
+    assert.equal(requested.at(-1).issuedState, 'ACTIVE'); assert(button('ZIP (0)'));
+    assert.equal(document.querySelectorAll('.nfse-issued-note').length, 1);
+    assert(document.querySelector('[aria-label="NFS-e 3"]').textContent.includes('Cancelamento em consulta'));
   } finally { await act(async () => root.unmount()); client.clear(); dom.window.close(); delete globalThis.__issuedQuery; delete globalThis.__issuedFail; await rm(temp, { recursive: true, force: true }); }
 });

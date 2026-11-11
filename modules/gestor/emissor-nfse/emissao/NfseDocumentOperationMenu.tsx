@@ -40,7 +40,7 @@ export default function NfseDocumentOperationMenu({ number, disabled, canCancel,
         if (index !== null) { event.preventDefault(); items[index]?.focus(); }
       }}>
       <button type="button" role="menuitem" tabIndex={-1} onClick={() => act(onConsult)}><Search size={15} />Consultar</button>
-      <button type="button" role="menuitem" tabIndex={-1} disabled={!canCancel} onClick={() => { if (canCancel) act(onCancel); }}><Ban size={15} />Cancelar</button>
+      {canCancel && <button type="button" role="menuitem" tabIndex={-1} onClick={() => act(onCancel)}><Ban size={15} />Cancelar</button>}
     </div>, document.body)}
   </>;
 }

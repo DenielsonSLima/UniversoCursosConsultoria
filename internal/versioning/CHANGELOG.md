@@ -37,6 +37,8 @@ Histórico arquivado: [10/10/2026 a 13/10/2026 — versões 4.8.208 a 4.8.214](.
 - Rejeição E0037 mostra explicação sobre o convênio municipal no ambiente consultado, sem concluir a situação em produção ou reenviar automaticamente.
 - Emissão de produção usa dados canônicos da preparação, A1 privado e uma DPS durável; respostas incertas são recuperadas por consulta sem reenvio automático.
 - Cancelamento opera somente sobre a nota própria autorizada e exige evento fiscal confirmado, preservando histórico e reservas financeiras.
+- DANFSe identifica cancelamentos confirmados com marca CANCELADA na prévia, impressão, PDF individual e ZIP, preservando o XML autorizado.
+- Canceladas tem aba própria com filtros e paginação no servidor; Emitidas mostra somente autorizações sem cancelamento confirmado.
 - Modelos oferecem Exportar com prévia e PDF completo para conferência da contabilidade; configurações mostram última NFS-e local e sequência DPS sem alterar contadores.
 - Emitidas reúne os filtros em uma linha compacta, apresenta três linhas por nota com fundos alternados e mantém Visualizar, PDF, XML e seleção para ZIP visíveis.
 - Período, origem e modalidade são filtrados no servidor antes da paginação; datas incompletas permanecem editáveis até a confirmação do campo.

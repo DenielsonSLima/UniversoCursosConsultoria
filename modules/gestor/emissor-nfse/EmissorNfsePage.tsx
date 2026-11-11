@@ -1,5 +1,5 @@
 import React, { lazy, Suspense, useMemo, useRef, useState } from 'react';
-import { AlertCircle, BriefcaseBusiness, Building2, CheckCheck, ClipboardList, FileText, Layers } from 'lucide-react';
+import { AlertCircle, BriefcaseBusiness, Building2, CheckCheck, ClipboardList, FileText, FileX2, Layers } from 'lucide-react';
 import InstitutionalSelect from '../../shared/components/InstitutionalSelect';
 import FinancialUnderlineTabs from '../financeiro/components/FinancialUnderlineTabs';
 import { useNfseWorkspace } from './hooks/useNfseQueries';
@@ -20,6 +20,7 @@ import { useNfseQueueRealtime } from './fila/useNfseQueueRealtime';
 const PrepararNfseTab = lazy(() => import('./preparar/PrepararNfseTab'));
 const PendentesNfseTab = lazy(() => import('./pendentes/PendentesNfseTab'));
 const EmitidasNfseTab = lazy(() => import('./emitidas/EmitidasNfseTab'));
+const CanceladasNfseTab = lazy(() => import('./canceladas/CanceladasNfseTab'));
 const ErrosNfseTab = lazy(() => import('./erros/ErrosNfseTab'));
 const ModelosNfseTab = lazy(() => import('./modelos/ModelosNfseTab'));
 const ServicosParceirosNfseTab = lazy(() => import('./parceiros/ServicosParceirosNfseTab'));
@@ -37,6 +38,7 @@ const tabs = [
   { id: 'servicos' as const, label: 'Serviços', icon: <BriefcaseBusiness size={15} /> },
   { id: 'pendentes' as const, label: 'Pendentes', icon: <Layers size={15} /> },
   { id: 'emitidas' as const, label: 'Emitidas', icon: <CheckCheck size={15} /> },
+  { id: 'canceladas' as const, label: 'Canceladas', icon: <FileX2 size={15} /> },
   { id: 'erros' as const, label: 'Erros', icon: <AlertCircle size={15} /> },
   { id: 'modelos' as const, label: 'Modelos', icon: <FileText size={15} /> },
 ];
@@ -101,6 +103,7 @@ const NfseWorkspace: React.FC<EmissorNfsePageProps> = ({ poloId, poloName, isMat
             {tab === 'servicos' && <ServicosParceirosNfseTab />}
             {tab === 'pendentes' && <PendentesNfseTab />}
             {tab === 'emitidas' && <EmitidasNfseTab />}
+            {tab === 'canceladas' && <CanceladasNfseTab />}
             {tab === 'erros' && <ErrosNfseTab />}
             {tab === 'modelos' && <ModelosNfseTab />}
           </Suspense>

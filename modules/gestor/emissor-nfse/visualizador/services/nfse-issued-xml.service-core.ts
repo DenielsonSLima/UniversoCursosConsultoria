@@ -1,13 +1,14 @@
-import type { NfseDocument, NfseScope } from '../../types/nfse.types';
+import type { NfseScope } from '../../types/nfse.types';
 import type { NfseRpcTransport } from '../../services/nfse.service-core';
 import { NfseContractError, NfseUnavailableError } from '../../services/nfse.errors';
 import { assertScope, record, unwrapNfseEnvelope } from '../../services/nfse.validation';
 import { DANFSE_XML_MAX_BYTES } from '../danfse.types';
 import { parseDanfseXml } from '../danfse.xml';
+import { withIssuedDanfsePresentation, type IssuedNfseIdentity } from './nfse-issued-presentation';
+export type { IssuedNfseIdentity } from './nfse-issued-presentation';
 
 /** Proposed server contract; only enable alongside the authorized-document ledger. */
 export const NFSE_AUTHORIZED_XML_RPC = 'get_nfse_authorized_xml_secure';
-export type IssuedNfseIdentity = Pick<NfseDocument, 'id' | 'status' | 'number' | 'accessKey'>;
 
 export function createNfseIssuedArtifactService(
   transport: NfseRpcTransport, enabled = false, parse = parseDanfseXml,
@@ -38,7 +39,7 @@ export function createNfseIssuedArtifactService(
     if (document.accessKey !== selected.accessKey || document.number !== selected.number
       || document.environment !== (scope.environment === 'PRODUCAO' ? '1' : '2')) throw new NfseContractError();
     // Original XML is retained only by the on-demand export operation, never its query cache.
-    return { document, xml: data.xml };
+    return { document: withIssuedDanfsePresentation(document, selected), xml: data.xml };
   };
 }
 

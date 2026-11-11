@@ -15,6 +15,7 @@ export const nfseQueryKeys = {
   documents: (scope: NfseScope | null, filters: NfseDocumentFilters) => [
     ...scopeKey(scope), 'documents', filters.status, filters.search?.trim() ?? '', filters.page ?? 1,
     filters.dateFrom ?? '', filters.dateTo ?? '', filters.courseType ?? '', filters.origin ?? '',
+    filters.issuedState ?? '',
   ] as const,
   models: (scope: NfseScope | null) => [...scopeKey(scope), 'models'] as const,
   configuration: (scope: NfseScope | null) => [...scopeKey(scope), 'configuration'] as const,

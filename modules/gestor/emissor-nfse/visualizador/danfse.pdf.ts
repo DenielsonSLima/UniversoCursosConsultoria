@@ -1,6 +1,6 @@
 import { jsPDF } from 'jspdf';
 import QRCode from 'qrcode';
-import { type DanfseAssets, type DanfseDocument, danfseConsultationUrl, dpsValue, xmlValue } from './danfse.types';
+import { type DanfseAssets, type DanfseDocument, type DanfseRenderOptions, danfseConsultationUrl, dpsValue, xmlValue } from './danfse.types';
 import { codeLabel, danfseComplements, danfseDate, joined, stateFromMunicipality } from './danfse.presentation';
 import { createDanfseLayout, DANFSE_PAGE, type DanfseLayout } from './danfse.pdf-layout';
 import { drawDanfseParties } from './danfse.pdf-parties';
@@ -32,7 +32,7 @@ function header(layout: DanfseLayout, document: DanfseDocument, assets: DanfseAs
   layout.line(layout.top - 0.065);
 }
 
-function identification(layout: DanfseLayout, document: DanfseDocument) {
+function identification(layout: DanfseLayout, document: DanfseDocument, cancelled: boolean) {
   const start = layout.top;
   const dps = (path: string) => dpsValue(document, path);
   const field = (label: string, value: string) => ({ label, value, identification: true });
@@ -47,7 +47,8 @@ function identification(layout: DanfseLayout, document: DanfseDocument) {
   ], 20.2241);
   layout.row([
     { ...field('EMITENTE DA NFS-e', codeLabel(dps('tpEmit'), { 1: 'Prestador', 2: 'Tomador', 3: 'Intermediário' })), shade: true },
-    field('SITUAÇÃO DA NFS-e', codeLabel(xmlValue(document, 'cStat'), { 100: 'NFS-e Gerada', 107: 'NFS-e MEI' })),
+    field('SITUAÇÃO DA NFS-e', cancelled ? 'Cancelada'
+      : codeLabel(xmlValue(document, 'cStat'), { 100: 'NFS-e Gerada', 107: 'NFS-e MEI' })),
     field('FINALIDADE', dps('IBSCBS/finNFSe')),
   ], 20.2241);
   const qr = QRCode.create(danfseConsultationUrl(document.accessKey), { errorCorrectionLevel: 'M' });
@@ -59,6 +60,18 @@ function identification(layout: DanfseLayout, document: DanfseDocument) {
   }
   const qrCaption = layout.linesFor('A autenticidade desta NFS-e pode ser verificada pela leitura deste código QR ou pela consulta da chave de acesso no portal nacional da NFS-e', 137.7, 6);
   qrCaption.forEach((line, index) => layout.text(line, 445.606, start + 57.4 + index * 6.9, 6));
+}
+
+function cancellationWatermark(pdf: jsPDF) {
+  // NT008 v1.02, section 2.5.1: normal >=50pt, diagonal, K35.
+  // Embedded Liberation Sans Regular is Arial-metric-compatible; it is not literal Arial.
+  pdf.saveGraphicsState();
+  pdf.setFont('DanfseSans', 'normal');
+  pdf.setFontSize(80);
+  pdf.setTextColor(0, 0, 0, 0.35);
+  const offset = pdf.getTextWidth('CANCELADA') / (2 * Math.SQRT2);
+  pdf.text('CANCELADA', DANFSE_PAGE.width / 2 - offset, DANFSE_PAGE.height / 2 + offset, { angle: 45 });
+  pdf.restoreGraphicsState();
 }
 
 function service(layout: DanfseLayout, document: DanfseDocument) {
@@ -78,7 +91,8 @@ function service(layout: DanfseLayout, document: DanfseDocument) {
 }
 
 /** A4 national layout, independent from the institutional document header. */
-export function createDanfsePdf(document: DanfseDocument, assets: DanfseAssets, projection?: DanfseProjection): Blob {
+export function createDanfsePdf(document: DanfseDocument, assets: DanfseAssets, projection?: DanfseProjection,
+  renderOptions: DanfseRenderOptions = {}): Blob {
   const fiscalValues = requireDanfseProjection(document, projection);
   const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: [595, 842], putOnlyUsedFonts: true, compress: true });
   pdf.addFileToVFS('DanfseSans-Regular.ttf', assets.regularFont);
@@ -90,8 +104,10 @@ export function createDanfsePdf(document: DanfseDocument, assets: DanfseAssets, 
   pdf.setDrawColor(0);
   pdf.rect(5, 5, 585, 832);
   const layout = createDanfseLayout(pdf);
+  const cancelled = renderOptions?.cancellationState === 'CONFIRMED';
+  if (cancelled) cancellationWatermark(pdf);
   header(layout, document, assets);
-  identification(layout, document);
+  identification(layout, document, cancelled);
   drawDanfseParties(layout, document);
   service(layout, document);
   drawDanfseTaxes(layout, document, fiscalValues);

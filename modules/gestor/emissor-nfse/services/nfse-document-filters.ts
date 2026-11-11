@@ -10,6 +10,8 @@ const date = (value?: string) => {
 export function nfseDocumentFilterArgs(filters: NfseDocumentFilters) {
   const from = date(filters.dateFrom), to = date(filters.dateTo), courseType = filters.courseType ? string(filters.courseType).trim() : null;
   if (from && to && from > to || courseType && courseType.length > 100) throw new NfseContractError();
+  if (filters.issuedState !== undefined && filters.status !== 'EMITIDA') throw new NfseContractError();
   return { p_date_from: from, p_date_to: to, p_course_type: courseType || null,
-    p_origin: filters.origin ? oneOf(filters.origin, ['ALUNO', 'SERVICO']) : null };
+    p_origin: filters.origin ? oneOf(filters.origin, ['ALUNO', 'SERVICO']) : null,
+    ...(filters.issuedState === undefined ? {} : { p_issued_state: oneOf(filters.issuedState, ['ACTIVE', 'CANCELLED']) }) };
 }

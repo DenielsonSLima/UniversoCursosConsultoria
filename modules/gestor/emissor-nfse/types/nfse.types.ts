@@ -5,7 +5,7 @@ import type { NfseModelAdditionalOptions } from '../modelos/services/nfse-model-
 import type { NfseOperationReference } from '../emissao/nfse-operation.contract';
 
 export type NfseEnvironment = 'HOMOLOGACAO' | 'PRODUCAO';
-export type NfseTab = 'preparar' | 'pendentes' | 'emitidas' | 'erros' | 'modelos';
+export type NfseTab = 'preparar' | 'pendentes' | 'emitidas' | 'canceladas' | 'erros' | 'modelos';
 
 /** Cache/request correlation only. The server must authorize the actual session. */
 export interface NfseScope {
@@ -125,6 +125,7 @@ export interface NfseCandidateFilters {
 }
 
 export interface NfseDocumentFilters {
+  issuedState?: 'ACTIVE' | 'CANCELLED';
   status: 'PENDENTE' | 'EMITIDA' | 'ERRO';
   search?: string;
   page?: number;

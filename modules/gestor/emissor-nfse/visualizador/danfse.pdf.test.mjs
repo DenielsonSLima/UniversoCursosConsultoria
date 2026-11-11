@@ -94,6 +94,40 @@ test('DANFSe is one native A4 page with selectable values, fixed official QR and
         assert.equal((await (await pdf.getPage(1)).getAnnotations()).length, 0);
       } finally { await taxTask.destroy(); }
     }
+    for (const cancellationState of [undefined, null, 'PENDING', 'REJECTED', 'CONFIRMED']) {
+      const document = { accessKey: '1'.repeat(50), number: '25', environment: '1', fields: {
+        ...fields, cStat: ['100'], 'DPS/infDPS/tpAmb': ['1'],
+        'DPS/infDPS/valores/trib/totTrib/pTotTribSN': ['12.00'],
+      } };
+      const original = JSON.stringify(document);
+      const cancelled = cancellationState === 'CONFIRMED';
+      const statusBlob = createDanfsePdf(document, assets, undefined, { cancellationState });
+      assert.equal(JSON.stringify(document), original, 'Rendering must preserve the original XML projection');
+      const statusTask = getDocument({ data: new Uint8Array(await statusBlob.arrayBuffer()) });
+      try {
+        const pdf = await statusTask.promise;
+        assert.equal(pdf.numPages, 1);
+        const page = await pdf.getPage(1), content = await page.getTextContent();
+        const text = content.items.map(item => item.str).join(' ');
+        assert.match(text, /Simples Nacional: 12,00%/);
+        assert.equal(content.items.filter(item => item.str === 'CANCELADA').length, cancelled ? 1 : 0);
+        if (cancelled) {
+          assert.match(text, /Cancelada/);
+          assert.doesNotMatch(text, /NFS-e Gerada/);
+          const mark = content.items.find(item => item.str === 'CANCELADA');
+          assert(Math.abs(mark.transform[1]) > 0 && Math.abs(mark.transform[2]) > 0, 'Watermark is native rotated text');
+          assert(Math.hypot(mark.transform[0], mark.transform[1]) >= 50, 'Watermark is at least 50pt');
+          const regular = content.items.find(item => item.str.includes('Simples Nacional:'));
+          assert.equal(mark.fontName, regular.fontName, 'Watermark uses the embedded regular font');
+        } else assert.match(text, /NFS-e Gerada/);
+        const operators = await page.getOperatorList();
+        assert.equal(operators.fnArray.filter(operator => operator === OPS.paintImageXObject).length, 1);
+        if (cancelled) assert(!operators.fnArray.some((operator, index) => operator === OPS.setGState
+          && operators.argsArray[index][0].some(([name, value]) => name === 'ca' && value < 1)),
+        'K35 watermark must not receive additional transparency');
+        assert.equal((await page.getAnnotations()).length, 0);
+      } finally { await statusTask.destroy(); }
+    }
     assert.throws(() => createDanfsePdf({ accessKey: '1'.repeat(50), number: '25', environment: '2',
       fields: { ...fields, 'DPS/infDPS/serv/cServ/xDescServ': ['conteúdo '.repeat(10000)] } }, assets), /espaço|uma página/);
     assert.throws(() => createDanfsePdf({ accessKey: '1'.repeat(50), number: '25', environment: '2',

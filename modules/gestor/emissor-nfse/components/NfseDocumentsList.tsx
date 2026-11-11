@@ -17,6 +17,7 @@ const labels: Record<NfseDocumentStatus, string> = {
 
 interface Props {
   status: 'PENDENTE' | 'EMITIDA' | 'ERRO';
+  issuedState?: 'ACTIVE' | 'CANCELLED';
   title: string;
   description: string;
   emptyTitle: string;
@@ -32,7 +33,7 @@ interface Props {
   selectionActions?: (documents: NfseDocument[], available: boolean) => ReactNode;
 }
 
-export default function NfseDocumentsList({ status, title, description, emptyTitle, emptyDescription, actions,
+export default function NfseDocumentsList({ status, issuedState, title, description, emptyTitle, emptyDescription, actions,
   documentActions, selection, selectionActions }: Props) {
   const { scope, unavailable, canRead, loading } = useNfseTabContext();
   const [search, setSearch] = useState('');
@@ -40,8 +41,8 @@ export default function NfseDocumentsList({ status, title, description, emptyTit
   const [filters, setFilters] = useState<NfseIssuedFilterValues>({ dateFrom: '', dateTo: '', courseType: '', origin: '' });
   const deferredSearch = useDeferredValue(search.trim());
   const invalidDates = status === 'EMITIDA' && Boolean(filters.dateFrom && filters.dateTo && filters.dateFrom > filters.dateTo);
-  const query = useNfseDocuments(canRead ? scope : null, { status, search: deferredSearch, page, ...(status === 'EMITIDA' ? filters : {}) }, !invalidDates);
-  const scopeKey = JSON.stringify([scope, status]), accessDenied = query.error instanceof NfseAccessError;
+  const query = useNfseDocuments(canRead ? scope : null, { status, search: deferredSearch, page, ...(status === 'EMITIDA' ? { ...filters, issuedState } : {}) }, !invalidDates);
+  const scopeKey = JSON.stringify([scope, status, issuedState]), accessDenied = query.error instanceof NfseAccessError;
   const lastSuccess = useRef<{ scopeKey: string; data: typeof query.data } | null>(null);
   if (query.data && !query.error && !query.isPending) lastSuccess.current = { scopeKey, data: query.data };
   if (accessDenied) lastSuccess.current = null;

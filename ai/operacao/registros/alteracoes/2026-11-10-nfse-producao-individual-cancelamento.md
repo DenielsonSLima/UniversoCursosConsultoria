@@ -144,6 +144,11 @@ sem outro POST, reset ou alteração dos snapshots anteriores.
   PGlite aprovadas. Não houve rede fiscal nem repetição dos 238 contratos/48 DPS.
 - A publicação permanece condicionada ao fechamento da revisão/CI do PR; esses
   resultados locais não substituem o resultado remoto de cada job.
+- O candidato 6193edda passou os 14 workflows remotos e teve Preview READY. Antes
+  da publicação, o usuário acrescentou a identificação CANCELADA no DANFSe;
+  o novo candidato será conferido com essa alteração de apresentação.
+- A extensão final de DANFSe/aba Canceladas está documentada em
+  `2026-11-11-nfse-canceladas-danfse.md`, com manifesto e validação próprios.
 
 ## Segundo teste autorizado
 
@@ -159,9 +164,10 @@ sem outro POST, reset ou alteração dos snapshots anteriores.
   nota de transparência, apesar do XML correto. Compositor corrigido e renderizado
   com 12,00%, uma página, sem alteração do XML. O PDF corrigido de 82.466 bytes
   foi copiado para Downloads como NFS-e-3-CONFERENCIA-CONTABIL-CANCELADA.pdf.
-  Nova validação de download pela UI e ZIP das duas notas ficou pendente: a sessão
-  local expirou e a última tentativa CUA retornou cgWindowNotFound. Downloads
-  individuais e ZIP da nota única já haviam passado na sessão autenticada anterior.
+  Após a reentrada do usuário, prévia e download corrigido foram conferidos na UI.
+  ZIPs reais de PDF/XML das duas notas passaram: dois membros por arquivo, CRC
+  íntegro e hashes XML idênticos aos originais. Evidência regenerável em
+  tmp/ui-downloads-two-confirmed-notes.json; a marca CANCELADA foi solicitada depois.
 - Competência e prestação em 11/11/2026, no fuso brasileiro. A correção aplicada
   em 20261111030145 resolve ISSUE_DATE/FIXED_DATE pelo snapshot do pré-modelo no
   servidor e congela a data da criação; replay não deriva outra competência.

@@ -39,3 +39,27 @@ test('date source stays tied to fiscal XML and all list filters isolate caches',
     assert.notDeepEqual(nfseQueryKeys.documents(scope, filters), nfseQueryKeys.documents(scope, { ...filters, ...change }));
   }
 });
+
+test('Active and Cancelled partitions use the server before pagination and preserve authorization history', async () => {
+  for (const issuedState of ['ACTIVE', 'CANCELLED'] as const) {
+    const calls: Record<string, unknown>[] = [];
+    const state = issuedState === 'CANCELLED' ? 'CANCELLED' : 'CANCELLATION_PENDING';
+    const service = createNfseService(async (_name, args) => {
+      calls.push(args); return { version: 1, scope, data: { ...page, rows: [{ ...row, state }] } };
+    }, { reads: true, writes: false });
+    const result = await service.documents(scope, { status: 'EMITIDA', issuedState, page: 2 });
+    assert.equal(calls[0].p_issued_state, issuedState); assert.equal(calls[0].p_page, 2);
+    assert.equal(result.totalItems, 26); assert.equal(result.rows[0].status, 'EMITIDA'); assert.equal(result.rows[0].state, state);
+    assert.notDeepEqual(nfseQueryKeys.documents(scope, { status: 'EMITIDA', issuedState }), nfseQueryKeys.documents(scope, { status: 'EMITIDA' }));
+  }
+  assert.notDeepEqual(nfseQueryKeys.documents(scope, { status: 'EMITIDA', issuedState: 'ACTIVE' }),
+    nfseQueryKeys.documents(scope, { status: 'EMITIDA', issuedState: 'CANCELLED' }));
+});
+
+test('a mismatched partition response fails rather than filtering just the visible page', async () => {
+  const service = createNfseService(async () => ({ version: 1, scope, data: page }), { reads: true, writes: false });
+  await assert.rejects(service.documents(scope, { status: 'EMITIDA', issuedState: 'ACTIVE' }), NfseContractError);
+  for (const invalid of [{ status: 'EMITIDA', issuedState: 'OTHER' }, { status: 'ERRO', issuedState: 'CANCELLED' }]) {
+    await assert.rejects(service.documents(scope, invalid as never), NfseContractError);
+  }
+});

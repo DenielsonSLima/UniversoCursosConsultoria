@@ -11,7 +11,7 @@ const { JSDOM } = await import(jsdomPath ? pathToFileURL(resolve(jsdomPath)).hre
 const base = fileURLToPath(new URL('../../../../', import.meta.url));
 const id = n => `00000000-0000-0000-0000-${String(n).padStart(12, '0')}`;
 
-test('daily workspace keeps six tabs, scoped environment and source actions; cancelled authorization stays in issued list', async () => {
+test('daily workspace has seven operational tabs and preserves cancelled authorization without another dispatch', async () => {
   await mkdir(resolve(base, 'tmp'), { recursive: true });
   const temp = await mkdtemp(resolve(base, 'tmp/nfse-daily-ui-'));
   const dom = new JSDOM('<!doctype html><div id="root"></div>', { url: 'http://localhost/', pretendToBeVisual: true });
@@ -40,7 +40,7 @@ test('daily workspace keeps six tabs, scoped environment and source actions; can
       builder.onResolve({ filter: /useNfseQueue$/ }, () => ({ path: 'queue', namespace: 'fixture' }));
       builder.onResolve({ filter: /useNfsePartnerServices$/ }, () => ({ path: 'services', namespace: 'fixture' }));
       builder.onResolve({ filter: /(?:useNfseRealtime|useNfseQueueRealtime|useNfsePartnerServicesRealtime)$/ }, () => ({ path: 'realtime', namespace: 'fixture' }));
-      builder.onResolve({ filter: /(?:PrepararNfseTab|PendentesNfseTab|EmitidasNfseTab|ErrosNfseTab|ModelosNfseTab|NfsePartnerServiceModal)$/ }, () => ({ path: 'empty', namespace: 'fixture' }));
+      builder.onResolve({ filter: /(?:PrepararNfseTab|PendentesNfseTab|EmitidasNfseTab|CanceladasNfseTab|ErrosNfseTab|ModelosNfseTab|NfsePartnerServiceModal)$/ }, () => ({ path: 'empty', namespace: 'fixture' }));
       builder.onResolve({ filter: /NfseSourceEmissionModal$/ }, () => ({ path: 'modal', namespace: 'fixture' }));
       builder.onResolve({ filter: /lib\/supabase$/ }, () => ({ path: 'blocked', namespace: 'fixture' }));
       builder.onLoad({ filter: /.*/, namespace: 'fixture' }, args => ({ loader: 'js', resolveDir: base, contents: ({
@@ -62,7 +62,8 @@ test('daily workspace keeps six tabs, scoped environment and source actions; can
   const click = async element => { assert(element); await act(async () => element.click()); await settle(); };
   try {
     await act(async () => root.render(wrap(React.createElement(Page, { poloId: id(2), contextKey: id(1), isMatriz: true })))); await settle();
-    assert.equal(document.querySelectorAll('[role="tab"]').length, 6);
+    assert.equal(document.querySelectorAll('[role="tab"]').length, 7);
+    assert([...document.querySelectorAll('[role="tab"]')].some(tab => tab.textContent === 'Canceladas'));
     assert.equal(document.querySelector('[role="tab"][aria-label="Homologação"]'), null);
     await click([...document.querySelectorAll('[role="tab"]')].find(tab => tab.textContent === 'Serviços'));
     assert(document.body.textContent.includes('Cancelada')); assert(document.body.textContent.includes('260,00'));
@@ -80,7 +81,7 @@ test('daily workspace keeps six tabs, scoped environment and source actions; can
     assert(document.querySelector('[aria-label="NFS-e 1"]').textContent.includes('Cancelada'));
     assert(document.querySelector('[aria-label="NFS-e 1"]').textContent.includes('Autorização histórica preservada'));
     await click(document.querySelector('button[aria-label="Mais ações da NFS-e 1"]'));
-    assert.equal([...document.querySelectorAll('[role="menuitem"]')].find(item => item.textContent === 'Cancelar').disabled, true);
+    assert.equal([...document.querySelectorAll('[role="menuitem"]')].find(item => item.textContent === 'Cancelar'), undefined);
     await click([...document.querySelectorAll('[role="menuitem"]')].find(item => item.textContent === 'Consultar'));
     assert.equal(opened.at(-1).intent, 'CONSULT');
     assert.equal(opened.at(-1).operation.state, 'CANCELLED'); assert.equal(opened.at(-1).source.id, serviceRow.id);

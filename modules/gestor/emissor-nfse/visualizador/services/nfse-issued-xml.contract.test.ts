@@ -6,6 +6,10 @@ import { NfseContractError, NfseUnavailableError } from '../../services/nfse.err
 import type { NfseScope } from '../../types/nfse.types';
 import { parseDanfseXml } from '../danfse.xml';
 import { createNfseIssuedArtifactService, createNfseIssuedXmlService, NFSE_AUTHORIZED_XML_RPC } from './nfse-issued-xml.service-core';
+import { nfseIssuedXmlQueryKey, resolveNfseIssuedDocument } from './nfse-issued-presentation';
+import { QueryClient } from '@tanstack/react-query';
+import { nfseQueryKeys } from '../../queries/nfse.queryKeys';
+import type { NfseDocument } from '../../types/nfse.types';
 
 const scope: NfseScope = { contextKey: 'synthetic-context',
   poloId: '00000000-0000-0000-0000-000000000001', environment: 'HOMOLOGACAO', month: '2026-11' };
@@ -28,6 +32,54 @@ test('download artifact preserves exact authorized XML rather than serializing a
   assert.equal(result.xml, original);
   assert.equal(result.document.accessKey, selected.accessKey);
   assert.equal('storagePath' in result, false);
+});
+
+test('only a confirmed canonical cancellation marks presentation; XML/hash remain original', async () => {
+  const read = createNfseIssuedArtifactService(async () => envelope(artifact()), true, parse);
+  for (const state of ['AUTHORIZED', 'CANCELLATION_PENDING', 'CANCELLATION_REJECTED', 'AWAITING_ANALYSIS', 'CANCELLED']) {
+    const result = await read(scope, { ...selected, state });
+    assert.equal(result.document.renderOptions.cancellationState, state === 'CANCELLED' ? 'CONFIRMED' : null);
+    assert.equal(result.xml, xml);
+    assert.equal(createHash('sha256').update(result.xml).digest('hex'), artifact().sha256);
+  }
+});
+
+test('cancelled presentation has a separate full-scope cache key and follows current rows without terminal regression', () => {
+  const client = new QueryClient();
+  const row = { ...selected, studentName: 'PESSOA SINTÉTICA', classLabel: 'Serviço', amount: '1.00', modelLabel: 'MODELO', retryable: false, state: 'AUTHORIZED' } as NfseDocument;
+  const cancelled = { ...row, state: 'CANCELLED', cancelPreviewId: 'cancel-synthetic' };
+  const filters = { status: 'EMITIDA' as const, page: 1 };
+  try {
+    const currentKey = nfseQueryKeys.documents(scope, filters);
+    client.setQueryData(nfseQueryKeys.documents({ ...scope, environment: 'PRODUCAO' }, filters), { rows: [cancelled] });
+    assert.equal(resolveNfseIssuedDocument(client, scope, row), row);
+    client.setQueryData(currentKey, { rows: [cancelled] }, { updatedAt: 1 });
+    client.setQueryData(nfseQueryKeys.documents(scope, { ...filters, page: 2 }), { rows: [row] }, { updatedAt: 2 });
+    assert.equal(resolveNfseIssuedDocument(client, scope, row)?.state, 'CANCELLED');
+    const originalKey = nfseIssuedXmlQueryKey(scope, row);
+    assert.notDeepEqual(nfseIssuedXmlQueryKey(scope, cancelled), originalKey);
+    for (const patch of [{ contextKey: 'other' }, { poloId: 'other' }, { month: '2026-10' }, { environment: 'PRODUCAO' as const }]) {
+      assert.notDeepEqual(nfseIssuedXmlQueryKey({ ...scope, ...patch }, row), originalKey);
+    }
+    assert.notDeepEqual(nfseIssuedXmlQueryKey(scope, { ...row, id: 'other' }), originalKey);
+    assert.notDeepEqual(nfseIssuedXmlQueryKey(scope, { ...row, accessKey: '2'.repeat(50) }), originalKey);
+    client.clear();
+    client.setQueryData(nfseQueryKeys.documents(scope, { status: 'EMITIDA', issuedState: 'ACTIVE' }), { rows: [] });
+    assert.equal(resolveNfseIssuedDocument(client, scope, row), null);
+    client.setQueryData(nfseQueryKeys.documents(scope, { status: 'EMITIDA', issuedState: 'CANCELLED' }), { rows: [cancelled] });
+    assert.equal(resolveNfseIssuedDocument(client, scope, row)?.state, 'CANCELLED');
+    client.clear();
+    const oldFilter = nfseQueryKeys.documents(scope, { status: 'EMITIDA', issuedState: 'ACTIVE', search: 'old-filter' });
+    client.setQueryData(oldFilter, { rows: [row] }, { updatedAt: 1 });
+    void client.invalidateQueries({ queryKey: [...nfseQueryKeys.scope(scope), 'documents'], refetchType: 'none' });
+    assert.equal(resolveNfseIssuedDocument(client, scope, row), null, 'An invalidated Active snapshot cannot supply a fresh presentation');
+    client.setQueryData(nfseQueryKeys.documents(scope, { status: 'EMITIDA', issuedState: 'ACTIVE' }), { rows: [] }, { updatedAt: 2 });
+    assert.equal(resolveNfseIssuedDocument(client, scope, row), null, 'Invalidated inactive filters cannot restore stale AUTHORIZED');
+    client.setQueryData(oldFilter, { rows: [row] }, { updatedAt: 1 });
+    assert.equal(resolveNfseIssuedDocument(client, scope, row), null, 'Even non-invalidated older filters cannot override a refreshed Active page');
+    client.setQueryData(nfseQueryKeys.documents(scope, { status: 'EMITIDA', issuedState: 'CANCELLED' }), { rows: [cancelled] });
+    assert.equal(resolveNfseIssuedDocument(client, scope, row)?.state, 'CANCELLED');
+  } finally { client.clear(); }
 });
 
 test('preview stays blocked before deployment of the authorized-document backend', async () => {
