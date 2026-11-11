@@ -176,7 +176,7 @@ jobs:
       - name: Validar contrato, adapter e runtime da emissão individual de produção sem rede fiscal
         run: >-
           deno test --config supabase/functions/nfse-national-individual/deno.json
-          --frozen --allow-read
+          --frozen --allow-read --allow-write=/tmp --allow-run=openssl
           supabase/functions/nfse-national-individual/handler.test.ts
           supabase/functions/nfse-national-individual/adapter.test.ts
           supabase/functions/nfse-national-individual/adapter-ibscbs.test.ts

@@ -194,7 +194,7 @@ e [auditoria A1](../../../../docs/contracts/nfse-a1-security-audit.md).
 
 ## Manifesto explícito
 
-Total: 225 arquivos
+Total: 227 arquivos
 
 - `.github/workflows/nfse-regressions.yml`
 - `ai/operacao/LOTE_ATIVO.md`
@@ -220,21 +220,17 @@ Total: 225 arquivos
 - `modules/gestor/configuracoes/nfse-portal-contribuinte/services/nfse-numbering.contract.test.ts`
 - `modules/gestor/configuracoes/nfse-portal-contribuinte/services/nfse-numbering.contract.ts`
 - `modules/gestor/configuracoes/nfse-portal-contribuinte/services/nfse-numbering.service.ts`
+- `modules/gestor/emissor-nfse/EmissorNfsePage.tsx`
+- `modules/gestor/emissor-nfse/cancelamento/NfseCancellationModelEditor.tsx`
+- `modules/gestor/emissor-nfse/cancelamento/NfseCancellationModels.interaction.test.mjs`
+- `modules/gestor/emissor-nfse/cancelamento/NfseCancellationModelsSection.tsx`
+- `modules/gestor/emissor-nfse/cancelamento/NfseCancellationTemplatePicker.tsx`
 - `modules/gestor/emissor-nfse/cancelamento/nfse-cancellation-models.contract.test.ts`
 - `modules/gestor/emissor-nfse/cancelamento/nfse-cancellation-models.contract.ts`
 - `modules/gestor/emissor-nfse/cancelamento/nfse-cancellation-models.css`
 - `modules/gestor/emissor-nfse/cancelamento/nfse-cancellation-models.queries.ts`
 - `modules/gestor/emissor-nfse/cancelamento/nfse-cancellation-models.service.ts`
-- `modules/gestor/emissor-nfse/cancelamento/NfseCancellationModelEditor.tsx`
-- `modules/gestor/emissor-nfse/cancelamento/NfseCancellationModels.interaction.test.mjs`
-- `modules/gestor/emissor-nfse/cancelamento/NfseCancellationModelsSection.tsx`
-- `modules/gestor/emissor-nfse/cancelamento/NfseCancellationTemplatePicker.tsx`
 - `modules/gestor/emissor-nfse/components/NfseDocumentsList.tsx`
-- `modules/gestor/emissor-nfse/emissao/nfse-batch.core.test.ts`
-- `modules/gestor/emissor-nfse/emissao/nfse-batch.core.ts`
-- `modules/gestor/emissor-nfse/emissao/nfse-fiscal-notice.test.ts`
-- `modules/gestor/emissor-nfse/emissao/nfse-fiscal-notice.ts`
-- `modules/gestor/emissor-nfse/emissao/nfse-operation.contract.ts`
 - `modules/gestor/emissor-nfse/emissao/NfseBatchEmissionModal.interaction.test.mjs`
 - `modules/gestor/emissor-nfse/emissao/NfseBatchEmissionModal.tsx`
 - `modules/gestor/emissor-nfse/emissao/NfseCancellationReadOnlyResult.tsx`
@@ -244,13 +240,17 @@ Total: 225 arquivos
 - `modules/gestor/emissor-nfse/emissao/NfseDocumentOperationMenu.tsx`
 - `modules/gestor/emissor-nfse/emissao/NfseSourceEmissionModal.interaction.test.mjs`
 - `modules/gestor/emissor-nfse/emissao/NfseSourceEmissionModal.tsx`
-- `modules/gestor/emissor-nfse/EmissorNfsePage.tsx`
+- `modules/gestor/emissor-nfse/emissao/nfse-batch.core.test.ts`
+- `modules/gestor/emissor-nfse/emissao/nfse-batch.core.ts`
+- `modules/gestor/emissor-nfse/emissao/nfse-fiscal-notice.test.ts`
+- `modules/gestor/emissor-nfse/emissao/nfse-fiscal-notice.ts`
+- `modules/gestor/emissor-nfse/emissao/nfse-operation.contract.ts`
 - `modules/gestor/emissor-nfse/emitidas/EmitidasNfseTab.tsx`
-- `modules/gestor/emissor-nfse/emitidas/nfse-issued-downloads.css`
 - `modules/gestor/emissor-nfse/emitidas/NfseDocumentActions.tsx`
 - `modules/gestor/emissor-nfse/emitidas/NfseIssuedFilters.tsx`
 - `modules/gestor/emissor-nfse/emitidas/NfseIssuedList.interaction.test.mjs`
 - `modules/gestor/emissor-nfse/emitidas/NfseIssuedRows.tsx`
+- `modules/gestor/emissor-nfse/emitidas/nfse-issued-downloads.css`
 - `modules/gestor/emissor-nfse/fila/fiscal-review/NfseFiscalReviewDetails.tsx`
 - `modules/gestor/emissor-nfse/fila/fiscal-review/useNfseFiscalReview.ts`
 - `modules/gestor/emissor-nfse/fila/nfse-queue.contract.ts`
@@ -266,6 +266,9 @@ Total: 225 arquivos
 - `modules/gestor/emissor-nfse/homologacao/nfse-homologation.types.ts`
 - `modules/gestor/emissor-nfse/hooks/useNfseQueries.ts`
 - `modules/gestor/emissor-nfse/hooks/useNfseRealtime.ts`
+- `modules/gestor/emissor-nfse/individual/NfseIndividualCancellation.tsx`
+- `modules/gestor/emissor-nfse/individual/NfseIndividualSnapshot.test.tsx`
+- `modules/gestor/emissor-nfse/individual/NfseIndividualSnapshot.tsx`
 - `modules/gestor/emissor-nfse/individual/nfse-individual-preparation.contract.test.ts`
 - `modules/gestor/emissor-nfse/individual/nfse-individual-preparation.service.ts`
 - `modules/gestor/emissor-nfse/individual/nfse-individual.attempt.ts`
@@ -275,21 +278,7 @@ Total: 225 arquivos
 - `modules/gestor/emissor-nfse/individual/nfse-individual.service-core.ts`
 - `modules/gestor/emissor-nfse/individual/nfse-individual.service.ts`
 - `modules/gestor/emissor-nfse/individual/nfse-individual.types.ts`
-- `modules/gestor/emissor-nfse/individual/NfseIndividualCancellation.tsx`
-- `modules/gestor/emissor-nfse/individual/NfseIndividualSnapshot.test.tsx`
-- `modules/gestor/emissor-nfse/individual/NfseIndividualSnapshot.tsx`
-- `modules/gestor/emissor-nfse/modelos/additional/nfse-preset-review.presentation.ts`
-- `modules/gestor/emissor-nfse/modelos/exportacao/nfse-model-export.css`
-- `modules/gestor/emissor-nfse/modelos/exportacao/nfse-model-export.fixture.ts`
-- `modules/gestor/emissor-nfse/modelos/exportacao/nfse-model-export.pdf.ts`
-- `modules/gestor/emissor-nfse/modelos/exportacao/nfse-model-export.projection.ts`
-- `modules/gestor/emissor-nfse/modelos/exportacao/nfse-model-export.rows.ts`
-- `modules/gestor/emissor-nfse/modelos/exportacao/nfse-model-export.test.mjs`
-- `modules/gestor/emissor-nfse/modelos/exportacao/NfseModelExportModal.interaction.test.mjs`
-- `modules/gestor/emissor-nfse/modelos/hooks/useNfseModelIssuerMetadata.ts`
-- `modules/gestor/emissor-nfse/modelos/hooks/useNfseModels.ts`
 - `modules/gestor/emissor-nfse/modelos/ModelosNfseTab.tsx`
-- `modules/gestor/emissor-nfse/modelos/nfse-description-variables.ts`
 - `modules/gestor/emissor-nfse/modelos/NfseDescriptionPreview.tsx`
 - `modules/gestor/emissor-nfse/modelos/NfseEmissionModelsSection.tsx`
 - `modules/gestor/emissor-nfse/modelos/NfseModelDescriptionEditor.interaction.test.mjs`
@@ -297,21 +286,33 @@ Total: 225 arquivos
 - `modules/gestor/emissor-nfse/modelos/NfseModelExportModal.tsx`
 - `modules/gestor/emissor-nfse/modelos/NfseModelTransparencyValues.tsx`
 - `modules/gestor/emissor-nfse/modelos/NfseModelValuesFields.tsx`
+- `modules/gestor/emissor-nfse/modelos/additional/nfse-preset-review.presentation.ts`
+- `modules/gestor/emissor-nfse/modelos/exportacao/NfseModelExportModal.interaction.test.mjs`
+- `modules/gestor/emissor-nfse/modelos/exportacao/nfse-model-export.css`
+- `modules/gestor/emissor-nfse/modelos/exportacao/nfse-model-export.fixture.ts`
+- `modules/gestor/emissor-nfse/modelos/exportacao/nfse-model-export.pdf.ts`
+- `modules/gestor/emissor-nfse/modelos/exportacao/nfse-model-export.projection.ts`
+- `modules/gestor/emissor-nfse/modelos/exportacao/nfse-model-export.rows.ts`
+- `modules/gestor/emissor-nfse/modelos/exportacao/nfse-model-export.test.mjs`
+- `modules/gestor/emissor-nfse/modelos/hooks/useNfseModelIssuerMetadata.ts`
+- `modules/gestor/emissor-nfse/modelos/hooks/useNfseModels.ts`
+- `modules/gestor/emissor-nfse/modelos/nfse-description-variables.ts`
 - `modules/gestor/emissor-nfse/modelos/services/nfse-models.contract.ts`
-- `modules/gestor/emissor-nfse/parceiros/hooks/useNfsePartnerServices.ts`
-- `modules/gestor/emissor-nfse/parceiros/hooks/useNfseServicePartnerSearch.ts`
 - `modules/gestor/emissor-nfse/parceiros/NfsePartnerServiceModal.interaction.test.mjs`
 - `modules/gestor/emissor-nfse/parceiros/NfsePartnerServiceModal.tsx`
+- `modules/gestor/emissor-nfse/parceiros/ServicosParceirosNfseTab.tsx`
+- `modules/gestor/emissor-nfse/parceiros/hooks/useNfsePartnerServices.ts`
+- `modules/gestor/emissor-nfse/parceiros/hooks/useNfseServicePartnerSearch.ts`
 - `modules/gestor/emissor-nfse/parceiros/realtime/useNfsePartnerServicesRealtime.ts`
 - `modules/gestor/emissor-nfse/parceiros/services/nfse-partner-services.contract.test.ts`
 - `modules/gestor/emissor-nfse/parceiros/services/nfse-partner-services.contract.ts`
 - `modules/gestor/emissor-nfse/parceiros/services/nfse-partner-services.service-core.ts`
-- `modules/gestor/emissor-nfse/parceiros/ServicosParceirosNfseTab.tsx`
 - `modules/gestor/emissor-nfse/parceiros/types/nfse-partner-services.types.ts`
 - `modules/gestor/emissor-nfse/pendentes/PendentesNfseTab.interaction.test.mjs`
 - `modules/gestor/emissor-nfse/pendentes/PendentesNfseTab.tsx`
 - `modules/gestor/emissor-nfse/preparar/realtime/useNfseReceiptRealtime.ts`
 - `modules/gestor/emissor-nfse/queries/nfse-cache.ts`
+- `modules/gestor/emissor-nfse/queries/nfse.queryKeys.ts`
 - `modules/gestor/emissor-nfse/realtime/nfse-realtime.test.ts`
 - `modules/gestor/emissor-nfse/realtime/nfse-subscription.ts`
 - `modules/gestor/emissor-nfse/realtime/nfse.realtime.ts`
@@ -320,6 +321,7 @@ Total: 225 arquivos
 - `modules/gestor/emissor-nfse/services/nfse-documents.contract.test.ts`
 - `modules/gestor/emissor-nfse/services/nfse.mappers.ts`
 - `modules/gestor/emissor-nfse/services/nfse.runtime.ts`
+- `modules/gestor/emissor-nfse/services/nfse.service-core.ts`
 - `modules/gestor/emissor-nfse/types/nfse.types.ts`
 - `modules/gestor/emissor-nfse/visualizador/danfse.pdf.test.mjs`
 - `modules/gestor/emissor-nfse/visualizador/danfse.presentation.ts`
