@@ -37,8 +37,22 @@ assert.equal(input.type,'text');assert.equal(input.value,'  Sênha-測試!  ');
 await act(async()=>{submit();submit();});
 assert.equal(calls.length,1);assert.equal(calls[0][2],'  Sênha-測試!  ');assert.equal(input.type,'password');
 await act(async()=>resolveUpload({expiresAt:'2027-11-10T12:00:00.000Z'}));
-assert.deepEqual(saved,[{expiresAt:'2027-11-10T12:00:00.000Z'}]);assert.equal(input.value,'');assert.equal(document.querySelector('[role=dialog]'),null);assert.equal(invalidations.length,1);
-assert.deepEqual(invalidations[0].queryKey,['nfse-configuration-metadata',scope.contextKey,scope.poloId,scope.environment]);
+assert.deepEqual(saved,[{expiresAt:'2027-11-10T12:00:00.000Z'}]);assert.equal(input.value,'');assert.equal(document.querySelector('[role=dialog]'),null);
+// A1 changes invalidate the canonical configuration resource, including derived
+// numbering/issuer and the active fiscal queue/review. These are cache hints,
+// not additional uploads or mocked RPC configuration responses.
+const expectedInvalidations=[
+  ['nfse-configuration-metadata',scope.contextKey,scope.poloId,scope.environment],
+  ['nfse','model-issuer',scope.contextKey,scope.poloId,scope.environment],
+  ['nfse','v1',scope.contextKey,scope.poloId,scope.environment,scope.month],
+  ['nfse-numbering','v1',scope.contextKey,scope.poloId,scope.environment],
+  ['nfse-queue','v1',scope.contextKey,scope.poloId,scope.environment,scope.month],
+  ['nfse-fiscal-review','v1',scope.contextKey,scope.poloId,scope.environment,scope.month],
+].map(key=>JSON.stringify(key)).sort();
+const assertInvalidationScope=()=>assert.deepEqual(invalidations.map(entry=>JSON.stringify(entry.queryKey)).sort(),expectedInvalidations);
+assertInvalidationScope();
+assert.equal(invalidations.filter(entry=>entry.queryKey[0]==='nfse-configuration-metadata').length,1);
+assert.equal(invalidations.filter(entry=>entry.queryKey[0]==='nfse-numbering').length,1);
 await render();await changeFile();input=document.getElementById('nfse-a1-password');input.value='fictional-failure';
 await act(async()=>submit());await act(async()=>rejectUpload(new Error('Senha ou arquivo inválido.')));
 assert.equal(input.value,'');assert.equal(input.type,'password');assert.match(document.querySelector('[role=alert]').textContent,/Senha ou arquivo/);
@@ -47,7 +61,7 @@ input.value='must-clear-on-cancel';await act(async()=>[...document.querySelector
 await render();input=document.getElementById('nfse-a1-password');input.value='must-clear-on-escape';await act(async()=>document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true})));assert.equal(input.value,'');assert.equal(closeCount,2);
 await render();input=document.getElementById('nfse-a1-password');input.value='must-clear-on-close';await act(async()=>document.querySelector('[aria-label=\"Fechar cadastro de certificado\"]').click());assert.equal(input.value,'');assert.equal(closeCount,3);
 await render();await changeFile();input=document.getElementById('nfse-a1-password');assert.equal(input.value,'');await act(async()=>submit());assert.equal(calls.at(-1)[2],'');await act(async()=>rejectUpload(new Error('Synthetic stop.')));
-await act(async()=>root.unmount());
+await act(async()=>root.unmount());assertInvalidationScope();
 console.log('PASS synthetic DOM smoke: standalone CSS, literal Unicode/whitespace, reveal, single submission, cache scope, expiry handoff, clearing after success/error/file change/cancel/Escape/unmount, blank-password file. No network request or real certificate.');
 
 // Exercise the real upload service with only its remote boundary replaced.

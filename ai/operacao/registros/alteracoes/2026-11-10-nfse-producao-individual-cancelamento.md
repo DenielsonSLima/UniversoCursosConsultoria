@@ -130,6 +130,21 @@ sem outro POST, reset ou alteração dos snapshots anteriores.
 - Build final Node 24.22.1 aprovado: 4.770 módulos, 26 páginas sociais geradas.
   Reader de produção e contratos focados: 76 testes Deno aprovados.
 
+## CI e verificações isoladas do fechamento
+
+- CI remoto confirmou 238/238 contratos Node e 48/48 testes DPS aprovados. As três
+  falhas anteriores dos filtros vieram de duas fontes locais omitidas do manifesto;
+  os arquivos de argumentos e chaves foram incluídos, sem afrouxar as assertivas.
+- O passo A1 ainda esperava uma invalidação. O harness foi alinhado às seis chaves
+  canônicas por escopo, mantendo a prova de upload único e senha literal/transitória.
+  Smoke DOM e serviço multipart passaram com Node 24.22.1, inclusive na reprodução
+  final da raiz e na repetição isolada, com transporte simulado e sem certificado real.
+- Os passos posteriores ao A1 foram executados localmente com Node 24.22.1 e as
+  dependências de CI: 16/16 interações DOM, 15/15 limites/PDFs e 282/282 verificações
+  PGlite aprovadas. Não houve rede fiscal nem repetição dos 238 contratos/48 DPS.
+- A publicação permanece condicionada ao fechamento da revisão/CI do PR; esses
+  resultados locais não substituem o resultado remoto de cada job.
+
 ## Segundo teste autorizado
 
 - NFS-e nº 3 de R$ 1,00 autorizada por POST único e recuperada por GET da mesma DPS,
@@ -142,7 +157,11 @@ sem outro POST, reset ou alteração dos snapshots anteriores.
 - PDF nativo de 82.657 bytes e XML baixados na sessão autenticada; visualizador
   confirmou nota, valor e classificação. O primeiro PDF omitia o percentual SN na
   nota de transparência, apesar do XML correto. Compositor corrigido e renderizado
-  com 12,00%, uma página, sem alteração do XML; novo download UI em fechamento.
+  com 12,00%, uma página, sem alteração do XML. O PDF corrigido de 82.466 bytes
+  foi copiado para Downloads como NFS-e-3-CONFERENCIA-CONTABIL-CANCELADA.pdf.
+  Nova validação de download pela UI e ZIP das duas notas ficou pendente: a sessão
+  local expirou e a última tentativa CUA retornou cgWindowNotFound. Downloads
+  individuais e ZIP da nota única já haviam passado na sessão autenticada anterior.
 - Competência e prestação em 11/11/2026, no fuso brasileiro. A correção aplicada
   em 20261111030145 resolve ISSUE_DATE/FIXED_DATE pelo snapshot do pré-modelo no
   servidor e congela a data da criação; replay não deriva outra competência.
@@ -194,7 +213,7 @@ e [auditoria A1](../../../../docs/contracts/nfse-a1-security-audit.md).
 
 ## Manifesto explícito
 
-Total: 227 arquivos
+Total: 228 arquivos
 
 - `.github/workflows/nfse-regressions.yml`
 - `ai/operacao/LOTE_ATIVO.md`
@@ -327,6 +346,7 @@ Total: 227 arquivos
 - `modules/gestor/emissor-nfse/visualizador/danfse.presentation.ts`
 - `scripts/check-file-line-limits.mjs`
 - `scripts/check-file-line-limits.test.mjs`
+- `scripts/test-nfse-certificate-ui.mjs`
 - `supabase/functions/_shared/nfse-national/dps.ts`
 - `supabase/functions/_shared/nfse-national/dps.types.ts`
 - `supabase/functions/_shared/nfse-national/homologation-schema.ts`
