@@ -33,3 +33,15 @@
   .nfse-fiscal-review-dialog .nfse-footer > p { flex-basis: auto; }
   .nfse-fiscal-review-dialog .nfse-footer .nfse-queue-actions { justify-content: flex-end; }
 }
+
+.nfse-fiscal-review-summary, .nfse-fiscal-review-model-heading { align-items: center; display: flex; flex-wrap: wrap; gap: 8px; justify-content: space-between; }
+.nfse-fiscal-review-summary { justify-content: flex-start; }
+.nfse-fiscal-review-summary small { color: #64748b; }
+.nfse-fiscal-review-model-heading .nfse-button { min-height: 30px; padding: 5px 9px; }
+.nfse-fiscal-review-model-name { font-weight: 500; line-height: 1.5; margin: 0; overflow-wrap: anywhere; }
+.nfse-fiscal-review-disclosure { min-width: 0; }
+.nfse-fiscal-review-disclosure summary { color: #36527a; cursor: pointer; font-size: 12px; line-height: 1.5; }
+.nfse-fiscal-review-disclosure summary:focus-visible { border-radius: 3px; outline: 2px solid #4169e1; outline-offset: 3px; }
+.nfse-fiscal-review-disclosure-content { margin-top: 12px; }
+.nfse-fiscal-review-disclosure-content > h4 { margin-top: 12px; }
+.nfse-fiscal-review-disclosure-content > .nfse-fiscal-review-checks { margin-top: 8px; }

@@ -1,8 +1,8 @@
 {
-  "version": "4.8.295",
+  "version": "4.8.296",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 304,
+  "revision": 305,
   "releasedAt": "2026-11-11",
-  "summary": "Modelos NFS-e da matriz disponíveis nas filiais com clonagem e inativação auditadas"
+  "summary": "Revisão fiscal compacta, competência acadêmica pelo último pagamento, CPF/CNPJ formatados e aviso interno de cancelamento"
 }

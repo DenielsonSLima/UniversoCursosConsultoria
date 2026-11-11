@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { installNfseSharedVisibility, installNfseSharedAcademicConsumers } from './nfse_fiscal_review_shared.fixture.mjs';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -45,6 +46,7 @@ test('academic descriptions freeze the exact selected enrollment and effective r
       INSERT INTO public.matriculas VALUES('${id(39)}','${id(30)}','${id(21)}','2025-02-01Z'),
         ('${id(40)}','${id(30)}','${id(20)}','2026-02-01Z'),('${id(42)}','${id(30)}','${id(20)}','2026-03-01Z');
       SET test.actor='${id(11)}';`);
+    await installNfseSharedVisibility(db);
     const formatter = await sql('20260621173000_secure_validator_identity_fields.sql');
     await db.exec(formatter.slice(0,formatter.indexOf('CREATE OR REPLACE FUNCTION public.validar_documento_por_codigo')));
     for (const name of baseMigrations) await db.exec(await sql(name));
@@ -61,6 +63,7 @@ test('academic descriptions freeze the exact selected enrollment and effective r
     const old = await value('SELECT snapshot value FROM private.nfse_queue_documents WHERE id=$1',[historical.data.documentIds[0]]);
     for (const name of ['20261111013732_nfse_academic_description_render.sql','20261111013738_nfse_academic_description_context.sql',
       '20261111013745_nfse_academic_description_prepare.sql','20261111013752_nfse_academic_description_reads.sql']) await db.exec(await sql(name));
+    await installNfseSharedAcademicConsumers(db);
     await receipt(200,40,3); await receipt(201,42,4);
     await db.exec(`INSERT INTO public.financial_payment_events VALUES('${id(300)}','RECEIVABLE','${id(200)}','${id(1)}','2026-11-09',NULL);
       INSERT INTO public.financial_payment_components VALUES('${id(400)}','${id(300)}',4000),('${id(401)}','${id(300)}',6000);`);
@@ -97,27 +100,63 @@ test('academic descriptions freeze the exact selected enrollment and effective r
       assert.equal(pending.status,'BLOCKED'); assert.match(pending.message,/prepare novamente/);
       assert.equal(legacy.data.reviewComplete,false); assert.equal(legacy.data.service.description,old.service.description);
     });
-    await t.test('production bridge uses reviewed frozen academic facts, including payment month rather than competence month', async () => {
+    await t.test('academic payment rule requires a new review of historical dates and preserves replay before dispatch', async () => {
+      // Rebase guard: a branch keeps its issuer/configuration and reads its
+      // company's matrix model through the real 4.8.295 predicate and RPCs.
+      await db.exec(`INSERT INTO public.empresas VALUES('${id(500)}','EMPRESA SINTETICA','00.000.000/0001-91');
+        INSERT INTO public.polos(id,status,nome,company_id,is_matriz) VALUES
+          ('${id(2)}','ativo','MATRIZ SINTETICA','${id(500)}',true);
+        UPDATE public.polos SET company_id='${id(500)}' WHERE id='${id(1)}';
+        UPDATE private.nfse_models SET polo_id='${id(2)}' WHERE id='${id(61)}';`);
       const prodScope=[id(10),id(1),'PRODUCAO','2026-12'];
       const production=await value('SELECT public.prepare_nfse_batch_secure($1,$2,$3,$4,$5,$6,$7,1,$8) value',
         [...prodScope,id(92),[`${id(20)}:${id(30)}`],id(61),'2026-11']);
       const documentId=production.data.documentIds[0];
       const review=await value('SELECT public.get_nfse_fiscal_review_secure($1,$2,$3,$4,$5,NULL) value',[...prodScope,documentId]);
       assert(!review.data.checks.some(c=>['SOURCE_CHANGED','ACADEMIC_DESCRIPTION_CONTEXT_REQUIRED'].includes(c.code)));
-      await value('SELECT public.save_nfse_fiscal_review_secure($1,$2,$3,$4,$5,$6,0,$7,$8) value',
-        [...prodScope,documentId,id(93),review.data.basisToken,{modelId:id(61),modelVersion:1,
-          recipient:{mode:'STUDENT',confirmed:true},competenceDate:'2026-10-15',serviceDate:'2026-10-15',
-          classificationConfirmed:true,receiptsConfirmed:true}]);
+      assert.equal(review.data.service.competenceDate,null); assert.equal(review.data.service.serviceDate,null);
+      // Persist a genuine pre-upgrade review through the previous RPC, then
+      // apply the new rule. Historical bytes and idempotent replay must survive.
+      const previousDefinition={modelId:id(61),modelVersion:1,recipient:{mode:'STUDENT',confirmed:true},
+        competenceDate:'2026-10-15',serviceDate:'2026-10-15',classificationConfirmed:true,receiptsConfirmed:true};
+      const previousArgs=[...prodScope,documentId,id(93),review.data.basisToken,previousDefinition];
+      const previous=await value('SELECT public.save_nfse_fiscal_review_secure($1,$2,$3,$4,$5,$6,0,$7,$8) value',previousArgs);
+      await db.exec(await sql('20261111123000_nfse_fiscal_review_payment_dates.sql'));
+      const outdated=await value('SELECT public.get_nfse_fiscal_review_secure($1,$2,$3,$4,$5,NULL) value',[...prodScope,documentId]);
+      assert.equal(outdated.data.reviewStatus,'STALE');assert.equal(outdated.data.reviewComplete,false);
+      assert.equal(outdated.data.service.competenceDate,'2026-10-15','No historical backfill');
+      assert.deepEqual(outdated.data.preparation.paymentDates,['2026-11-08','2026-11-09']);
+      assert(outdated.data.checks.some(c=>c.code==='ACADEMIC_PAYMENT_DATE_REVIEW_REQUIRED'));
+      await assert.rejects(value('SELECT private.nfse_queue_operation_basis($1,$2,$3,$4,$5) value',
+        ['ACADEMIC_QUEUE',documentId,id(1),'PRODUCAO','2026-12']),e=>e.code==='40001');
+      assert.deepEqual(await value('SELECT public.save_nfse_fiscal_review_secure($1,$2,$3,$4,$5,$6,0,$7,$8) value',previousArgs),previous);
+      await value('SELECT public.save_nfse_fiscal_review_secure($1,$2,$3,$4,$5,$6,1,$7,$8) value',
+        [...prodScope,documentId,id(94),outdated.data.basisToken,{...previousDefinition,
+          competenceDate:'2026-11-09',serviceDate:'2026-11-09'}]);
+      assert.equal(await value('SELECT count(*)::int value FROM private.nfse_fiscal_review_revisions WHERE document_id=$1',[documentId]),2);
       const confirmed=await value('SELECT public.get_nfse_fiscal_review_secure($1,$2,$3,$4,$5,NULL) value',[...prodScope,documentId]);
       assert.equal(confirmed.data.reviewComplete,true);assert.equal(confirmed.data.reviewStatus,'CONFIRMED');
       assert.equal(confirmed.data.canTransmit,false,'Review RPC never supplies the executor dispatch capability');
+      assert.equal(confirmed.data.service.competenceDate,'2026-11-09');
+      assert.deepEqual(confirmed.data.preparation.paymentDates,['2026-11-08','2026-11-09']);
       assert(confirmed.data.checks.every(check=>check.status==='PASSED'),'A complete review has no artificial global blocker');
       const basis=await value('SELECT private.nfse_queue_operation_basis($1,$2,$3,$4,$5) value',
         ['ACADEMIC_QUEUE',documentId,id(1),'PRODUCAO','2026-12']);
       assert.equal(basis.snapshot.source.serviceDescription,snapshot.service.description);
+      assert.equal(basis.snapshot.model.id,id(61));
+      assert.equal(basis.snapshot.source.preparation.polo_id,id(1));
+      assert.equal(basis.snapshot.issuer.name,'UNIDADE SINTÉTICA');
+      assert.equal(await value('SELECT polo_id::text value FROM private.nfse_models WHERE id=$1',[id(61)]),id(2));
+      await db.exec(`UPDATE public.polos SET is_matriz=false WHERE id='${id(2)}'`);
+      await assert.rejects(value('SELECT private.nfse_queue_operation_basis($1,$2,$3,$4,$5) value',
+        ['ACADEMIC_QUEUE',documentId,id(1),'PRODUCAO','2026-12']),e=>e.code==='40001');
+      await db.exec(`UPDATE public.polos SET is_matriz=true WHERE id='${id(2)}'`);
       assert.match(basis.snapshot.source.serviceDescription,/novembro de 2026/);
       assert(!basis.snapshot.source.serviceDescription.includes('outubro'));
       await db.query('UPDATE public.contas_receber SET parcela_numero=9 WHERE id=$1',[id(201)]);
+      const stale=await value('SELECT public.get_nfse_fiscal_review_secure($1,$2,$3,$4,$5,NULL) value',[...prodScope,documentId]);
+      assert.deepEqual(stale.data.preparation.paymentDates,[]);
+      assert.equal(stale.data.service.competenceDate,'2026-11-09');
       await assert.rejects(value('SELECT private.nfse_queue_operation_basis($1,$2,$3,$4,$5) value',
         ['ACADEMIC_QUEUE',documentId,id(1),'PRODUCAO','2026-12']),e=>e.code==='40001');
       await db.query('UPDATE public.contas_receber SET parcela_numero=4 WHERE id=$1',[id(201)]);
@@ -178,3 +217,4 @@ test('academic descriptions freeze the exact selected enrollment and effective r
     });
   } finally { await db.close(); }
 });
+

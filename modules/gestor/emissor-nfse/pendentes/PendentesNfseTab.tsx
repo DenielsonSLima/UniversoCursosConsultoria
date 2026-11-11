@@ -70,7 +70,7 @@ export default function PendentesNfseTab() {
           onClick={() => setConfirmation([...removableIds])}><Trash2 size={15} />{busy ? 'Excluindo…' : `Excluir selecionados${removableIds.length ? ` (${removableIds.length})` : ''}`}</button>
         <button type="button" className="nfse-button nfse-button-primary" disabled={!selectedIds.length || busy || query.isFetching}
           onClick={() => selectedIds.length === 1 ? setEmission(data?.rows.find(row => row.id === selectedIds[0]) || null)
-            : setBatch(data?.rows.filter(row => selectedIds.includes(row.id)) || [])}><Play size={15} />{selectedIds.length > 1 ? `Revisar lote (${selectedIds.length})` : 'Emitir / consultar nota'}</button>
+            : setBatch(data?.rows.filter(row => selectedIds.includes(row.id)) || [])}><Play size={15} />{selectedIds.length > 1 ? `Emitir selecionados (${selectedIds.length})` : 'Emitir / consultar nota'}</button>
       </div>
     </header>
     {data?.rows.length ? <>
@@ -92,13 +92,12 @@ export default function PendentesNfseTab() {
           <td>{item.modelLabel}</td>
           <td>{item.receiptCount} recebimento(s)<small>{formatNfseMonth(item.paymentMonth)}</small></td>
           <td className="nfse-amount">{formatNfseMoney(item.amount)}</td>
-          <td><span className="nfse-status" data-tone="warning">{operationLabel(item.state)}</span>{item.number && <small>NFS-e {item.number}</small>}
-            {!item.operationId && item.blockingReasons.map(reason => <small key={reason}>{nfseQueueBlockingLabel(reason)}</small>)}</td>
+          <td className="nfse-queue-status"><span className="nfse-status" data-tone="warning"
+            title={!item.operationId ? item.blockingReasons.map(nfseQueueBlockingLabel).join('\n') : undefined}>
+            {operationLabel(item.state)}</span>{item.number && <small>NFS-e {item.number}</small>}</td>
           <td><button type="button" className="nfse-button nfse-button-secondary" disabled={busy || query.isFetching || Boolean(item.operationId)}
             aria-label={`Revisar dados fiscais de ${item.studentName}`} onClick={() => setReviewId(item.id)}>
-            <ClipboardCheck size={15} />Revisar</button>
-            <button type="button" className="nfse-button nfse-button-secondary" disabled={busy || query.isFetching}
-              onClick={() => setEmission(item)}>{item.operationId ? 'Consultar NFS-e' : 'Revisar e emitir'}</button></td>
+            <ClipboardCheck size={15} />Revisar</button></td>
         </tr>)}</tbody>
       </table></div>
       <footer className="nfse-footer"><span>{data.totalItems} documento(s)</span><span>Total preparado: <strong>{formatNfseMoney(data.totalAmount)}</strong></span></footer>
@@ -125,3 +124,4 @@ export default function PendentesNfseTab() {
       message={`Excluir ${confirmation?.length ?? 0} preparação(ões) selecionada(s) desta fila? Os recebimentos serão preservados e poderão ser preparados novamente. O histórico será mantido. Esta ação não cancela nem exclui notas fiscais emitidas.`} />
   </section>;
 }
+

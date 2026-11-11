@@ -4,3 +4,6 @@
 .nfse-table .nfse-selection-cell { width: 44px; }
 .nfse-table tr[data-selected="true"] { background: #f5f8ff; }
 .nfse-table input[type="checkbox"]:focus-visible { outline: 2px solid #4169e1; outline-offset: 3px; }
+
+
+.nfse-table .nfse-queue-status { white-space: nowrap; width: 1%; }

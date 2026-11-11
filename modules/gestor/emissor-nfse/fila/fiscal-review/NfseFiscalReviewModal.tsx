@@ -4,9 +4,12 @@ import { Loader2, Save, X } from 'lucide-react';
 import InstitutionalSelect from '../../../../shared/components/InstitutionalSelect';
 import { useNfseModels } from '../../modelos/hooks/useNfseModels';
 import { useNfseStudentsDialog } from '../../preparar/useNfseStudentsDialog';
+import { formatNfseMonth } from '../../preparar/nfse-month.presentation';
+import { formatNfseDate } from '../../components/nfse.presentation';
 import type { NfseScope } from '../../types/nfse.types';
 import NfseFiscalReviewDetails from './NfseFiscalReviewDetails';
 import { fiscalReviewDate } from './nfse-fiscal-review.contract';
+import { getNfseFiscalReviewDates } from './nfse-fiscal-review.dates';
 import { useNfseFiscalReview } from './useNfseFiscalReview';
 import type { NfseFiscalReviewService, SaveNfseFiscalReview } from './nfse-fiscal-review.types';
 import './nfse-fiscal-review.css';
@@ -20,8 +23,7 @@ const datesValid = (competence: string, service: string) => {
 export default function NfseFiscalReviewModal({ scope, documentId, onClose, onSaved, service }: Props) {
   const titleId = useId();
   const [modelId, setModelId] = useState('');
-  const [competenceDate, setCompetenceDate] = useState('');
-  const [serviceDate, setServiceDate] = useState('');
+  const [editingModel, setEditingModel] = useState(false);
   const [recipientConfirmed, setRecipientConfirmed] = useState(false);
   const [classificationConfirmed, setClassificationConfirmed] = useState(false);
   const [receiptsConfirmed, setReceiptsConfirmed] = useState(false);
@@ -34,15 +36,18 @@ export default function NfseFiscalReviewModal({ scope, documentId, onClose, onSa
   const modelsQuery = useNfseModels(scope);
   const models = modelsQuery.error ? [] : modelsQuery.data?.rows.filter(model => model.active && model.nationalServiceCode === '080201') || [];
   const data = query.error ? undefined : query.data;
+  const fiscalDates = data ? getNfseFiscalReviewDates(data) : null;
+  const competenceDate = fiscalDates?.competenceDate || '';
+  const serviceDate = fiscalDates?.serviceDate || '';
   const selectedModel = models.find(model => model.id === modelId);
   const busy = save.isPending;
   const close = () => { if (!submitting.current) onClose(); };
   const { overlayRef, dialogRef, initialFocusRef } = useNfseStudentsDialog<ComponentRef<'button'>>(close);
   useEffect(() => {
     if (!data) return;
-    const reviewed = data.reviewComplete && data.reviewStatus === 'CONFIRMED';
+    const dates = getNfseFiscalReviewDates(data);
+    const reviewed = data.reviewComplete && data.reviewStatus === 'CONFIRMED' && dates.source === 'SAVED';
     if (!modelId && data.service.nationalServiceCode === '080201' && data.service.modelId) setModelId(data.service.modelId);
-    setCompetenceDate(data.service.competenceDate || ''); setServiceDate(data.service.serviceDate || '');
     setRecipientConfirmed(reviewed && data.recipient.confirmed); setClassificationConfirmed(reviewed); setReceiptsConfirmed(reviewed);
     setDirty(false);
   }, [data, modelId]);
@@ -80,40 +85,47 @@ export default function NfseFiscalReviewModal({ scope, documentId, onClose, onSa
         {savedMessage && <p className="nfse-fiscal-review-state" role="status">{savedMessage}</p>}
         {query.isPending ? <p className="nfse-fiscal-review-state" role="status"><Loader2 size={18} />Consultando dados fiscais…</p>
           : data && <>
-            <NfseFiscalReviewDetails review={data} />
-            <section className="nfse-fiscal-review-section" aria-label="Modelo e datas fiscais">
-              <h3>Modelo para a revisão fiscal</h3>
+            <NfseFiscalReviewDetails review={data} requiresDateReview={data.reviewComplete && fiscalDates?.source !== 'SAVED'} />
+            <section className="nfse-fiscal-review-section" aria-label="Modelo e competência fiscal">
+              <div className="nfse-fiscal-review-model-heading"><h3>Modelo e competência fiscal</h3>
+                {selectedModel && <button type="button" className="nfse-button nfse-button-secondary" disabled={busy}
+                  aria-expanded={editingModel} onClick={() => setEditingModel(value => !value)}>{editingModel ? 'Concluir seleção' : 'Alterar modelo'}</button>}
+              </div>
+              {selectedModel && !editingModel ? <p className="nfse-fiscal-review-model-name">{selectedModel.name}</p> :
               <div className="nfse-field"><label htmlFor={`${titleId}-model`}>Modelo de ensino técnico</label>
                 <InstitutionalSelect id={`${titleId}-model`} ariaLabel="Modelo de ensino técnico" value={modelId}
                   onValueChange={value => change(() => { setModelId(value); setRecipientConfirmed(false); setClassificationConfirmed(false); setReceiptsConfirmed(false); })}
                   options={models.map(model => ({ value: model.id, label: `${model.name} · ${model.nationalServiceCode}` }))}
                   placeholder="Selecionar modelo 080201" loading={modelsQuery.isPending} disabled={busy}
                   error={modelsQuery.error ? 'Não foi possível consultar os modelos.' : undefined} />
-              </div>
+              </div>}
               {modelsQuery.error && <button type="button" className="nfse-button nfse-button-secondary" disabled={busy} onClick={() => void modelsQuery.refetch()}>Consultar modelos novamente</button>}
               {!modelsQuery.isPending && !modelsQuery.error && !models.length && <p className="nfse-inline-help">Cadastre um modelo ativo com tributação 080201 para continuar esta revisão.</p>}
               {query.isFetching && <p className="nfse-inline-help" role="status">Atualizando os dados do modelo…</p>}
-              {data.service.modelId && <dl className="nfse-fiscal-review-grid">
-                <div><dt>Tributação Nacional</dt><dd>{data.service.nationalServiceCode || 'Não informada'}</dd></div>
-                <div><dt>NBS</dt><dd>{data.service.nbsCode || 'Não informada'}</dd></div>
-                <div className="nfse-fiscal-review-wide"><dt>Descrição do serviço</dt><dd className="nfse-fiscal-review-description">{data.service.description || 'Não informada'}</dd></div>
-              </dl>}
-              <fieldset disabled={busy || query.isFetching} className="nfse-fiscal-review-fields">
-                <label className="nfse-field"><span>Competência fiscal</span><input type="date" aria-label="Competência fiscal" required value={competenceDate}
-                  onChange={event => change(() => setCompetenceDate(event.target.value))} /></label>
-                <label className="nfse-field"><span>Data da prestação do serviço</span><input type="date" aria-label="Data da prestação do serviço" required value={serviceDate}
-                  onChange={event => change(() => setServiceDate(event.target.value))} /></label>
-              </fieldset>
-              <p className="nfse-inline-help">Informe as datas fiscais conferidas. O mês dos recebimentos não preenche a competência nem a data da prestação.</p>
+              {data.service.modelId && <details className="nfse-fiscal-review-disclosure">
+                <summary tabIndex={0}>Ver descrição e classificação do serviço</summary>
+                <dl className="nfse-fiscal-review-grid nfse-fiscal-review-disclosure-content">
+                  <div><dt>Tributação Nacional</dt><dd>{data.service.nationalServiceCode || 'Não informada'}</dd></div>
+                  <div><dt>NBS</dt><dd>{data.service.nbsCode || 'Não informada'}</dd></div>
+                  <div className="nfse-fiscal-review-wide"><dt>Descrição do serviço</dt><dd className="nfse-fiscal-review-description">{data.service.description || 'Não informada'}</dd></div>
+                </dl>
+              </details>}
+              <dl className="nfse-fiscal-review-grid">
+                <div className="nfse-fiscal-review-wide"><dt>Competência fiscal</dt>
+                  <dd><output aria-label="Competência fiscal">{formatNfseMonth(data.preparation.paymentMonth) || 'Mês dos pagamentos não informado'}</output>
+                    <small>Automática pelo mês dos pagamentos.{competenceDate && ` Último pagamento: ${formatNfseDate(competenceDate)}.`}</small></dd></div>
+              </dl>
+              {!datesValid(competenceDate, serviceDate) && <p className="nfse-inline-help" role="alert">
+                Não foi possível determinar as datas fiscais desta preparação. Atualize a revisão antes de salvar.</p>}
             </section>
             <fieldset disabled={busy || query.isFetching} className="nfse-fiscal-review-section nfse-fiscal-review-confirmations">
               <legend>Confirmações da revisão</legend>
               <label><input type="checkbox" checked={recipientConfirmed} disabled={!data.recipient.name || !data.recipient.document}
-                onChange={event => change(() => setRecipientConfirmed(event.target.checked))} /><span>Confirmo que o aluno identificado é o tomador deste serviço.</span></label>
+                onChange={event => change(() => setRecipientConfirmed(event.target.checked))} /><span>Confirmo o aluno como tomador do serviço.</span></label>
               <label><input type="checkbox" checked={classificationConfirmed}
                 onChange={event => change(() => setClassificationConfirmed(event.target.checked))} /><span>Conferi o modelo, a descrição e a classificação fiscal do serviço.</span></label>
               <label><input type="checkbox" checked={receiptsConfirmed}
-                onChange={event => change(() => setReceiptsConfirmed(event.target.checked))} /><span>Conferi a origem e os recebimentos apresentados nesta preparação.</span></label>
+                onChange={event => change(() => setReceiptsConfirmed(event.target.checked))} /><span>Conferi a origem e os recebimentos.</span></label>
             </fieldset>
           </>}
       </div>
@@ -124,3 +136,4 @@ export default function NfseFiscalReviewModal({ scope, documentId, onClose, onSa
     </div>
   </div>, document.body);
 }
+

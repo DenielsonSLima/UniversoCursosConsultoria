@@ -15,7 +15,7 @@ const id = n => `00000000-0000-0000-0000-${String(n).padStart(12,'0')}`;
 const scope = {contextKey:id(1),poloId:id(2),environment:'HOMOLOGACAO',month:'2026-11'};
 const row = n => ({id:id(n),batchId:id(90),studentId:id(n+100),studentName:`Aluno sintético ${n}`,
   classId:id(91),classLabel:'Turma sintética',amount:'10.00',modelLabel:'Modelo sintético',
-  status:'PREPARADO',receiptCount:1,paymentMonth:'2026-11',createdAt:'2026-11-10',blockingReasons:[]});
+  status:'PREPARADO',receiptCount:1,paymentMonth:'2026-11',createdAt:'2026-11-10',state:null,blockingReasons:['COMPETENCE_REQUIRED','SERVICE_DATE_REQUIRED']});
 
 test('pending queue supports page selection, cancellation, repeated clicks, errors and last-page recovery', async()=>{
   await mkdir(resolve(base,'../tmp'),{recursive:true});
@@ -44,6 +44,11 @@ test('pending queue supports page selection, cancellation, repeated clicks, erro
     bundle:true,write:false,format:'esm',platform:'node',packages:'external',jsx:'automatic',outfile:bundle,
     loader:{'.css':'empty'},plugins:[{name:'synthetic-service',setup(build){
       build.onResolve({filter:/nfse-queue\.service$/},()=>({path:'synthetic',namespace:'fixture'}));
+      build.onResolve({filter:/Nfse(SourceEmissionModal|BatchEmissionModal|FiscalReviewModal)$/},args=>({path:args.path,namespace:'boundary'}));
+      build.onLoad({filter:/.*/,namespace:'boundary'},args=>({contents:`import React from 'react';
+        export default function Dialog(props) { return React.createElement('div',{role:'dialog','data-modal':${JSON.stringify(args.path)}},
+          props.items ? props.items.length+' itens selecionados' : props.documentId || props.source.id,
+          React.createElement('button',{onClick:props.onClose},'Fechar fluxo')); }`,loader:'js',resolveDir:base}));
       build.onLoad({filter:/.*/,namespace:'fixture'},()=>({contents:'export const nfseQueueService=globalThis.__nfseQueueService;',loader:'js'}));
     }}]});
   await writeFile(bundle,result.outputFiles[0].contents);
@@ -60,14 +65,31 @@ test('pending queue supports page selection, cancellation, repeated clicks, erro
     await settle();
     assert.equal(checkboxes().length,26);
     assert.equal(button('Atualizar'),undefined);
+    assert.equal(button('Revisar e emitir'),undefined);
+    for (const row of document.querySelectorAll('tbody tr')) {
+      assert.equal(row.querySelectorAll('button').length,1);
+      assert.equal(row.querySelector('button').textContent,'Revisar');
+      assert.equal(row.querySelector('.nfse-queue-status').textContent,'Preparado');
+      assert(row.querySelector('.nfse-queue-status .nfse-status').title.includes('Informar a competência fiscal'));
+    }
+    await click(button('Revisar dados fiscais'));
+    assert(document.querySelector('[data-modal]').dataset.modal.includes('NfseFiscalReviewModal'));
+    await click(button('Fechar fluxo'));
     assert.equal(button('Emitir / consultar nota').disabled,true);
     assert.equal(button('Excluir selecionados').disabled,true);
     await click(checkboxes()[1]);
     assert.equal(checkboxes()[0].indeterminate,true);
     assert(button('Excluir selecionados (1)'));
+    await click(button('Emitir / consultar nota'));
+    assert(document.querySelector('[data-modal]').dataset.modal.includes('NfseSourceEmissionModal'));
+    await click(button('Fechar fluxo'));
     await click(checkboxes()[0]);
     assert.equal(checkboxes().filter(c=>c.checked).length,26);
     assert(document.body.textContent.includes('25 selecionado(s) nesta página'));
+    await click(button('Emitir selecionados (25)'));
+    assert(document.querySelector('[data-modal]').dataset.modal.includes('NfseBatchEmissionModal'));
+    assert(document.querySelector('[role="dialog"]').textContent.includes('25 itens selecionados'));
+    await click(button('Fechar fluxo'));
     await click(button('Excluir selecionados'));
     assert(document.querySelector('[role="dialog"]').textContent.includes('25 preparação'));
     await click(button('Voltar'));
@@ -114,3 +136,4 @@ test('pending queue supports page selection, cancellation, repeated clicks, erro
     await rm(temp,{recursive:true,force:true});
   }
 });
+

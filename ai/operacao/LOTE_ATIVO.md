@@ -1,7 +1,7 @@
 # Lote ativo
 
-## Lote: 2026-11-11-nfse-modelos-compartilhados
+## Lote: 2026-11-11-nfse-revisao-competencia-compacta
 
-Objetivo: modelos NFS-e da matriz nas filiais da mesma empresa e menu clonar/inativar. Mudança crítica por banco/escopo/publicação. Candidata 4.8.295/revisão 304, integrada após 4.8.294. Publicação GitHub e produção autorizada explicitamente pelo usuário. Quatro migrations de funções, sem alteração de registros reais. Contratos, UI sintética, PGlite e revisão independente aprovados. CI/build e aplicação remota são gates antes de produção; Safari autenticado pendente porque o Mac está offline.
+Objetivo: revisão fiscal compacta, CPF/CNPJ formatados, competência acadêmica pelo último pagamento e aviso interno de 24 horas. Mudança crítica por banco/financeiro/publicação. Candidata 4.8.296/revisão 305 após 4.8.295. Publicação GitHub e produção autorizada, condicionada aos testes. 19 arquivos de produto/testes e 6 de integração/registro; sem emissão ou cancelamento real. 17 unitários, 7 interação e 21 SQL aprovados; CI/Preview/DDL remoto pendentes. Safari indisponível, conferência visual posterior pelo usuário.
 
-Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-11-nfse-modelos-compartilhados.md`.
+Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-11-nfse-revisao-competencia-compacta.md`.

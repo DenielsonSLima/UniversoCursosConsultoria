@@ -28,6 +28,13 @@ Histórico arquivado: [13/10/2026 — versões 4.8.215 a 4.8.217](./changelog/20
 
 Histórico arquivado: [14/10/2026 — versões 4.8.218 a 4.8.226](./changelog/2026-10-14-versoes-4-8-218-a-226.md).
 
+## [4.8.296] - 2026-11-11
+
+- Revisão reaproveita o pré-modelo, recolhe detalhes e formata CPF/CNPJ. A fila mantém somente Revisar por linha, com emissão pela seleção.
+- Alunos usam a data do último pagamento reservado no mês, sem edição manual; Serviços mantém suas datas informadas pelo usuário.
+- Revisões anteriores divergentes pedem nova confirmação sem alterar histórico, recebimentos ou notas emitidas; herança da Matriz preservada.
+- Aviso de cancelamento em até 24 horas como referência interna, sem criar bloqueio após o prazo nem reduzir validações fiscais.
+
 ## [4.8.295] - 2026-11-11
 
 - Modelos de emissão da matriz ficam disponíveis nas filiais ativas da mesma empresa, sem recadastro e com identificação da origem.
@@ -475,6 +482,7 @@ Histórico arquivado: [14/10/2026 — versões 4.8.218 a 4.8.226](./changelog/20
 
 - Corrige timeout na prestação de contas do Caixa com busca limitada ao vínculo financeiro da parcela, preservando evidências e cálculos.
 - Cancela consultas de relatório ao fechar e impede repetição automática de timeout PostgreSQL.
+
 
 
 

@@ -25,6 +25,7 @@ export default function NfseIndividualCancellation(props: Props) {
   } catch { /* Keep incomplete facts editable; no request may contain unresolved tokens. */ }
   const reasonCode = preview?.payload.reasonCode || result?.payload.reasonCode || props.model?.reasonCode || '1';
   return <section className="nfse-individual-review" aria-label="Cancelamento da nota autorizada"><h3>Cancelar a nota desta operação</h3>
+    <p className="nfse-inline-help">Referência interna: solicitar cancelamento em até 24 horas da emissão. Após esse período, a solicitação continua disponível e será validada pelo emissor.</p>
     <p>Motivo {cancellationReasons.find(item => item.value === reasonCode)?.label}</p>
     {props.scope && props.onModel && !props.existing && <NfseCancellationTemplatePicker scope={props.scope} disabled={busy || sent} onApply={props.onModel} />}
     {props.model && <p>Modelo: {props.model.name} · versão {props.model.version}</p>}
@@ -50,3 +51,4 @@ export default function NfseIndividualCancellation(props: Props) {
       {result.state === 'AWAITING_ANALYSIS' && <p>A solicitação de análise não confirma que a nota foi cancelada.</p>}</div>}
   </section>;
 }
+

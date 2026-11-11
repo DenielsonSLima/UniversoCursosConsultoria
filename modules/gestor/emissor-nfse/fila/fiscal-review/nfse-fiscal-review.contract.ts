@@ -35,10 +35,15 @@ export function parseNfseFiscalReview(value: unknown, documentId: string): NfseF
     || !/^(0|[1-9]\d{0,27})\.\d{2}$/.test(preparation.amount)) throw new NfseContractError();
   const savedAt = nullableString(data.savedAt);
   if (savedAt && !Number.isFinite(Date.parse(savedAt))) throw new NfseContractError();
+  const paymentMonth = queueMonth(preparation.paymentMonth);
+  const receiptCount = integer(preparation.receiptCount, 1);
+  const paymentDates = preparation.paymentDates === undefined ? [] : list(preparation.paymentDates, fiscalReviewDate);
+  if (paymentDates.length > Math.min(receiptCount, 31) || new Set(paymentDates).size !== paymentDates.length
+    || paymentDates.some(date => date.slice(0, 7) !== paymentMonth)) throw new NfseContractError();
   return { documentId, revision: integer(data.revision), reviewStatus, basisToken: fiscalReviewBasis(data.basisToken),
     reviewComplete, canTransmit: false,
     preparation: { studentName: string(preparation.studentName), classLabel: string(preparation.classLabel),
-      paymentMonth: queueMonth(preparation.paymentMonth), amount: preparation.amount, receiptCount: integer(preparation.receiptCount, 1),
+      paymentMonth, amount: preparation.amount, receiptCount, paymentDates: [...paymentDates].sort(),
       originalModel: { id: queueUuid(originalModel.id), version: integer(originalModel.version, 1), name: string(originalModel.name),
         nationalServiceCode: string(originalModel.nationalServiceCode) } },
     issuer: { name: nullableString(issuer.name), cnpj: string(issuer.cnpj), municipalityCode: nullableString(issuer.municipalityCode),
@@ -63,3 +68,4 @@ export function parseNfseFiscalReviewSaved(value: unknown, documentId: string): 
   if (queueUuid(data.documentId) !== documentId) throw new NfseContractError();
   return { documentId, revision: integer(data.revision, 1), reviewId: queueUuid(data.reviewId), message: string(data.message) };
 }
+

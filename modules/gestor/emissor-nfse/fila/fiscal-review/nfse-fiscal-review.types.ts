@@ -9,6 +9,8 @@ export interface NfseFiscalReview {
   reviewComplete: boolean;
   canTransmit: false;
   preparation: { studentName: string; classLabel: string; paymentMonth: string; amount: string; receiptCount: number;
+    /** Revalidated receipt dates, never a saved fiscal date or a month boundary. */
+    paymentDates?: string[];
     originalModel: { id: string; version: number; name: string; nationalServiceCode: string } };
   issuer: { name: string | null; cnpj: string; municipalityCode: string | null; municipalRegistration: string | null;
     opSimpNac: string | null; regEspTrib: string | null; regApTribSN: string | null; configurationVersion: number | null };
@@ -40,3 +42,4 @@ export interface NfseFiscalReviewService {
   get(scope: NfseScope, documentId: string, modelId?: string, signal?: AbortSignal): Promise<NfseFiscalReview>;
   save(scope: NfseScope, documentId: string, input: SaveNfseFiscalReview): Promise<NfseFiscalReviewSaved>;
 }
+

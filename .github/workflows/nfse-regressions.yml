@@ -105,6 +105,7 @@ jobs:
         run: >-
           node --test
           modules/gestor/emissor-nfse/emissao/NfseSourceEmissionModal.interaction.test.mjs
+          modules/gestor/emissor-nfse/individual/NfseIndividualCancellation.interaction.test.mjs
           modules/gestor/emissor-nfse/emissao/NfseDailyFlow.interaction.test.mjs
           modules/gestor/emissor-nfse/emissao/NfseBatchEmissionModal.interaction.test.mjs
           modules/gestor/emissor-nfse/emitidas/NfseIssuedList.interaction.test.mjs
@@ -241,6 +242,7 @@ jobs:
           deno test --no-config --no-lock --no-check --node-modules-dir=none --allow-env
           supabase/functions/nfse-certificate-upload/certificate.test.ts
           supabase/functions/nfse-certificate-upload/pkcs12-reader.test.ts
+
 
 
 
