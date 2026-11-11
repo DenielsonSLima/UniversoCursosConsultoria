@@ -31,6 +31,8 @@ const option = (value: unknown) => {
   const row = record(value);
   return { id: string(row.id), label: string(row.label) };
 };
+// Optional during a rolling deployment; missing registration stays unknown.
+const registrationText = (value: unknown): string | null => value == null ? null : string(value, true).trim() || null;
 
 export function isNfseReceiptScopeValid(scope: NfseReceiptScope | null): scope is NfseReceiptScope {
   return Boolean(scope && UUID.test(scope.contextId) && UUID.test(scope.poloId)
@@ -46,6 +48,8 @@ function group(value: unknown): NfseReceiptGroup {
     const candidateId = candidate(student.id);
     if (candidateId !== `${id}:${studentId}`) throw new NfseContractError();
     return { id: candidateId, studentId, studentName: string(student.studentName),
+      studentCpf: registrationText(student.studentCpf), studentCity: registrationText(student.studentCity),
+      studentState: registrationText(student.studentState),
       receivedAmount: amount(student.receivedAmount), receiptCount: integer(student.receiptCount, 1) };
   });
   assertUniqueIds(students);
@@ -109,3 +113,4 @@ export function createNfseReceiptReader(transport: NfseRpcTransport) {
     return mapNfseReceiptResponse(data, scope, selectedIds, page);
   };
 }
+

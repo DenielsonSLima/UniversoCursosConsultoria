@@ -30,6 +30,8 @@ export interface NfsePartnerServiceRow extends NfseOperationReference {
   id: string;
   partnerId: string;
   partnerName: string;
+  partnerType: 'PF' | 'PJ' | 'ALUNO' | null;
+  canRemove: boolean;
   modelId: string;
   modelName: string;
   serviceDate: string;
@@ -71,3 +73,14 @@ export interface NfsePartnerServiceSaved {
 }
 
 export const NFSE_PARTNER_SERVICE_PAGE_SIZE = 50;
+
+
+export interface NfsePartnerServiceFilters {
+  search: string;
+  dateFrom: string;
+  dateTo: string;
+  partnerType: '' | 'PJ' | 'PF' | 'ALUNO';
+}
+export const NFSE_PARTNER_SERVICE_FILTERS: NfsePartnerServiceFilters = {
+  search: '', dateFrom: '', dateTo: '', partnerType: '',
+};

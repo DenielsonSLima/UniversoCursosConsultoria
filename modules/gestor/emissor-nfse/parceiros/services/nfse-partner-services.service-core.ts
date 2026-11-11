@@ -1,8 +1,9 @@
+import { partnerServiceFilters, partnerRemovalInput, parsePartnerRemoval, type NfsePartnerRemovalInput } from './nfse-partner-list.contract';
 import type { NfseScope } from '../../types/nfse.types';
 import type { NfseRpcTransport } from '../../services/nfse.service-core';
 import { assertScope, integer, unwrapNfseEnvelope } from '../../services/nfse.validation';
 import { NfseContractError } from '../../services/nfse.errors';
-import { NFSE_PARTNER_SERVICE_PAGE_SIZE, type NfsePartnerServiceInput } from '../types/nfse-partner-services.types';
+import { NFSE_PARTNER_SERVICE_FILTERS, NFSE_PARTNER_SERVICE_PAGE_SIZE, type NfsePartnerServiceFilters, type NfsePartnerServiceInput } from '../types/nfse-partner-services.types';
 import { nfsePartnerServiceDefinition, parseNfsePartnerServiceOptions, parseNfsePartnerServiceSaved, parseNfsePartnerServicesPage, parseNfseServicePartnerSearch, partnerServiceUuid } from './nfse-partner-services.contract';
 
 export function createNfsePartnerServices(transport: NfseRpcTransport) {
@@ -22,10 +23,14 @@ export function createNfsePartnerServices(transport: NfseRpcTransport) {
     async options(scope: NfseScope, signal?: AbortSignal) {
       return parseNfsePartnerServiceOptions(await call('get_nfse_partner_service_options_secure', scope, {}, signal));
     },
-    async list(scope: NfseScope, page: number, signal?: AbortSignal) {
+    async list(scope: NfseScope, page: number, signal?: AbortSignal, filters: NfsePartnerServiceFilters = NFSE_PARTNER_SERVICE_FILTERS) {
       integer(page, 1);
-      return parseNfsePartnerServicesPage(await call('get_nfse_partner_services_secure', scope,
-        { p_page: page, p_page_size: NFSE_PARTNER_SERVICE_PAGE_SIZE }, signal), page);
+      return parseNfsePartnerServicesPage(await call('get_nfse_partner_services_v2_secure', scope,
+        { p_page: page, p_page_size: NFSE_PARTNER_SERVICE_PAGE_SIZE, ...partnerServiceFilters(filters) }, signal), page);
+    },
+    async remove(scope: NfseScope, input: NfsePartnerRemovalInput) {
+      const args = partnerRemovalInput(input);
+      return parsePartnerRemoval(await call('remove_nfse_partner_services_secure', scope, args), args.p_service_ids);
     },
     async save(scope: NfseScope, input: NfsePartnerServiceInput) {
       const definition = nfsePartnerServiceDefinition(input);
@@ -39,3 +44,4 @@ export function createNfsePartnerServices(transport: NfseRpcTransport) {
     },
   };
 }
+

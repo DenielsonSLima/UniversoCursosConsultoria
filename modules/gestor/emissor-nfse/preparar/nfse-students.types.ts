@@ -8,6 +8,9 @@ export interface NfseStudentOption {
 export interface NfseStudentRow {
   id: string;
   studentName: string;
+  studentCpf?: string | null;
+  studentCity?: string | null;
+  studentState?: string | null;
   receivedAmount: NfseMoney;
 }
 
@@ -18,3 +21,4 @@ export interface NfseStudentGroup {
   receivedAmount: NfseMoney;
   students: NfseStudentRow[];
 }
+

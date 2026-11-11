@@ -26,6 +26,12 @@ Histórico arquivado: [10/10/2026 a 13/10/2026 — versões 4.8.208 a 4.8.214](.
 
 Histórico arquivado: [13/10/2026 — versões 4.8.215 a 4.8.217](./changelog/2026-10-13-versoes-4-8-215-a-217.md).
 
+## [4.8.290] - 2026-11-11
+
+- Serviços NFS-e ganha busca, período, tipo de parceiro, paginação e exclusão lógica de não emitidos com confirmação e proteção fiscal.
+- A lista de alunos apresenta CPF formatado e cidade/UF disponíveis no cadastro.
+- Ambiente fiscal vira indicador compacto; erro de consulta é sinalizado sem afirmar disponibilidade do governo.
+
 ## [4.8.289] - 2026-11-11
 
 - Visualização da NFS-e reúne Baixar PDF, Imprimir e Fechar na linha do título, com adaptação para telas pequenas.
@@ -482,3 +488,4 @@ Histórico arquivado: [13/10/2026 — versões 4.8.215 a 4.8.217](./changelog/20
 
 - Contratos: matrícula recebida presencialmente pode integrar o valor contratual por aluno, sem gerar boleto ou lançamento de caixa.
 - Leitura contratual de cancelamentos históricos compatível com novos campos vazios; financeiro e histórico emitido preservados.
+

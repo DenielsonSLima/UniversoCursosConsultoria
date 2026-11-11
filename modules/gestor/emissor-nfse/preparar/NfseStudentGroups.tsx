@@ -2,6 +2,7 @@ import React, { useEffect, useId, useRef, useState } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { formatNfseMoney } from '../components/nfse.presentation';
 import type { NfseStudentGroup } from './nfse-students.types';
+import { formatNfseStudentCpf, formatNfseStudentLocation } from './nfse-student-registration.presentation';
 
 interface SelectionCheckboxProps {
   label: string;
@@ -59,7 +60,11 @@ export default function NfseStudentGroups({ groups, selectedIds, disabled, onTog
           {group.students.map(student => <label key={student.id} className="nfse-student-row">
             <input type="checkbox" aria-label={`Selecionar ${student.studentName}`} checked={selectedIds.includes(student.id)}
               disabled={disabled} onChange={() => onToggleStudent(student.id)} />
-            <span className="nfse-student-name">{student.studentName}</span>
+            <span className="nfse-student-name">
+              <span>{student.studentName}</span>
+              <span className="nfse-student-cpf">{formatNfseStudentCpf(student.studentCpf)}</span>
+              <span className="nfse-student-location">{formatNfseStudentLocation(student.studentCity, student.studentState)}</span>
+            </span>
             <span className="nfse-student-amount">{formatNfseMoney(student.receivedAmount)}</span>
           </label>)}
         </div>}
@@ -67,3 +72,4 @@ export default function NfseStudentGroups({ groups, selectedIds, disabled, onTog
     })}
   </div>;
 }
+

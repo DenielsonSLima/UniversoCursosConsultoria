@@ -29,6 +29,28 @@ const response = () => ({
     valid: true, unavailableIds: [] as string[], groups: [globalThis.structuredClone(group)] },
 });
 
+test('registration fields remain exact strings or unknown in listing and selection', () => {
+  const payload = response();
+  Object.assign(payload.groups[0].students[0], { studentCpf: '00100200300', studentCity: ' Cidade sintética ', studentState: 'SE' });
+  Object.assign(payload.selection.groups[0].students[0], { studentCpf: '001.002.003-00', studentCity: null, studentState: '' });
+  const parsed = mapNfseReceiptResponse(payload, scope, [id], 1);
+  assert.equal(parsed.groups[0].students[0].studentCpf, '00100200300');
+  assert.equal(parsed.groups[0].students[0].studentCity, 'Cidade sintética');
+  assert.equal(parsed.groups[0].students[0].studentState, 'SE');
+  assert.equal(parsed.selection.groups[0].students[0].studentCpf, '001.002.003-00');
+  assert.equal(parsed.selection.groups[0].students[0].studentCity, null);
+  assert.equal(parsed.selection.groups[0].students[0].studentState, null);
+  const old = mapNfseReceiptResponse(response(), scope, [id], 1).groups[0].students[0];
+  assert.equal(old.studentCpf, null);
+  assert.equal(old.studentCity, null);
+  assert.equal(old.studentState, null);
+  for (const field of ['studentCpf', 'studentCity', 'studentState']) {
+    const invalid = response();
+    Object.assign(invalid.groups[0].students[0], { [field]: 123 });
+    assert.throws(() => mapNfseReceiptResponse(invalid, scope, [id], 1), NfseContractError);
+  }
+});
+
 test('receipt reader sends only identities, filters and month; client amounts and fiscal fields never cross transport', async () => {
   let sent: Record<string, unknown> | undefined;
   let sentName: string | undefined;
@@ -181,3 +203,4 @@ test('query keys isolate context, polo, month, all list filters and canonical se
   assert.notDeepEqual(nfseStudentKeys.selection(scope, [id]), nfseStudentKeys.selection(scope, [secondId]));
   assert.equal(defaultNfseReceiptFilters().courseType, 'TECNICO');
 });
+

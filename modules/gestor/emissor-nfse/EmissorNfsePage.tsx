@@ -1,6 +1,5 @@
 import React, { lazy, Suspense, useMemo, useRef, useState } from 'react';
 import { AlertCircle, BriefcaseBusiness, Building2, CheckCheck, ClipboardList, FileText, FileX2, Layers } from 'lucide-react';
-import InstitutionalSelect from '../../shared/components/InstitutionalSelect';
 import FinancialUnderlineTabs from '../financeiro/components/FinancialUnderlineTabs';
 import { useNfseWorkspace } from './hooks/useNfseQueries';
 import { useNfseRealtime } from './hooks/useNfseRealtime';
@@ -17,6 +16,7 @@ import ToastNotification, { useToast } from '../components/ToastNotification';
 import { useNfseQueue } from './fila/useNfseQueue';
 import { useNfseQueueRealtime } from './fila/useNfseQueueRealtime';
 import { useNfseEnvironment } from './hooks/useNfseEnvironment';
+import NfseEnvironmentStatus from './components/NfseEnvironmentStatus';
 
 const PrepararNfseTab = lazy(() => import('./preparar/PrepararNfseTab'));
 const PendentesNfseTab = lazy(() => import('./pendentes/PendentesNfseTab'));
@@ -46,7 +46,7 @@ const tabs = [
 
 const NfseWorkspace: React.FC<EmissorNfsePageProps> = ({ poloId, poloName, isMatriz, contextKey }) => {
   const [tab, setTab] = useState<NfseWorkspaceTab>('preparar');
-  const [environment, setEnvironment] = useNfseEnvironment({ poloId, contextKey });
+  const [environment] = useNfseEnvironment({ poloId, contextKey });
   const [month, setMonth] = useState(getNfseCurrentMonth);
   const monthInputRef = useRef<HTMLInputElement>(null);
   const scope = useMemo<NfseScope | null>(() => {
@@ -80,10 +80,8 @@ const NfseWorkspace: React.FC<EmissorNfsePageProps> = ({ poloId, poloName, isMat
           <div className="nfse-field min-w-[185px]">
             <NfseMonthPicker id="nfse-workspace-month" value={month} onChange={setMonth} inputRef={monthInputRef} />
           </div>
-          <div className="nfse-field min-w-[185px]"><label htmlFor="nfse-workspace-environment">Ambiente fiscal</label>
-            <InstitutionalSelect id="nfse-workspace-environment" ariaLabel="Ambiente fiscal" value={environment}
-              options={[{ value: 'PRODUCAO', label: 'Produção' }, { value: 'HOMOLOGACAO', label: 'Homologação' }]}
-              onValueChange={value => { if (value === 'PRODUCAO' || value === 'HOMOLOGACAO') setEnvironment(value); }} /></div>
+          <NfseEnvironmentStatus environment={environment} enabled={Boolean(scope)}
+            workspace={query} queue={queue} />
         </div>
       </header>
       {!selectedPolo ? <div className="nfse-notice"><Building2 size={18} /><div><strong>Selecione um polo</strong><p>Use o seletor de unidade no cabeçalho para preparar e acompanhar as notas do estabelecimento.</p></div></div>
@@ -120,3 +118,4 @@ const EmissorNfsePage: React.FC<EmissorNfsePageProps> = (props) => {
 };
 
 export default EmissorNfsePage;
+

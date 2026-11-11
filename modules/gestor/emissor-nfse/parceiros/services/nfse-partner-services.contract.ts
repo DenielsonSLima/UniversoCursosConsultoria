@@ -60,6 +60,8 @@ export function parseNfsePartnerServicesPage(value: unknown, expectedPage: numbe
   const rows = list(payload.rows, (item): NfsePartnerServiceRow => {
     const row = record(item);
     return { id: partnerServiceUuid(row.id), partnerId: partnerServiceUuid(row.partnerId), partnerName: string(row.partnerName),
+      partnerType: row.partnerType == null || row.partnerType === '' ? null : oneOf(row.partnerType, ['PJ', 'PF', 'ALUNO']),
+      canRemove: boolean(row.canRemove),
       modelId: partnerServiceUuid(row.modelId), modelName: string(row.modelName), serviceDate: date(row.serviceDate),
       serviceDescription: string(row.serviceDescription), amount: amount(row.amount), ...financialResult(row),
       status: oneOf(row.status, ['PREPARADO']), createdAt: string(row.createdAt), ...operationReference(row) };
@@ -90,3 +92,4 @@ export function parseNfsePartnerServiceSaved(value: unknown): NfsePartnerService
   const row = record(value);
   return { id: partnerServiceUuid(row.id), ...financialResult(row), message: string(row.message) };
 }
+

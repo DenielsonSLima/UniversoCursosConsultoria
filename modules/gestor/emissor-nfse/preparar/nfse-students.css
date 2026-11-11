@@ -55,7 +55,9 @@
 .nfse-student-row-caption { border-top: 1px solid #edf0f5; color: #64748b; display: flex; font-size: 12px; gap: 12px; justify-content: space-between; padding: 9px 12px 9px 38px; }
 .nfse-student-row { align-items: center; border-top: 1px solid #edf0f5; cursor: pointer; display: flex; gap: 10px; min-height: 48px; padding: 11px 12px; }
 .nfse-student-row:has(input:checked) { background: #f6f9ff; }
-.nfse-student-name { flex: 1 1 auto; line-height: 1.5; min-width: 0; overflow-wrap: anywhere; }
+.nfse-student-name { align-items: baseline; display: flex; flex: 1 1 auto; flex-wrap: wrap; gap: 3px 12px; line-height: 1.5; min-width: 0; overflow-wrap: anywhere; }
+.nfse-student-cpf, .nfse-student-location { color: #64748b; font-size: 12px; }
+.nfse-student-cpf { font-variant-numeric: tabular-nums; white-space: nowrap; }
 .nfse-student-amount { flex: 0 0 auto; font-variant-numeric: tabular-nums; font-weight: 500; white-space: nowrap; }
 .nfse-students-footer { align-items: center; flex: 0 0 auto; flex-wrap: nowrap; gap: 12px; }
 .nfse-students-total { display: flex; flex: 1 1 auto; flex-direction: column; gap: 4px; min-width: 0; }
@@ -85,3 +87,4 @@
   .nfse-students-actions { display: grid; grid-template-columns: auto minmax(0, 1fr); }
   .nfse-students-actions .nfse-button { padding-left: 10px; padding-right: 10px; }
 }
+

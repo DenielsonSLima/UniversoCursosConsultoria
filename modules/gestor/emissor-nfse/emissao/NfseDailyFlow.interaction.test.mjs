@@ -22,18 +22,20 @@ test('daily workspace has seven operational tabs and preserves cancelled authori
   const { QueryClient, QueryClientProvider } = await import('@tanstack/react-query');
   const scopes = [], opened = [];
   const serviceRow = { id: id(10), partnerName: 'PARCEIRO SINTÉTICO', modelName: 'MODELO SINTÉTICO', serviceDescription: 'SERVIÇO SINTÉTICO', serviceDate: '2026-11-10',
-    amount: '260.00', receivableAction: 'NONE', state: 'CANCELLED', operationId: id(20), requestId: id(21), cancelPreviewId: id(22), number: '1' };
+    amount: '260.00', partnerType: 'PJ', canRemove: false, receivableAction: 'NONE', state: 'CANCELLED', operationId: id(20), requestId: id(21), cancelPreviewId: id(22), number: '1' };
   const documentRow = { ...serviceRow, id: id(20), studentName: serviceRow.partnerName, classLabel: 'Serviço', modelLabel: serviceRow.modelName,
     status: 'EMITIDA', accessKey: '1'.repeat(50), sourceKind: 'PARTNER_SERVICE', sourceId: serviceRow.id, retryable: false, message: 'Cancelamento confirmado.' };
   const query = data => ({ data, error: null, isPending: false, isFetching: false, refetch: async () => {} });
   globalThis.__dailyWorkspace = scope => { scopes.push(scope); return query({ summary: {}, capabilities: {}, classes: [], models: [], readiness: { status: 'BLOCKED', message: '' } }); };
-  globalThis.__dailyServices = scope => { scopes.push(scope); return query({ rows: [serviceRow], totalAmount: '260.00', totalItems: 1, pageSize: 25 }); };
+  const serviceData = { rows: [serviceRow], totalAmount: '260.00', totalItems: 1, pageSize: 25 };
+  globalThis.__dailyServices = scope => { scopes.push(scope); return query(serviceData); };
   globalThis.__dailyDocuments = () => query({ rows: [documentRow], page: 1, pageSize: 25, totalItems: 1 });
   globalThis.__dailyOpened = props => { opened.push(props); };
   const bundle = resolve(temp, 'test.mjs');
   const compiled = await build({ stdin: { contents: `export {default as Page} from './modules/gestor/emissor-nfse/EmissorNfsePage';
     export {default as Documents} from './modules/gestor/emissor-nfse/components/NfseDocumentsList';
-    export {NfseTabContext} from './modules/gestor/emissor-nfse/components/NfseTabContext';`, resolveDir: base, loader: 'tsx' },
+    export {NfseTabContext} from './modules/gestor/emissor-nfse/components/NfseTabContext';
+    export {useNfseEnvironment} from './modules/gestor/emissor-nfse/hooks/useNfseEnvironment';`, resolveDir: base, loader: 'tsx' },
     bundle: true, write: false, format: 'esm', platform: 'node', packages: 'external', jsx: 'automatic', outfile: bundle, loader: { '.css': 'empty' },
     plugins: [{ name: 'isolated-daily-flow', setup(builder) {
       builder.onResolve({ filter: /useNfseQueries$/ }, () => ({ path: 'queries', namespace: 'fixture' }));
@@ -46,7 +48,7 @@ test('daily workspace has seven operational tabs and preserves cancelled authori
       builder.onLoad({ filter: /.*/, namespace: 'fixture' }, args => ({ loader: 'js', resolveDir: base, contents: ({
         queries: 'export const useNfseWorkspace=(s)=>globalThis.__dailyWorkspace(s); export const useNfseDocuments=()=>globalThis.__dailyDocuments();',
         queue: 'export const useNfseQueue=()=>({data:{summary:{preparedCount:0}},error:null});',
-        services: 'export const useNfsePartnerServices=(s)=>globalThis.__dailyServices(s);',
+        services: 'export const useNfsePartnerServices=(s)=>globalThis.__dailyServices(s); export const useRemoveNfsePartnerServices=()=>({isPending:false,mutateAsync:async()=>{throw new Error("Removal forbidden in daily read test")}});',
         realtime: 'export const useNfseRealtime=()=>{}; export const useNfseQueueRealtime=()=>{}; export const useNfsePartnerServicesRealtime=()=>{};',
         empty: 'export default function Empty(){return null;}',
         modal: 'import React from "react"; export default function Modal(p){globalThis.__dailyOpened(p); return React.createElement("div",{role:"dialog"},p.source.kind,React.createElement("button",{onClick:p.onClose},"Fechar origem"));}',
@@ -54,14 +56,18 @@ test('daily workspace has seven operational tabs and preserves cancelled authori
       })[args.path] }));
     } }] });
   await writeFile(bundle, compiled.outputFiles[0].contents);
-  const { Page, Documents, NfseTabContext } = await import(pathToFileURL(bundle).href);
+  const { Page, Documents, NfseTabContext, useNfseEnvironment } = await import(pathToFileURL(bundle).href);
+  function ConfigurationControl() {
+    const [, setEnvironment] = useNfseEnvironment({ poloId: id(2), contextKey: id(1) });
+    return React.createElement('button', { onClick: () => setEnvironment('HOMOLOGACAO') }, 'Alterar nas configurações');
+  }
   const root = createRoot(document.getElementById('root'));
   const client = new QueryClient({ defaultOptions: { queries: { gcTime: 0 }, mutations: { gcTime: 0 } } });
   const wrap = children => React.createElement(QueryClientProvider, { client }, children);
   const settle = async () => act(async () => { await new Promise(resolve => setTimeout(resolve, 20)); });
   const click = async element => { assert(element); await act(async () => element.click()); await settle(); };
   try {
-    await act(async () => root.render(wrap(React.createElement(Page, { poloId: id(2), contextKey: id(1), isMatriz: true })))); await settle();
+    await act(async () => root.render(wrap(React.createElement(React.Fragment, null, React.createElement(Page, { poloId: id(2), contextKey: id(1), isMatriz: true }), React.createElement(ConfigurationControl))))); await settle();
     assert.equal(document.querySelectorAll('[role="tab"]').length, 7);
     assert([...document.querySelectorAll('[role="tab"]')].some(tab => tab.textContent === 'Canceladas'));
     assert.equal(document.querySelector('[role="tab"][aria-label="Homologação"]'), null);
@@ -71,8 +77,8 @@ test('daily workspace has seven operational tabs and preserves cancelled authori
     assert.deepEqual(opened.at(-1).source, { kind: 'PARTNER_SERVICE', id: serviceRow.id });
     assert.equal(opened.at(-1).operation.cancelPreviewId, id(22));
     await click([...document.querySelectorAll('button')].find(button => button.textContent === 'Fechar origem'));
-    await click(document.querySelector('input[aria-label="Ambiente fiscal"]'));
-    await click([...document.querySelectorAll('[role="option"]')].find(option => option.textContent === 'Homologação'));
+    assert.equal(document.querySelector('input[aria-label="Ambiente fiscal"]'), null, 'Issuer uses compact status, not a second selector');
+    await click([...document.querySelectorAll('button')].find(button => button.textContent === 'Alterar nas configurações'));
     assert.equal(scopes.at(-1).environment, 'HOMOLOGACAO');
     assert.equal(document.querySelector('[role="dialog"]'), null, 'Environment change resets selected operation');
     const scope = { contextKey: id(1), poloId: id(2), environment: 'PRODUCAO', month: '2026-11' };
@@ -90,3 +96,4 @@ test('daily workspace has seven operational tabs and preserves cancelled authori
     for (const key of ['__dailyWorkspace', '__dailyServices', '__dailyDocuments', '__dailyOpened']) delete globalThis[key];
     await rm(temp, { recursive: true, force: true }); }
 });
+

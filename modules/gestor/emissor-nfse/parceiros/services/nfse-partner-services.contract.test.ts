@@ -74,7 +74,7 @@ test('list preserves the server total and fails on a foreign scope', async () =>
   const data = { rows: [], page: 1, pageSize: 50, totalItems: 0, totalAmount: '0.00' };
   assert.deepEqual(parseNfsePartnerServicesPage(data, 1), data);
   const service = createNfsePartnerServices(async (name, args) => {
-    assert.equal(name, 'get_nfse_partner_services_secure'); assert.equal(args.p_page_size, 50);
+    assert.equal(name, 'get_nfse_partner_services_v2_secure'); assert.equal(args.p_page_size, 50);
     return envelope(data);
   });
   assert.equal((await service.list(scope, 1)).totalAmount, '0.00');
@@ -105,3 +105,4 @@ test('remote partner lookup is bounded, scoped and preserves students without fe
   const crossed = createNfsePartnerServices(async () => envelope({ rows: [student], page: 1, pageSize: 20, totalItems: 1 }, { ...scope, poloId: id(99) }));
   await assert.rejects(crossed.searchPartners(scope, 'Aluno'), NfseContractError);
 });
+

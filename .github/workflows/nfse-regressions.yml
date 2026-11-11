@@ -106,6 +106,9 @@ jobs:
           modules/gestor/emissor-nfse/emissao/NfseBatchEmissionModal.interaction.test.mjs
           modules/gestor/emissor-nfse/emitidas/NfseIssuedList.interaction.test.mjs
           modules/gestor/emissor-nfse/visualizador/NfseXmlViewerModal.interaction.test.mjs
+          modules/gestor/emissor-nfse/parceiros/ServicosParceirosNfseTab.interaction.test.mjs
+          modules/gestor/emissor-nfse/preparar/NfseStudentGroups.interaction.test.mjs
+          modules/gestor/emissor-nfse/components/NfseEnvironmentStatus.interaction.test.mjs
           modules/gestor/emissor-nfse/erros/ErrosNfseTab.interaction.test.mjs
           modules/gestor/emissor-nfse/hooks/useNfseEnvironment.interaction.test.mjs
           modules/gestor/emissor-nfse/cancelamento/NfseCancellationModels.interaction.test.mjs
@@ -220,4 +223,5 @@ jobs:
           deno test --no-config --no-lock --no-check --node-modules-dir=none --allow-env
           supabase/functions/nfse-certificate-upload/certificate.test.ts
           supabase/functions/nfse-certificate-upload/pkcs12-reader.test.ts
+
 

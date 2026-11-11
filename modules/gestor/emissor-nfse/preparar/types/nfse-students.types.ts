@@ -15,6 +15,9 @@ export interface NfseReceiptStudent {
   id: string;
   studentId: string;
   studentName: string;
+  studentCpf: string | null;
+  studentCity: string | null;
+  studentState: string | null;
   receivedAmount: string;
   receiptCount: number;
 }
@@ -53,3 +56,4 @@ export const NFSE_STUDENT_SELECTION_LIMIT = 1000;
 export const defaultNfseReceiptFilters = (): NfseReceiptFilters => ({
   courseType: 'TECNICO', classId: '', search: '', page: 1,
 });
+
