@@ -4,6 +4,7 @@ import { Banknote, CalendarDays, CreditCard, Landmark, Plus, ReceiptText, Smartp
 import type { ContaBancaria } from '../financeiro.types';
 import type { FinancialPaymentForm } from './useFinancialPaymentForm';
 import { canonicalPaymentAmount } from './financial-payment.form';
+import { selectPaymentAccount } from './financial-payment.account';
 import { todayInMaceio } from '../receber/components/manual-settlement/manual-settlement-date';
 import ManualSettlementCombobox, { type ManualSettlementComboboxOption } from '../receber/components/manual-settlement/ManualSettlementCombobox';
 
@@ -49,7 +50,8 @@ export function FinancialPaymentEditor({ form, accounts, expense }: { form: Fina
   const setComponent = (index: number, field: 'accountId' | 'method' | 'amount', value: string) => {
     if (field === 'amount') { form.setPaymentAmount(index, value); return; }
     form.setDraft(current => ({ ...current,
-      components: current.components.map((component, row) => row === index ? { ...component, [field]: value } : component) }));
+      components: current.components.map((component, row) => row !== index ? component
+        : field === 'accountId' ? selectPaymentAccount(component, value, accounts) : { ...component, [field]: value }) }));
   };
 
   return <fieldset disabled={disabled} className="min-w-0 space-y-4">
@@ -127,3 +129,4 @@ export function FinancialPaymentEditor({ form, accounts, expense }: { form: Fina
     </label>
   </fieldset>;
 }
+

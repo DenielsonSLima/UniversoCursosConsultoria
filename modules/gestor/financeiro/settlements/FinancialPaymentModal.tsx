@@ -7,6 +7,7 @@ import { useFinancialPaymentForm } from './useFinancialPaymentForm';
 import { FinancialPaymentEditor } from './FinancialPaymentEditor';
 import { FinancialPaymentHistory } from './FinancialPaymentHistory';
 import { FinancialPaymentSummary } from './FinancialPaymentSummary';
+import { defaultPaymentMethodForAccount } from './financial-payment.account';
 
 export interface FinancialPaymentModalProps {
   sourceKind: FinancialPaymentSourceKind;
@@ -25,7 +26,8 @@ export interface FinancialPaymentModalProps {
 export const FinancialPaymentModal: React.FC<FinancialPaymentModalProps> = (props) => {
   const accounts = props.accounts.filter(account => account.ativo !== false && isContaDisponivelNoPolo(account, props.poloId));
   const initialAccountId = accounts.some(account => account.id === props.initialAccountId) ? props.initialAccountId : accounts[0]?.id || '';
-  const form = useFinancialPaymentForm(props.sourceKind, props.sourceId, initialAccountId, props.onConfirm);
+  const initialMethod = defaultPaymentMethodForAccount(accounts.find(account => account.id === initialAccountId));
+  const form = useFinancialPaymentForm(props.sourceKind, props.sourceId, initialAccountId, props.onConfirm, initialMethod);
   const [reversing, setReversing] = useState(false);
   const busy = form.pending || reversing;
   const ref = useRef<HTMLDivElement>(null);
@@ -104,3 +106,4 @@ export const FinancialPaymentModal: React.FC<FinancialPaymentModalProps> = (prop
     </div>, document.body,
   );
 };
+

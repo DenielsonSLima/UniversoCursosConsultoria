@@ -26,6 +26,13 @@ Histórico arquivado: [10/10/2026 a 13/10/2026 — versões 4.8.208 a 4.8.214](.
 
 Histórico arquivado: [13/10/2026 — versões 4.8.215 a 4.8.217](./changelog/2026-10-13-versoes-4-8-215-a-217.md).
 
+Histórico arquivado: [14/10/2026 — versões 4.8.218 a 4.8.226](./changelog/2026-10-14-versoes-4-8-218-a-226.md).
+
+## [4.8.292] - 2026-11-11
+
+- Forma de pagamento sugerida automaticamente pela conta: caixa interno em Dinheiro, Banese e Caixa Econômica em Pix.
+- A seleção manual continua disponível; múltiplas formas e tentativas já enviadas mantêm seus dados.
+
 ## [4.8.291] - 2026-11-11
 
 - Produção pode indicar resposta recente da consulta nacional de uma nota própria, sem emitir ou alterar documentos fiscais.
@@ -449,49 +456,4 @@ Histórico arquivado: [13/10/2026 — versões 4.8.215 a 4.8.217](./changelog/20
 
 - Corrige timeout na prestação de contas do Caixa com busca limitada ao vínculo financeiro da parcela, preservando evidências e cálculos.
 - Cancela consultas de relatório ao fechar e impede repetição automática de timeout PostgreSQL.
-
-## [4.8.226] - 2026-10-14
-
-- Rótulo e campo de data alinhados à forma de pagamento no modal financeiro.
-
-## [4.8.225] - 2026-10-14
-
-- Em uma única forma de pagamento, o valor sugerido acompanha automaticamente descontos, juros, multa e acréscimos calculados no servidor.
-- Valores parciais informados manualmente e múltiplas formas continuam preservados.
-
-## [4.8.224] - 2026-10-14
-
-- Campos de pagamento, juros, multa, desconto e acréscimos formatam reais automaticamente com duas casas decimais durante a digitação.
-- Preservados o visual aprovado e os cálculos no servidor.
-
-## [4.8.223] - 2026-10-14
-
-- O modal financeiro recupera o cabeçalho, os campos organizados e o resumo lateral do visual aprovado.
-- As formas de pagamento adicionais permanecem integradas ao formulário, com recebimentos e pagamentos parciais preservados.
-- Saldo, encargos, desconto e valor da baixa continuam exibindo os resultados canônicos do servidor; as regras de confirmação e retomada permanecem intactas.
-
-## [4.8.221] - 2026-10-14
-
-- Contas a Receber, Outros Créditos e Contas a Pagar permitem registrar pagamentos parciais e combinar formas e contas na mesma baixa.
-- Saldo restante, ajustes, prévia e histórico são calculados no servidor, com proteção contra confirmação repetida e valores desatualizados.
-- Caixa e relatórios contabilizam cada pagamento na data e conta corretas; despesas permitem estornar um pagamento específico preservando o histórico.
-- Recebimento manual Banese exige cancelamento bancário confirmado; o saldo aberto não gera boleto automaticamente. Fluxos importados e especializados preservam suas regras anteriores.
-
-## [4.8.220] - 2026-10-14
-
-- Outros Créditos permite selecionar parcelas, grupos ou a página para cancelar até 25 lançamentos por operação.
-- Cancelamento Banese confirma a situação no banco antes da baixa interna, preserva o histórico e informa o resultado de cada crédito.
-- Operações interrompidas retomam a mesma intenção; pagamentos e cobranças fora do escopo impedem o cancelamento.
-- Listagem recupera alterações ao reconectar; consulta manual repetida por boleto removida.
-
-## [4.8.219] - 2026-10-14
-
-- Corrigida a projeção do vencimento individual de transferências para carregar o financeiro sem alterar o histórico da turma.
-- A Secretaria permite continuar para o financeiro individual após registrar a transferência, reutilizando a conferência, emissão BolePix e carnê existentes.
-- Plano, aproveitamentos e cobranças anteriores preservados; a emissão exige confirmação individual.
-
-## [4.8.218] - 2026-10-14
-
-- Contratos: matrícula recebida presencialmente pode integrar o valor contratual por aluno, sem gerar boleto ou lançamento de caixa.
-- Leitura contratual de cancelamentos históricos compatível com novos campos vazios; financeiro e histórico emitido preservados.
 

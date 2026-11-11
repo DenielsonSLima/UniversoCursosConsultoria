@@ -44,5 +44,8 @@ jobs:
           node supabase/tests/financial_payment_title_counts.isolated.test.mjs
       - name: Exercise real React payment flow
         run: |
+          node --test modules/gestor/financeiro/settlements/financial-payment.account.test.ts
+          node --test modules/gestor/financeiro/settlements/financial-payment.account.interaction.test.mjs
           node --test modules/gestor/financeiro/settlements/financial-payment.routing.test.ts
           node --test --test-force-exit modules/gestor/financeiro/settlements/financial-payment.smoke.test.mjs
+

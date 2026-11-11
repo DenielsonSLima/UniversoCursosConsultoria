@@ -3,7 +3,7 @@ import { supabase } from '../../../../lib/supabase';
 import { generateSafeUuid } from '../../../../lib/randomUuid';
 import { todayInMaceio } from '../receber/components/manual-settlement/manual-settlement-date';
 import { FinancialPaymentError, getFinancialPaymentHistory, previewFinancialPayment } from './financial-payment.service';
-import type { FinancialPaymentConfirmation, FinancialPaymentHistory, FinancialPaymentInput, FinancialPaymentPreview, FinancialPaymentResult, FinancialPaymentSourceKind } from './financial-payment.types';
+import type { FinancialPaymentConfirmation, FinancialPaymentHistory, FinancialPaymentInput, FinancialPaymentMethod, FinancialPaymentPreview, FinancialPaymentResult, FinancialPaymentSourceKind } from './financial-payment.types';
 import { draftFromCanonical, isStoredFinancialPayment, normalizePaymentDraft, paymentMoneyInput } from './financial-payment.form';
 
 const attemptKey = (userId: string, kind: FinancialPaymentSourceKind, id: string) => `universo:financial-payment:v1:${userId}:${kind}:${id}`;
@@ -23,9 +23,9 @@ const loadAttempt = (key: string, sourceId: string): FinancialPaymentConfirmatio
 };
 
 export function useFinancialPaymentForm(sourceKind: FinancialPaymentSourceKind, sourceId: string, initialAccountId: string,
-  onConfirm: (payload: FinancialPaymentConfirmation) => Promise<FinancialPaymentResult>) {
+  onConfirm: (payload: FinancialPaymentConfirmation) => Promise<FinancialPaymentResult>, initialMethod: FinancialPaymentMethod = 'DINHEIRO') {
   const [draft, setDraft] = useState<FinancialPaymentInput>(() => ({ requestId: generateSafeUuid(), sourceId,
-    paymentDate: todayInMaceio(), components: [{ accountId: initialAccountId, method: 'DINHEIRO', amount: '' }],
+    paymentDate: todayInMaceio(), components: [{ accountId: initialAccountId, method: initialMethod, amount: '' }],
     interest: '', penalty: '', addition: '', discount: '', notes: '' }));
   const [history, setHistory] = useState<FinancialPaymentHistory | null>(null);
   const [preview, setPreview] = useState<FinancialPaymentPreview | null>(null);
@@ -114,3 +114,4 @@ export function useFinancialPaymentForm(sourceKind: FinancialPaymentSourceKind, 
 }
 
 export type FinancialPaymentForm = ReturnType<typeof useFinancialPaymentForm>;
+
