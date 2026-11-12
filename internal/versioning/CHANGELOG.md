@@ -32,6 +32,10 @@ Histórico arquivado: [19/10/2026 — versão 4.8.227](./changelog/2026-10-19-ve
 
 Histórico arquivado: [20–21/10/2026 — versões 4.8.228 a 4.8.229](./changelog/2026-10-20-a-21-versoes-4-8-228-a-229.md).
 
+## [4.8.301] - 2026-11-12
+
+- Central de Relatórios inclui NFS-e emitidas em paisagem, duas linhas por nota e totais por tributação, NBS e polo, com consolidado exclusivo da matriz.
+
 ## [4.8.300] - 2026-11-12
 
 - DANFSe resolve nomes de municípios ausentes no XML pelo código IBGE exato, preservando a nota e os nomes já identificados.

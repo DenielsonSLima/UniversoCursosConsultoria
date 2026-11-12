@@ -1,8 +1,8 @@
 {
-  "version": "4.8.300",
+  "version": "4.8.301",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 309,
+  "revision": 310,
   "releasedAt": "2026-11-12",
-  "summary": "Nome do município do tomador no DANFSe resolvido pelo catálogo IBGE"
+  "summary": "Relatório contábil NFS-e paisagem por polo e consolidado da matriz"
 }
