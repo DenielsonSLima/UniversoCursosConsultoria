@@ -31,9 +31,9 @@ const ParceiroAlunoFormStepContact: React.FC<ContactStepProps> = ({ formData, on
       </div>
 
       <div>
-        <label className={LABEL_CLS}>Número <span className="text-red-500">*</span></label>
+        <label className={LABEL_CLS}>Número</label>
         <input type="text" name="numero" maxLength={60} value={formData.numero} onChange={onChange}
-          className={INPUT_CLS} placeholder="123 ou S/N" required />
+          className={INPUT_CLS} placeholder="S/N quando não informado" />
       </div>
 
       <div>

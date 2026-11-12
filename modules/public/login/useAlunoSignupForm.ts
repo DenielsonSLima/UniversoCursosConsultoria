@@ -162,14 +162,13 @@ export const useAlunoSignupForm = ({ setMessage }: UseAlunoSignupFormOptions) =>
     }
     if (
       !endereco.trim()
-      || !numero.trim()
       || !bairro.trim()
       || !cidade.trim()
       || uf.trim().length !== 2
     ) {
       setMessage({
         tone: 'error',
-        text: 'Complete endereço, número, bairro, cidade e UF para concluir o cadastro.',
+        text: 'Complete endereço, bairro, cidade e UF para concluir o cadastro.',
       });
       return false;
     }

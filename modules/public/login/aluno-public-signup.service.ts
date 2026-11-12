@@ -95,7 +95,7 @@ export const finalizePublicAlunoSignup = async (data: LegacyPublicAlunoProfileDa
   const nome = data.nome.trim().toLocaleUpperCase('pt-BR');
   const cep = onlyDigits(data.cep || '');
   const endereco = String(data.endereco || '').trim().toLocaleUpperCase('pt-BR');
-  const numero = String(data.numero || '').trim().toLocaleUpperCase('pt-BR');
+  const numero = String(data.numero || '').trim().toLocaleUpperCase('pt-BR') || 'S/N';
   const complemento = String(data.complemento || '').trim().toLocaleUpperCase('pt-BR');
   const bairro = String(data.bairro || '').trim().toLocaleUpperCase('pt-BR');
   const cidade = String(data.cidade || '').trim().toLocaleUpperCase('pt-BR');
@@ -253,7 +253,7 @@ export const signupPublicAluno = async (data: PublicAlunoSignupData) => {
     : 'public_signup_web';
   const cep = onlyDigits(data.cep);
   const endereco = data.endereco.trim().toLocaleUpperCase('pt-BR');
-  const numero = data.numero.trim().toLocaleUpperCase('pt-BR');
+  const numero = data.numero.trim().toLocaleUpperCase('pt-BR') || 'S/N';
   const complemento = data.complemento.trim().toLocaleUpperCase('pt-BR');
   const bairro = data.bairro.trim().toLocaleUpperCase('pt-BR');
   const cidade = data.cidade.trim().toLocaleUpperCase('pt-BR');
