@@ -21,7 +21,7 @@ insert into cursos values('${id(3)}','EAD','EAD'),('${id(30)}','Tecnico','TECNIC
 insert into turmas values('${id(4)}','${id(3)}','${id(1)}','Turma','A'),('${id(40)}','${id(30)}','${id(1)}','Tecnico','B');
 insert into matriculas values('${id(5)}','${id(2)}','${id(4)}','ATIVO','2026-11-01'),('${id(50)}','${id(2)}','${id(40)}','ATIVO','2026-11-01');
 insert into contas_receber values('${id(6)}','${id(2)}','${id(5)}','${id(4)}','${id(1)}','EAD',100,null,'2026-12-01',null,'PENDENTE','PARCELA','banese_card','BOLETO','production','123','123',now()),('${id(60)}','${id(2)}','${id(50)}','${id(40)}','${id(1)}','Tecnico',200,null,'2026-12-01',null,'PENDENTE','PARCELA','banese_card','BOLETO','production','123','123',now());`);
-await db.exec(fs.readFileSync(new URL('../migrations/20261112123000_partner_ead_boleto_read.sql', import.meta.url),'utf8'));
+await db.exec(fs.readFileSync(new URL('../migrations/20261112123418_partner_ead_boleto_read.sql', import.meta.url),'utf8'));
 await db.exec('set role authenticated');
 const read=async()=> (await db.query(`select parceiro_aluno_financeiro_visualizacao('${id(2)}') as x`)).rows[0].x;
 let result=await read();assert.equal(result.items.length,1);assert.equal(result.summary.open,100);assert.equal(result.items[0].can_open_boleto,true);

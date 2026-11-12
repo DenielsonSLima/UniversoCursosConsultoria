@@ -16,4 +16,7 @@ Usuário solicitou botão Abrir em nova aba para boleto EAD no cadastro do aluno
 - Smoke autenticado Safari pendente se computador do usuário estiver offline; não substituir por resultado automatizado.
 
 ## Manifesto
-`modules/gestor/components/GestorModuleContent.tsx`, `modules/gestor/parceiros/ParceirosPage.tsx`, arquivos `ParceiroAlunoDetalhes`, `ParceiroAlunoFinanceiro`, `EadBoletoButton`, `ead-boleto-tab`, `parceiro-aluno-financeiro.service` e testes em `modules/gestor/parceiros/components/viewparceiros/aluno/`; `supabase/functions/banese-boleto-document/{index,ead-read-access,ead-read-access.test}.ts`; migration `20261112123000_partner_ead_boleto_read.sql`; teste `supabase/tests/partner_ead_boleto_read.pglite.mjs`; registro e versão4.8.302.
+`modules/gestor/components/GestorModuleContent.tsx`, `modules/gestor/parceiros/ParceirosPage.tsx`, arquivos `ParceiroAlunoDetalhes`, `ParceiroAlunoFinanceiro`, `EadBoletoButton`, `ead-boleto-tab`, `parceiro-aluno-financeiro.service` e testes em `modules/gestor/parceiros/components/viewparceiros/aluno/`; `supabase/functions/banese-boleto-document/{index,ead-read-access,ead-read-access.test}.ts`; migration `20261112123418_partner_ead_boleto_read.sql`; teste `supabase/tests/partner_ead_boleto_read.pglite.mjs`; registro e versão4.8.302.
+
+## Implantação de backend
+Migration aplicada via MCP com versão remota `20261112123418`; arquivo local renomeado para corresponder exatamente à história remota, sem reaplicar SQL. Edge `banese-boleto-document` v24 ACTIVE/JWT. Contrato remoto de leitura validou identidade institucional, retorno EAD, resumo, negação de aluno inexistente e execução anônima. Nenhuma cobrança emitida/cancelada/alterada.
