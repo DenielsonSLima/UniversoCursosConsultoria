@@ -49,7 +49,7 @@ export default function NfseBatchEmissionModal({ scope, items, onClose, onChange
         <p>A competência de cada serviço seguirá a regra do seu pré-modelo. Nas preparações acadêmicas, os dados e as datas serão validados no servidor.</p>
         <button type="button" className="nfse-button nfse-button-secondary" disabled={view.busy || scope.environment !== 'PRODUCAO'}
           onClick={() => void controller.review()}>Atualizar dados do lote</button>
-        <p role="status">{authorized} de {items.length} nota(s) autorizada(s). {view.busy ? view.phase === 'ISSUE' ? 'Enviando uma nota por vez…' : 'Consultando revisões…' : view.paused ? 'Lote pausado; confira o resultado de cada nota.' : 'Os dados são conferidos no servidor. Clique em Emitir para enviar as notas disponíveis.'}</p>
+        <p role="status">{authorized} de {items.length} nota(s) autorizada(s). {view.busy ? view.phase === 'ISSUE' ? 'Enviando uma nota por vez…' : 'Validando dados…' : view.paused ? 'Lote pausado; confira o resultado de cada nota.' : 'Os dados são conferidos no servidor. Clique em Emitir para enviar as notas disponíveis.'}</p>
         {uncertain && <p role="status">Há resultado não confirmado. Consulte a mesma operação antes de continuar o lote.</p>}
         {view.items.map((item, index) => {
           const payload = item.result?.payload || item.preview?.payload;
@@ -57,14 +57,14 @@ export default function NfseBatchEmissionModal({ scope, items, onClose, onChange
           const state = item.operation?.state === 'CANCELLED' ? 'CANCELLED' : item.result?.state;
           return <section key={`${item.source.kind}:${item.source.id}`} className="nfse-individual-review" aria-label={`Preparação ${index + 1}: ${item.label}`}>
             <h3>{index + 1}. {payload?.recipientName || item.label} · {formatNfseMoney(payload?.amount || item.amount)}</h3>
-            <p>{item.uncertain ? 'Aguardando confirmação' : item.dispatched && !item.result ? 'Envio iniciado; aguarde o resultado' : state ? operationLabel(state) : item.preview ? 'Revisão disponível' : 'Aguardando conferência'}</p>
+            <p>{item.uncertain ? 'Aguardando confirmação' : item.dispatched && !item.result ? 'Envio iniciado; aguarde o resultado' : state ? operationLabel(state) : item.preview ? (item.preview.capability.available ? 'Pronta para emissão' : 'Dados cadastrais ou fiscais pendentes') : 'Validando dados'}</p>
             {item.result?.number && <p>NFS-e nº {item.result.number}</p>}
             {item.result?.message && <p>{item.result.message}</p>}
             {Boolean(item.result?.codes?.length) && <p>Código(s): {item.result!.codes!.join(', ')}</p>}
             {item.error && <p className="nfse-download-error" role="alert">{item.error}</p>}
             {item.preview && !item.preview.capability.available && <p>{individualReason(item.preview.capability.reason)}</p>}
-            {payload && <details><summary>Revisar dados da nota</summary><NfseIndividualSnapshot payload={payload} /></details>}
-            {expired && <p>Revisão expirada. Abra a preparação individual para renovar a mesma operação.</p>}
+            {payload && <details><summary>Ver dados da nota</summary><NfseIndividualSnapshot payload={payload} /></details>}
+            {expired && <p>Prévia expirada. Atualize os dados para continuar com a mesma operação.</p>}
             {item.previewId && <button type="button" className="nfse-button nfse-button-secondary" disabled={view.busy} onClick={() => void controller.consult(index)}>Consultar esta operação</button>}
           </section>;
         })}
@@ -72,7 +72,7 @@ export default function NfseBatchEmissionModal({ scope, items, onClose, onChange
       <footer className="nfse-footer"><span>{available} nota(s) conferida(s) e disponível(is) para envio.</span><div className="nfse-queue-actions">
         {view.busy && <button type="button" className="nfse-button nfse-button-secondary" onClick={() => controller.stop()}>Pausar após a nota atual</button>}
         <button type="button" className="nfse-button nfse-button-secondary" disabled={view.busy} onClick={close}>Fechar</button>
-        <button type="button" className="nfse-button nfse-button-primary" disabled={view.busy || !available || uncertain || scope.environment !== 'PRODUCAO'} onClick={() => void controller.issue()}>Emitir notas conferidas ({available})</button>
+        <button type="button" className="nfse-button nfse-button-primary" disabled={view.busy || !available || uncertain || scope.environment !== 'PRODUCAO'} onClick={() => void controller.issue()}>Emitir notas ({available})</button>
       </div></footer>
     </div>
   </div>, document.body);

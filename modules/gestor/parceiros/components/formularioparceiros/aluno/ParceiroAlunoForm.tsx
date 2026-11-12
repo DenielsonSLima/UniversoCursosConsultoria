@@ -44,6 +44,7 @@ const ParceiroAlunoForm: React.FC<ParceiroAlunoFormProps> = ({
   isSaving = false,
 }) => {
   const [currentStep, setCurrentStep] = useState(1);
+  const [addressNumberError, setAddressNumberError] = useState(false);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [pendingPhotoFile, setPendingPhotoFile] = useState<File | null>(null);
   const [formData, setFormData] = useState<AlunoFormData>(() => createInitialFormData(defaultPoloId));
@@ -232,12 +233,19 @@ const ParceiroAlunoForm: React.FC<ParceiroAlunoFormProps> = ({
       alert('E-mail do responsável inválido.');
       return;
     }
+    if (!formData.numero.trim() || formData.numero.trim().length > 60) {
+      setAddressNumberError(true);
+      setCurrentStep(5);
+      return;
+    }
+    setAddressNumberError(false);
     if (!onSave) return;
 
     submitGuardRef.current = true;
     try {
       await onSave?.(uppercaseAlunoTextFields({
         ...formData,
+        numero: formData.numero.trim(),
         email: normalizeEmail(formData.email),
         responsavelEmail: normalizeEmail(formData.responsavelEmail),
         // O módulo Parceiros só cria o cadastro. A matrícula é iniciada em Gestão.
@@ -327,6 +335,9 @@ const ParceiroAlunoForm: React.FC<ParceiroAlunoFormProps> = ({
         {currentStep === 4 && <ParceiroAlunoFormStepEducation formData={formData} onChange={handleChange} />}
         {currentStep === 5 && <ParceiroAlunoFormStepContact formData={formData} onChange={handleChange} onCepBlur={handleCepBlur} />}
 
+        {currentStep === 5 && addressNumberError && (
+          <p role="alert" className="mt-2 text-sm text-red-600">Informe o número do endereço (até 60 caracteres). Use S/N somente se o endereço não possuir número.</p>
+        )}
         <div className="partner-registration-footer flex justify-between gap-3 pt-6 mt-6 border-t border-slate-100">
           <button
             type="button"

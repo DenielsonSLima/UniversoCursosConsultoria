@@ -72,7 +72,7 @@ test('saved source reviews canonical snapshot and recovers issue and cancellatio
     assert(!/recipientDocument|modelId|amount|fiscalInput|Xml/.test(JSON.stringify(calls[0].args)));
     assert(document.body.textContent.includes('versão 3')); assert(document.body.textContent.includes('IBS/CBS')); assert(document.body.textContent.includes('030101'));
     assert(document.body.textContent.includes('260,00')); assert(document.body.textContent.includes(payload.serviceDescription));
-    const review = [...document.querySelectorAll('details')].find(item => item.querySelector('summary')?.textContent === 'Revisar dados da nota');
+    const review = [...document.querySelectorAll('details')].find(item => item.querySelector('summary')?.textContent === 'Ver dados da nota');
     assert(review); assert.equal(review.open, false, 'Review is optional and collapsed on opening');
     await click(review.querySelector('summary')); assert.equal(review.open, true);
     assert.equal(document.querySelector('input[type="checkbox"]'), null);
@@ -101,7 +101,7 @@ test('saved source reviews canonical snapshot and recovers issue and cancellatio
     assert.equal(calls.filter(row => row.action === 'ISSUE').length, 1); assert.equal(calls.filter(row => row.action === 'CANCEL').length, 1);
     assert.equal(document.querySelector('select,datalist'), null);
     await act(async () => render({ key: 'unsent-review', source: { kind: 'PARTNER_SERVICE', id: id(41) }, operation: { operationId: id(5), requestId: id(40), state: 'PREVIEWED' } })); await settle();
-    assert.equal(button('Emitir NFS-e').disabled, true); await click(button('Renovar revisão desta operação'));
+    assert.equal(button('Emitir NFS-e').disabled, true); await click(button('Atualizar dados desta operação'));
     assert.equal(calls.at(-1).action, 'PREVIEW_QUEUE'); assert.equal(calls.at(-1).args[1], id(40));
     assert.equal(button('Emitir NFS-e').disabled, false);
     assert.equal(calls.filter(row => row.action === 'ISSUE').length, 1, 'Reopening and renewal never dispatch automatically');
@@ -121,7 +121,7 @@ test('saved source reviews canonical snapshot and recovers issue and cancellatio
     assert.equal(button('Cancelar esta NFS-e em produção').disabled, false);
     await act(async () => render({ key: 'readonly-consult', intent: 'CONSULT', source: { kind: 'PARTNER_SERVICE', id: id(46) }, operation: { operationId: id(5), requestId: id(44), cancelPreviewId: id(6), state: 'AUTHORIZED' } })); await settle();
     assert(document.querySelector('[aria-label="Consulta do cancelamento"]'));
-    assert.equal([...document.querySelectorAll('summary')].some(item => item.textContent === 'Revisar dados da nota'), false, 'Consultation shows issue details directly');
+    assert.equal([...document.querySelectorAll('summary')].some(item => item.textContent === 'Ver dados da nota'), false, 'Consultation shows issue details directly');
     assert.equal(button('Revalidar este cancelamento'), undefined); assert.equal(button('Emitir NFS-e'), undefined);
     assert.equal(document.querySelector('textarea'), null);
     globalThis.__nfsePickerTest = props => React.createElement('button', { onClick: () => props.onApply(selectedModel) }, 'Selecionar modelo sintético');
@@ -160,6 +160,10 @@ test('saved source reviews canonical snapshot and recovers issue and cancellatio
     await click(button('Atualizar dados para emissão'));
     assert.equal(failedRequests.length, 2); assert.equal(failedRequests[0][1], failedRequests[1][1], 'Explicit retry reuses the same preview request');
     assert.equal(button('Emitir NFS-e').disabled, true, 'Unavailable canonical capability is never bypassed');
+    await click(button('Atualizar dados desta operação'));
+    assert.equal(failedRequests.length, 3, 'Blocked but unexpired preview supports explicit canonical refresh');
+    assert.equal(failedRequests[2][1], failedRequests[1][1], 'Address correction preserves the original request');
+    assert.equal(button('Emitir NFS-e').disabled, true, 'Refresh must not bypass canonical capability');
     assert.equal(calls.filter(row => row.action === 'ISSUE').length, 1);
   } finally { await act(async () => root.unmount()); dom.window.close(); delete globalThis.__nfsePickerTest; await rm(temp, { recursive: true, force: true }); }
 });

@@ -92,7 +92,7 @@ export default function NfseSourceEmissionModal({ scope, source, label, amount, 
   };
   const expired = Boolean(preview && Date.parse(preview.expiresAt) <= Date.now()), cancelExpired = Boolean(cancelPreview && Date.parse(cancelPreview.expiresAt) <= Date.now());
   const renew = () => {
-    if (intent !== 'ISSUE' || !attempt || issued?.state !== 'PREVIEWED' || !expired || !preview?.payload) return;
+    if (intent !== 'ISSUE' || !attempt || issued?.state !== 'PREVIEWED' || (!expired && preview?.capability.available) || !preview?.payload) return;
     void run(async () => {
       const response = await service.previewSource(scope, attempt.requestId, source,
         source.kind === 'PARTNER_SERVICE' ? preview.payload!.competenceDate : undefined);
@@ -159,11 +159,11 @@ export default function NfseSourceEmissionModal({ scope, source, label, amount, 
           <button type="button" className="nfse-button nfse-button-secondary" disabled={busy} onClick={prepare}>Atualizar dados para emissão</button>
         </>}
         {payload && (intent === 'CONSULT' ? <NfseIndividualSnapshot payload={payload} />
-          : <details><summary>{intent === 'CANCEL' ? 'Dados da NFS-e autorizada' : 'Revisar dados da nota'}</summary><NfseIndividualSnapshot payload={payload} /></details>)}
+          : <details><summary>{intent === 'CANCEL' ? 'Dados da NFS-e autorizada' : 'Ver dados da nota'}</summary><NfseIndividualSnapshot payload={payload} /></details>)}
         {preview && !preview.capability.available && <p role="status">{individualReason(preview.capability.reason)}</p>}
         {intent === 'ISSUE' && preview && (!attempt || issued?.state === 'PREVIEWED') && <>
-          {expired && <p role="status">A revisão expirou. Confira novamente os dados.</p>}
-          {expired && attempt && <button type="button" className="nfse-button nfse-button-secondary" disabled={busy} onClick={renew}>Renovar revisão desta operação</button>}
+          {expired && <p role="status">A prévia expirou. Atualize os dados para continuar.</p>}
+          {(expired || !preview.capability.available) && attempt && <button type="button" className="nfse-button nfse-button-secondary" disabled={busy} onClick={renew}>Atualizar dados desta operação</button>}
         </>}
         {attempt && <button type="button" className="nfse-button nfse-button-secondary" disabled={busy} onClick={() => consult(attempt)}>Consultar resultado da emissão</button>}
         {operation?.state === 'CANCELLED' && !cancellation && <p role="status"><strong>Cancelada</strong> · {operation.message || 'O cancelamento desta nota está registrado.'}</p>}

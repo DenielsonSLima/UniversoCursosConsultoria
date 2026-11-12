@@ -45,6 +45,14 @@ Histórico arquivado: [27/10/2026 — versões 4.8.236 a 4.8.237](./changelog/20
 
 Histórico arquivado: [4.8.239](./changelog/2026-10-27-versao-4-8-239.md).
 
+Histórico arquivado: [27/10/2026 — versão 4.8.240](./changelog/2026-10-27-versao-4-8-240.md).
+
+## [4.8.310] - 2026-11-12
+
+- Cadastro de aluno exige número; regularização auditada de números ausentes com 00 provisório, sem alterar os existentes.
+- NFS-e identifica lacunas do endereço e distingue preparação, dados ausentes e nota pronta; sem revisão manual artificial.
+- Prévia ainda não assinada pode atualizar somente o número do endereço, preservando operação, DPS e histórico fiscal; demais mudanças exigem novo fluxo.
+
 ## [4.8.309] - 2026-11-12
 
 - Status Google usa conta institucional vinculada, sem confundir contato corrigido com conta inexistente.
@@ -488,8 +496,3 @@ Histórico arquivado: [4.8.239](./changelog/2026-10-27-versao-4-8-239.md).
 - Retomada de rematrícula aprovada pelo serviço consulta a mesma tentativa sem alterar o consentimento histórico.
 - Substituição individual autorizada confirma baixa e ausência de pagamento antes de reservar um único título novo; resposta Pix da criação fica preservada e retries consultam a mesma identidade.
 - Operação desta entrega concluiu 13/13 títulos, mantendo valor, vencimento e as doze mensalidades. Dois QR Codes do PDF nativo foram conferidos contra o Pix oficial.
-
-## [4.8.240] - 2026-10-27
-
-- Matemática Básica e Matemática para Enem recebem aulas próprias, exercícios resolvidos, atividades por habilidade e provas matemáticas revisadas com fontes INEP e OBMEP/IMPA.
-- A sala mantém avaliações anteriores por versão e oferece início explícito da revisão, preservando tentativas, notas e certificados; resoluções seguem somente no feedback após resposta.

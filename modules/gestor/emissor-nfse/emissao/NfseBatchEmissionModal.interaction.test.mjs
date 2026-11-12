@@ -47,12 +47,12 @@ test('batch reviews each canonical note, pauses on uncertain result and reports 
     assert.equal(calls.filter(call => call.action === 'PREVIEW_QUEUE').length, 2);
     assert.equal(calls.filter(call => call.action === 'ISSUE').length, 0, 'Opening a batch never dispatches');
     assert.equal(document.querySelectorAll('input[type="checkbox"]').length, 0);
-    assert.equal(button('Emitir notas conferidas').disabled, false);
+    assert.equal(button('Emitir notas').disabled, false);
     assert.equal(document.querySelector('h2').textContent, 'Emitir notas');
     assert(button('Atualizar dados do lote'));
-    assert([...document.querySelectorAll('details')].every(item => item.querySelector('summary').textContent === 'Revisar dados da nota' && !item.open));
-    const send = button('Emitir notas conferidas'); await act(async () => { send.click(); send.click(); }); await settle();
-    assert.equal(calls.filter(call => call.action === 'ISSUE').length, 1); assert.equal(button('Emitir notas conferidas').disabled, true);
+    assert([...document.querySelectorAll('details')].every(item => item.querySelector('summary').textContent === 'Ver dados da nota' && !item.open));
+    const send = button('Emitir notas'); await act(async () => { send.click(); send.click(); }); await settle();
+    assert.equal(calls.filter(call => call.action === 'ISSUE').length, 1); assert.equal(button('Emitir notas').disabled, true);
     assert(document.body.textContent.includes('Há resultado não confirmado'));
     const region = document.querySelector('[aria-label="Notificações"]'); assert(region); assert(region.className.includes('sm:right-6'));
     assert(region.textContent.includes('Lote pausado')); assert(!region.textContent.includes('autorizada'));
@@ -60,7 +60,7 @@ test('batch reviews each canonical note, pauses on uncertain result and reports 
     assert(!document.querySelector('[aria-label="Notificações"]').textContent.includes('NFS-e nº 2 autorizada'), 'Reading history is not a new issuance confirmation');
     assert(document.body.textContent.includes('NFS-e nº 2'));
     assert.equal(calls.filter(call => call.action === 'ISSUE').length, 1);
-    await click(button('Emitir notas conferidas')); assert.equal(calls.filter(call => call.action === 'ISSUE').length, 2);
+    await click(button('Emitir notas')); assert.equal(calls.filter(call => call.action === 'ISSUE').length, 2);
     assert(document.body.textContent.includes('2 de 2 nota(s) autorizada(s)'));
     assert(document.querySelector('[aria-label="Notificações"]').textContent.includes('NFS-e nº 3 autorizada'));
     for (let i = 0; i < window.sessionStorage.length; i++) assert.deepEqual(Object.keys(JSON.parse(window.sessionStorage.getItem(window.sessionStorage.key(i)))).sort(), ['previewId', 'requestId']);
