@@ -1,0 +1,54 @@
+name: NFS-e background worker security
+on:
+  pull_request:
+    paths: ['supabase/functions/nfse-reconciliation-worker/**', 'supabase/migrations/*nfse_reconciliation*', 'supabase/tests/nfse*worker*', 'supabase/tests/nfse-reconciliation*', '.github/workflows/nfse-worker-security.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  postgres:
+    strategy:
+      matrix:
+        suite: [concurrency, material-proof, scheduler, proof-concurrency]
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    services:
+      postgres:
+        image: postgres:17.6
+        env:
+          POSTGRES_PASSWORD: synthetic-test-only
+          POSTGRES_DB: nfse_worker_test
+        ports: ['5432:5432']
+        options: --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/setup-node@v4
+        with: {node-version: '>=24.22.1 <25'}
+      - run: npm install --prefix "$RUNNER_TEMP/nfse-pg" --no-save --package-lock=false --ignore-scripts pg@8.16.3
+      - run: |
+          if [ "${{ matrix.suite }}" = concurrency ]; then
+            node supabase/tests/nfse-worker-postgres-concurrency.test.mjs
+          elif [ "${{ matrix.suite }}" = proof-concurrency ]; then
+            node supabase/tests/nfse-reconciliation-proof.concurrent.test.mjs
+          else
+            node "supabase/tests/nfse-reconciliation-${{ matrix.suite }}.isolated.test.mjs" "file://$PWD/supabase/tests/nfse-worker-postgres-adapter.mjs"
+          fi
+        env:
+          NFSE_PG_MODULE: ${{ runner.temp }}/nfse-pg/node_modules/pg/lib/index.js
+          NFSE_TEST_DATABASE_URL: postgresql://postgres:synthetic-test-only@localhost:5432/nfse_worker_test
+  deno:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: denoland/setup-deno@v2
+        with: {deno-version: v2.x}
+      - uses: actions/setup-node@v4
+        with: {node-version: '>=24.22.1 <25'}
+      - run: |
+          npm install --prefix "$RUNNER_TEMP/nfse-worker-deps" --no-save --package-lock=false --ignore-scripts @supabase/supabase-js@2.95.3 @xmldom/xmldom@0.8.15 xml-crypto@6.4.0 libxml2-wasm@0.7.2
+          ln -s "$RUNNER_TEMP/nfse-worker-deps/node_modules" node_modules
+      - run: deno check --no-config --no-lock --node-modules-dir=manual supabase/functions/nfse-reconciliation-worker/index.ts
+      - run: deno test --no-config --no-lock --node-modules-dir=manual --allow-read --allow-env supabase/functions/nfse-reconciliation-worker/*.test.ts

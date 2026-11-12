@@ -59,6 +59,12 @@ Histórico arquivado: [05/11/2026 — versão 4.8.246](./changelog/2026-11-05-ve
 
 Histórico arquivado: [4.8.247 a 4.8.248](./changelog/2026-11-05-versao-4-8-247.md).
 
+## [4.8.318] - 2026-11-12
+
+### Corrigido
+- Acompanhamento central de NFS-e já submetidas, com fila durável e consultas protegidas sem depender da sessão.
+- Persistência de confirmação validada, proteção contra concorrência e retomada após corrigir certificado/configuração, sem reenvio fiscal.
+
 ## [4.8.317] - 2026-11-12
 
 ### Corrigido
