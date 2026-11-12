@@ -23,3 +23,10 @@ test('known rules explain correction destination without alleging ambiguous caus
   assert.equal(nfseRuleError('Tomador ativo com documento válido obrigatório. TOKEN'), null);
   assert.equal(nfseRuleError({message:'secret'}), null);
 });
+
+test('503 identifies service outage without asserting a fiscal outcome or exposing body', async () => {
+  const result = await individualTransportError({context:new Response('SECRET-XML', {status:503})});
+  assert.match(result.message, /indisponível \(HTTP 503\)/);
+  assert.match(result.message, /não confirma envio nem rejeição/);
+  assert.doesNotMatch(result.message, /SECRET-XML/);
+});

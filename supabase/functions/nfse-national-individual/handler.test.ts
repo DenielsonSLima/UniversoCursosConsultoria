@@ -424,3 +424,12 @@ Deno.test("public issue and cancellation preserve bounded fiscal codes without e
     100,
   );
 });
+
+Deno.test('out-of-scope ledger failure is 403 and never suggests uncertain dispatch', async () => {
+  const denied = Object.assign(new Error('PRIVATE_SQL_DETAIL'), { code: 'INDIVIDUAL_OPERATION_SCOPE_DENIED' });
+  const h = harness({ ledger: async () => { throw denied; } });
+  const response = await h.handler(request('RECONCILE'));
+  assert.equal(response.status, 403);
+  assert.deepEqual(await response.json(), { error: 'INDIVIDUAL_OPERATION_SCOPE_DENIED' });
+  assert.equal(h.calls.some(call => call.action === 'EXECUTE'), false);
+});

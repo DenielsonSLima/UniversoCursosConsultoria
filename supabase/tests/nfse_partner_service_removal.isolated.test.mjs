@@ -168,6 +168,39 @@ test('service filters and logical removal preserve canonical data and fiscal saf
       }
       await db.exec('set role authenticated'); assert.equal((await list()).data.totalItems,7); await db.exec('reset role');
     });
+    await t.test('unsigned previews can be removed, but stale prepare/claim and signed states stay fenced', async () => {
+      await db.exec(await read('20261112173000_nfse_unsigned_service_removal.sql'));
+      const canRemove = () => query(`select private.nfse_partner_service_removable('${id(107)}') value`);
+      // Existing fixture's PREVIEWED has signed evidence and must remain blocked.
+      assert.equal(await canRemove(), false);
+      await db.query('update private.nfse_individual_operations set signed_dps_xml=NULL,result=NULL where id=$1',[id(207)]);
+      assert.equal(await canRemove(), true);
+      for (const change of ["result='{}'", "authorized_xml=''", "signed_dps_xml=''", "state='PROCESSING'", "state='AWAITING_CONFIRMATION'"]) {
+        await db.exec(`update private.nfse_individual_operations set ${change} where id='${id(207)}'`);
+        assert.equal(await canRemove(), false, change);
+        await db.exec(`update private.nfse_individual_operations set state='PREVIEWED',result=NULL,authorized_xml=NULL,signed_dps_xml=NULL where id='${id(207)}'`);
+      }
+      await db.query("insert into private.nfse_individual_cancellations values($1,$2,'PREVIEWED','{}',NULL)",[id(507),id(207)]);
+      assert.equal(await canRemove(), false);
+      await db.query('delete from private.nfse_individual_cancellations where id=$1',[id(507)]);
+      const original = await before();
+      assert.equal((await remove([id(107)],id(905))).data.removedCount,1);
+      assert.deepEqual(await before(),original);
+      assert.equal(await canRemove(),false);
+      for (const change of ["signed_dps_xml='signed synthetic'", "state='PROCESSING'", "state='AUTHORIZED'", "authorized_xml='synthetic'"]) {
+        await assert.rejects(db.exec(`update private.nfse_individual_operations set ${change} where id='${id(207)}'`),e=>e.code==='40001');
+      }
+      assert.deepEqual(await before(),original);
+      // Reverse ordering: signing wins first, then removal must reject atomically.
+      await db.query(`insert into private.nfse_individual_operations(id,request_id,polo_id,environment,month,state)
+        values($1,$2,$3,'PRODUCAO','2026-11','PREVIEWED')`,[id(201),id(301),id(1)]);
+      await db.query(`insert into private.nfse_queue_operation_links values($1,'PARTNER_SERVICE',$2)`,[id(201),id(101)]);
+      assert.equal(await query(`select private.nfse_partner_service_removable('${id(101)}') value`),true);
+      await db.exec(`update private.nfse_individual_operations set signed_dps_xml='signed synthetic' where id='${id(201)}'`);
+      await assert.rejects(remove([id(101)],id(906)),e=>e.code==='40001');
+      const sql = await read('20261112173000_nfse_unsigned_service_removal.sql');
+      assert(sql.includes('FOR SHARE')); assert(sql.includes("transaction_isolation"));
+    });
   } finally { await db.close(); }
 });
 

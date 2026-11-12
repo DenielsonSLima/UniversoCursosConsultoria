@@ -55,6 +55,14 @@ Histórico arquivado: [28/10/2026 — versão 4.8.243](./changelog/2026-10-28-ve
 
 Histórico arquivado: [01/11/2026 — versão 4.8.244](./changelog/2026-11-01-versao-4-8-244.md).
 
+Histórico arquivado: [05/11/2026 — versão 4.8.245](./changelog/2026-11-05-versao-4-8-245.md).
+
+## [4.8.315] - 2026-11-12
+
+- Usuários autorizados no mesmo polo acompanham e emitem a mesma preparação, preservando autoria, auditoria e envio único.
+- Serviços preparados sem envio mostram estado claro e podem ser removidos somente quando ainda não assinados ou enviados.
+- Falta de autorização recebe aviso específico, sem simular espera pelo retorno fiscal.
+
 ## [4.8.314] - 2026-11-12
 
 - Contrato público fiscal validado reutilizado por até 60 segundos, com autorização e certificado revalidados em cada solicitação.
@@ -487,11 +495,3 @@ Histórico arquivado: [01/11/2026 — versão 4.8.244](./changelog/2026-11-01-ve
 ### Corrigido
 - Categoria, Agrupamento e Ordenação do catálogo público EAD usam rótulos e campos com altura e alinhamento uniformes.
 - Seletores pesquisáveis preservam opções e valores, com navegação por teclado e fechamento por Escape, Tab e clique externo.
-
-## [4.8.245] - 2026-11-05
-
-### Corrigido
-- Matrícula EAD exige acesso ao módulo Financeiro e confirmação entre adicionar sem financeiro, com liberação imediata auditada, ou gerar cobrança e aguardar pagamento.
-- Outros créditos recebidos localmente permitem estorno auditado com motivo e preservação do histórico financeiro; liquidações de gateway exigem tratamento próprio.
-- Créditos avulsos sem classificação legada são reconhecidos para seleção e cancelamento com as mesmas guardas dos demais títulos.
-- Resumo e painel EAD usam fatos financeiros, sem inferir pagamento ou receita a partir do acesso acadêmico. Produção autorizada; implantação e conferência registradas no lote.
