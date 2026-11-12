@@ -43,6 +43,24 @@ function totalTaxes(value: NationalDpsInput['values']['totalTaxes']): string {
     tag(`${prefix}TotTribMun`, decimal(value.municipal, monetary ? 15 : 3)) + `</${prefix}TotTrib>`;
 }
 
+/** Restricted municipal lecture profile; payment after supply or advance for future supply. */
+function governmentPurchaseXml(input: NationalDpsInput, ibs: NonNullable<NationalDpsInput['ibscbs']>): string {
+  const government = ibs.governmentPurchase;
+  if (government === undefined) return '';
+  requireContract(government !== null && typeof government === 'object' &&
+    !Array.isArray(government), 'UNSUPPORTED_GOVERNMENT_OPERATION');
+  exactKeys(government, ['operationType', 'entityType']);
+  requireContract(input.environment === 'PRODUCAO' &&
+    (government.operationType === '1' || government.operationType === '4') &&
+    government.entityType === '4' && ibs.operationCode === '030102' && ibs.personalUse === '0' &&
+    ibs.recipientIsAcquirer === true && ibs.cst === '000' && ibs.classificationCode === '000001' &&
+    input.service.nationalTaxCode === '080201' && input.service.nbs === '122051900' &&
+    input.recipient.taxId.type === 'CNPJ' && input.recipient.address !== undefined &&
+    input.recipient.address.municipalityCode === input.service.municipalityCode,
+  'UNSUPPORTED_GOVERNMENT_OPERATION');
+  return tag('tpOper', government.operationType) + tag('tpEnteGov', government.entityType);
+}
+
 /** Verified subset of the downloaded national DPS v1.01 schema. Not a fiscal eligibility engine. */
 export function buildNationalDps(input: NationalDpsInput): UnsignedFiscalXml {
   exactKeys(input, ['environment', 'purpose', 'issuedAt', 'applicationVersion', 'series', 'number',
@@ -134,12 +152,13 @@ export function buildNationalDps(input: NationalDpsInput): UnsignedFiscalXml {
     `</tribMun><totTrib>${totalTaxes(v.totalTaxes)}</totTrib></trib></valores>`;
   if (input.ibscbs) {
     const ibs = input.ibscbs;
-    exactKeys(ibs, ['personalUse', 'operationCode', 'recipientIsAcquirer', 'cst', 'classificationCode']);
+    exactKeys(ibs, ['personalUse', 'operationCode', 'recipientIsAcquirer', 'cst', 'classificationCode', 'governmentPurchase']);
     requireContract(['0', '1'].includes(ibs.personalUse) && ibs.recipientIsAcquirer === true,
       'UNSUPPORTED_IBSCBS_SCENARIO');
     const production = input.environment === 'PRODUCAO';
     xml += '<IBSCBS>' + (production ? tag('finNFSe', '0') : '') + tag('indFinal', ibs.personalUse) +
-      tag('cIndOp', digits(ibs.operationCode, 6)) + '<indDest>0</indDest><valores><trib>' +
+      tag('cIndOp', digits(ibs.operationCode, 6)) + governmentPurchaseXml(input, ibs) +
+      '<indDest>0</indDest><valores><trib>' +
       (production ? '<gIBSCBS>' : '') + tag('CST', digits(ibs.cst, 3)) +
       tag('cClassTrib', digits(ibs.classificationCode, 6)) +
       (production ? '</gIBSCBS>' : '') + '</trib></valores></IBSCBS>';

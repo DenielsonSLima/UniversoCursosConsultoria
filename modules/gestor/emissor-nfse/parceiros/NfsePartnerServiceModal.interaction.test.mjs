@@ -32,7 +32,7 @@ test('partner preparation preserves the selected 2000-character model descriptio
         ? `export const nfseModelsService={list:async()=>({rows:[globalThis.__partnerModel]}),
           previewDescription:async(_scope,description)=>({description,monthLabel:'novembro de 2026',usesReferenceMonth:false})};`
         : args.path === 'partners' ? `export const nfsePartnerServices={options:async()=>globalThis.__partnerOptions,
-          searchPartners:async(_scope,query,id)=>id||query.length>=2?globalThis.__partnerOptions.partners:[],
+          searchPartners:(...args)=>globalThis.__partnerSearch(...args),
           save:(...args)=>globalThis.__partnerSave(...args)};`
           : 'export const supabase=new Proxy({},{get(){throw new Error("Live client forbidden in UI smoke")}});', loader: 'js' }));
     } }] });
@@ -40,9 +40,19 @@ test('partner preparation preserves the selected 2000-character model descriptio
   const { default: Modal } = await import(pathToFileURL(bundle).href);
   const description = 'SERVIÇO SINTÉTICO '.padEnd(2000, 'x');
   globalThis.__partnerModel = { id: id(3), version: 2, name: 'Modelo sintético 2000', active: true, serviceDescription: description };
-  globalThis.__partnerOptions = { partners: [{ id: id(4), name: 'Parceiro sintético', tradeName: null, document: null, type: 'ALUNO' }],
+  const student = { id: id(4), name: 'Parceiro sintético', tradeName: null, document: '00000000191', type: 'ALUNO' };
+  const company = { id: id(7), name: 'MUNICIPIO SINTETICO', tradeName: 'Prefeitura sintética', document: '12.345.678/0001-95', type: 'PJ' };
+  globalThis.__partnerOptions = { partners: [student, company],
     categories: [], existingReceivables: [], capabilities: { canGenerateReceivable: false } };
   const calls = [], messages = [];
+  const searches = []; let late;
+  globalThis.__partnerSearch = async (scope, query, selectedId, signal) => {
+    searches.push({ scope, query, selectedId, signal });
+    if (selectedId) return [student, company].filter(partner => partner.id === selectedId);
+    if (query === 'lenta') return new Promise(resolve => { late = resolve; });
+    if (query === 'erro') throw new Error('Busca sintética indisponível.');
+    return query === 'Parceiro' ? [student] : ['Prefeitura', '12.345.678/0001-95', '23'].includes(query) ? [company] : [];
+  };
   globalThis.__partnerSave = async (scope, input) => {
     calls.push({ scope, input });
     return { id: id(5), receivableId: null, receivableAction: 'NONE', message: 'Serviço preparado.' };
@@ -64,23 +74,49 @@ test('partner preparation preserves the selected 2000-character model descriptio
     await act(async () => root.render(React.createElement(QueryClientProvider, { client },
       React.createElement(Modal, { scope, onClose() {}, onSaved: message => messages.push(message) }))));
     await settle();
-    await setValue(document.querySelector('input[aria-label="Buscar aluno ou parceiro"]'), 'Parceiro'); await settle(250);
-    await click(document.getElementById('nfse-service-partner'));  await click(document.querySelector('[role="option"]'));
+    assert.equal(document.querySelector('input[type="search"]'), null, 'There is no duplicated partner search input');
+    const partnerInput = document.getElementById('nfse-service-partner');
+    await click(partnerInput); assert(document.body.textContent.includes('Digite ao menos 2 caracteres'));
+    await setValue(partnerInput, 'Parceiro'); await settle(250); await settle();
+    await click(document.querySelector('[role="option"]'));
+    assert.equal(partnerInput.value, `${student.name} · ${student.document}`);
     await click(document.getElementById('nfse-service-model')); await click(document.querySelector('[role="option"]'));
     const textarea = document.querySelector('textarea');
     assert.equal(textarea.maxLength, 2000); assert.equal(textarea.value, description);
     await setValue(document.querySelector('input[type="date"]'), '2026-11-10');
     await setValue(document.querySelector('input[inputmode="decimal"]'), '1,00');
     await settle(350); await settle();
+    await click(partnerInput); await setValue(partnerInput, 'lenta'); await settle(250); await settle();
+    assert(late); assert.equal(document.querySelectorAll('[role="option"]').length, 0);
+    const slow = searches.find(row => row.query === 'lenta');
+    await setValue(partnerInput, 'Prefeitura'); await settle(250); await settle();
+    assert.equal(slow.signal.aborted, true, 'Changing the search cancels the old scoped request');
+    assert(document.querySelector('[role="option"]').textContent.includes(company.tradeName));
+    await act(async () => late([student])); await settle();
+    assert(![...document.querySelectorAll('[role="option"]')].some(option => option.textContent.includes(student.name)), 'A late response cannot replace the current server result');
+    await setValue(partnerInput, 'erro'); await settle(250); await settle();
+    assert(document.body.textContent.includes('Não foi possível consultar os parceiros'));
+    assert.equal(document.querySelector('textarea').value, description); assert.equal(document.querySelector('input[inputmode="decimal"]').value, '1,00');
+    assert.equal(document.querySelector('button[type="submit"]').disabled, true);
+    await setValue(partnerInput, '23'); await settle(250); await settle();
+    assert(document.querySelector('[role="option"]'), 'The server result is not subjected to a second local text filter');
+    await act(async () => partnerInput.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true })));
+    await act(async () => partnerInput.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))); await settle();
+    assert.equal(partnerInput.value, `${company.tradeName} · ${company.document}`);
+    await click(partnerInput); await setValue(partnerInput, '12.345.678/0001-95'); await settle(250); await settle();
+    assert(document.querySelector('[role="option"]').textContent.includes(company.tradeName));
+    await act(async () => partnerInput.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))); await settle();
+    assert.equal(partnerInput.value, `${company.tradeName} · ${company.document}`);
     const submit = document.querySelector('button[type="submit"]');
     assert.equal(submit.disabled, false); await click(submit);
     assert.equal(calls.length, 1); assert.equal(calls[0].input.serviceDescription, description);
     assert.equal(calls[0].input.generateReceivable, false); assert.equal(calls[0].input.amount, '1.00');
     assert.equal(calls[0].input.modelId, id(3)); assert.equal(calls[0].input.modelVersion, 2);
+    assert.equal(calls[0].input.partnerId, company.id); assert(searches.every(row => row.scope.poloId === scope.poloId && row.scope.environment === scope.environment));
     assert.equal(messages.length, 1); assert.equal(document.querySelector('select, datalist'), null);
   } finally {
     await act(async () => root.unmount()); client.clear(); dom.window.close();
-    delete globalThis.__partnerModel; delete globalThis.__partnerOptions; delete globalThis.__partnerSave;
+    delete globalThis.__partnerModel; delete globalThis.__partnerOptions; delete globalThis.__partnerSave; delete globalThis.__partnerSearch;
     await rm(temp, { recursive: true, force: true });
   }
 });

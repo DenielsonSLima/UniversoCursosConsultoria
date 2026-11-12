@@ -161,6 +161,7 @@ jobs:
           --lock=supabase/functions/_shared/nfse-national/deno.lock --frozen
           --allow-read --allow-write=/tmp --allow-run=openssl,xmllint
           supabase/functions/_shared/nfse-national/provider.test.ts
+          supabase/functions/_shared/nfse-national/dps-government.test.ts
           supabase/functions/_shared/nfse-national/pilot.test.ts
           supabase/functions/_shared/nfse-national/cancellation-policy.test.ts
           supabase/functions/_shared/nfse-national/homologation-live-contract.test.ts
@@ -201,6 +202,7 @@ jobs:
           --frozen --allow-read --allow-write=/tmp --allow-run=openssl
           supabase/functions/nfse-national-individual/handler.test.ts
           supabase/functions/nfse-national-individual/adapter.test.ts
+          supabase/functions/nfse-national-individual/adapter-government.test.ts
           supabase/functions/nfse-national-individual/academic-competence.test.ts
           supabase/functions/nfse-national-individual/adapter-ibscbs.test.ts
           supabase/functions/nfse-national-individual/service-location.test.ts

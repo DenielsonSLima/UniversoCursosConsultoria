@@ -57,6 +57,8 @@ export interface NationalDpsInput {
     recipientIsAcquirer: true;
     cst: string;
     classificationCode: string;
+    /** Restricted municipal lecture subset; omitted for existing student operations. */
+    governmentPurchase?: { operationType: '1' | '4'; entityType: '4' };
   };
   substitution?: {
     originalAccessKey: string;

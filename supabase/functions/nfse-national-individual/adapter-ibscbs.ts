@@ -9,6 +9,21 @@ const object = (value: unknown): Data =>
 const nullableText = (value: unknown) =>
   typeof value === "string" && value.length > 0 ? value : null;
 
+/** Restricted municipal lecture profile; payment after supply or advance for future supply. */
+export function supportedMunicipalGovernmentPurchase(definition: Data): boolean {
+  const service = object(definition.serviceOptions), people = object(definition.peopleOptions);
+  const ibs = object(object(definition.valuesOptions).ibscbs);
+  const extra = object(object(definition.additionalOptions).people);
+  return definition.nationalServiceCode === "080201" && definition.nbsCode === "122051900" &&
+    definition.operationIndicatorCode === "030102" && service.includeIbsCbs === true &&
+    service.governmentPurchase === true && service.governmentEntityType === "4" &&
+    (service.operationType === "1" || service.operationType === "4") &&
+    people.version === 2 && people.issuerRole === "PROVIDER" && people.recipientSource === "AT_ISSUANCE" &&
+    people.recipientAddressSource === "FROM_PARTNER" && people.intermediarySource === "NONE" &&
+    people.recipientIsDestination === true && people.destinationSource === null && extra.personalUse === false &&
+    ibs.cst === "000" && ibs.classificationCode === "000001";
+}
+
 /** Read-only review uses exactly the choices in the immutable server model snapshot. */
 export function queueIbsCbsSummary(definition: Data) {
   const service = object(definition.serviceOptions),
@@ -49,10 +64,11 @@ export function queueDeclaredIbsCbs(
     requireContract(values.ibscbs === null, "FISCAL_IBSCBS_REVIEW_REQUIRED");
     return undefined;
   }
+  const governmentPurchase = service.governmentPurchase === true;
   requireContract(
-    service.governmentPurchase === false &&
+    supportedMunicipalGovernmentPurchase(definition) || (service.governmentPurchase === false &&
       service.governmentEntityType == null &&
-      service.operationType == null,
+      service.operationType == null),
     "FISCAL_GOVERNMENT_OPERATION_UNSUPPORTED",
   );
   requireContract(
@@ -99,5 +115,8 @@ export function queueDeclaredIbsCbs(
     recipientIsAcquirer: true,
     cst: String(ibs.cst),
     classificationCode: String(ibs.classificationCode),
+    ...(governmentPurchase ? { governmentPurchase: {
+      operationType: service.operationType as "1" | "4", entityType: "4",
+    } } : {}),
   };
 }

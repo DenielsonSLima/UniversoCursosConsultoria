@@ -1,8 +1,8 @@
 # Lote ativo
 
-## Lote: 2026-11-11-nfse-filiais-emissao-retorno
+## Lote: 2026-11-12-nfse-servicos-busca-adiantamento
 
-Objetivo: validar uma emissão e cancelamento por filial (Aquidabã, Porto da Folha e Propriá), com preparação acadêmica pelo fluxo normal e disponibilidade de recebimentos após cancelamento confirmado.
-Status: 4.8.297 publicada pela PR390/main35d94f,12workflows ePROD READY. Continuação298 em fechamento com14migrations aplicadas eEdgev25JWT. Aquidabã ePorto autorizaram e cancelaram umaNFS-e nº1/R$260,00 cada; XMLs oficiais e liberação estrita comprovados. As mesmas mensalidades reapareceram naUI após cancelamento; financeiro preservado. Propriá excluída pelo usuário. CorreçõesASCII/data acadêmica aplicadas. Novo pedido: validação automática, Revisar/Editar opcional e Emitir explícito sem3checkboxes; SQL/editor/individual/lote prontos e testados. Smoke autenticado da novaUX e CI/publicação298 em fechamento.
-Autorização: usuário pediu expressamente testes reais de uma nota por filial, cancelamento posterior e revisão do retorno; correções necessárias integram o mesmo domínio. Nenhum disparo no portal oficial; operação fiscal pelo sistema autenticado.
-Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-11-nfse-filiais-emissao-retorno.md`; preservar alterações paralelas fora dele.
+Objetivo: unificar a busca de aluno/parceiro em Serviços e corrigir a localização de pessoas jurídicas; separar os modelos governamentais de palestra com recebimento posterior e adiantamento para prestação futura, incluindo suporte fiscal ao tipo de operação 4.
+Status: 4.8.299 validada localmente: build, busca PF/PJ em um único combobox no Safari, contratos/SQL/DOM e XSD/assinatura governamentais aprovados. Migration20261112092832 aplicada e Edge v26 ACTIVE/JWT conferida, preservando 31/33 fontes. Modelo posterior tipo1/v2 ativo e antecipado tipo4/v3 ativo; alunos v7 intacto e ambos governamentais visíveis nas três filiais. Publicação GitHub/CI/Preview em fechamento. Nenhuma nova nota emitida neste lote.
+Autorização: usuário pediu dois modelos governamentais e confirmou adiantamento antes da palestra; solicitou correção da busca duplicada e de PJ. Publicação no mesmo emissor autorizada na conversa. Nenhuma nova emissão, cancelamento ou movimentação financeira faz parte deste lote.
+Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-12-nfse-servicos-busca-adiantamento.md`; preservar alterações paralelas fora dele.
