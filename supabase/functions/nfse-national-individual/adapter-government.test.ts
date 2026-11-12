@@ -92,7 +92,7 @@ Deno.test("municipal lecture requires partner service, corporate acquirer and ma
   assert.equal(assessIndividualDps(reviewedMunicipalLectureFixture()).available, false);
   const invalidAddress = reviewedMunicipalLectureFixture();
   ((invalidAddress.snapshot.recipient as Data).address as Data).street = "";
-  assert.equal(assessIndividualDps(invalidAddress, "2803401").reason, "FISCAL_RECIPIENT_ADDRESS_REVIEW_REQUIRED");
+  assert.equal(assessIndividualDps(invalidAddress, "2803401").reason, "FISCAL_RECIPIENT_STREET_REQUIRED");
   const otherCity = reviewedMunicipalLectureFixture();
   (definition(otherCity).serviceOptions as Data).municipalityCode = "3550308";
   (otherCity.snapshot.configuration as Data).municipalityCode = "3550308";

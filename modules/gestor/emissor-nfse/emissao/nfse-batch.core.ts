@@ -59,7 +59,17 @@ export function createNfseBatchController(scope: NfseScope, input: readonly Nfse
       for (let index = 0; index < items.length && !disposed && !stopped; index++) {
         const item = items[index];
         try {
-          if (item.previewId) { await read(index); continue; }
+          if (item.previewId) {
+            await read(index);
+            if (disposed || stopped) break;
+            const current = items[index];
+            if (current.result?.state !== 'PREVIEWED' || current.uncertain || !current.preview ||
+              (current.preview.capability.available && Date.parse(current.preview.expiresAt) > Date.now())) continue;
+            const refreshed = await service.previewSource(captured, item.requestId, item.source,
+              item.source.kind === 'PARTNER_SERVICE' ? current.preview.payload?.competenceDate : undefined);
+            if (refreshed.previewId !== item.previewId) throw new Error('Atualização retornou outra operação fiscal. Consulte novamente.');
+            patch(index, { preview: refreshed, error: undefined }); changed(); continue;
+          }
           const preview = await service.previewSource(captured, item.requestId, item.source, item.source.kind === 'PARTNER_SERVICE' ? competenceDate : undefined);
           changed();
           persist(item, preview.previewId);

@@ -96,3 +96,17 @@ test('unavailable or expired server capability remains blocked without acceptanc
   await f.controller.issue();
   assert.equal(f.calls.filter(call => call.action === 'ISSUE').length, 0);
 });
+
+
+test('blocked unsigned batch refreshes canonical data with the same identity and never dispatches', async () => {
+  const f = fixture({ reconcile: async (_scope, _request, previewId) => ({ ...result(previewId, 'PREVIEWED'),
+    expiresAt: new Date(Date.now() + 60_000).toISOString(), capability: { available: false, reason: 'FISCAL_RECIPIENT_ADDRESS_NUMBER_REQUIRED' } }) });
+  await f.controller.review();
+  const original = f.calls.filter(row => row.action === 'PREVIEW_QUEUE').map(row => row.args);
+  const reopened = createNfseBatchController(scope, inputs, f.service, f.storage);
+  await reopened.review();
+  const repeated = f.calls.filter(row => row.action === 'PREVIEW_QUEUE').slice(2).map(row => row.args);
+  assert.deepEqual(repeated, original);
+  assert(reopened.getSnapshot().items.every(item => batchCanIssue(item)));
+  assert.equal(f.calls.filter(row => row.action === 'ISSUE').length, 0);
+});

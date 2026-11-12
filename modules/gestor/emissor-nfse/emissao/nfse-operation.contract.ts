@@ -24,7 +24,7 @@ export function operationReference(value: unknown): NfseOperationReference {
   return { operationId, requestId, cancelPreviewId, state, number, accessKey, message, sourceKind: source?.kind || null, sourceId: source?.id || null };
 }
 export function operationLabel(state?: string | null): string {
-  return state ? ({ PREVIEWED: 'Preparado para revisão', PROCESSING: 'Em processamento', AUTHORIZED: 'Emitida', REJECTED: 'Rejeitada',
-    AWAITING_CONFIRMATION: 'Aguardando confirmação', BLOCKED: 'Pendente de revisão', CANCELLED: 'Cancelada', CANCELLATION_PENDING: 'Cancelamento em consulta',
+  return state ? ({ PREVIEWED: 'Preparado para emissão', PROCESSING: 'Em processamento', AUTHORIZED: 'Emitida', REJECTED: 'Rejeitada',
+    AWAITING_CONFIRMATION: 'Aguardando confirmação', BLOCKED: 'Dados pendentes', CANCELLED: 'Cancelada', CANCELLATION_PENDING: 'Cancelamento em consulta',
     CANCELLATION_REJECTED: 'Cancelamento rejeitado', AWAITING_ANALYSIS: 'Aguardando análise fiscal' }[state] || 'Consultar situação fiscal') : 'Preparado';
 }

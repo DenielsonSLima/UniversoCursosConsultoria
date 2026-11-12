@@ -13,6 +13,10 @@ on:
       - 'scripts/test-nfse-certificate-ui.mjs'
       - 'supabase/migrations/*nfse*'
       - 'supabase/tests/nfse*'
+      - 'supabase/tests/student_address_number*'
+      - 'supabase/migrations/*student_address_number*'
+      - 'supabase/operations/student_address_number*'
+      - 'modules/gestor/parceiros/components/formularioparceiros/aluno/**'
       - 'supabase/functions/_shared/nfse-national/**'
       - 'supabase/functions/nfse-certificate-upload/**'
       - 'supabase/functions/nfse-national-preflight/**'
@@ -37,6 +41,10 @@ on:
       - 'scripts/test-nfse-certificate-ui.mjs'
       - 'supabase/migrations/*nfse*'
       - 'supabase/tests/nfse*'
+      - 'supabase/tests/student_address_number*'
+      - 'supabase/migrations/*student_address_number*'
+      - 'supabase/operations/student_address_number*'
+      - 'modules/gestor/parceiros/components/formularioparceiros/aluno/**'
       - 'supabase/functions/_shared/nfse-national/**'
       - 'supabase/functions/nfse-certificate-upload/**'
       - 'supabase/functions/nfse-national-preflight/**'
@@ -101,6 +109,10 @@ jobs:
           modules/gestor/emissor-nfse/modelos/NfseModelDescriptionEditor.interaction.test.mjs
           modules/gestor/emissor-nfse/modelos/exportacao/NfseModelExportModal.interaction.test.mjs
           modules/gestor/emissor-nfse/parceiros/NfsePartnerServiceModal.interaction.test.mjs
+      - name: Validar número obrigatório no cadastro do aluno
+        env:
+          PARTNER_FORM_JSDOM_PATH: ${{ runner.temp }}/nfse-certificate-ui/node_modules/jsdom
+        run: node --test modules/gestor/parceiros/components/formularioparceiros/aluno/parceiro-aluno-form.navigation.test.mjs
       - name: Exercitar emissão, recuperação e consulta de numeração sem transmissão
         env:
           NFSE_TEST_JSDOM_MODULE: ${{ runner.temp }}/nfse-certificate-ui/node_modules/jsdom/lib/api.js
@@ -139,6 +151,10 @@ jobs:
           modules/gestor/relatorios/nfse/nfse-accounting.pdf.test.mjs
       - name: Instalar PostgreSQL isolado para os contratos fiscais
         run: npm install --prefix "$RUNNER_TEMP/nfse-sql" --no-save --package-lock=false --ignore-scripts @electric-sql/pglite@0.3.14
+      - name: Validar número, auditoria e rollback de alunos
+        env:
+          PGLITE_MODULE_URL: file://${{ runner.temp }}/nfse-sql/node_modules/@electric-sql/pglite/dist/index.js
+        run: node supabase/tests/student_address_number.pglite.mjs
       - name: Instalar parser XML real para o relatório contábil
         run: npm install --prefix "$RUNNER_TEMP/nfse-accounting-sql" --no-save --package-lock=false --ignore-scripts @electric-sql/pglite@0.5.16
       - name: Validar recebimentos, modelos e serviços em banco isolado
@@ -214,6 +230,7 @@ jobs:
           supabase/functions/nfse-national-individual/academic-competence.test.ts
           supabase/functions/nfse-national-individual/adapter-ibscbs.test.ts
           supabase/functions/nfse-national-individual/service-location.test.ts
+          supabase/functions/nfse-national-individual/recipient-address.test.ts
           supabase/functions/nfse-national-individual/cancellation-review.test.ts
           supabase/functions/nfse-national-individual/queue-bridge.test.ts
           supabase/functions/nfse-national-individual/runtime.test.ts

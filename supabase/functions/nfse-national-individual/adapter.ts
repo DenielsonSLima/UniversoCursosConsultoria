@@ -8,6 +8,7 @@ import type { IndividualRow } from "./handler.ts";
 import { queueDeclaredIbsCbs, queueIbsCbsSummary, supportedMunicipalGovernmentPurchase } from "./adapter-ibscbs.ts";
 import { publicIndividualServiceLocation, resolveIndividualServiceLocation } from "./service-location.ts";
 import { academicPaymentReference } from "./academic-competence.ts";
+import { assertRecipientAddress } from "./recipient-address.ts";
 type Data = Record<string, unknown>;
 const object = (v: unknown): Data =>
   v !== null && typeof v === "object" && !Array.isArray(v) ? v as Data : {};
@@ -396,13 +397,7 @@ export function buildIndividualDps(
   if (people.recipientAddressSource === "FROM_PARTNER") {
     const address = object(recipient.address),
       postalCode = text(address.postalCode).replace(/\D/g, "");
-    requireContract(
-      /^\d{8}$/.test(postalCode) &&
-        ["street", "number", "district"].every((key) =>
-          text(address[key]).trim().length > 0
-        ),
-      "FISCAL_RECIPIENT_ADDRESS_REVIEW_REQUIRED",
-    );
+    assertRecipientAddress(address);
     result.recipient.address = {
       municipalityCode: recipientMunicipalityCode!,
       postalCode,
