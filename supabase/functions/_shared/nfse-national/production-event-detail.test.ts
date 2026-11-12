@@ -9,7 +9,7 @@ import {assertProductionSingleEventEnvelope} from './production-event-response.t
 const json=(body:unknown,status=200)=>({status,body:new TextEncoder().encode(JSON.stringify(body))});
 const contract:ProductionEventEnvelopeContract={requestProperty:'pedidoRegistroEventoXmlGZipB64',listProperty:null,
   xmlProperty:'eventoXmlGZipB64',eventIdProperty:null,responseMode:'SINGLE_EVENT',lookupSequence:'001'};
-Deno.test('single event contract reconciles type101101 sequence1 before and after the sole POST',async()=>{
+Deno.test('single event contract accepts verified POST event and reconciles with GET only',async()=>{
   await withProductionTestCertificate(async credential=>{
     let registered='';const calls:string[]=[];
     const executor=createNationalProductionCancellation({credential,signatureProfile:'RSA_SHA1_LEGACY',schema:createProductionNumericSeriesCompatibilityValidator(),
@@ -28,7 +28,7 @@ Deno.test('single event contract reconciles type101101 sequence1 before and afte
     const prepared=await executor.prepare(cancellationFixture(pilotAccessKey));
     const result=await executor.cancel(prepared);assert.equal(result.state,'CONFIRMED');
     if(result.state==='CONFIRMED'){assert.equal(result.cancellationState,'CANCELLED');assert.equal(result.eventCode,'101101');assert.equal(result.eventId,`EVT${pilotAccessKey}101101001`);}
-    assert.deepEqual(calls,[`GET /nfse/${pilotAccessKey}/eventos/101101/1`,`POST /nfse/${pilotAccessKey}/eventos`,`GET /nfse/${pilotAccessKey}/eventos/101101/1`]);
+    assert.deepEqual(calls,[`GET /nfse/${pilotAccessKey}/eventos/101101/1`,`POST /nfse/${pilotAccessKey}/eventos`]);
     calls.length=0;assert.equal((await executor.reconcile(prepared)).state,'CONFIRMED');assert.deepEqual(calls,[`GET /nfse/${pilotAccessKey}/eventos/101101/1`]);
   });
 });

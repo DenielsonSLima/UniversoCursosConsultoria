@@ -1,8 +1,8 @@
 {
-  "version": "4.8.316",
+  "version": "4.8.317",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 325,
+  "revision": 326,
   "releasedAt": "2026-11-12",
-  "summary": "Modelos fiscais por origem, período de serviços e emissão direta com sincronização"
+  "summary": "Retorno de cancelamento fiscal, parceiros por polo e lista de notas compacta"
 }

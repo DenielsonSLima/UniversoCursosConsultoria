@@ -57,6 +57,15 @@ Histórico arquivado: [01/11/2026 — versão 4.8.244](./changelog/2026-11-01-ve
 Histórico arquivado: [05/11/2026 — versão 4.8.245](./changelog/2026-11-05-versao-4-8-245.md).
 Histórico arquivado: [05/11/2026 — versão 4.8.246](./changelog/2026-11-05-versao-4-8-246.md).
 
+Histórico arquivado: [4.8.247 a 4.8.248](./changelog/2026-11-05-versao-4-8-247.md).
+
+## [4.8.317] - 2026-11-12
+
+### Corrigido
+- Retorno do cancelamento por XML assinado com prova fiscal validada.
+- Parceiros PJ com seleção explícita de polos e preservação das permissões.
+- Lista de notas emitidas reorganizada em três colunas compactas.
+
 ## [4.8.316] - 2026-11-12
 
 ### Corrigido
@@ -483,16 +492,3 @@ Histórico arquivado: [05/11/2026 — versão 4.8.246](./changelog/2026-11-05-ve
 - Financeiro com resumo, tesouraria, abas e cabeçalhos mais compactos.
 - Caixa com indicadores, trilhas e análises leves; valores extensos sem truncamento e navegação de capítulos ajustada ao cabeçalho móvel.
 - Configurações com catálogo compacto, ícones centralizados e retorno das seções refinado. Dados, regras financeiras, permissões, consultas e operações preservados.
-
-## [4.8.248] - 2026-11-05
-
-### Alterado
-- Secretaria com operações agrupadas, fontes menores e ícones centralizados nas linhas.
-- Parceiros com quatro cartões por linha no desktop amplo e ficha interna do aluno mais compacta.
-- Gestão com entrada, filtros, cartões e cabeçalho/resumo das turmas refinados nas quatro modalidades. Dados, permissões, consultas e operações preservados.
-
-## [4.8.247] - 2026-11-05
-
-### Alterado
-- Início do Gestor com tipografia e espaçamento compactos, indicadores integrados, agenda e movimentação em composição mais leve.
-- Menu lateral e cabeçalho menores; dados, permissões, consultas e destinos dos atalhos preservados. Redesenho em prévia para aceite visual.

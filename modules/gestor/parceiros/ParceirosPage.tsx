@@ -232,7 +232,7 @@ const ParceirosPage: React.FC<ParceirosPageProps> = ({
       <ParceiroProfessorDetalhes key={selectedParceiro.id} professorInicial={selectedParceiro}
         onBack={handleBackFromDetails} />
     ) : selectedParceiro.tipo === 'PJ' ? (
-      <ParceiroPJDetalhes key={selectedParceiro.id} pjInicial={selectedParceiro}
+      <ParceiroPJDetalhes key={selectedParceiro.id} pjInicial={selectedParceiro} canManagePolos={includeGlobal}
         onBack={handleBackFromDetails} />
     ) : (
       <ParceiroPFDetalhes key={selectedParceiro.id} pfInicial={selectedParceiro}
