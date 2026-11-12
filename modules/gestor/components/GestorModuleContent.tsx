@@ -191,6 +191,7 @@ const GestorModuleContentView: React.FC<GestorModuleContentProps> = ({
       : 'selection';
     return (
       <ParceirosPage
+        financeCacheScope={JSON.stringify([profile.id, profile.contextId, currentPoloId, permissions])}
         initialForm={initialForm}
         poloId={scopedPoloId}
         includeGlobal={isGlobal}
@@ -204,6 +205,7 @@ const GestorModuleContentView: React.FC<GestorModuleContentProps> = ({
     case 'calendario': return <CalendarioPage poloId={scopedPoloId} />;
     case 'parceiros': return (
       <ParceirosPage
+        financeCacheScope={JSON.stringify([profile.id, profile.contextId, currentPoloId, permissions])}
         poloId={scopedPoloId}
         includeGlobal={isGlobal}
         onRequestScrollTop={onRequestScrollTop}

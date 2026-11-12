@@ -43,6 +43,7 @@ const RESPONSAVEL_CREATE_UNAVAILABLE_REASON =
   'O cadastro de responsável está disponível somente para gestores com escopo global.';
 
 interface ParceirosPageProps {
+  financeCacheScope?: string;
   activeTabInicial?: ParceirosTabType;
   initialForm?: ParceiroFormType;
   poloId?: string | null;
@@ -64,6 +65,7 @@ const tabs = [
 ] as const;
 
 const ParceirosPage: React.FC<ParceirosPageProps> = ({
+  financeCacheScope,
   activeTabInicial = 'todos',
   initialForm,
   poloId,
@@ -225,7 +227,7 @@ const ParceirosPage: React.FC<ParceirosPageProps> = ({
 
     const detail = selectedParceiro.tipo === 'Aluno' ? (
       <ParceiroAlunoDetalhes key={selectedParceiro.id} alunoInicial={selectedParceiro}
-        onBack={handleBackFromDetails} onRequestScrollTop={onRequestScrollTop} />
+        onBack={handleBackFromDetails} onRequestScrollTop={onRequestScrollTop} financeCacheScope={financeCacheScope} />
     ) : selectedParceiro.tipo === 'Professor' ? (
       <ParceiroProfessorDetalhes key={selectedParceiro.id} professorInicial={selectedParceiro}
         onBack={handleBackFromDetails} />

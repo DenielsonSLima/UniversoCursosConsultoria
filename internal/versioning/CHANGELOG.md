@@ -32,6 +32,14 @@ Histórico arquivado: [19/10/2026 — versão 4.8.227](./changelog/2026-10-19-ve
 
 Histórico arquivado: [20–21/10/2026 — versões 4.8.228 a 4.8.229](./changelog/2026-10-20-a-21-versoes-4-8-228-a-229.md).
 
+Histórico arquivado: [21/10/2026 — versão4.8.230](./changelog/2026-10-21-versao-4-8-230.md).
+
+## [4.8.302] - 2026-11-12
+
+- Botão Abrir no financeiro do cadastro do aluno para boletos EAD já emitidos.
+- Leitura autenticada por polo disponível a gestores sem acesso ao financeiro, sem emissão ou alteração de títulos.
+- Resumos calculados no servidor e nova aba cancelável durante carregamento.
+
 ## [4.8.301] - 2026-11-12
 
 - Central de Relatórios inclui NFS-e emitidas em paisagem, duas linhas por nota e totais por tributação, NBS e polo, com consolidado exclusivo da matriz.
@@ -488,8 +496,3 @@ Histórico arquivado: [20–21/10/2026 — versões 4.8.228 a 4.8.229](./changel
 - Adicionado botão Ver registros no aviso dos recebimentos, com lista completa paginada e filtro separado para ausência de detalhamento sem diferença.
 - Modal somente leitura exibe aluno, parcela, recebido, base, componentes identificados, diferença e origem da composição. Valores ausentes não são presumidos zero.
 - Reutilizada RPC segura do relatório mensal sob demanda, sem alteração de cobranças, saldos, banco ou permissões.
-
-## [4.8.230] - 2026-10-21
-
-- Parceiros: nomes dos cards de pessoas jurídicas menores em aproximadamente15%.
-- Prévia ao passar o mouse ou focar pelo teclado com nome completo, razão social, CNPJ e demais dados disponíveis, sem abrir o cadastro.

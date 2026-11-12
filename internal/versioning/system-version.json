@@ -1,8 +1,8 @@
 {
-  "version": "4.8.301",
+  "version": "4.8.302",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 310,
+  "revision": 311,
   "releasedAt": "2026-11-12",
-  "summary": "Relatório contábil NFS-e paisagem por polo e consolidado da matriz"
+  "summary": "Visualização autenticada de boletos EAD no cadastro do aluno"
 }
