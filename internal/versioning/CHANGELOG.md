@@ -37,6 +37,12 @@ Histórico arquivado: [21/10/2026 — versão4.8.230](./changelog/2026-10-21-ver
 Histórico arquivado: [21/10/2026 — versão4.8.231](./changelog/2026-10-21-versao-4-8-231.md).
 
 Histórico arquivado: [22/10/2026 — versão 4.8.232](./changelog/2026-10-22-versao-4-8-232.md).
+Histórico arquivado: [23/10/2026 — versão 4.8.233](./changelog/2026-10-23-versao-4-8-233.md).
+
+## [4.8.305] - 2026-11-12
+
+- Emissor NFS-e respeita liberação efetiva do módulo, própria ou herdada, sem cadastro oculto do piloto.
+- Preserva vínculo de identidade, atividade, horário e guardas de polo/ambiente; revogação continua bloqueando.
 
 ## [4.8.304] - 2026-11-12
 
@@ -492,8 +498,3 @@ Histórico arquivado: [22/10/2026 — versão 4.8.232](./changelog/2026-10-22-ve
 
 - Caixa preserva status HTTP e interrompe tentativas após negação de acesso, sem trocar para versão anterior da consulta.
 - Composição do Caixa agrega totais e classificação na mesma leitura de cada relatório, preservando valores e permissões; conexões antecipadas Cloudflare removidas e captcha sob demanda.
-
-## [4.8.233] - 2026-10-23
-
-- Consulta financeira passa a negar identidade ausente e restringir resultados aos polos autorizados; calculadora mantém resultados com search_path fixo.
-- Dependências de segurança atualizadas, prévias adaptadas ao PDF.js 6 e conferência do runtime Node separada do build. Aplicação das migrations, produção e distribuição móvel ainda pendentes.

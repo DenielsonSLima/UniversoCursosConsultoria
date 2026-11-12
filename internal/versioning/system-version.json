@@ -1,8 +1,8 @@
 {
-  "version": "4.8.304",
+  "version": "4.8.305",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 313,
+  "revision": 314,
   "releasedAt": "2026-11-12",
-  "summary": "Relatório NFS-e com situações, resumos paralelos e totais válidos"
+  "summary": "Emissor NFS-e respeita a permissão institucional efetiva"
 }

@@ -1,7 +1,7 @@
 import { canAccessCommunicationRoute, canAccessGestorModule, canAccessTab, type GestorPermissions } from './access-control';
 import { POLO_CADASTROS_ALLOWED } from './gestor-navigation';
 
-/** Shared by navigation and rendering; the pilot gate overrides editable module grants. */
+/** Shared by navigation and rendering; the server validates the effective institutional authorization. */
 export function canOpenGestorModule(
   moduleId: string,
   permissions: GestorPermissions,
