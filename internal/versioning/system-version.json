@@ -1,8 +1,8 @@
 {
-  "version": "4.8.318",
+  "version": "4.8.319",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 327,
+  "revision": 328,
   "releasedAt": "2026-11-12",
-  "summary": "Reconciliação fiscal central de operações submetidas, com consultas protegidas e continuidade sem sessão"
+  "summary": "Retorno automático de emissão e cancelamento sem consulta manual"
 }

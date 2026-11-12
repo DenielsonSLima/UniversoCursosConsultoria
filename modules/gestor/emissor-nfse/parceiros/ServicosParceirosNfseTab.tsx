@@ -104,7 +104,7 @@ export default function ServicosParceirosNfseTab() {
           <td>{item.receivableAction === 'CREATED' ? 'Criada' : item.receivableAction === 'LINKED' ? 'Vinculada' : 'Não gerada'}</td>
           <td><span className="nfse-status">{operationLabel(item.state)}</span>{item.number && <small>NFS-e {item.number}</small>}</td>
           <td><button type="button" className="nfse-button nfse-button-secondary" disabled={blocked}
-            onClick={() => { setEmissionIntent('CONSULT'); return !item.state || item.state === 'PREVIEWED' ? setBatch([item]) : setEmission(item); }}>{!item.state || item.state === 'PREVIEWED' ? 'Emitir NFS-e' : 'Consultar NFS-e'}</button></td>
+            onClick={() => { setEmissionIntent('CONSULT'); return !item.state || item.state === 'PREVIEWED' ? setBatch([item]) : setEmission(item); }}>{!item.state || item.state === 'PREVIEWED' ? 'Emitir NFS-e' : 'Detalhes da NFS-e'}</button></td>
         </tr>)}</tbody>
       </table></div>
       <footer className="nfse-footer"><span>Total filtrado: <strong>{formatNfseMoney(data.totalAmount)}</strong></span><span>{data.totalItems} serviço(s)</span></footer>

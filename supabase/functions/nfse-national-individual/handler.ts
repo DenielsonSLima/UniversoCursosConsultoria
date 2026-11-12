@@ -16,6 +16,7 @@ export interface IndividualRow {
   configurationVersion: number;
   certificateFingerprint: string;
   authorizedXml: string | null;
+  cancelPreviewId?: string | null;
 }
 export interface CancellationRow {
   previewId: string;
@@ -89,7 +90,7 @@ export interface IndividualDependencies {
   ): Promise<{ available: boolean; reason: string | null }>;
   payload(row: IndividualRow): Record<string, unknown>;
   respond(req: Request, body: unknown, status: number): Response;
-  rateLimited(req: Request): boolean;
+  rateLimited(req: Request, command: IndividualCommand, actor: string): boolean;
 }
 const terminalIssue = ["AUTHORIZED", "REJECTED", "BLOCKED"];
 const terminalCancel = [
@@ -117,9 +118,6 @@ export function createIndividualHandler(deps: IndividualDependencies) {
     if (req.method !== "POST") {
       return deps.respond(req, { error: "METHOD_NOT_ALLOWED" }, 405);
     }
-    if (deps.rateLimited(req)) {
-      return deps.respond(req, { error: "RATE_LIMITED" }, 429);
-    }
     let command: IndividualCommand;
     try {
       command = await readIndividualCommand(req);
@@ -132,10 +130,14 @@ export function createIndividualHandler(deps: IndividualDependencies) {
     } catch {
       return deps.respond(req, { error: "INDIVIDUAL_SCOPE_DENIED" }, 403);
     }
+    if (deps.rateLimited(req, command, actor)) {
+      return deps.respond(req, { error: "RATE_LIMITED" }, 429);
+    }
     const respond = (data: unknown) =>
       deps.respond(req, { version: 1, scope: command.scope, data }, 200);
     const publicIssue = (row: IndividualRow) => ({
       previewId: row.previewId,
+      ...(command.action === "OBSERVE" ? { cancelPreviewId: row.cancelPreviewId ?? null } : {}),
       state: row.state === "PROCESSING" ? "AWAITING_CONFIRMATION" : row.state,
       message: resultText(row),
       codes: publicCodes(row.result),
@@ -174,9 +176,12 @@ export function createIndividualHandler(deps: IndividualDependencies) {
           capability: await deps.capability(command, actor, row),
         });
       }
-      if (command.action === "ISSUE" || command.action === "RECONCILE") {
+      if (command.action === "ISSUE" || command.action === "RECONCILE" || command.action === "OBSERVE") {
         let row = await deps.ledger(command, actor, "READ");
         if (terminalIssue.includes(row.state)) return respond(publicIssue(row));
+        if (command.action === "OBSERVE") {
+          return respond(row.state === "PREVIEWED" ? { ...publicIssue(row), expiresAt: row.expiresAt } : publicIssue(row));
+        }
         if (command.action === "RECONCILE" && row.state === "PREVIEWED") {
           return respond({
             ...publicIssue(row),
@@ -222,7 +227,10 @@ export function createIndividualHandler(deps: IndividualDependencies) {
         });
       }
       let row = await deps.cancellation(command, actor, "READ");
-      if (terminalCancel.includes(row.state)) return respond(publicCancel(row));
+      if (command.action === "OBSERVE_CANCEL") {
+        return respond(row.state === "PREVIEWED" ? { ...publicCancel(row), expiresAt: row.expiresAt } : publicCancel(row));
+      }
+      if (terminalCancel.includes(row.state) && !(command.action === "RECONCILE_CANCEL" && row.state === "AWAITING_ANALYSIS")) return respond(publicCancel(row));
       if (command.action === "RECONCILE_CANCEL" && row.state === "PREVIEWED") {
         return respond({
           ...publicCancel(row),
@@ -293,7 +301,7 @@ function issueMessage(result: Record<string, unknown>) {
   if (result.state === "BLOCKED") {
     return "Emissão bloqueada antes da transmissão.";
   }
-  return "Resultado da emissão ainda não confirmado. Consulte esta mesma DPS; nenhum reenvio automático será feito.";
+  return "Acompanhando automaticamente o retorno desta mesma DPS, sem reenviar a emissão.";
 }
 function cancelMessage(result: Record<string, unknown>) {
   if (result.state === "CANCELLED") {
@@ -305,5 +313,5 @@ function cancelMessage(result: Record<string, unknown>) {
   if (result.state === "BLOCKED") {
     return "Cancelamento bloqueado antes da transmissão.";
   }
-  return "Resultado do cancelamento ainda não confirmado. Consulte os eventos desta mesma nota.";
+  return "Acompanhando automaticamente os eventos de cancelamento desta mesma nota.";
 }

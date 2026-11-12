@@ -1,8 +1,8 @@
 # Lote ativo
 
-## Lote: 2026-11-12-nfse-worker-central
-Objetivo: acompanhar operações fiscais já submetidas sem depender da sessão, sem novos envios fiscais.
-Status: integração 4.8.318 sobre a 4.8.317; gates finais antes da publicação e ativação.
-Autorização: usuário solicitou correção e publicação do acompanhamento central; sem emitir ou cancelar notas reais.
-Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-12-nfse-worker-central.md`.
-Limitações: scheduler permanece desativado até implantação JWT verificado e smoke protegido sem claim fiscal.
+## Lote: 2026-11-12-nfse-retorno-automatico
+Objetivo: acompanhar automaticamente o retorno de emissão/cancelamento e atualizar o Emissor via Realtime/TanStack Query, sem consulta manual.
+Status: implementação local concluída; testes internos e preparação de revisão/CI da versão 4.8.319.
+Autorização: usuário autorizou correção e automação do fluxo; publicação em produção e operações fiscais reais não autorizadas neste lote.
+Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-12-nfse-retorno-automatico.md`.
+Limitações: validação visual pelo usuário; migration nova e Edge ainda não aplicadas.

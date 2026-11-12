@@ -6,6 +6,7 @@ import { resolve } from 'node:path';
 import { pathToFileURL, fileURLToPath } from 'node:url';
 import { build } from 'esbuild';
 import React, { act } from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 const jsdomPath = process.env.NFSE_TEST_JSDOM_MODULE;
 const { JSDOM } = await import(jsdomPath ? pathToFileURL(resolve(jsdomPath)).href : 'jsdom');
 const base = fileURLToPath(new URL('../../../../', import.meta.url));
@@ -26,11 +27,12 @@ test('saved source reviews canonical snapshot and recovers issue and cancellatio
   const { createRoot } = await import('react-dom/client');
   const bundle = resolve(temp, 'test.mjs');
   const compiled = await build({ entryPoints: [resolve(base, 'modules/gestor/emissor-nfse/emissao/NfseSourceEmissionModal.tsx')],
-    bundle: true, write: false, format: 'esm', platform: 'node', packages: 'external', jsx: 'automatic', outfile: bundle, loader: { '.css': 'empty' },
+    bundle: true, write: false, format: 'esm', platform: 'node', packages: 'external', external: ['react'], jsx: 'automatic', outfile: bundle, loader: { '.css': 'empty' },
     plugins: [{ name: 'block-live-client', setup(builder) {
       builder.onResolve({ filter: /NfseCancellationTemplatePicker$/ }, () => ({ path: 'picker', namespace: 'fixture' }));
+      builder.onResolve({ filter: /useNfseBatchRealtime$/ }, () => ({ path: 'realtime', namespace: 'fixture' }));
       builder.onResolve({ filter: /lib\/supabase$/ }, () => ({ path: 'blocked', namespace: 'fixture' }));
-      builder.onLoad({ filter: /.*/, namespace: 'fixture' }, args => ({ contents: args.path === 'picker' ? 'export default function Picker(props){return globalThis.__nfsePickerTest?.(props)||null;}' : 'export const supabase=new Proxy({},{get(){throw new Error("Live client forbidden")}});', loader: 'js' }));
+      builder.onLoad({ filter: /.*/, namespace: 'fixture' }, args => ({ contents: args.path === 'picker' ? 'export default function Picker(props){return globalThis.__nfsePickerTest?.(props)||null;}' : args.path === 'realtime' ? "import {useEffect} from 'react';export function useNfseOperationRealtime(_scope,changed,enabled){useEffect(()=>{if(enabled)globalThis.__nfseSourceEvent=changed;return()=>{if(globalThis.__nfseSourceEvent===changed)delete globalThis.__nfseSourceEvent;};},[changed,enabled]);}" : 'export const supabase=new Proxy({},{get(){throw new Error("Live client forbidden")}});', loader: 'js' }));
     } }] });
   await writeFile(bundle, compiled.outputFiles[0].contents);
   const { default: Modal } = await import(pathToFileURL(bundle).href);
@@ -46,6 +48,7 @@ test('saved source reviews canonical snapshot and recovers issue and cancellatio
     cancel: async (...args) => { calls.push({ action: 'CANCEL', args }); return new Promise((resolve, reject) => { cancelPending = { resolve, reject }; }); },
     reconcileCancellation: async (...args) => { calls.push({ action: 'RECONCILE_CANCEL', args }); if (args[1] === id(50)) return { previewId: id(5), cancelPreviewId: id(6), state: 'CANCELLATION_PENDING', message: 'Resultado pendente.', payload: cancelPayload, retry: { availableAt: new Date(Date.now() - 1000).toISOString(), used: false } }; if (args[1] === id(44)) return { previewId: id(5), cancelPreviewId: id(6), state: 'PREVIEWED', message: 'Prévia expirada.', payload: cancelPayload, expiresAt: new Date(Date.now() - 1000).toISOString(), capability: { available: false, reason: 'PRODUCTION_PREVIEW_EXPIRED' } }; return { previewId: id(5), cancelPreviewId: id(6), state: 'CANCELLED', message: 'Evento sintético confirmado', payload: cancelPayload }; },
   };
+  service.observe = service.reconcile; service.observeCancellation = service.reconcileCancellation;
   const selectedModel = { id: 'SYSTEM:ERROR_AMOUNT', version: 1, source: 'SYSTEM', category: 'VALOR', name: 'Modelo sintético formal', active: true,
     eventCode: '101101', reasonCode: '1', textTemplate: 'Solicito cancelar por erro no valor: {{detalhe}}.', requiresDetail: true };
   service.previewCancellationModel = async (...args) => { calls.push({ action: 'CANCEL_PREVIEW_SELECTED', args }); return {
@@ -54,7 +57,8 @@ test('saved source reviews canonical snapshot and recovers issue and cancellatio
   service.retryCancellation = async (...args) => { calls.push({ action: 'RETRY_CANCEL', args }); return { previewId: id(5), cancelPreviewId: id(6), state: 'CANCELLATION_PENDING',
     message: 'Retomada pendente.', payload: cancelPayload, retry: { availableAt: null, used: true } }; };
   const root = createRoot(document.getElementById('root'));
-  const render = props => root.render(React.createElement(React.StrictMode, null, React.createElement(Modal, { scope, source, label: payload.recipientName, amount: payload.amount, service, onClose() {}, onChanged() {}, onNotice: notice => notices.push(notice), ...props })));
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
+  const render = props => root.render(React.createElement(QueryClientProvider, { client }, React.createElement(React.StrictMode, null, React.createElement(Modal, { scope, source, label: payload.recipientName, amount: payload.amount, service, onClose() {}, onChanged() {}, onNotice: notice => notices.push(notice), ...props }))));
   const settle = async () => act(async () => { await new Promise(resolve => setTimeout(resolve, 15)); });
   const button = text => [...document.querySelectorAll('button')].find(control => control.textContent.trim() === text);
   const click = async control => { assert(control, 'Control missing'); await act(async () => control.click()); await settle(); };
@@ -168,8 +172,107 @@ test('saved source reviews canonical snapshot and recovers issue and cancellatio
     await check('Conferi a nota, o motivo'); await click(button('Confirmar cancelamento'));
     assert(document.querySelector('[role="alert"]').textContent.includes('diferem dos confirmados'));
     assert.equal(calls.filter(row => row.action === 'CANCEL').length, cancelCount, 'Canonical mismatch never dispatches');
+    let remoteCancelState = 'CANCELLATION_PENDING', remoteCancelKnown = false, remoteCancelReads = 0;
+    const otherActorService = { ...service, observe: async () => ({ ...note, cancelPreviewId: remoteCancelKnown ? id(94) : null }),
+      observeCancellation: async (...args) => { remoteCancelReads++; assert.equal(args[1], id(93)); assert.equal(args[2], id(5)); assert.equal(args[3], id(94));
+        return { previewId: id(5), cancelPreviewId: id(94), state: remoteCancelState, payload: cancelPayload, message: `Outro usuário: ${remoteCancelState}` }; },
+      reconcile: async () => assert.fail('An issued note only observes snapshots'), reconcileCancellation: async () => assert.fail('Another actor event must not invoke fiscal GET'),
+      issue: async () => assert.fail('Another actor event cannot issue'), cancel: async () => assert.fail('Another actor event cannot cancel') };
+    await act(async () => render({ key: 'other-actor-cancellation', intent: 'CONSULT', service: otherActorService,
+      source: { kind: 'PARTNER_SERVICE', id: id(95) }, operation: { operationId: id(5), requestId: id(93), state: 'AUTHORIZED' } })); await settle();
+    assert.equal(remoteCancelReads, 0);
+    remoteCancelKnown = true;
+    await act(async () => globalThis.__nfseSourceEvent(true)); await settle(); await settle();
+    assert.equal(remoteCancelReads, 1, 'A new canonical cancellation reference is observed immediately, without reopening or waiting for polling');
+    assert(document.body.textContent.includes('Outro usuário: CANCELLATION_PENDING'));
+    const remoteStored = JSON.parse(dom.window.sessionStorage.getItem([...Array(dom.window.sessionStorage.length)].map((_, i) => dom.window.sessionStorage.key(i)).find(key => key.endsWith(id(95)))));
+    assert.equal(remoteStored.cancelPreviewId, id(94)); assert.equal(remoteStored.requestId, id(93));
+    remoteCancelKnown = false;
+    await act(async () => globalThis.__nfseSourceEvent(true)); await settle();
+    assert(document.body.textContent.includes('Outro usuário: CANCELLATION_PENDING'), 'A stale null reference cannot erase a known cancellation');
+    remoteCancelState = 'CANCELLED';
+    await act(async () => globalThis.__nfseSourceEvent(true)); await settle();
+    assert(document.body.textContent.includes('Outro usuário: CANCELLED'));
+
+    const quotaNativeTimeout = dom.window.setTimeout.bind(dom.window), quotaWakeups = [];
+    dom.window.setTimeout = (fn, delay, ...args) => {
+      if (delay >= 60_000) { quotaWakeups.push({ fn, delay }); return quotaNativeTimeout(() => {}, 300_000); }
+      return quotaNativeTimeout(fn, delay, ...args);
+    };
+    try {
+      const quotaCalls = [];
+      const quotaService = { ...service, observe: async () => note, issue: async (...args) => {
+        quotaCalls.push(args); if (quotaCalls.length === 1) throw Object.assign(new Error('Limite antes do envio.'), { status: 429, code: 'RATE_LIMITED', beforeDispatch: true, retryAfterMs: 60_000 });
+        return note;
+      } };
+      await act(async () => render({ key: 'quota-retry', service: quotaService, source: { kind: 'PARTNER_SERVICE', id: id(96) } })); await settle();
+      await click(button('Emitir NFS-e'));
+      assert.equal(quotaCalls.length, 1); assert(document.body.textContent.includes('Este envio ainda não foi aceito'));
+      assert.equal(button('Fechar').disabled, false); assert(quotaWakeups.at(-1).delay >= 60_000);
+      await act(async () => quotaWakeups.at(-1).fn()); await settle();
+      assert.equal(quotaCalls.length, 2); assert.deepEqual(quotaCalls[0], quotaCalls[1], 'Quota retry preserves every dispatch identifier');
+      assert(document.body.textContent.includes('Autorização sintética'));
+
+      const expiredQuotaCalls = [];
+      const expiredSnapshot = { ...note, state: 'PREVIEWED', number: null, accessKey: null, expiresAt: new Date(Date.now() - 1000).toISOString(),
+        capability: { available: false, reason: 'PRODUCTION_PREVIEW_EXPIRED' }, message: 'Prévia expirou sem envio.' };
+      const expiredQuotaService = { ...service, observe: async () => expiredSnapshot, issue: async (...args) => {
+        expiredQuotaCalls.push(args); if (expiredQuotaCalls.length === 1) throw Object.assign(new Error('Quota'), { status: 429, code: 'RATE_LIMITED', beforeDispatch: true });
+        return expiredSnapshot;
+      } };
+      await act(async () => render({ key: 'quota-preview-expired', service: expiredQuotaService, source: { kind: 'PARTNER_SERVICE', id: id(97) } })); await settle();
+      await click(button('Emitir NFS-e')); await act(async () => quotaWakeups.at(-1).fn()); await settle();
+      assert.equal(expiredQuotaCalls.length, 2); assert.equal(button('Emitir NFS-e').disabled, true);
+      assert(button('Atualizar dados desta operação')); assert(document.body.textContent.includes('A prévia expirou'));
+      await act(async () => globalThis.__nfseSourceEvent(true)); await settle();
+      assert(button('Atualizar dados desta operação'), 'A proven unaccepted preview must not remain stuck in the optimistic pending cache.');
+      assert.equal(expiredQuotaCalls.length, 2, 'Expiry never authorizes a further fiscal POST.');
+
+      const closedQuotaCalls = []; let quotaCloses = 0;
+      const livePreview = { ...expiredSnapshot, expiresAt: expiry(), capability: { available: true, reason: null } };
+      const closedQuotaService = { ...service, observe: async () => livePreview, issue: async (...args) => {
+        closedQuotaCalls.push(args); throw Object.assign(new Error('Quota'), { status: 429, code: 'RATE_LIMITED', beforeDispatch: true });
+      } };
+      const closedSource = { kind: 'PARTNER_SERVICE', id: id(98) };
+      await act(async () => render({ key: 'quota-close', service: closedQuotaService, source: closedSource, onClose: () => { quotaCloses++; } })); await settle();
+      await click(button('Emitir NFS-e')); const cancelledWake = quotaWakeups.at(-1);
+      await click(button('Fechar')); assert.equal(quotaCloses, 1);
+      await act(async () => cancelledWake.fn()); await settle(); assert.equal(closedQuotaCalls.length, 1);
+      await act(async () => render({ key: 'quota-reopen', service: closedQuotaService, source: closedSource })); await settle();
+      await act(async () => cancelledWake.fn()); await settle();
+      assert.equal(closedQuotaCalls.length, 1, 'Reopening the same operation cannot inherit an automatic dispatch intent.');
+      assert.equal(button('Emitir NFS-e').disabled, false);
+    } finally { dom.window.setTimeout = quotaNativeTimeout; }
+
+    let resolveLateIssue, lateIssueSends = 0;
+    const lateIssueService = { ...service, observe: async () => note, reconcile: async () => assert.fail('Sent details cannot query the fiscal service'),
+      issue: async () => { lateIssueSends++; return new Promise(resolve => { resolveLateIssue = resolve; }); } };
+    await act(async () => render({ key: 'worker-before-post', service: lateIssueService, source: { kind: 'PARTNER_SERVICE', id: id(90) } })); await settle();
+    await click(button('Emitir NFS-e')); assert.equal(lateIssueSends, 1);
+    assert.equal(button('Fechar').disabled, true);
+    await act(async () => globalThis.__nfseSourceEvent(true)); await settle();
+    assert(document.body.textContent.includes('Autorização sintética')); assert.equal(button('Fechar').disabled, false,
+      'A worker confirmation unlocks the dialog while the original HTTP response is still pending');
+    await act(async () => resolveLateIssue({ ...note, state: 'AWAITING_CONFIRMATION', message: 'Resposta POST atrasada.' })); await settle();
+    assert(!document.body.textContent.includes('Resposta POST atrasada')); assert.equal(lateIssueSends, 1);
+
+    let resolveLateCancel, lateCancelSends = 0;
+    const lateCancelService = { ...service, observe: async () => note, observeCancellation: async () => ({ previewId: id(5), cancelPreviewId: id(6), state: 'CANCELLED', payload: cancelPayload, message: 'Worker confirmou cancelamento.' }),
+      reconcile: async () => assert.fail('Sent details cannot query fiscal service'), reconcileCancellation: async () => assert.fail('Observation must not reconcile fiscal events'),
+      cancel: async () => { lateCancelSends++; return new Promise(resolve => { resolveLateCancel = resolve; }); } };
+    await act(async () => render({ key: 'cancel-worker-before-post', intent: 'CANCEL', service: lateCancelService,
+      source: { kind: 'PARTNER_SERVICE', id: id(92) }, operation: { operationId: id(5), requestId: id(91), state: 'AUTHORIZED' } })); await settle();
+    await act(async () => { const input = document.querySelector('textarea');
+      Object.getOwnPropertyDescriptor(dom.window.HTMLTextAreaElement.prototype, 'value').set.call(input, cancelPayload.justification);
+      input.dispatchEvent(new dom.window.Event('input', { bubbles: true })); }); await settle();
+    await check('Conferi a nota, o motivo'); await click(button('Confirmar cancelamento')); assert.equal(lateCancelSends, 1);
+    await act(async () => globalThis.__nfseSourceEvent(true)); await settle();
+    assert(document.body.textContent.includes('Worker confirmou cancelamento.')); assert.equal(button('Fechar').disabled, false);
+    await act(async () => resolveLateCancel({ previewId: id(5), cancelPreviewId: id(6), state: 'CANCELLATION_PENDING', payload: cancelPayload, message: 'POST de cancelamento atrasado.' })); await settle();
+    assert(!document.body.textContent.includes('POST de cancelamento atrasado')); assert.equal(lateCancelSends, 1);
+
     let followReads = 0;
-    const followingService = { ...service, reconcileCancellation: async () => {
+    const followingService = { ...service, observeCancellation: async () => {
       followReads++;
       return { previewId: id(5), cancelPreviewId: id(6), state: followReads === 1 ? 'CANCELLATION_PENDING' : 'CANCELLED',
         payload: cancelPayload, message: followReads === 1 ? 'Ainda sem confirmação.' : 'Cancelamento confirmado sintético.',
@@ -187,7 +290,7 @@ test('saved source reviews canonical snapshot and recovers issue and cancellatio
     assert.equal(followReads, 2, 'Terminal confirmation stops automatic reads');
     assert.equal(calls.filter(row => row.action === 'CANCEL').length, cancelCount, 'Automatic follow-up is GET-only');
     let issueReads = 0;
-    const automaticIssueService = { ...service, reconcile: async () => {
+    const automaticIssueService = { ...service, observe: async () => {
       issueReads++;
       return issueReads === 1 ? { ...note, state: 'AWAITING_CONFIRMATION', number: null, accessKey: null, message: 'Resposta ainda não confirmada.' } : note;
     } };
@@ -195,7 +298,7 @@ test('saved source reviews canonical snapshot and recovers issue and cancellatio
     await act(async () => render({ key: 'auto-issue', intent: 'CONSULT', service: automaticIssueService,
       source: { kind: 'PARTNER_SERVICE', id: id(85) }, operation: { operationId: id(5), requestId: id(84), state: 'AWAITING_CONFIRMATION' } })); await settle();
     assert.equal(button('Consultar resultado da emissão'), undefined);
-    assert(document.body.textContent.includes('Consultando o resultado automaticamente'));
+    assert(document.body.textContent.includes('Atualizando o resultado automaticamente'));
     await act(async () => { await new Promise(resolve => setTimeout(resolve, 100)); });
     assert.equal(issueReads, 2); assert(document.body.textContent.includes('Autorização sintética'));
     await act(async () => { await new Promise(resolve => setTimeout(resolve, 100)); });
@@ -225,5 +328,5 @@ test('saved source reviews canonical snapshot and recovers issue and cancellatio
     assert.equal(failedRequests[2][1], failedRequests[1][1], 'Address correction preserves the original request');
     assert.equal(button('Emitir NFS-e').disabled, true, 'Refresh must not bypass canonical capability');
     assert.equal(calls.filter(row => row.action === 'ISSUE').length, 1);
-  } finally { await act(async () => root.unmount()); dom.window.close(); delete globalThis.__nfsePickerTest; await rm(temp, { recursive: true, force: true }); }
+  } finally { await act(async () => root.unmount()); client.clear(); dom.window.close(); delete globalThis.__nfsePickerTest; delete globalThis.__nfseSourceEvent; await rm(temp, { recursive: true, force: true }); }
 });

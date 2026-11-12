@@ -1,7 +1,14 @@
 name: NFS-e background worker security
 on:
   pull_request:
-    paths: ['supabase/functions/nfse-reconciliation-worker/**', 'supabase/migrations/*nfse_reconciliation*', 'supabase/tests/nfse*worker*', 'supabase/tests/nfse-reconciliation*', '.github/workflows/nfse-worker-security.yml']
+    paths:
+      - 'supabase/functions/nfse-reconciliation-worker/**'
+      - 'supabase/migrations/*nfse_reconciliation*'
+      - 'supabase/migrations/*nfse_observation*'
+      - 'supabase/tests/nfse*worker*'
+      - 'supabase/tests/nfse-reconciliation*'
+      - 'supabase/tests/nfse-observation*'
+      - '.github/workflows/nfse-worker-security.yml'
   workflow_dispatch:
 permissions:
   contents: read
@@ -9,7 +16,7 @@ jobs:
   postgres:
     strategy:
       matrix:
-        suite: [concurrency, material-proof, scheduler, proof-concurrency]
+        suite: [concurrency, material-proof, scheduler, proof-concurrency, continuation, continuation-concurrency, observation-reference]
     runs-on: ubuntu-latest
     timeout-minutes: 8
     services:
@@ -31,6 +38,10 @@ jobs:
             node supabase/tests/nfse-worker-postgres-concurrency.test.mjs
           elif [ "${{ matrix.suite }}" = proof-concurrency ]; then
             node supabase/tests/nfse-reconciliation-proof.concurrent.test.mjs
+          elif [ "${{ matrix.suite }}" = continuation-concurrency ]; then
+            node supabase/tests/nfse-reconciliation-continuation.concurrent.test.mjs
+          elif [ "${{ matrix.suite }}" = observation-reference ]; then
+            node supabase/tests/nfse-observation-cancellation-reference.isolated.test.mjs "file://$PWD/supabase/tests/nfse-worker-postgres-adapter.mjs"
           else
             node "supabase/tests/nfse-reconciliation-${{ matrix.suite }}.isolated.test.mjs" "file://$PWD/supabase/tests/nfse-worker-postgres-adapter.mjs"
           fi

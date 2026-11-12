@@ -54,6 +54,28 @@ test('issue and cancellation use one bound operation; browser never sends XML, p
   assert.deepEqual(calls[0], { scope, requestId: id(10), action: 'PREVIEW', ...definition });
 });
 
+test('automatic observation reads the bound snapshot without confirming or sending fiscal actions', async () => {
+  const calls: Record<string, unknown>[] = [];
+  const service = createNfseIndividualService(async body => {
+    calls.push(body);
+    return envelope(body.action === 'OBSERVE_CANCEL' ? { ...cancellation, state: 'CANCELLATION_PENDING' }
+      : { ...issue, state: 'AWAITING_CONFIRMATION', number: null, accessKey: null });
+  });
+  assert.equal((await service.observe!(scope, id(10), id(5))).state, 'AWAITING_CONFIRMATION');
+  assert.equal((await service.observeCancellation!(scope, id(10), id(5), id(6))).state, 'CANCELLATION_PENDING');
+  assert.deepEqual(calls, [
+    { scope, action: 'OBSERVE', requestId: id(10), previewId: id(5) },
+    { scope, action: 'OBSERVE_CANCEL', requestId: id(10), previewId: id(5), cancelPreviewId: id(6) },
+  ]);
+  const crossed = createNfseIndividualService(async () => envelope({ ...issue, previewId: id(20) }));
+  await assert.rejects(crossed.observe!(scope, id(10), id(5)), NfseContractError);
+  const wrongEvent = createNfseIndividualService(async () => envelope({ ...cancellation, cancelPreviewId: id(20) }));
+  await assert.rejects(wrongEvent.observeCancellation!(scope, id(10), id(5), id(6)), NfseContractError);
+  assert.equal(parseIndividualIssueResult({ ...issue, cancelPreviewId: id(6) }).cancelPreviewId, id(6));
+  assert.equal(parseIndividualIssueResult({ ...issue, cancelPreviewId: null }).cancelPreviewId, null);
+  assert.throws(() => parseIndividualIssueResult({ ...issue, cancelPreviewId: 'forged-reference' }), NfseContractError);
+});
+
 test('preview identity/date/model drift and crossed scope cannot supply another operation', async () => {
   for (const change of [{ modelId: id(20) }, { modelVersion: 2 }, { competenceDate: '2026-11-10' }, { serviceDate: '2026-11-10' }]) {
     const service = createNfseIndividualService(async () => envelope({ ...preview, payload: { ...payload, ...change } }));

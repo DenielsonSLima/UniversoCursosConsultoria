@@ -26,6 +26,13 @@ export function createIndividualLedgerAccess(
 ): Pick<IndividualDependencies, "ledger" | "cancellation"> {
   return {
     async ledger(command, actor, action, input) {
+      if (command.action === "OBSERVE" && action === "READ") {
+        return await rpc("get_nfse_individual_observation_internal", {
+          ...scope(command, actor),
+          p_request_id: command.requestId,
+          p_preview_id: command.previewId,
+        }, "PRODUCTION_LEDGER_UNAVAILABLE") as IndividualRow;
+      }
       const preview = action === "PREVIEW" || action === "PREVIEW_QUEUE";
       const legacy = {
         partnerId: command.partnerId,
@@ -48,6 +55,14 @@ export function createIndividualLedgerAccess(
       }, "PRODUCTION_LEDGER_UNAVAILABLE") as IndividualRow;
     },
     async cancellation(command, actor, action, input) {
+      if (command.action === "OBSERVE_CANCEL" && action === "READ") {
+        return await rpc("get_nfse_individual_cancellation_observation_internal", {
+          ...scope(command, actor),
+          p_request_id: command.requestId,
+          p_preview_id: command.previewId,
+          p_cancel_preview_id: command.cancelPreviewId,
+        }, "PRODUCTION_CANCELLATION_LEDGER_UNAVAILABLE") as CancellationRow;
+      }
       return await rpc("nfse_individual_cancellation_internal", {
         ...scope(command, actor),
         p_request_id: command.requestId,

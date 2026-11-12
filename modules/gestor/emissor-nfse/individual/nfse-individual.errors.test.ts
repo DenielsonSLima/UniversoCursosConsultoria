@@ -30,3 +30,17 @@ test('503 identifies service outage without asserting a fiscal outcome or exposi
   assert.match(result.message, /não confirma envio nem rejeição/);
   assert.doesNotMatch(result.message, /SECRET-XML/);
 });
+
+test('automatic observation can stop on access errors and respect throttle without reading private payloads', async () => {
+  const denied = await individualTransportError(failure('INDIVIDUAL_SCOPE_DENIED', 403));
+  assert.equal((denied as Error & { status: number }).status, 403);
+  assert.equal((denied as Error & { code: string }).code, 'INDIVIDUAL_SCOPE_DENIED');
+  const limited = await individualTransportError({ context: new Response(JSON.stringify({ error: 'RATE_LIMITED', secret: 'FORBIDDEN' }),
+    { status: 429, headers: { 'Retry-After': '120' } }) });
+  assert.equal((limited as Error & { retryAfterMs: number }).retryAfterMs, 120000);
+  assert.equal((limited as Error & { status: number }).status, 429);
+  assert.equal((limited as Error & { beforeDispatch: boolean }).beforeDispatch, true);
+  assert.doesNotMatch(JSON.stringify(limited), /FORBIDDEN/);
+  const ambiguous = await individualTransportError({ context: new Response('unknown gateway body', { status: 429 }) });
+  assert.equal('beforeDispatch' in ambiguous, false, 'An arbitrary gateway error never authorizes another fiscal POST');
+});

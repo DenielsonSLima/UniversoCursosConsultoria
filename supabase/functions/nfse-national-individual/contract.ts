@@ -11,10 +11,12 @@ export interface IndividualCommand {
     | "PREVIEW_QUEUE"
     | "ISSUE"
     | "RECONCILE"
+    | "OBSERVE"
     | "CANCEL_PREVIEW"
     | "CANCEL"
     | "RETRY_CANCEL"
-    | "RECONCILE_CANCEL";
+    | "RECONCILE_CANCEL"
+    | "OBSERVE_CANCEL";
   requestId: string;
   previewId?: string;
   confirmed?: true;
@@ -104,7 +106,7 @@ export function parseIndividualCommand(v: unknown): IndividualCommand {
         if (v.reasonCode !== "1" || typeof v.justification !== "string" || v.justification.trim().length < 15 ||
           v.justification.trim().length > 255 || invalidFinalText(v.justification)) throw new Error("INVALID_COMMAND");
       }
-    } else if (["CANCEL", "RECONCILE_CANCEL", "RETRY_CANCEL"].includes(String(v.action))) {
+    } else if (["CANCEL", "RECONCILE_CANCEL", "RETRY_CANCEL", "OBSERVE_CANCEL"].includes(String(v.action))) {
       fields.push("cancelPreviewId");
       if (!uuid.test(String(v.cancelPreviewId))) {
         throw new Error("INVALID_COMMAND");
@@ -113,7 +115,7 @@ export function parseIndividualCommand(v: unknown): IndividualCommand {
         fields.push("retryRequestId");
         if (!uuid.test(String(v.retryRequestId))) throw new Error("INVALID_COMMAND");
       }
-    } else if (v.action !== "ISSUE" && v.action !== "RECONCILE") {
+    } else if (!["ISSUE", "RECONCILE", "OBSERVE"].includes(String(v.action))) {
       throw new Error("INVALID_COMMAND");
     }
   }
