@@ -34,7 +34,7 @@ Histórico arquivado: [14/10/2026 — versões 4.8.218 a 4.8.226](./changelog/20
 - Emissão das filiais usa o A1 da matriz com validação da empresa, ambiente e CNPJ próprio do emitente; local 030101 acompanha o estabelecimento selecionado.
 - Cancelamento acadêmico confirmado libera os recebimentos para nova preparação, preservando nota, XML, reservas e numeração anteriores.
 - Disponibilidade acadêmica considera unidade e ambiente no TanStack Query/Realtime; validação informa quando falta identificar a parcela no financeiro.
-- Testes fiscais reais das filiais permanecem pendentes dos dados dos recebimentos, conforme registro do lote.
+- Descrição acadêmica permite ausência real de numeração da parcela com matrícula e data do pagamento, sem inventar dados nem alterar o modelo.
 
 ## [4.8.296] - 2026-11-11
 

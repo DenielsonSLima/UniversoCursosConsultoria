@@ -38,7 +38,8 @@ export default function PendentesNfseTab() {
   const data = query.error ? undefined : query.data;
   const visibleIds = data?.rows.map(item => item.id) ?? [];
   const selectedIds = selected.filter(id => visibleIds.includes(id));
-  const removableIds = selectedIds.filter(id => data?.rows.some(row => row.id === id && !row.operationId));
+  const removableIds = selectedIds.filter(id => data?.rows.some(row => row.id === id
+    && (!row.operationId || row.state === 'PREVIEWED')));
   const allSelected = visibleIds.length > 0 && selectedIds.length === visibleIds.length;
   const busy = remove.isPending;
 

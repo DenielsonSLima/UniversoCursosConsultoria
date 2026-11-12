@@ -130,6 +130,34 @@ test('pending queue supports page selection, cancellation, repeated clicks, erro
     await click(checkboxes()[1]);
     await click(button('Próxima'));
     assert(document.body.textContent.includes('0 selecionado(s) nesta página'));
+    // PREVIEWED means no dispatch lease, including a signed but untransmitted
+    // preparation. The server rechecks the same scope lock before logical removal.
+    const unsigned = { ...row(80), operationId:id(180), requestId:id(280), state:'PREVIEWED' };
+    const signed = { ...row(81), operationId:id(181), requestId:id(281), state:'PREVIEWED',
+      signedDpsXml:'PERSISTED SIGNED SYNTHETIC BYTES', fiscalInput:{frozen:true} };
+    const dispatched = ['PROCESSING','AWAITING_CONFIRMATION','AUTHORIZED','REJECTED','BLOCKED'].map((state,n)=>({
+      ...row(n+82), operationId:id(n+182), requestId:id(n+282), state }));
+    rows = [unsigned,signed,...dispatched];
+    const preserved = JSON.stringify([unsigned,signed]);
+    await act(async()=>client.invalidateQueries({queryKey:['nfse-queue','v1',scope.contextKey,scope.poloId,scope.environment,scope.month]}));
+    await settle();await settle();
+    assert.equal(checkboxes().length,8);
+    for (const item of dispatched) {
+      const input = document.querySelector(`input[aria-label="Selecionar preparação de ${item.studentName}, ${item.classLabel}"]`);
+      await click(input);assert.equal(button('Excluir selecionados').disabled,true);await click(input);
+    }
+    await click(checkboxes()[1]);await click(checkboxes()[2]);await click(checkboxes()[3]);
+    assert(button('Excluir selecionados (2)'));
+    await click(button('Excluir selecionados'));
+    const dialog = document.querySelector('[role="dialog"]');
+    assert.match(dialog.textContent,/histórico será mantido/);
+    assert.match(dialog.textContent,/não cancela nem exclui notas fiscais emitidas/);
+    assert.doesNotMatch(dialog.textContent,/sem assinatura|não assinad|unsigned/i);
+    await click(button('Excluir da fila'));
+    assert.deepEqual(calls.at(-1).input.documentIds,[unsigned.id,signed.id]);
+    assert(!JSON.stringify(calls.at(-1).input).includes('PERSISTED SIGNED'));
+    await act(async()=>pending.resolve());await settle();
+    assert.equal(rows.length,5);assert.equal(JSON.stringify([unsigned,signed]),preserved);
   } finally {
     await act(async()=>root.unmount());client.clear();dom.window.close();
     delete globalThis.__nfseQueueService;
