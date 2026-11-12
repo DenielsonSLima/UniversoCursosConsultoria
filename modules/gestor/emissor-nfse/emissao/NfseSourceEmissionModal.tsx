@@ -34,7 +34,7 @@ export default function NfseSourceEmissionModal({ scope, source, label, amount, 
   const [preview, setPreview] = useState<IndividualPreview>();
   const [issued, setIssued] = useState<IndividualIssueResult>(), [cancellation, setCancellation] = useState<IndividualCancelResult>();
   const [cancelPreview, setCancelPreview] = useState<IndividualCancelPreview>();
-  const [confirmed, setConfirmed] = useState(false), [cancelConfirmed, setCancelConfirmed] = useState(false);
+  const [cancelConfirmed, setCancelConfirmed] = useState(false);
   const [justification, setJustification] = useState('');
   const [cancellationModel, setCancellationModel] = useState<NfseCancellationModel | null>(null), [detail, setDetail] = useState<string | null>(null);
   const [error, setError] = useState<string>(), [busy, setBusy] = useState(false), [clock, setClock] = useState(Date.now);
@@ -58,7 +58,7 @@ export default function NfseSourceEmissionModal({ scope, source, label, amount, 
   const consult = (saved: IndividualAttempt) => void run(async () => {
     const response = await service.reconcile(scope, saved.requestId, saved.previewId);
     if (!mounted.current) return;
-    setIssued(response); setConfirmed(false); onChanged();
+    setIssued(response); onChanged();
     setPreview(response.state === 'PREVIEWED' && response.expiresAt && response.capability ? {
       previewId: response.previewId, expiresAt: response.expiresAt, state: 'PREVIEWED', payload: response.payload, capability: response.capability } : undefined);
     if (saved.cancelPreviewId) {
@@ -69,7 +69,11 @@ export default function NfseSourceEmissionModal({ scope, source, label, amount, 
     }
   });
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
-  useEffect(() => { if (!opened.current && attempt) { opened.current = true; consult(attempt); } }, [attempt]);
+  useEffect(() => {
+    if (opened.current) return;
+    if (attempt) { opened.current = true; consult(attempt); }
+    else if (intent === 'ISSUE' && supported) { opened.current = true; prepare(); }
+  }, [attempt, intent, supported]);
   useEffect(() => {
     const times = [preview?.expiresAt, cancelPreview?.expiresAt].flatMap(value => value && Date.parse(value) > Date.now() ? [Date.parse(value)] : []);
     if (!times.length) return;
@@ -81,7 +85,10 @@ export default function NfseSourceEmissionModal({ scope, source, label, amount, 
     if (request.current?.key !== key) request.current = { key, id: crypto.randomUUID() };
     const requestId = request.current.id;
     void run(async () => { const response = await service.previewSource(scope, requestId, source);
-      if (mounted.current) { setPreview(response); setConfirmed(false); onChanged(); } });
+      if (mounted.current) {
+        if (!remember({ requestId, previewId: response.previewId })) return;
+        setPreview(response); setIssued({ ...response, message: 'Preparação disponível. A emissão ainda não foi enviada.' }); onChanged();
+      } });
   };
   const expired = Boolean(preview && Date.parse(preview.expiresAt) <= Date.now()), cancelExpired = Boolean(cancelPreview && Date.parse(cancelPreview.expiresAt) <= Date.now());
   const renew = () => {
@@ -90,18 +97,18 @@ export default function NfseSourceEmissionModal({ scope, source, label, amount, 
       const response = await service.previewSource(scope, attempt.requestId, source,
         source.kind === 'PARTNER_SERVICE' ? preview.payload!.competenceDate : undefined);
       if (response.previewId !== attempt.previewId) throw new Error('A revisão retornou outra operação. Consulte a preparação novamente.');
-      if (mounted.current) { setPreview(response); setConfirmed(false); onChanged(); }
+      if (mounted.current) { setPreview(response); onChanged(); }
     });
   };
   const issue = () => {
-    if (intent !== 'ISSUE' || busy || attempt && issued?.state !== 'PREVIEWED' || !preview?.capability.available || !preview.payload || !confirmed || expired) return;
+    if (intent !== 'ISSUE' || busy || attempt && issued?.state !== 'PREVIEWED' || !preview?.capability.available || !preview.payload || expired) return;
     const requestId = attempt?.requestId || request.current?.id;
     if (!requestId) return;
     const saved = { requestId, previewId: preview.previewId };
     if (!remember(saved)) return;
     // The effect will not consult the same request while its first dispatch is being started.
     opened.current = true;
-    setPreview(undefined); setIssued(undefined); setConfirmed(false);
+    setPreview(undefined); setIssued(undefined);
     void run(async () => { const response = await service.issue(scope, saved.requestId, saved.previewId); if (mounted.current) { setIssued(response); onChanged(); onNotice?.(individualIssueNotice(response)); } });
   };
   const prepareCancel = () => {
@@ -136,28 +143,27 @@ export default function NfseSourceEmissionModal({ scope, source, label, amount, 
       if (mounted.current) { setCancellation(response); onChanged(); onNotice?.(individualCancelNotice(response)); }
     });
   };
+  const payload = issued?.payload || preview?.payload;
   if (typeof document === 'undefined') return null;
   return createPortal(<div ref={overlayRef} className="nfse-portal nfse-fiscal-review-overlay" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) close(); }}>
     <div ref={dialogRef} className="nfse-fiscal-review-dialog" role="dialog" aria-modal="true" aria-labelledby={title} tabIndex={-1} aria-busy={busy}>
-      <header className="nfse-section-heading"><div><h2 id={title}>{intent === 'CANCEL' ? 'Cancelar NFS-e' : attempt ? 'Consultar NFS-e' : 'Revisar emissão'}</h2><p>{label} · {formatNfseMoney(amount)} · {scope.environment === 'PRODUCAO' ? 'Produção' : 'Homologação'}</p></div>
+      <header className="nfse-section-heading"><div><h2 id={title}>{intent === 'CANCEL' ? 'Cancelar NFS-e' : intent === 'CONSULT' || issued && issued.state !== 'PREVIEWED' ? 'Consultar NFS-e' : 'Emitir NFS-e'}</h2><p>{label} · {formatNfseMoney(payload?.amount || amount)} · {scope.environment === 'PRODUCAO' ? 'Produção' : 'Homologação'}</p>
+        {payload && <p>{payload.modelName} · versão {payload.modelVersion}</p>}</div>
         <button ref={initialFocusRef} type="button" className="nfse-button nfse-button-secondary" aria-label="Fechar emissão" disabled={busy} onClick={close}><X size={17} /></button></header>
       <div className="nfse-fiscal-review-body nfse-individual-content">
         {!supported && <p role="status">O executor de emissão deste ambiente ainda não está disponível. Os dados preparados foram preservados.</p>}
         {error && <p className="nfse-individual-state" role="alert">{error}</p>}
         {intent === 'ISSUE' && !attempt && supported && <>
           <p>{source.kind === 'PARTNER_SERVICE' ? 'A competência seguirá a regra salva no pré-modelo. Confira as datas e a descrição final na prévia antes de emitir.'
-            : 'O tomador, o modelo e as datas serão conferidos pela revisão fiscal salva desta preparação.'}</p>
-          <button type="button" className="nfse-button nfse-button-secondary" disabled={busy} onClick={prepare}>Conferir dados para emissão</button>
+            : 'O tomador, o modelo e as datas serão conferidos no servidor a partir desta preparação.'}</p>
+          <button type="button" className="nfse-button nfse-button-secondary" disabled={busy} onClick={prepare}>Atualizar dados para emissão</button>
         </>}
-        {(issued?.payload || preview?.payload) && (intent === 'CANCEL'
-          ? <details><summary>Dados da NFS-e autorizada</summary><NfseIndividualSnapshot payload={(issued?.payload || preview?.payload)!} /></details>
-          : <NfseIndividualSnapshot payload={(issued?.payload || preview?.payload)!} />)}
+        {payload && (intent === 'CONSULT' ? <NfseIndividualSnapshot payload={payload} />
+          : <details><summary>{intent === 'CANCEL' ? 'Dados da NFS-e autorizada' : 'Revisar dados da nota'}</summary><NfseIndividualSnapshot payload={payload} /></details>)}
         {preview && !preview.capability.available && <p role="status">{individualReason(preview.capability.reason)}</p>}
         {intent === 'ISSUE' && preview && (!attempt || issued?.state === 'PREVIEWED') && <>
           {expired && <p role="status">A revisão expirou. Confira novamente os dados.</p>}
           {expired && attempt && <button type="button" className="nfse-button nfse-button-secondary" disabled={busy} onClick={renew}>Renovar revisão desta operação</button>}
-          <label className="nfse-individual-confirm"><input type="checkbox" checked={confirmed} disabled={busy || expired || !preview.capability.available}
-            onChange={event => setConfirmed(event.target.checked)} />Conferi os dados apresentados e autorizo emitir esta NFS-e em produção.</label>
         </>}
         {attempt && <button type="button" className="nfse-button nfse-button-secondary" disabled={busy} onClick={() => consult(attempt)}>Consultar resultado da emissão</button>}
         {operation?.state === 'CANCELLED' && !cancellation && <p role="status"><strong>Cancelada</strong> · {operation.message || 'O cancelamento desta nota está registrado.'}</p>}
@@ -176,7 +182,7 @@ export default function NfseSourceEmissionModal({ scope, source, label, amount, 
       </div>
       <footer className="nfse-footer"><span>{busy ? 'Consultando o serviço fiscal…' : 'Os dados fiscais vêm da preparação selecionada.'}</span><div className="nfse-queue-actions">
         <button type="button" className="nfse-button nfse-button-secondary" disabled={busy} onClick={close}>Fechar</button>
-        {intent === 'ISSUE' && (!attempt || issued?.state === 'PREVIEWED') && <button type="button" className="nfse-button nfse-button-primary" disabled={!supported || busy || !confirmed || !preview?.capability.available || expired} onClick={issue}>Emitir NFS-e</button>}
+        {intent === 'ISSUE' && (!attempt || issued?.state === 'PREVIEWED') && <button type="button" className="nfse-button nfse-button-primary" disabled={!supported || busy || !preview?.capability.available || expired} onClick={issue}>Emitir NFS-e</button>}
       </div></footer>
     </div>
   </div>, document.body);

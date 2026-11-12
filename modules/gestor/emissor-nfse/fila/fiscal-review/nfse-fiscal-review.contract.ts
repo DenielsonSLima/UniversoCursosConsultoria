@@ -42,6 +42,8 @@ export function parseNfseFiscalReview(value: unknown, documentId: string): NfseF
     || paymentDates.some(date => date.slice(0, 7) !== paymentMonth)) throw new NfseContractError();
   return { documentId, revision: integer(data.revision), reviewStatus, basisToken: fiscalReviewBasis(data.basisToken),
     reviewComplete, canTransmit: false,
+    validationSource: data.validationSource === undefined || data.validationSource === null ? null
+      : oneOf(data.validationSource, ['MANUAL', 'SYSTEM_VALIDATED']),
     preparation: { studentName: string(preparation.studentName), classLabel: string(preparation.classLabel),
       paymentMonth, amount: preparation.amount, receiptCount, paymentDates: [...paymentDates].sort(),
       originalModel: { id: queueUuid(originalModel.id), version: integer(originalModel.version, 1), name: string(originalModel.name),

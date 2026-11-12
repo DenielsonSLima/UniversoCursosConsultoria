@@ -1,8 +1,8 @@
 {
-  "version": "4.8.297",
+  "version": "4.8.298",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 306,
-  "releasedAt": "2026-11-11",
-  "summary": "Modelos NFS-e centralizados na matriz, representação das filiais e liberação acadêmica após cancelamento confirmado"
+  "revision": 307,
+  "releasedAt": "2026-11-12",
+  "summary": "Emissão com validação automática, revisão opcional e datas reais dos pagamentos nas filiais"
 }

@@ -28,6 +28,10 @@ Histórico arquivado: [13/10/2026 — versões 4.8.215 a 4.8.217](./changelog/20
 
 Histórico arquivado: [14/10/2026 — versões 4.8.218 a 4.8.226](./changelog/2026-10-14-versoes-4-8-218-a-226.md).
 
+## [4.8.298] - 2026-11-12
+
+- Emissão valida os dados automaticamente, com revisão/edição opcional; descrições acadêmicas e datas dos pagamentos compatíveis com o executor, após emissão e cancelamento reais nas filiais.
+
 ## [4.8.297] - 2026-11-11
 
 - Matriz gerencia os modelos de emissão; filiais usam e exportam o mesmo cadastro, sem criar cópias locais.

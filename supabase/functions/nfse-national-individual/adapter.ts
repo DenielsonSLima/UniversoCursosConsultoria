@@ -5,6 +5,7 @@ import {
   requireContract,
 } from "../_shared/nfse-national/xml.ts";
 import type { IndividualRow } from "./handler.ts";
+import { academicPaymentReference } from "./academic-competence.ts";
 import { queueDeclaredIbsCbs, queueIbsCbsSummary } from "./adapter-ibscbs.ts";
 import { publicIndividualServiceLocation, resolveIndividualServiceLocation } from "./service-location.ts";
 type Data = Record<string, unknown>;
@@ -274,7 +275,8 @@ export function buildIndividualDps(
     );
   } else {requireContract(
       people.competenceMode === "ISSUE_DATE" &&
-        text(command.competenceDate) === individualFiscalDate(row.issuedAt),
+        text(command.competenceDate) === (object(snapshot.source).kind === "ACADEMIC_QUEUE"
+          ? academicPaymentReference(snapshot.source) : individualFiscalDate(row.issuedAt)),
       "FISCAL_COMPETENCE_MODEL_MISMATCH",
     );}
   const sn = people.simpleNationalOption === "FROM_ESTABLISHMENT"

@@ -25,14 +25,14 @@ function fixture(overrides: Partial<NfseIndividualService> = {}, entries = input
   return { controller, calls, stored, storage, notices, service };
 }
 
-test('batch requires canonical per-note review, preserves only IDs and dispatches sequentially once despite repeated clicks', async () => {
+test('batch requires canonical server preview, preserves only IDs and dispatches sequentially on an explicit click', async () => {
   let resolveFirst: (value: IndividualIssueResult) => void = () => {};
   const sent: unknown[][] = [];
   const f = fixture({ issue: async (...args) => { sent.push(args); if (sent.length === 1) return await new Promise(resolve => { resolveFirst = resolve; }); return result(args[2]); } });
   await f.controller.issue(); assert.equal(sent.length, 0);
   await f.controller.review(); assert.equal(f.calls.length, 2); assert(f.calls.every(call => call.args[3] === undefined));
-  assert.equal(batchCanIssue(f.controller.getSnapshot().items[0]), false);
-  f.controller.confirm(0, true); f.controller.confirm(1, true);
+  assert.equal(batchCanIssue(f.controller.getSnapshot().items[0]), true);
+  assert.equal(sent.length, 0, 'Canonical review alone does not send a note');
   const running = f.controller.issue(); await f.controller.issue(); assert.equal(sent.length, 1);
   resolveFirst(result(id(30))); await running;
   assert.equal(sent.length, 2); assert.deepEqual(sent.map(args => args[2]), [id(30), id(31)]);
@@ -46,7 +46,7 @@ test('uncertain first POST pauses batch; recovery only GETs the same identity an
   const sent: unknown[][] = [], consulted: unknown[][] = [];
   const f = fixture({ issue: async (...args) => { sent.push(args); if (sent.length === 1) throw new Error('Resposta perdida'); return result(args[2]); },
     reconcile: async (...args) => { consulted.push(args); return result(args[2]); } });
-  await f.controller.review(); f.controller.confirm(0, true); f.controller.confirm(1, true);
+  await f.controller.review();
   await f.controller.issue(); assert.equal(sent.length, 1); assert.equal(f.controller.getSnapshot().paused, true);
   await f.controller.issue(); assert.equal(sent.length, 1);
   await f.controller.consult(0); assert.equal(consulted.length, 1); assert.equal(sent.length, 1);
@@ -59,7 +59,7 @@ test('dispose and explicit pause never dispatch the next note after the current 
     let release: (value: IndividualIssueResult) => void = () => {};
     const sent: unknown[][] = [];
     const f = fixture({ issue: async (...args) => { sent.push(args); return await new Promise(resolve => { release = resolve; }); } });
-    await f.controller.review(); f.controller.confirm(0, true); f.controller.confirm(1, true);
+    await f.controller.review();
     const pending = f.controller.issue();
     if (dispose) f.controller.dispose(); else f.controller.stop();
     release(result(id(30))); await pending;
@@ -80,7 +80,19 @@ test('reopening stored operations consults instead of creating a new preview or 
 test('failed ID persistence prevents fiscal dispatch and leaves financial source untouched', async () => {
   const f = fixture();
   const controller = createNfseBatchController(scope, inputs, f.service, { getItem: () => null, setItem() { throw new Error('Storage unavailable'); } });
-  await controller.review(); controller.confirm(0, true); controller.confirm(1, true); await controller.issue();
+  await controller.review(); await controller.issue();
   assert.equal(f.calls.filter(call => call.action === 'ISSUE').length, 0);
   assert(controller.getSnapshot().items.every(item => item.error));
+});
+
+test('unavailable or expired server capability remains blocked without acceptance checkboxes', async () => {
+  const f = fixture({ previewSource: async (_scope, _requestId, source) => ({
+    previewId: source.id === id(10) ? id(30) : id(31), state: 'PREVIEWED', payload,
+    expiresAt: new Date(Date.now() + (source.id === id(10) ? 60_000 : -1000)).toISOString(),
+    capability: source.id === id(10) ? { available: false, reason: 'FISCAL_MODEL_REVIEW_REQUIRED' } : { available: true, reason: null },
+  }) });
+  await f.controller.review();
+  assert(f.controller.getSnapshot().items.every(item => !batchCanIssue(item)));
+  await f.controller.issue();
+  assert.equal(f.calls.filter(call => call.action === 'ISSUE').length, 0);
 });

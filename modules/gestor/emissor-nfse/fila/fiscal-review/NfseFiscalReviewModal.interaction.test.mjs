@@ -16,7 +16,7 @@ for (const scenario of [
   { name: 'old saved dates require a new confirmation', paymentDates: ['2026-10-09', '2026-10-08'], preconfigured: true, expectedDate: '2026-10-09', oldSavedDate: '2026-10-08' },
   { name: 'automatic payment month', paymentDates: ['2026-10-09'], preconfigured: false, expectedDate: '2026-10-09' },
   { name: 'prepared model reused without opening the picker', paymentDates: ['2026-10-09'], preconfigured: true, expectedDate: '2026-10-09' },
-]) test(`compact fiscal review: ${scenario.name}; retry preserves intent and never emits`, async () => {
+]) test(`optional fiscal editor: ${scenario.name}; canonical validation without checkboxes or issue`, async () => {
   await mkdir(resolve(base, 'tmp'), { recursive: true });
   const temp = await mkdtemp(resolve(base, 'tmp/nfse-fiscal-review-ui-'));
   const dom = new JSDOM('<!doctype html><button id="opener">Revisar</button><div id="root"></div>',
@@ -52,16 +52,18 @@ for (const scenario of [
     get: async (_scope, _documentId, modelId) => ({ ...globalThis.structuredClone(fiscalReview), revision,
       preparation: { ...fiscalReview.preparation, paymentDates: scenario.paymentDates, receiptCount: Math.max(1, scenario.paymentDates?.length || 0) },
       reviewStatus: revision ? 'CONFIRMED' : 'NOT_REVIEWED', reviewComplete: Boolean(revision),
+      validationSource: revision && !scenario.oldSavedDate ? 'SYSTEM_VALIDATED' : null,
       recipient: { ...fiscalReview.recipient, confirmed: Boolean(revision) },
       savedAt: revision ? '2026-11-10T20:00:00Z' : null, savedBy: revision ? fiscalId(10) : null,
       service: { ...fiscalReview.service, ...((modelId === fiscalId(6) || scenario.preconfigured) ? { modelId: fiscalId(6), modelVersion: 2,
         nationalServiceCode: '080201', description: 'Descrição fiscal revisada sintética' } : {}),
         competenceDate: savedDefinition?.competenceDate || null, serviceDate: savedDefinition?.serviceDate || null } }),
-    save: async (scope, documentId, input) => {
+    save: async () => { throw Error('Human confirmations must not be fabricated'); },
+    validate: async (scope, documentId, input) => {
       calls.push({ scope, documentId, input });
       await new Promise((resolve, reject) => { pending = { resolve, reject }; });
-      revision++; savedDefinition = input.definition;
-      return { documentId, revision, reviewId: fiscalId(9), message: 'Conferência fiscal salva, sem transmissão.' };
+      revision++; savedDefinition = { competenceDate: scenario.expectedDate, serviceDate: scenario.expectedDate };
+      return { documentId, revision, reviewId: fiscalId(9), message: 'Ajustes validados, sem transmissão.' };
     },
   };
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 }, mutations: { retry: false, gcTime: 0 } } });
@@ -88,8 +90,8 @@ for (const scenario of [
     assert.equal(origin.open, false);
     assert.equal(document.querySelector('input[type="date"]'), null);
     assert.equal(document.querySelector('output[aria-label="Competência fiscal"]').textContent, 'Outubro de 2026');
-    assert.equal(button('Salvar revisão').disabled, true);
-    assert([...document.querySelectorAll('input[type="checkbox"]')].every(input => !input.checked));
+    assert.equal(button('Salvar ajustes').disabled, !scenario.expectedDate || !scenario.preconfigured);
+    assert.equal(document.querySelectorAll('input[type="checkbox"]').length, 0);
     assert(document.body.textContent.includes('Automática pelo mês dos pagamentos.'));
     if (scenario.expectedDate) assert(document.body.textContent.includes('Último pagamento: 09/10/2026.'));
     if (scenario.oldSavedDate) assert(document.body.textContent.includes('Atualizar revisão'));
@@ -111,37 +113,31 @@ for (const scenario of [
     assert(document.querySelector('[role="combobox"]'));
     await click(button('Concluir seleção'));
     assert.equal(document.querySelector('[role="combobox"]'), null);
-    assert.equal(button('Salvar revisão').disabled, true);
-    const confirmations = [...document.querySelectorAll('input[type="checkbox"]')];
-    assert.equal(confirmations.length, 3);
-    for (let index = 0; index < confirmations.length; index++) {
-      await click(confirmations[index]);
-      assert.equal(button('Salvar revisão').disabled, !scenario.expectedDate || index < confirmations.length - 1);
-    }
+    assert.equal(document.querySelectorAll('input[type="checkbox"]').length, 0);
     if (!scenario.expectedDate) {
       assert(document.querySelector('[role="alert"]').textContent.includes('Não foi possível determinar as datas fiscais'));
       assert.equal(calls.length, 0);
       return;
     }
-    assert.equal(button('Salvar revisão').disabled, false);
-    const submit = button('Salvar revisão');
+    assert.equal(button('Salvar ajustes').disabled, false);
+    const submit = button('Salvar ajustes');
     await act(async () => { submit.click(); submit.click(); }); await settle();
-    assert.equal(calls.length, 1); assert.equal(button('Salvando revisão').disabled, true);
+    assert.equal(calls.length, 1); assert.equal(button('Salvando ajustes').disabled, true);
     assert.equal(calls[0].input.expectedRevision, scenario.oldSavedDate ? 1 : 0);
-    assert.equal(calls[0].input.definition.competenceDate, scenario.expectedDate);
-    assert.equal(calls[0].input.definition.serviceDate, scenario.expectedDate);
+    assert.equal(calls[0].input.modelId, fiscalId(6)); assert.equal(calls[0].input.modelVersion, 2);
+    assert.equal('definition' in calls[0].input, false, 'No invented date, identity or human confirmation is sent');
     await act(async () => pending.reject(new Error('Resposta não confirmada.'))); await settle();
     assert(document.querySelector('[role="alert"]').textContent.includes('Resposta não confirmada'));
     assert.equal(document.querySelector('output[aria-label="Competência fiscal"]').textContent, 'Outubro de 2026');
-    await click(button('Salvar revisão'));
+    await click(button('Salvar ajustes'));
     assert.equal(calls.length, 2); assert.equal(calls[0].input.requestId, calls[1].input.requestId);
-    assert.equal('amount' in calls[1].input.definition, false); assert.equal('cnpj' in calls[1].input.definition, false);
+    assert.equal('amount' in calls[1].input, false); assert.equal('cnpj' in calls[1].input, false);
     await act(async () => pending.resolve()); await settle(); await settle();
     assert.equal(document.querySelector('output[aria-label="Competência fiscal"]').textContent, 'Outubro de 2026');
     assert.equal(document.querySelector('input[type="date"]'), null);
-    assert.equal(savedMessages.length, 1); assert(document.body.textContent.includes('Revisão fiscal salva'));
+    assert.equal(savedMessages.length, 1); assert(document.body.textContent.includes('Ajustes validados'));
     assert(document.body.textContent.includes('serão conferidos novamente antes da transmissão'));
-    assert.equal(button('Salvar revisão').disabled, true); assert.equal(button('Emitir'), undefined);
+    assert.equal(button('Salvar ajustes').disabled, true); assert.equal(button('Emitir'), undefined);
     assert.equal(closed, 0);
   } finally {
     await act(async () => root.unmount()); client.clear();

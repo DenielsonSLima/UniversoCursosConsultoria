@@ -21,7 +21,12 @@ export default function NfseBatchEmissionModal({ scope, items, onClose, onChange
     getItem: key => window.sessionStorage.getItem(key), setItem: (key, value) => window.sessionStorage.setItem(key, value),
   }, { onChanged, onNotice }));
   const view = useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot);
-  useEffect(() => { controller.activate(); return () => controller.dispose(); }, [controller]);
+  useEffect(() => {
+    controller.activate();
+    let current = true;
+    globalThis.queueMicrotask(() => { if (current) void controller.review(); });
+    return () => { current = false; controller.dispose(); };
+  }, [controller]);
   const [clock, setClock] = useState(Date.now);
   useEffect(() => {
     const expiries = view.items.flatMap(item => item.preview && Date.parse(item.preview.expiresAt) > Date.now() ? [Date.parse(item.preview.expiresAt)] : []);
@@ -37,14 +42,14 @@ export default function NfseBatchEmissionModal({ scope, items, onClose, onChange
   if (typeof document === 'undefined') return null;
   return createPortal(<div ref={overlayRef} className="nfse-portal nfse-fiscal-review-overlay" role="presentation" onMouseDown={event => { if (event.currentTarget === event.target) close(); }}>
     <div ref={dialogRef} className="nfse-fiscal-review-dialog" role="dialog" aria-modal="true" aria-labelledby={id} tabIndex={-1} aria-busy={view.busy}>
-      <header className="nfse-section-heading"><div><h2 id={id}>Revisão e emissão do lote</h2><p>{items.length} preparação(ões) · {scope.environment === 'PRODUCAO' ? 'Produção' : 'Homologação'}</p></div>
+      <header className="nfse-section-heading"><div><h2 id={id}>Emitir notas</h2><p>{items.length} preparação(ões) · {scope.environment === 'PRODUCAO' ? 'Produção' : 'Homologação'}</p></div>
         <button ref={initialFocusRef} type="button" className="nfse-button nfse-button-secondary" disabled={view.busy} aria-label="Fechar lote" onClick={close}><X size={17} /></button></header>
       <div className="nfse-fiscal-review-body nfse-individual-content">
         {scope.environment !== 'PRODUCAO' && <p role="status">O executor deste ambiente ainda não está disponível. As preparações foram preservadas.</p>}
-        <p>A competência de cada serviço seguirá a regra do seu pré-modelo. Nas preparações acadêmicas, serão usadas as datas da revisão fiscal salva.</p>
+        <p>A competência de cada serviço seguirá a regra do seu pré-modelo. Nas preparações acadêmicas, os dados e as datas serão validados no servidor.</p>
         <button type="button" className="nfse-button nfse-button-secondary" disabled={view.busy || scope.environment !== 'PRODUCAO'}
-          onClick={() => void controller.review()}>Conferir cada preparação no servidor</button>
-        <p role="status">{authorized} de {items.length} nota(s) autorizada(s). {view.busy ? view.phase === 'ISSUE' ? 'Enviando uma nota por vez…' : 'Consultando revisões…' : view.paused ? 'Lote pausado; confira o resultado de cada nota.' : 'Confira e confirme individualmente os dados antes de emitir.'}</p>
+          onClick={() => void controller.review()}>Atualizar dados do lote</button>
+        <p role="status">{authorized} de {items.length} nota(s) autorizada(s). {view.busy ? view.phase === 'ISSUE' ? 'Enviando uma nota por vez…' : 'Consultando revisões…' : view.paused ? 'Lote pausado; confira o resultado de cada nota.' : 'Os dados são conferidos no servidor. Clique em Emitir para enviar as notas disponíveis.'}</p>
         {uncertain && <p role="status">Há resultado não confirmado. Consulte a mesma operação antes de continuar o lote.</p>}
         {view.items.map((item, index) => {
           const payload = item.result?.payload || item.preview?.payload;
@@ -58,9 +63,7 @@ export default function NfseBatchEmissionModal({ scope, items, onClose, onChange
             {Boolean(item.result?.codes?.length) && <p>Código(s): {item.result!.codes!.join(', ')}</p>}
             {item.error && <p className="nfse-download-error" role="alert">{item.error}</p>}
             {item.preview && !item.preview.capability.available && <p>{individualReason(item.preview.capability.reason)}</p>}
-            {payload && <details><summary>Dados canônicos desta nota</summary><NfseIndividualSnapshot payload={payload} /></details>}
-            {item.preview && !item.dispatched && <label className="nfse-individual-confirm"><input type="checkbox" checked={item.confirmed}
-              disabled={view.busy || Boolean(expired) || !item.preview.capability.available || !payload} onChange={event => controller.confirm(index, event.target.checked)} />Conferi os dados desta nota e autorizo sua emissão em produção.</label>}
+            {payload && <details><summary>Revisar dados da nota</summary><NfseIndividualSnapshot payload={payload} /></details>}
             {expired && <p>Revisão expirada. Abra a preparação individual para renovar a mesma operação.</p>}
             {item.previewId && <button type="button" className="nfse-button nfse-button-secondary" disabled={view.busy} onClick={() => void controller.consult(index)}>Consultar esta operação</button>}
           </section>;

@@ -5,7 +5,7 @@ import type { NfseFiscalReview } from './nfse-fiscal-review.types';
 
 const regimes: Record<string, string> = { '1': 'Não optante', '2': 'MEI', '3': 'Optante pelo Simples Nacional · não MEI' };
 const regime = (value: string | null) => regimes[value || ''] || 'Não informado';
-const status = { NOT_REVIEWED: 'Revisão pendente', CONFIRMED: 'Revisão fiscal salva', STALE: 'Atualizar revisão', BLOCKED: 'Revisão com pendências' };
+const status = { NOT_REVIEWED: 'Validação na emissão', CONFIRMED: 'Revisão fiscal salva', STALE: 'Atualizar revisão', BLOCKED: 'Dados com pendências' };
 const checkStatus = { PASSED: 'Conferido', BLOCKED: 'Pendente', UNKNOWN: 'Não confirmado' };
 
 export default function NfseFiscalReviewDetails({ review, requiresDateReview = false }: {
@@ -20,7 +20,7 @@ export default function NfseFiscalReviewDetails({ review, requiresDateReview = f
       <div><dt>Tomador do serviço</dt><dd>{recipient.name || 'Nome do tomador não informado'}<small>{formatNfseFiscalDocument(recipient.document) || 'Documento não informado'}</small></dd></div>
       <div><dt>Valor do serviço</dt><dd>{formatNfseMoney(preparation.amount)}<small>{preparation.receiptCount} recebimento(s) · {formatNfseMonth(preparation.paymentMonth)}</small></dd></div>
     </dl>
-    <div className="nfse-fiscal-review-summary"><span className="nfse-status" data-tone={review.reviewComplete && !requiresDateReview ? 'success' : 'warning'}>{requiresDateReview ? 'Atualizar revisão' : status[review.reviewStatus]}</span>
+    <div className="nfse-fiscal-review-summary"><span className="nfse-status" data-tone={review.reviewComplete && !requiresDateReview ? 'success' : 'warning'}>{requiresDateReview ? 'Atualizar revisão' : review.reviewComplete && review.validationSource === 'SYSTEM_VALIDATED' ? 'Dados validados automaticamente' : status[review.reviewStatus]}</span>
       {review.savedAt && <small>Salva em {new Date(review.savedAt).toLocaleString('pt-BR', { timeZone: 'America/Maceio' })}</small>}
     </div>
     <details className="nfse-fiscal-review-disclosure">

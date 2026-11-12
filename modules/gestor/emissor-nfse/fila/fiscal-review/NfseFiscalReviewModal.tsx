@@ -11,7 +11,7 @@ import NfseFiscalReviewDetails from './NfseFiscalReviewDetails';
 import { fiscalReviewDate } from './nfse-fiscal-review.contract';
 import { getNfseFiscalReviewDates } from './nfse-fiscal-review.dates';
 import { useNfseFiscalReview } from './useNfseFiscalReview';
-import type { NfseFiscalReviewService, SaveNfseFiscalReview } from './nfse-fiscal-review.types';
+import type { NfseFiscalReviewService, ValidateNfseFiscalReview } from './nfse-fiscal-review.types';
 import './nfse-fiscal-review.css';
 
 interface Props { scope: NfseScope; documentId: string; onClose: () => void; onSaved: (message: string) => void;
@@ -24,15 +24,11 @@ export default function NfseFiscalReviewModal({ scope, documentId, onClose, onSa
   const titleId = useId();
   const [modelId, setModelId] = useState('');
   const [editingModel, setEditingModel] = useState(false);
-  const [recipientConfirmed, setRecipientConfirmed] = useState(false);
-  const [classificationConfirmed, setClassificationConfirmed] = useState(false);
-  const [receiptsConfirmed, setReceiptsConfirmed] = useState(false);
-  const [dirty, setDirty] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [savedMessage, setSavedMessage] = useState<string | null>(null);
-  const request = useRef<{ key: string; input: SaveNfseFiscalReview } | null>(null);
+  const request = useRef<{ key: string; input: ValidateNfseFiscalReview } | null>(null);
   const submitting = useRef(false);
-  const { query, save } = useNfseFiscalReview(scope, documentId, modelId, service);
+  const { query, validate } = useNfseFiscalReview(scope, documentId, modelId, service);
   const modelsQuery = useNfseModels(scope);
   const models = modelsQuery.error ? [] : modelsQuery.data?.rows.filter(model => model.active && model.nationalServiceCode === '080201') || [];
   const data = query.error ? undefined : query.data;
@@ -40,42 +36,35 @@ export default function NfseFiscalReviewModal({ scope, documentId, onClose, onSa
   const competenceDate = fiscalDates?.competenceDate || '';
   const serviceDate = fiscalDates?.serviceDate || '';
   const selectedModel = models.find(model => model.id === modelId);
-  const busy = save.isPending;
+  const busy = validate.isPending;
   const close = () => { if (!submitting.current) onClose(); };
   const { overlayRef, dialogRef, initialFocusRef } = useNfseStudentsDialog<ComponentRef<'button'>>(close);
   useEffect(() => {
     if (!data) return;
-    const dates = getNfseFiscalReviewDates(data);
-    const reviewed = data.reviewComplete && data.reviewStatus === 'CONFIRMED' && dates.source === 'SAVED';
     if (!modelId && data.service.nationalServiceCode === '080201' && data.service.modelId) setModelId(data.service.modelId);
-    setRecipientConfirmed(reviewed && data.recipient.confirmed); setClassificationConfirmed(reviewed); setReceiptsConfirmed(reviewed);
-    setDirty(false);
   }, [data, modelId]);
-  const change = (action: () => void) => { action(); setDirty(true); setSavedMessage(null); };
   const canSave = Boolean(data && selectedModel && modelId === data.service.modelId
     && selectedModel.version === data.service.modelVersion && data.recipient.name && data.recipient.document
-    && recipientConfirmed && classificationConfirmed && receiptsConfirmed && dirty
+    && (!data.reviewComplete || fiscalDates?.source !== 'SAVED')
     && datesValid(competenceDate, serviceDate) && !busy && !query.isFetching && !modelsQuery.isFetching && !modelsQuery.error);
   const submit = async () => {
     if (!canSave || !data || !selectedModel || submitting.current) return;
-    const definition = { modelId: selectedModel.id, modelVersion: selectedModel.version,
-      recipient: { mode: 'STUDENT' as const, confirmed: true as const }, competenceDate, serviceDate,
-      classificationConfirmed: true as const, receiptsConfirmed: true as const };
-    const key = JSON.stringify([scope, documentId, data.revision, data.basisToken, definition]);
+    const selection = { modelId: selectedModel.id, modelVersion: selectedModel.version };
+    const key = JSON.stringify([scope, documentId, data.revision, data.basisToken, selection]);
     if (request.current?.key !== key) request.current = { key, input: { requestId: crypto.randomUUID(), expectedRevision: data.revision,
-      basisToken: data.basisToken, definition } };
+      basisToken: data.basisToken, ...selection } };
     submitting.current = true; setError(null); setSavedMessage(null);
     try {
-      const response = await save.mutateAsync(request.current.input);
-      request.current = null; setDirty(false); setSavedMessage(response.message); onSaved(response.message);
-    } catch (failure) { setError(failure instanceof Error ? failure.message : 'Não foi possível confirmar a revisão. Atualize a consulta.'); }
+      const response = await validate.mutateAsync(request.current.input);
+      request.current = null; setSavedMessage(response.message); onSaved(response.message);
+    } catch (failure) { setError(failure instanceof Error ? failure.message : 'Não foi possível salvar os ajustes. Atualize a consulta.'); }
     finally { submitting.current = false; }
   };
   if (typeof document === 'undefined') return null;
   return createPortal(<div ref={overlayRef} className="nfse-portal nfse-fiscal-review-overlay" role="presentation"
     onMouseDown={event => { if (event.target === event.currentTarget) close(); }}>
     <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1} className="nfse-fiscal-review-dialog">
-      <header className="nfse-section-heading"><h2 id={titleId}>Revisar dados fiscais</h2>
+      <header className="nfse-section-heading"><h2 id={titleId}>Revisar ou editar dados fiscais</h2>
         <button ref={initialFocusRef} type="button" className="nfse-button nfse-button-secondary" aria-label="Fechar revisão fiscal"
           disabled={busy} onClick={close}><X size={17} /></button></header>
       <div className="nfse-fiscal-review-body" aria-busy={query.isFetching || busy}>
@@ -94,7 +83,7 @@ export default function NfseFiscalReviewModal({ scope, documentId, onClose, onSa
               {selectedModel && !editingModel ? <p className="nfse-fiscal-review-model-name">{selectedModel.name}</p> :
               <div className="nfse-field"><label htmlFor={`${titleId}-model`}>Modelo de ensino técnico</label>
                 <InstitutionalSelect id={`${titleId}-model`} ariaLabel="Modelo de ensino técnico" value={modelId}
-                  onValueChange={value => change(() => { setModelId(value); setRecipientConfirmed(false); setClassificationConfirmed(false); setReceiptsConfirmed(false); })}
+                  onValueChange={value => { setModelId(value); setSavedMessage(null); }}
                   options={models.map(model => ({ value: model.id, label: `${model.name} · ${model.nationalServiceCode}` }))}
                   placeholder="Selecionar modelo 080201" loading={modelsQuery.isPending} disabled={busy}
                   error={modelsQuery.error ? 'Não foi possível consultar os modelos.' : undefined} />
@@ -118,21 +107,13 @@ export default function NfseFiscalReviewModal({ scope, documentId, onClose, onSa
               {!datesValid(competenceDate, serviceDate) && <p className="nfse-inline-help" role="alert">
                 Não foi possível determinar as datas fiscais desta preparação. Atualize a revisão antes de salvar.</p>}
             </section>
-            <fieldset disabled={busy || query.isFetching} className="nfse-fiscal-review-section nfse-fiscal-review-confirmations">
-              <legend>Confirmações da revisão</legend>
-              <label><input type="checkbox" checked={recipientConfirmed} disabled={!data.recipient.name || !data.recipient.document}
-                onChange={event => change(() => setRecipientConfirmed(event.target.checked))} /><span>Confirmo o aluno como tomador do serviço.</span></label>
-              <label><input type="checkbox" checked={classificationConfirmed}
-                onChange={event => change(() => setClassificationConfirmed(event.target.checked))} /><span>Conferi o modelo, a descrição e a classificação fiscal do serviço.</span></label>
-              <label><input type="checkbox" checked={receiptsConfirmed}
-                onChange={event => change(() => setReceiptsConfirmed(event.target.checked))} /><span>Conferi a origem e os recebimentos.</span></label>
-            </fieldset>
+            <p className="nfse-inline-help">A emissão valida automaticamente o cadastro, o modelo e os recebimentos. Use esta revisão somente para consultar ou ajustar o modelo.</p>
           </>}
       </div>
-      <footer className="nfse-footer"><p>Salvar a revisão não emite nota e não altera os recebimentos.</p>
+      <footer className="nfse-footer"><p>Salvar ajustes não emite nota e não altera os recebimentos.</p>
         <div className="nfse-queue-actions"><button type="button" className="nfse-button nfse-button-secondary" disabled={busy} onClick={close}>Fechar</button>
           <button type="button" className="nfse-button nfse-button-primary" disabled={!canSave} onClick={() => void submit()}>
-            <Save size={15} />{busy ? 'Salvando revisão…' : 'Salvar revisão fiscal'}</button></div></footer>
+            <Save size={15} />{busy ? 'Salvando ajustes…' : 'Salvar ajustes'}</button></div></footer>
     </div>
   </div>, document.body);
 }

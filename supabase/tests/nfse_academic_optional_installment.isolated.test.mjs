@@ -2,7 +2,9 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { pathToFileURL,fileURLToPath } from 'node:url';
+import { Buffer } from 'node:buffer';
+import { build } from 'esbuild';
 const { PGlite } = await import(pathToFileURL(resolve(process.env.NFSE_TEST_PGLITE_MODULE)).href);
 const sql = name => readFile(new URL(`../migrations/${name}`,import.meta.url),'utf8');
 const id = n => `00000000-0000-0000-0000-${String(n).padStart(12,'0')}`;
@@ -135,6 +137,38 @@ test('formal academic description uses real course, enrollment and payment facts
       for (const signature of ['private.nfse_academic_description_context(uuid,uuid,uuid,jsonb)','private.render_nfse_academic_description(text,jsonb)']) {
         assert.equal(await value("SELECT has_function_privilege('authenticated',$1,'EXECUTE') value",[signature]),false);
       }
+    });
+    await t.test('generated ASCII separators pass the actual XML builder without rewriting captured snapshots',async () => {
+      const missing = await context(2,'2026-11',32), mixed = { ...known,entries:[known.entries[0],missing.entries[0]] };
+      const old = await render(template,missing);
+      const history = await value('SELECT jsonb_agg(snapshot ORDER BY id) value FROM private.nfse_queue_documents');
+      const entry = file => JSON.stringify(fileURLToPath(new URL(`../functions/${file}`,import.meta.url)));
+      const result = await build({stdin:{contents:`
+        export { xmlText } from ${entry('_shared/nfse-national/xml.ts')};
+        export { buildNationalDps } from ${entry('_shared/nfse-national/dps.ts')};
+        export { buildIndividualDps } from ${entry('nfse-national-individual/adapter.ts')};
+        export { reviewedDeclaredIbsFixture } from ${entry('nfse-national-individual/adapter.fixture.ts')};`,loader:'ts',
+        resolveDir:fileURLToPath(new URL('../../',import.meta.url))},
+        bundle:true,write:false,platform:'node',format:'esm'});
+      const fiscal = await import(`data:text/javascript;base64,${Buffer.from(result.outputFiles[0].contents).toString('base64')}`);
+      assert.throws(()=>fiscal.xmlText(old),e=>e.code==='UNSUPPORTED_XML_TEXT');
+      await db.exec(await sql('20261112025318_nfse_academic_description_latin1_separators.sql'));
+      for (const facts of [missing,mixed]) {
+        const description = await render(template,facts);
+        assert([...description].every(char=>char.codePointAt(0)<=0xff));
+        assert(description.includes(`matrícula ${missing.entries[0].enrollmentNumber} - 11/11/2026`));
+        const row = fiscal.reviewedDeclaredIbsFixture();row.snapshot.source.serviceDescription=description;
+        const xml = fiscal.buildNationalDps(fiscal.buildIndividualDps(row)).xml;
+        assert(xml.includes(`<xDescServ>${fiscal.xmlText(description)}</xDescServ>`));
+      }
+      assert.equal(await render(template,known),knownBytes);
+      assert.deepEqual(await value('SELECT jsonb_agg(snapshot ORDER BY id) value FROM private.nfse_queue_documents'),history);
+      assert.deepEqual(await unchanged(),before);
+      // The official description type is broader; retain our current composer
+      // guard rather than asserting a false official prohibition of Unicode.
+      const schema = await readFile(new URL('../functions/_shared/nfse-national/schemas/1.01/tiposSimples_v1.01.xsd',import.meta.url),'utf8');
+      assert.match(schema,/<xs:simpleType name="TSDesc2000">\s*<xs:restriction base="TSStringComQuebraDeLinha">/);
+      assert(schema.slice(schema.indexOf('<xs:simpleType name="TSStringComQuebraDeLinha">')).includes('[\\s\\S!-ÿ]'));
     });
   } finally { await db.close(); }
 });
