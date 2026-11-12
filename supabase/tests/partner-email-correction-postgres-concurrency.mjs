@@ -5,6 +5,13 @@ import { correct, delivery, ids, correctionRequest } from './fixtures/partner-em
 if (!process.env.PORTAL_PG_MODULE || !process.env.PORTAL_TEST_DATABASE_URL) {
   throw new Error('Requires PORTAL_PG_MODULE and PORTAL_TEST_DATABASE_URL pointing to an empty disposable PostgreSQL17 database.');
 }
+const databaseUrl = new URL(process.env.PORTAL_TEST_DATABASE_URL);
+if (!['postgres:', 'postgresql:'].includes(databaseUrl.protocol)
+  || !['localhost', '127.0.0.1'].includes(databaseUrl.hostname)
+  || databaseUrl.pathname !== '/partner_email_correction_test'
+  || databaseUrl.search || databaseUrl.hash) {
+  throw new Error('PostgreSQL fixture requires a local partner_email_correction_test database without connection overrides.');
+}
 const module = await import(pathToFileURL(process.env.PORTAL_PG_MODULE).href);
 const { Client } = module.default ?? module;
 const clients = await Promise.all([0,1,2].map(async () => {
