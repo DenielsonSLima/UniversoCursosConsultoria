@@ -54,7 +54,7 @@ test('saved source reviews canonical snapshot and recovers issue and cancellatio
   service.retryCancellation = async (...args) => { calls.push({ action: 'RETRY_CANCEL', args }); return { previewId: id(5), cancelPreviewId: id(6), state: 'CANCELLATION_PENDING',
     message: 'Retomada pendente.', payload: cancelPayload, retry: { availableAt: null, used: true } }; };
   const root = createRoot(document.getElementById('root'));
-  const render = props => root.render(React.createElement(Modal, { scope, source, label: payload.recipientName, amount: payload.amount, service, onClose() {}, onChanged() {}, onNotice: notice => notices.push(notice), ...props }));
+  const render = props => root.render(React.createElement(React.StrictMode, null, React.createElement(Modal, { scope, source, label: payload.recipientName, amount: payload.amount, service, onClose() {}, onChanged() {}, onNotice: notice => notices.push(notice), ...props })));
   const settle = async () => act(async () => { await new Promise(resolve => setTimeout(resolve, 15)); });
   const button = text => [...document.querySelectorAll('button')].find(control => control.textContent.trim() === text);
   const click = async control => { assert(control, 'Control missing'); await act(async () => control.click()); await settle(); };
@@ -65,15 +65,18 @@ test('saved source reviews canonical snapshot and recovers issue and cancellatio
   try {
     document.getElementById('opener').focus();
     await act(async () => render({})); await settle();
-    assert.equal(calls.length, 0); assert.equal(button('Conferir dados para emissão').disabled, false);
+    assert.equal(calls.length, 1, 'Opening prepares once even in StrictMode, without dispatching');
+    assert.equal(calls[0].action, 'PREVIEW_QUEUE');
     assert.equal(document.querySelector('input[type="date"]'), null);
-    assert(document.body.textContent.includes('regra salva no pré-modelo'));
-    await click(button('Conferir dados para emissão'));
     assert.deepEqual(calls[0].args.slice(2), [source]);
     assert(!/recipientDocument|modelId|amount|fiscalInput|Xml/.test(JSON.stringify(calls[0].args)));
     assert(document.body.textContent.includes('versão 3')); assert(document.body.textContent.includes('IBS/CBS')); assert(document.body.textContent.includes('030101'));
     assert(document.body.textContent.includes('260,00')); assert(document.body.textContent.includes(payload.serviceDescription));
-    assert.equal(button('Emitir NFS-e').disabled, true); await check('Conferi os dados apresentados');
+    const review = [...document.querySelectorAll('details')].find(item => item.querySelector('summary')?.textContent === 'Revisar dados da nota');
+    assert(review); assert.equal(review.open, false, 'Review is optional and collapsed on opening');
+    await click(review.querySelector('summary')); assert.equal(review.open, true);
+    assert.equal(document.querySelector('input[type="checkbox"]'), null);
+    assert.equal(button('Emitir NFS-e').disabled, false, 'Canonical capability enables the explicit button without a second acceptance checkbox');
     const send = button('Emitir NFS-e'); await act(async () => { send.click(); send.click(); }); await settle();
     assert.equal(calls.filter(row => row.action === 'ISSUE').length, 1);
     await act(async () => issuePending.reject(new Error('Resposta de emissão não confirmada.'))); await settle();
@@ -100,7 +103,7 @@ test('saved source reviews canonical snapshot and recovers issue and cancellatio
     await act(async () => render({ key: 'unsent-review', source: { kind: 'PARTNER_SERVICE', id: id(41) }, operation: { operationId: id(5), requestId: id(40), state: 'PREVIEWED' } })); await settle();
     assert.equal(button('Emitir NFS-e').disabled, true); await click(button('Renovar revisão desta operação'));
     assert.equal(calls.at(-1).action, 'PREVIEW_QUEUE'); assert.equal(calls.at(-1).args[1], id(40));
-    await check('Conferi os dados apresentados'); assert.equal(button('Emitir NFS-e').disabled, false);
+    assert.equal(button('Emitir NFS-e').disabled, false);
     assert.equal(calls.filter(row => row.action === 'ISSUE').length, 1, 'Reopening and renewal never dispatch automatically');
     await act(async () => render({ key: 'rejected-result', source: { kind: 'PARTNER_SERVICE', id: id(43) }, operation: { operationId: id(5), requestId: id(42), state: 'REJECTED' } })); await settle();
     assert(document.body.textContent.includes('Código(s) retornado(s): E0120, E9999'));
@@ -118,6 +121,7 @@ test('saved source reviews canonical snapshot and recovers issue and cancellatio
     assert.equal(button('Cancelar esta NFS-e em produção').disabled, false);
     await act(async () => render({ key: 'readonly-consult', intent: 'CONSULT', source: { kind: 'PARTNER_SERVICE', id: id(46) }, operation: { operationId: id(5), requestId: id(44), cancelPreviewId: id(6), state: 'AUTHORIZED' } })); await settle();
     assert(document.querySelector('[aria-label="Consulta do cancelamento"]'));
+    assert.equal([...document.querySelectorAll('summary')].some(item => item.textContent === 'Revisar dados da nota'), false, 'Consultation shows issue details directly');
     assert.equal(button('Revalidar este cancelamento'), undefined); assert.equal(button('Emitir NFS-e'), undefined);
     assert.equal(document.querySelector('textarea'), null);
     globalThis.__nfsePickerTest = props => React.createElement('button', { onClick: () => props.onApply(selectedModel) }, 'Selecionar modelo sintético');
@@ -140,10 +144,22 @@ test('saved source reviews canonical snapshot and recovers issue and cancellatio
     assert.equal(button('Retomar pedido'), undefined); assert(document.body.textContent.includes('Retomada pendente'));
     const count = calls.length;
     await act(async () => render({ key: 'academic', source: { kind: 'ACADEMIC_QUEUE', id: id(20) }, amount: '300.00' })); await settle();
-    assert.equal(document.querySelector('input[type="date"]'), null); await click(button('Conferir dados para emissão'));
+    assert.equal(document.querySelector('input[type="date"]'), null);
     assert.deepEqual(calls.at(-1).args.slice(2), [{ kind: 'ACADEMIC_QUEUE', id: id(20) }]);
     await act(async () => render({ key: 'homo', scope: { ...scope, environment: 'HOMOLOGACAO' } })); await settle();
     assert(document.body.textContent.includes('executor de emissão deste ambiente ainda não está disponível'));
     assert.equal(calls.length, count + 1); assert.equal(button('Emitir NFS-e').disabled, true);
+    const failedRequests = [];
+    const blockedService = { ...service, previewSource: async (...args) => {
+      failedRequests.push(args); if (failedRequests.length === 1) throw new Error('Validação indisponível.');
+      return { previewId: id(70), state: 'PREVIEWED', expiresAt: expiry(), payload, capability: { available: false, reason: 'FISCAL_MODEL_REVIEW_REQUIRED' } };
+    } };
+    await act(async () => render({ key: 'preview-error', source: { kind: 'ACADEMIC_QUEUE', id: id(70) }, service: blockedService })); await settle();
+    assert.equal(failedRequests.length, 1); assert(document.querySelector('[role="alert"]').textContent.includes('Validação indisponível'));
+    assert.equal(button('Emitir NFS-e').disabled, true);
+    await click(button('Atualizar dados para emissão'));
+    assert.equal(failedRequests.length, 2); assert.equal(failedRequests[0][1], failedRequests[1][1], 'Explicit retry reuses the same preview request');
+    assert.equal(button('Emitir NFS-e').disabled, true, 'Unavailable canonical capability is never bypassed');
+    assert.equal(calls.filter(row => row.action === 'ISSUE').length, 1);
   } finally { await act(async () => root.unmount()); dom.window.close(); delete globalThis.__nfsePickerTest; await rm(temp, { recursive: true, force: true }); }
 });

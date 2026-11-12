@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { NfseScope } from '../../types/nfse.types';
 import { nfseQueueKeys } from '../nfse-queue.types';
 import { nfseFiscalReviewService } from './nfse-fiscal-review.service';
-import type { NfseFiscalReviewService, SaveNfseFiscalReview } from './nfse-fiscal-review.types';
+import type { NfseFiscalReviewService, SaveNfseFiscalReview, ValidateNfseFiscalReview } from './nfse-fiscal-review.types';
 
 export const nfseFiscalReviewKeys = {
   scope: (scope: NfseScope) => ['nfse-fiscal-review', 'v1', scope.contextKey, scope.poloId, scope.environment, scope.month] as const,
@@ -25,5 +25,14 @@ export function useNfseFiscalReview(scope: NfseScope, documentId: string, modelI
     ]);
     return result;
   } });
-  return { query, save };
+  const validate = useMutation({ retry: false, mutationFn: async (input: ValidateNfseFiscalReview) => {
+    const captured = { ...scope };
+    const result = await service.validate(captured, documentId, input);
+    await Promise.all([
+      client.invalidateQueries({ queryKey: nfseFiscalReviewKeys.scope(captured) }),
+      client.invalidateQueries({ queryKey: nfseQueueKeys.scope(captured) }),
+    ]);
+    return result;
+  } });
+  return { query, save, validate };
 }

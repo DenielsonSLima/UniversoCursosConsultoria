@@ -7,6 +7,7 @@ export interface NfseFiscalReview {
   reviewStatus: 'NOT_REVIEWED' | 'CONFIRMED' | 'STALE' | 'BLOCKED';
   basisToken: string;
   reviewComplete: boolean;
+  validationSource?: 'MANUAL' | 'SYSTEM_VALIDATED' | null;
   canTransmit: false;
   preparation: { studentName: string; classLabel: string; paymentMonth: string; amount: string; receiptCount: number;
     /** Revalidated receipt dates, never a saved fiscal date or a month boundary. */
@@ -38,8 +39,12 @@ export interface SaveNfseFiscalReview {
   requestId: string; expectedRevision: number; basisToken: string; definition: NfseFiscalReviewDefinition;
 }
 export interface NfseFiscalReviewSaved { documentId: string; revision: number; reviewId: string; message: string }
+export interface ValidateNfseFiscalReview {
+  requestId: string; expectedRevision: number; basisToken: string; modelId: string; modelVersion: number;
+}
 export interface NfseFiscalReviewService {
   get(scope: NfseScope, documentId: string, modelId?: string, signal?: AbortSignal): Promise<NfseFiscalReview>;
   save(scope: NfseScope, documentId: string, input: SaveNfseFiscalReview): Promise<NfseFiscalReviewSaved>;
+  validate(scope: NfseScope, documentId: string, input: ValidateNfseFiscalReview): Promise<NfseFiscalReviewSaved>;
 }
 

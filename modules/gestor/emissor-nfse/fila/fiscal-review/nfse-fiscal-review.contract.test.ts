@@ -60,3 +60,21 @@ test('responses cannot cross document, context, polo, environment or month', asy
   const otherScope: NfseScope = { ...fiscalScope, environment: 'PRODUCAO' };
   assert.notDeepEqual(otherScope, fiscalScope);
 });
+
+test('optional adjustments send only model selection and concurrency proof, without human attestations', async () => {
+  const selection = { requestId: fiscalId(8), expectedRevision: 0, basisToken: fiscalReview.basisToken,
+    modelId: fiscalDefinition.modelId, modelVersion: fiscalDefinition.modelVersion };
+  const service = createNfseFiscalReviewService(async (name, args) => {
+    assert.equal(name, 'validate_nfse_fiscal_review_secure');
+    assert.deepEqual(args, { p_context_key: fiscalScope.contextKey, p_polo_id: fiscalScope.poloId,
+      p_environment: fiscalScope.environment, p_month: fiscalScope.month, p_document_id: fiscalReview.documentId,
+      p_request_id: selection.requestId, p_expected_revision: 0, p_basis_token: selection.basisToken,
+      p_model_id: selection.modelId, p_model_version: selection.modelVersion });
+    return envelope(saved);
+  });
+  assert.deepEqual(await service.validate(fiscalScope, fiscalReview.documentId, selection), saved);
+  const automatic = parseNfseFiscalReview({ ...fiscalReview, revision: 1, reviewStatus: 'CONFIRMED',
+    reviewComplete: true, validationSource: 'SYSTEM_VALIDATED', recipient: { ...fiscalReview.recipient, confirmed: false } }, fiscalReview.documentId);
+  assert.equal(automatic.validationSource, 'SYSTEM_VALIDATED'); assert.equal(automatic.recipient.confirmed, false);
+  assert.throws(() => parseNfseFiscalReview({ ...fiscalReview, validationSource: 'HUMAN_ASSUMED' }, fiscalReview.documentId), NfseContractError);
+});

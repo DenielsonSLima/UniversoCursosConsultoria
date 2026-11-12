@@ -43,11 +43,14 @@ test('batch reviews each canonical note, pauses on uncertain result and reports 
   const button = text => [...document.querySelectorAll('button')].find(item => item.textContent.includes(text));
   const click = async item => { assert(item); await act(async () => item.click()); await settle(); };
   try {
-    await act(async () => root.render(React.createElement(App))); await settle();
-    assert.equal(button('Emitir notas conferidas').disabled, true); await click(button('Conferir cada preparação'));
+    await act(async () => root.render(React.createElement(React.StrictMode, null, React.createElement(App)))); await settle();
     assert.equal(calls.filter(call => call.action === 'PREVIEW_QUEUE').length, 2);
-    const checks = [...document.querySelectorAll('input[type="checkbox"]')]; assert.equal(checks.length, 2);
-    await click(checks[0]); await click(checks[1]);
+    assert.equal(calls.filter(call => call.action === 'ISSUE').length, 0, 'Opening a batch never dispatches');
+    assert.equal(document.querySelectorAll('input[type="checkbox"]').length, 0);
+    assert.equal(button('Emitir notas conferidas').disabled, false);
+    assert.equal(document.querySelector('h2').textContent, 'Emitir notas');
+    assert(button('Atualizar dados do lote'));
+    assert([...document.querySelectorAll('details')].every(item => item.querySelector('summary').textContent === 'Revisar dados da nota' && !item.open));
     const send = button('Emitir notas conferidas'); await act(async () => { send.click(); send.click(); }); await settle();
     assert.equal(calls.filter(call => call.action === 'ISSUE').length, 1); assert.equal(button('Emitir notas conferidas').disabled, true);
     assert(document.body.textContent.includes('Há resultado não confirmado'));

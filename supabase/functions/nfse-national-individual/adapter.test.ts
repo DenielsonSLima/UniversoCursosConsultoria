@@ -246,6 +246,10 @@ Deno.test("canonical queue identity and amount are required; unsupported sources
   }
   const academic = reviewedIndividualFixture();
   (academic.snapshot.source as Record<string, unknown>).kind = "ACADEMIC_QUEUE";
+  (academic.snapshot.source as Record<string, unknown>).preparation = { payment_month: "2026-11" };
+  (academic.snapshot.source as Record<string, unknown>).reviewBasis = {
+    basis: { financial: { currentReceipts: [{ paymentDate: "2026-11-10" }] } },
+  };
   (command(academic).source as Record<string, unknown>).kind = "ACADEMIC_QUEUE";
   values(academic).serviceAmount = { source: "RECEIPTS", fixedAmount: null };
   assert.equal(buildIndividualDps(academic).values.serviceAmount, "1.00");

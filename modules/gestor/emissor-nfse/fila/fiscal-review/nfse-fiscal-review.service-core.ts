@@ -22,5 +22,12 @@ export function createNfseFiscalReviewService(transport: NfseRpcTransport): Nfse
         p_basis_token: fiscalReviewBasis(input.basisToken), p_definition: fiscalReviewDefinition(input.definition),
       }), documentId);
     },
+    async validate(scope, documentId, input) {
+      return parseNfseFiscalReviewSaved(await call('validate_nfse_fiscal_review_secure', scope, documentId, {
+        p_request_id: queueUuid(input.requestId), p_expected_revision: integer(input.expectedRevision),
+        p_basis_token: fiscalReviewBasis(input.basisToken), p_model_id: queueUuid(input.modelId),
+        p_model_version: integer(input.modelVersion, 1),
+      }), documentId);
+    },
   };
 }
