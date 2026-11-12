@@ -38,7 +38,7 @@ test('formal cancellation models copy, edit, deactivate and select a canonical v
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 }, mutations: { retry: false, gcTime: 0 } } });
   const root = createRoot(document.getElementById('root'));
   const render = picker => root.render(React.createElement(QueryClientProvider, { client }, picker
-    ? React.createElement(Picker, { scope, service, disabled: false, onApply: model => selected.push(model) })
+    ? React.createElement(Picker, { key: String(picker), applyOnSelect: picker === 'direct', scope, service, disabled: false, onApply: model => selected.push(model) })
     : React.createElement(NfseTabContext.Provider, { value: { scope } }, React.createElement(Section, { service }))));
   const settle = async () => act(async () => { await new Promise(resolve => setTimeout(resolve, 25)); });
   const button = text => [...document.querySelectorAll('button')].find(item => item.textContent.trim() === text);
@@ -59,5 +59,11 @@ test('formal cancellation models copy, edit, deactivate and select a canonical v
     await click(document.querySelector('[role="option"]')); await click(button('Usar modelo selecionado'));
     assert.equal(selected.length, 1); assert.equal(selected[0].id, system.id); assert.equal(selected[0].version, 1);
     assert.equal(document.querySelector('select,datalist'), null); assert.equal(saves.length, 2);
+    await act(async () => render('direct')); await settle();
+    assert.equal(button('Usar modelo selecionado'), undefined);
+    await click(document.querySelector('input[aria-label="Modelo de justificativa para cancelar"]'));
+    await click(document.querySelector('[role="option"]'));
+    assert.equal(selected.length, 2, 'Direct mode applies the model from a single selection');
+    assert.equal(selected[1].id, system.id); assert.equal(saves.length, 2, 'Selection never dispatches fiscal action');
   } finally { await act(async () => root.unmount()); client.clear(); dom.window.close(); await rm(temp, { recursive: true, force: true }); }
 });

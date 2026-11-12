@@ -1,3 +1,4 @@
+import { observeFiscalExecution } from "./execution-observation.ts";
 import { productionContractCache } from "./contract-cache.ts";
 import { createIndividualLedgerAccess } from "./queue-bridge.ts";
 import {
@@ -347,7 +348,7 @@ export function createIndividualRuntime(
         signedDpsXml: row.signedDpsXml,
       };
       if (!reconcile) ctx.allowPost("ISSUE", row.dispatch);
-      const result = await (reconcile
+      const result = await observeFiscalExecution(reconcile ? "RECONCILE" : "ISSUE", () => reconcile
         ? ctx.issuer.reconcile(prepared)
         : ctx.issuer.issue(prepared));
       if ('code' in result && /^(RESPONSE_|INVALID_AUTHORIZED_|PRODUCTION_.*CONTRACT)/.test(result.code || '')) {
@@ -393,7 +394,7 @@ export function createIndividualRuntime(
         row,
       );
       const result =
-        await (reconcile
+        await observeFiscalExecution(reconcile ? "RECONCILE_CANCEL" : "CANCEL", () => reconcile
           ? executor.reconcile(prepared)
           : executor.cancel(prepared));
       if (

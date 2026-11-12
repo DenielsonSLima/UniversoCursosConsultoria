@@ -4,7 +4,9 @@ import type { NfseScope } from '../../types/nfse.types';
 import { isNfseScopeValid } from '../../types/nfse.scope';
 import { nfsePartnerServicesKeys } from '../queries/nfse-partner-services.keys';
 
-/** Financial events refresh title choices; private drafts refresh on save/focus. */
+import { subscribeNfseChanges } from '../../realtime/nfse-subscription';
+
+/** Financial events refresh title choices; fiscal service changes use the page subscription. */
 export function useNfsePartnerServicesRealtime(scope: NfseScope | null) {
   const client = useQueryClient();
   const contextKey = scope?.contextKey;
@@ -16,26 +18,13 @@ export function useNfsePartnerServicesRealtime(scope: NfseScope | null) {
     if (!isNfseScopeValid(captured)) return;
     let disposed = false;
     let cleanup: (() => void) | undefined;
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    const invalidate = () => {
-      if (disposed || timer) return;
-      timer = setTimeout(() => {
-        timer = undefined;
-        if (!disposed) void client.invalidateQueries({ queryKey: nfsePartnerServicesKeys.scope(captured) });
-      }, 300);
-    };
     void import('../../../../../lib/supabase').then(({ supabase }) => {
       if (disposed) return;
-      let subscribed = false;
-      const channel = supabase.channel(`nfse-partner-services:${poloId}:${crypto.randomUUID()}`)
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'finance_realtime_events', filter: `polo_id=eq.${poloId}` }, invalidate)
-        .subscribe((status) => {
-          if (status !== 'SUBSCRIBED') return;
-          if (subscribed) invalidate();
-          subscribed = true;
-        });
-      cleanup = () => { void supabase.removeChannel(channel); };
+      const keys = [nfsePartnerServicesKeys.scope(captured)];
+      cleanup = subscribeNfseChanges(supabase, client,
+        `nfse-partner-services:${poloId}:${crypto.randomUUID()}`,
+        [{ table: 'finance_realtime_events', filter: `polo_id=eq.${poloId}`, targets: () => keys }], keys);
     }).catch(() => { /* Queries recover on focus/reconnect; no polling. */ });
-    return () => { disposed = true; if (timer) clearTimeout(timer); cleanup?.(); };
+    return () => { disposed = true; cleanup?.(); };
   }, [client, contextKey, poloId, environment, month]);
 }

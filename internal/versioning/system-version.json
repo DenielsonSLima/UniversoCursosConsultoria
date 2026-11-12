@@ -1,8 +1,8 @@
 {
-  "version": "4.8.315",
+  "version": "4.8.316",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 324,
+  "revision": 325,
   "releasedAt": "2026-11-12",
-  "summary": "Emissão fiscal multiusuário autorizada e estado real de serviços preparados"
+  "summary": "Modelos fiscais por origem, período de serviços e emissão direta com sincronização"
 }

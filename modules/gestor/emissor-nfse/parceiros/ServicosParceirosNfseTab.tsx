@@ -3,7 +3,7 @@ import NfsePartnerServiceFilters from './NfsePartnerServiceFilters';
 import { NFSE_PARTNER_SERVICE_FILTERS, type NfsePartnerServiceFilters as Filters } from './types/nfse-partner-services.types';
 import { createPartnerRemovalAttempt } from './services/nfse-partner-list.contract';
 import React, { useEffect, useRef, useState } from 'react';
-import { Plus, RefreshCw, Trash2 } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 import ToastNotification, { useToast } from '../../components/ToastNotification';
 import { useNfseTabContext } from '../components/NfseTabContext';
 import NfseDataState from '../components/NfseDataState';
@@ -32,6 +32,7 @@ export default function ServicosParceirosNfseTab() {
   const submitting = useRef(false);
   const busy = remove.isPending;
   const [open, setOpen] = useState(false);
+  const [emissionIntent, setEmissionIntent] = useState<'CONSULT' | 'CANCEL'>('CONSULT');
   const [emission, setEmission] = useState<NfsePartnerServiceRow | null>(null);
   const [selected, setSelected] = useState<string[]>([]);
   const [batch, setBatch] = useState<NfsePartnerServiceRow[] | null>(null);
@@ -74,8 +75,7 @@ export default function ServicosParceirosNfseTab() {
         <button type="button" className="nfse-button nfse-button-danger" disabled={!scope || !canRemoveSelection || blocked}
           onClick={() => setConfirmation(selectedRows.map(row => row.id))}><Trash2 size={15} />{busy ? 'Excluindo…' : `Excluir selecionados (${selectedRows.length})`}</button>
         <button type="button" className="nfse-button nfse-button-secondary" disabled={!selectedRows.length || blocked}
-          onClick={() => setBatch(selectedRows)}>Revisar lote ({selectedRows.length})</button>
-        <button type="button" className="nfse-button nfse-button-secondary" onClick={() => void query.refetch()} disabled={!scope || blocked}><RefreshCw size={15} className={query.isFetching ? 'animate-spin' : ''} />Atualizar</button>
+          onClick={() => setBatch(selectedRows)}>Emitir notas ({selectedRows.length})</button>
         <button type="button" className="nfse-button nfse-button-primary" disabled={!scope || busy} onClick={(event) => { event.currentTarget.focus(); setOpen(true); }}><Plus size={15} />Adicionar serviço</button>
       </div>
     </header>
@@ -95,7 +95,7 @@ export default function ServicosParceirosNfseTab() {
           disabled={blocked || !visibleIds.length} onChange={event => setSelected(event.target.checked ? visibleIds : [])} /></th><th>Aluno ou parceiro</th><th>Serviço</th><th>Data da prestação</th><th>Valor</th><th>Conta a receber</th><th>Situação fiscal</th><th>Ações</th></tr></thead>
         <tbody>{data.rows.map((item) => <tr key={item.id}>
           <td className="nfse-selection-cell"><input type="checkbox" aria-label={`Selecionar serviço de ${item.partnerName}`} checked={selected.includes(item.id)} disabled={blocked}
-            title={item.canRemove ? 'Selecionar serviço' : 'Selecionar para revisão; protegido contra exclusão'}
+            title={item.canRemove ? 'Selecionar serviço' : 'Selecionar para acompanhamento; protegido contra exclusão'}
             onChange={event => setSelected(ids => event.target.checked ? [...ids.filter(id => id !== item.id), item.id] : ids.filter(id => id !== item.id))} /></td>
           <td>{item.partnerName}<small>{item.partnerType === 'PJ' ? 'Pessoa jurídica (PJ)' : item.partnerType === 'PF' ? 'Pessoa física (PF)' : item.partnerType === 'ALUNO' ? 'Aluno' : ''}</small></td>
           <td>{item.modelName}<small>{item.serviceDescription}</small></td>
@@ -104,7 +104,7 @@ export default function ServicosParceirosNfseTab() {
           <td>{item.receivableAction === 'CREATED' ? 'Criada' : item.receivableAction === 'LINKED' ? 'Vinculada' : 'Não gerada'}</td>
           <td><span className="nfse-status">{operationLabel(item.state)}</span>{item.number && <small>NFS-e {item.number}</small>}</td>
           <td><button type="button" className="nfse-button nfse-button-secondary" disabled={blocked}
-            onClick={() => setEmission(item)}>{!item.state || item.state === 'PREVIEWED' ? 'Emitir NFS-e' : 'Consultar NFS-e'}</button></td>
+            onClick={() => { setEmissionIntent('CONSULT'); return !item.state || item.state === 'PREVIEWED' ? setBatch([item]) : setEmission(item); }}>{!item.state || item.state === 'PREVIEWED' ? 'Emitir NFS-e' : 'Consultar NFS-e'}</button></td>
         </tr>)}</tbody>
       </table></div>
       <footer className="nfse-footer"><span>Total filtrado: <strong>{formatNfseMoney(data.totalAmount)}</strong></span><span>{data.totalItems} serviço(s)</span></footer>
@@ -116,11 +116,18 @@ export default function ServicosParceirosNfseTab() {
       setOpen(false); setPage(1); setSelected([]); toast.success('Serviço adicionado', message);
     }} />}
     {emission && scope && <NfseSourceEmissionModal scope={scope} source={{ kind: 'PARTNER_SERVICE', id: emission.id }}
-      label={emission.partnerName} amount={emission.amount} operation={emission} onClose={() => setEmission(null)}
+      intent={emissionIntent} label={emission.partnerName} amount={emission.amount} operation={emission} onClose={() => setEmission(null)}
       onNotice={notice => toast[notice.type](notice.title, notice.message)} onChanged={() => {
         void invalidateNfseCache(client, scope, 'operations');
       }} />}
-    {batch && scope && <NfseBatchEmissionModal scope={scope} items={batch.map(row => ({ source: { kind: 'PARTNER_SERVICE', id: row.id }, label: row.partnerName, amount: row.amount, operation: row }))}
+    {batch && scope && <NfseBatchEmissionModal issueRequested scope={scope} items={batch.map(row => ({ source: { kind: 'PARTNER_SERVICE', id: row.id }, label: row.partnerName, amount: row.amount, operation: row }))}
+      onCancelOperation={item => {
+        const row = batch.find(row => row.id === item.source.id);
+        if (!row || !item.previewId || item.result?.state !== 'AUTHORIZED') return;
+        setEmissionIntent('CANCEL');
+        setEmission({ ...row, operationId: item.previewId, requestId: item.requestId, state: 'AUTHORIZED', number: item.result.number ?? null });
+        setBatch(null);
+      }}
       onClose={() => setBatch(null)} onNotice={notice => toast[notice.type](notice.title, notice.message)}
       onChanged={() => { void invalidateNfseCache(client, scope, 'operations'); }} />}
     <ConfirmModal isOpen={Boolean(confirmation)} onClose={() => setConfirmation(null)} onConfirm={() => void confirmRemoval()}

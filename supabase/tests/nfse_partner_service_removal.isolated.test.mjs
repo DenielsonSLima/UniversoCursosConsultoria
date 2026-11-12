@@ -201,6 +201,22 @@ test('service filters and logical removal preserve canonical data and fiscal saf
       const sql = await read('20261112173000_nfse_unsigned_service_removal.sql');
       assert(sql.includes('FOR SHARE')); assert(sql.includes("transaction_isolation"));
     });
+    await t.test('authorized and externally imported notes leave pending projection without touching history', async () => {
+      await db.exec('create table private.nfse_external_imports(service_id uuid)');
+      const snapshot = await before();
+      await db.exec(await read('20261112203005_nfse_services_pending_partition.sql'));
+      const pending = (await list()).data;
+      assert(!pending.rows.some(row => row.id === id(103)), 'AUTHORIZED excluded');
+      for (const n of [101,105,106,108]) assert(pending.rows.some(row => row.id === id(n)), `pending/uncertain ${n} preserved`);
+      const page = (await list([],scope,1,1)).data;
+      assert.equal(page.totalItems,pending.rows.length);
+      assert.equal(page.totalAmount,String(pending.rows.length*10)+'.00');
+      await db.query('insert into private.nfse_external_imports values($1)',[id(105)]);
+      assert.equal((await list()).data.totalItems,pending.totalItems-1);
+      assert(!(await list()).data.rows.some(row=>row.id===id(105)));
+      await assert.rejects(list([], [id(10),id(2),'PRODUCAO','2026-11']));
+      assert.deepEqual(await before(),snapshot);
+    });
   } finally { await db.close(); }
 });
 

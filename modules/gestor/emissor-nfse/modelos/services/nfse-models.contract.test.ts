@@ -12,7 +12,7 @@ import { createDefaultNfseModelAdditionalOptions, serializeNfseModelAdditionalOp
 const id = (value: number) => `00000000-0000-0000-0000-${String(value).padStart(12, '0')}`;
 const scope: NfseScope = { contextKey: id(1), poloId: id(2), month: '2026-11', environment: 'HOMOLOGACAO' };
 const input: NfseModelInput = {
-  requestId: id(3), name: 'Modelo de teste', nationalServiceCode: '080102', nbsCode: '122040000',
+  requestId: id(3), modelType: 'SERVICO', name: 'Modelo de teste', nationalServiceCode: '080102', nbsCode: '122040000',
   operationIndicatorCode: '', serviceDescription: 'Serviço de teste', issTreatment: 'TRIBUTAVEL',
   immunityType: null, technicalResponsibilityDocument: '', referenceDocument: '',
   complementaryInfo: '', orderReference: '', active: true,

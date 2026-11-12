@@ -54,8 +54,15 @@ Histórico arquivado: [27/10/2026 — versão 4.8.242](./changelog/2026-10-27-ve
 Histórico arquivado: [28/10/2026 — versão 4.8.243](./changelog/2026-10-28-versao-4-8-243.md).
 
 Histórico arquivado: [01/11/2026 — versão 4.8.244](./changelog/2026-11-01-versao-4-8-244.md).
-
 Histórico arquivado: [05/11/2026 — versão 4.8.245](./changelog/2026-11-05-versao-4-8-245.md).
+Histórico arquivado: [05/11/2026 — versão 4.8.246](./changelog/2026-11-05-versao-4-8-246.md).
+
+## [4.8.316] - 2026-11-12
+
+### Corrigido
+- Modelos separados por origem e período selecionável nos serviços, com validações preservadas.
+- Emissão direta explícita com progresso e proteção contra reenvio incerto; serviços autorizados saem da lista pendente.
+- Lista de serviços sem atualização manual, com cache compartilhado e sincronização multiusuário; métricas sanitizadas da execução fiscal.
 
 ## [4.8.315] - 2026-11-12
 
@@ -489,9 +496,3 @@ Histórico arquivado: [05/11/2026 — versão 4.8.245](./changelog/2026-11-05-ve
 ### Alterado
 - Início do Gestor com tipografia e espaçamento compactos, indicadores integrados, agenda e movimentação em composição mais leve.
 - Menu lateral e cabeçalho menores; dados, permissões, consultas e destinos dos atalhos preservados. Redesenho em prévia para aceite visual.
-
-## [4.8.246] - 2026-11-05
-
-### Corrigido
-- Categoria, Agrupamento e Ordenação do catálogo público EAD usam rótulos e campos com altura e alinhamento uniformes.
-- Seletores pesquisáveis preservam opções e valores, com navegação por teclado e fechamento por Escape, Tab e clique externo.

@@ -1,3 +1,4 @@
+import { applicationReadCachePolicy } from '../../../../../lib/query-cache-policy';
 import type { NfsePartnerRemovalInput } from '../services/nfse-partner-list.contract';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { NfseScope } from '../../types/nfse.types';
@@ -12,7 +13,7 @@ const required = (scope: NfseScope | null) => {
   if (!isNfseScopeValid(scope)) throw new NfseAccessError();
   return scope;
 };
-const queryOptions = { retry: false, staleTime: 15_000, gcTime: 0, refetchOnWindowFocus: true } as const;
+const queryOptions = { ...applicationReadCachePolicy, retry: false, refetchOnWindowFocus: true } as const;
 
 export function useNfsePartnerServiceOptions(scope: NfseScope | null) {
   return useQuery({ ...queryOptions, queryKey: nfsePartnerServicesKeys.options(scope), enabled: isNfseScopeValid(scope),

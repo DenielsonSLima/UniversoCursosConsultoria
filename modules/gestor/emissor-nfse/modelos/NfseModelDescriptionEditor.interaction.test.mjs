@@ -27,13 +27,14 @@ test('description catalog inserts only known literal variables and clearly previ
     description:'CURSO [curso da turma selecionada]; [matrícula vinculada ao recebimento]',
     monthLabel:'novembro de 2026',usesReferenceMonth:false,requiresAcademicContext:true}};
   let current='Texto selecionado';
-  function Fixture(){const[value,setValue]=useState(current);return React.createElement(Editor,{value,
+  function Fixture({modelType = 'ALUNO'}){const[value,setValue]=useState(current);return React.createElement(Editor,{value,modelType,
     onChange:next=>{current=next;setValue(next);},preview});}
   const root=createRoot(document.getElementById('root'));
   const button=text=>[...document.querySelectorAll('button')].find(e=>e.textContent===text);
   try{
     await act(async()=>root.render(React.createElement(Fixture)));
-    assert.equal(nfseDescriptionVariables.length,5);
+    assert.equal(nfseDescriptionVariables.length,6);
+    assert.equal(button('Inserir período do serviço'), undefined);
     assert(document.body.textContent.includes('Estrutura da descrição acadêmica'));
     assert(document.body.textContent.includes('os dados reais'));
     assert(!document.body.textContent.includes('CPF'));
@@ -45,6 +46,21 @@ test('description catalog inserts only known literal variables and clearly previ
     for(const token of ['{{curso}}','{{matricula}}','{{parcelas}}','{{meses_pagamento}}'])assert(current.includes(token));
     assert.equal(insertNfseDescriptionVariable('abc','{{cpf}}'),null);
     assert.equal(insertNfseDescriptionVariable('x'.repeat(1999),'{{curso}}'),null);
+    await act(async()=>root.render(React.createElement(Fixture,{modelType:'SERVICO'})));
+    assert.equal(button('Inserir curso da turma'),undefined);
+    assert.equal(button('Usar descrição formal de cursos'),undefined);
+    assert(button('Inserir período do serviço'));
+    await act(async()=>button('Inserir período do serviço').click());
+    assert(current.includes('{{periodo}}'));
+    await act(async()=>root.render(React.createElement(Fixture,{modelType:'AMBOS'})));
+    assert(button('Inserir curso da turma'));
+    assert(button('Inserir período do serviço'));
+    assert(document.body.textContent.includes('Somente ao emitir para alunos'));
+    assert(document.body.textContent.includes('Somente ao emitir serviços'));
+    assert(document.body.textContent.includes('prefira texto sem variáveis'));
+    await act(async()=>root.render(React.createElement(Fixture,{modelType:null})));
+    assert.equal(document.querySelectorAll('.nfse-description-insert').length,0);
+    assert(document.body.textContent.includes('Selecione o tipo do modelo'));
     const parsed=parseNfseModelDescriptionPreview(preview.data);assert.equal(parsed.requiresAcademicContext,true);
     assert.throws(()=>parseNfseModelDescriptionPreview({...preview.data,requiresAcademicContext:'true'}));
   }finally{await act(async()=>root.unmount());dom.window.close();await rm(temp,{recursive:true,force:true});}

@@ -122,3 +122,19 @@ test('company lookup forwards name or masked document unchanged and trusts autho
   await assert.rejects(service.searchPartners(scope, 'x'.repeat(101)), NfseContractError);
 });
 
+
+test('service period remains explicit and separate from fiscal service date', () => {
+  const selected = { ...input, serviceDescription: 'SERVIÇO NO PERÍODO DE {{periodo}}, CONFORME RELATÓRIO.',
+    servicePeriodStart: '2026-09-09', servicePeriodEnd: '2026-10-08' };
+  const definition = nfsePartnerServiceDefinition(selected);
+  assert.equal(definition.serviceDate, input.serviceDate);
+  assert.equal(definition.servicePeriodStart, '2026-09-09');
+  assert.equal(definition.servicePeriodEnd, '2026-10-08');
+  assert.equal(definition.serviceDescription, selected.serviceDescription, 'Server expands the canonical description');
+  for (const change of [{ servicePeriodStart: undefined }, { servicePeriodEnd: undefined },
+    { servicePeriodStart: '2026-02-30' }, { servicePeriodEnd: '2026-09-08' },
+    { serviceDescription: 'Serviço {{curso}}' }, { serviceDescription: 'x'.repeat(1980) + '{{periodo}}' }]) {
+    assert.throws(() => nfsePartnerServiceDefinition({ ...selected, ...change }), NfseContractError);
+  }
+  assert.equal('servicePeriodStart' in nfsePartnerServiceDefinition(input), false);
+});

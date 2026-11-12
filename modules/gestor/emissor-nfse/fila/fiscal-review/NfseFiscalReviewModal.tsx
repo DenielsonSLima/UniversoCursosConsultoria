@@ -30,7 +30,7 @@ export default function NfseFiscalReviewModal({ scope, documentId, onClose, onSa
   const submitting = useRef(false);
   const { query, validate } = useNfseFiscalReview(scope, documentId, modelId, service);
   const modelsQuery = useNfseModels(scope);
-  const models = modelsQuery.error ? [] : modelsQuery.data?.rows.filter(model => model.active && model.nationalServiceCode === '080201') || [];
+  const models = modelsQuery.error ? [] : modelsQuery.data?.rows.filter(model => model.active && (model.modelType === 'ALUNO' || model.modelType === 'AMBOS') && model.nationalServiceCode === '080201') || [];
   const data = query.error ? undefined : query.data;
   const fiscalDates = data ? getNfseFiscalReviewDates(data) : null;
   const competenceDate = fiscalDates?.competenceDate || '';
@@ -85,11 +85,11 @@ export default function NfseFiscalReviewModal({ scope, documentId, onClose, onSa
                 <InstitutionalSelect id={`${titleId}-model`} ariaLabel="Modelo de ensino técnico" value={modelId}
                   onValueChange={value => { setModelId(value); setSavedMessage(null); }}
                   options={models.map(model => ({ value: model.id, label: `${model.name} · ${model.nationalServiceCode}` }))}
-                  placeholder="Selecionar modelo 080201" loading={modelsQuery.isPending} disabled={busy}
+                  placeholder="Selecionar modelo para alunos" loading={modelsQuery.isPending} disabled={busy}
                   error={modelsQuery.error ? 'Não foi possível consultar os modelos.' : undefined} />
               </div>}
               {modelsQuery.error && <button type="button" className="nfse-button nfse-button-secondary" disabled={busy} onClick={() => void modelsQuery.refetch()}>Consultar modelos novamente</button>}
-              {!modelsQuery.isPending && !modelsQuery.error && !models.length && <p className="nfse-inline-help">Cadastre um modelo ativo com tributação 080201 para continuar esta revisão.</p>}
+              {!modelsQuery.isPending && !modelsQuery.error && !models.length && <p className="nfse-inline-help">Cadastre um modelo ativo do tipo Alunos com tributação 080201 para continuar esta revisão.</p>}
               {query.isFetching && <p className="nfse-inline-help" role="status">Atualizando os dados do modelo…</p>}
               {data.service.modelId && <details className="nfse-fiscal-review-disclosure">
                 <summary tabIndex={0}>Ver descrição e classificação do serviço</summary>

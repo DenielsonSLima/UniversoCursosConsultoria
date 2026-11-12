@@ -39,7 +39,7 @@ test('partner preparation preserves the selected 2000-character model descriptio
   await writeFile(bundle, compiled.outputFiles[0].contents);
   const { default: Modal } = await import(pathToFileURL(bundle).href);
   const description = 'SERVIÇO SINTÉTICO '.padEnd(2000, 'x');
-  globalThis.__partnerModel = { id: id(3), version: 2, name: 'Modelo sintético 2000', active: true, serviceDescription: description };
+  globalThis.__partnerModel = { id: id(3), version: 2, modelType: 'AMBOS', name: 'Modelo sintético 2000', active: true, serviceDescription: description };
   const student = { id: id(4), name: 'Parceiro sintético', tradeName: null, document: '00000000191', type: 'ALUNO' };
   const company = { id: id(7), name: 'MUNICIPIO SINTETICO', tradeName: 'Prefeitura sintética', document: '12.345.678/0001-95', type: 'PJ' };
   globalThis.__partnerOptions = { partners: [student, company],
@@ -114,6 +114,27 @@ test('partner preparation preserves the selected 2000-character model descriptio
     assert.equal(calls[0].input.modelId, id(3)); assert.equal(calls[0].input.modelVersion, 2);
     assert.equal(calls[0].input.partnerId, company.id); assert(searches.every(row => row.scope.poloId === scope.poloId && row.scope.environment === scope.environment));
     assert.equal(messages.length, 1); assert.equal(document.querySelector('select, datalist'), null);
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(dom.window.HTMLTextAreaElement.prototype, 'value').set.call(textarea, 'SERVIÇO NO PERÍODO DE {{periodo}}, CONFORME RELATÓRIO.');
+      textarea.dispatchEvent(new dom.window.Event('input', { bubbles: true }));
+    }); await settle(350);
+    assert.equal(submit.disabled, true, 'Missing period never silently falls back to service date');
+    const dates = [...document.querySelectorAll('input[type="date"]')];
+    assert.equal(dates.length, 3);
+    assert.equal(dates[1].value, ''); assert.equal(dates[2].value, '');
+    await setValue(dates[1], '2026-09-09'); await setValue(dates[2], '2026-09-08');
+    assert.equal(submit.disabled, true);
+    assert(document.body.textContent.includes('não pode ser anterior'));
+    await setValue(dates[2], '2026-10-08'); await settle(350); await settle();
+    assert(document.body.textContent.includes('09/09/2026 ATÉ 08/10/2026'));
+    assert.equal(submit.disabled, false); await click(submit);
+    assert.equal(calls.length, 2);
+    assert.equal(calls[1].input.serviceDescription, 'SERVIÇO NO PERÍODO DE {{periodo}}, CONFORME RELATÓRIO.');
+    assert.equal(calls[1].input.servicePeriodStart, '2026-09-09');
+    assert.equal(calls[1].input.servicePeriodEnd, '2026-10-08');
+    assert.equal(calls[1].input.serviceDate, '2026-11-10');
+    assert.notEqual(calls[0].input.requestId, calls[1].input.requestId);
+
   } finally {
     await act(async () => root.unmount()); client.clear(); dom.window.close();
     delete globalThis.__partnerModel; delete globalThis.__partnerOptions; delete globalThis.__partnerSave; delete globalThis.__partnerSearch;
