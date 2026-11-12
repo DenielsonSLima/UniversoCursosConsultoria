@@ -1,8 +1,8 @@
 {
-  "version": "4.8.296",
+  "version": "4.8.297",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 305,
+  "revision": 306,
   "releasedAt": "2026-11-11",
-  "summary": "Revisão fiscal compacta, competência acadêmica pelo último pagamento, CPF/CNPJ formatados e aviso interno de cancelamento"
+  "summary": "Modelos NFS-e centralizados na matriz, representação das filiais e liberação acadêmica após cancelamento confirmado"
 }

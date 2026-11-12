@@ -1,7 +1,11 @@
+import type { NfseEnvironment } from '../../types/nfse.types';
+
 export interface NfseReceiptScope {
   contextId: string;
   poloId: string;
   paymentMonth: string;
+  /** Optional only for legacy read-only consumers during deployment. */
+  environment?: NfseEnvironment;
 }
 
 export interface NfseReceiptFilters {

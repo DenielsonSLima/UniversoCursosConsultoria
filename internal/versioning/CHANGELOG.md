@@ -28,6 +28,14 @@ Histórico arquivado: [13/10/2026 — versões 4.8.215 a 4.8.217](./changelog/20
 
 Histórico arquivado: [14/10/2026 — versões 4.8.218 a 4.8.226](./changelog/2026-10-14-versoes-4-8-218-a-226.md).
 
+## [4.8.297] - 2026-11-11
+
+- Matriz gerencia os modelos de emissão; filiais usam e exportam o mesmo cadastro, sem criar cópias locais.
+- Emissão das filiais usa o A1 da matriz com validação da empresa, ambiente e CNPJ próprio do emitente; local 030101 acompanha o estabelecimento selecionado.
+- Cancelamento acadêmico confirmado libera os recebimentos para nova preparação, preservando nota, XML, reservas e numeração anteriores.
+- Disponibilidade acadêmica considera unidade e ambiente no TanStack Query/Realtime; validação informa quando falta identificar a parcela no financeiro.
+- Descrição acadêmica permite ausência real de numeração da parcela com matrícula e data do pagamento, sem inventar dados nem alterar o modelo.
+
 ## [4.8.296] - 2026-11-11
 
 - Revisão reaproveita o pré-modelo, recolhe detalhes e formata CPF/CNPJ. A fila mantém somente Revisar por linha, com emissão pela seleção.

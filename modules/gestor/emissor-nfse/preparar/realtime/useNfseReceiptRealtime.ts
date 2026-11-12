@@ -8,9 +8,10 @@ export function useNfseReceiptRealtime(scope: NfseReceiptScope | null, enabled: 
   const client = useQueryClient();
   const contextId = scope?.contextId;
   const poloId = scope?.poloId;
+  const environment = scope?.environment;
   const paymentMonth = scope?.paymentMonth;
   useEffect(() => {
-    const captured = contextId && poloId && paymentMonth ? { contextId, poloId, paymentMonth } : null;
+    const captured = contextId && poloId && paymentMonth ? { contextId, poloId, environment, paymentMonth } : null;
     if (!enabled || !isNfseReceiptScopeValid(captured)) return;
     let disposed = false;
     let cleanup: (() => void) | undefined;
@@ -37,5 +38,5 @@ export function useNfseReceiptRealtime(scope: NfseReceiptScope | null, enabled: 
       cleanup = () => { void supabase.removeChannel(channel); };
     }).catch(() => { /* Queries recover on focus/reconnect; no polling. */ });
     return () => { disposed = true; if (timer) clearTimeout(timer); cleanup?.(); };
-  }, [client, enabled, contextId, poloId, paymentMonth]);
+  }, [client, enabled, contextId, poloId, environment, paymentMonth]);
 }

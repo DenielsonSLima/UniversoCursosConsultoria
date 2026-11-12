@@ -27,6 +27,16 @@ function ibsCbs(value: unknown): IndividualPayload['ibsCbs'] {
     operationIndicatorCode: code(row.operationIndicatorCode, /^[0-9]{6}$/), recipientSameAsAcquirer: flag(row.recipientSameAsAcquirer),
     personalUse: flag(row.personalUse), governmentPurchase: flag(row.governmentPurchase) };
 }
+function serviceLocation(value: unknown): IndividualPayload['serviceLocation'] {
+  if (value === null) return null;
+  const row = record(value);
+  const nullableCode = (value: unknown, pattern: RegExp) => value === null ? null : digits(value, pattern);
+  return { source: oneOf(row.source, ['ISSUER_ESTABLISHMENT', 'MODEL_FIXED', 'ISSUED_SNAPSHOT']),
+    countryCode: digits(row.countryCode, /^[A-Z]{3}$/),
+    municipalityCode: nullableCode(row.municipalityCode, /^[0-9]{7}$/),
+    modelMunicipalityCode: nullableCode(row.modelMunicipalityCode, /^[0-9]{7}$/),
+    operationIndicatorCode: nullableCode(row.operationIndicatorCode, /^[0-9]{6}$/) };
+}
 export function individualDefinition(value: IndividualDefinition): IndividualDefinition {
   if (value.amount !== '1.00') return fail();
   return { partnerId: queueUuid(value.partnerId), modelId: queueUuid(value.modelId), modelVersion: integer(value.modelVersion, 1), amount: '1.00',
@@ -49,6 +59,7 @@ export function individualPayload(value: unknown): IndividualPayload {
     regApTribSN: row.regApTribSN === null ? null : oneOf(row.regApTribSN, ['1', '2', '3']),
     municipalityCode: digits(row.municipalityCode, /^[0-9]{7}$/), municipalRegistration: municipalRegistration || null,
     ...(snPercent === undefined ? {} : { simpleNationalTransparencyPercent: snPercent as string | null }),
+    ...(row.serviceLocation === undefined ? {} : { serviceLocation: serviceLocation(row.serviceLocation) }),
     ...(row.ibsCbs === undefined ? {} : { ibsCbs: ibsCbs(row.ibsCbs) }) };
 }
 export function parseIndividualPreview(value: unknown): IndividualPreview {

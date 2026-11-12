@@ -1,7 +1,8 @@
 # Lote ativo
 
-## Lote: 2026-11-11-nfse-revisao-competencia-compacta
+## Lote: 2026-11-11-nfse-filiais-emissao-retorno
 
-Objetivo: revisão fiscal compacta, CPF/CNPJ formatados, competência acadêmica pelo último pagamento e aviso interno de 24 horas. Mudança crítica por banco/financeiro/publicação. Candidata 4.8.296/revisão 305 após 4.8.295. Publicação GitHub e produção autorizada, condicionada aos testes. 19 arquivos de produto/testes e 6 de integração/registro; sem emissão ou cancelamento real. 17 unitários, 7 interação e 21 SQL aprovados; CI/Preview/DDL remoto pendentes. Safari indisponível, conferência visual posterior pelo usuário.
-
-Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-11-nfse-revisao-competencia-compacta.md`.
+Objetivo: validar uma emissão e cancelamento por filial (Aquidabã, Porto da Folha e Propriá), com preparação acadêmica pelo fluxo normal e disponibilidade de recebimentos após cancelamento confirmado.
+Status: candidata4.8.297 sobre main9bc04a5/4.8.296. As três configuraçõesPROD foram salvas pela interface com referência ao A1 da matriz e município próprio. Correções de representação, liberação acadêmica e local030101 aplicadas viaMCP; Edge individualv23 comJWT. Gestão de modelos centralizada na matriz, sem cópias nas filiais. Validação final/publicação em andamento. Descrição formal sem número de parcela autorizada pelo usuário e aplicada; Propriá retirada desta rodada por não ter recebimentos pagos. Preparo e revisão reais de Aquidabã concluídos, com modelo centralv7; a primeira prévia identificou número ausente no endereço do tomador e não transmitiu. Usuario confirmou S/N como sem numero para os dois cadastros do teste; atualizar somente esses campos, renovar a revisao e testar.
+Autorização: usuário pediu expressamente testes reais de uma nota por filial, cancelamento posterior e revisão do retorno; correções necessárias integram o mesmo domínio. Nenhum disparo no portal oficial; operação fiscal pelo sistema autenticado.
+Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-11-nfse-filiais-emissao-retorno.md`; preservar alterações paralelas fora dele.

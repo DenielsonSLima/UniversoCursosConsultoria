@@ -34,7 +34,8 @@ export default function PrepararNfseTab() {
     return () => clearTimeout(timer);
   }, [search]);
   const receiptScope = useMemo(() => scope ? {
-    contextId: scope.contextKey, poloId: scope.poloId, paymentMonth: open ? month : draft.month,
+    contextId: scope.contextKey, poloId: scope.poloId, environment: scope.environment,
+    paymentMonth: open ? month : draft.month,
   } : null, [scope, open, month, draft.month]);
   const validScope = isNfseReceiptScopeValid(receiptScope);
   const modelsQuery = useNfseModels(scope, draft.ids.length > 0);

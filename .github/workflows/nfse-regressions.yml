@@ -202,6 +202,7 @@ jobs:
           supabase/functions/nfse-national-individual/handler.test.ts
           supabase/functions/nfse-national-individual/adapter.test.ts
           supabase/functions/nfse-national-individual/adapter-ibscbs.test.ts
+          supabase/functions/nfse-national-individual/service-location.test.ts
           supabase/functions/nfse-national-individual/cancellation-review.test.ts
           supabase/functions/nfse-national-individual/queue-bridge.test.ts
           supabase/functions/nfse-national-individual/runtime.test.ts

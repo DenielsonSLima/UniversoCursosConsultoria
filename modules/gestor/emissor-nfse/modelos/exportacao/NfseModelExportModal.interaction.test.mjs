@@ -17,8 +17,9 @@ const fixtureOutput = join(directory, 'fixture.cjs');
 await build({ entryPoints: [fileURLToPath(new URL('nfse-model-export.fixture.ts', base))], bundle: true,
   platform: 'node', format: 'cjs', outfile: fixtureOutput, logLevel: 'silent' });
 const fixture = require(fixtureOutput);
-const model = fixture.exportModelFixture();
-const state = { model, scope: fixture.exportScope, issuer: { data: fixture.exportIssuer, isPending: false, isFetching: false, error: null, refetch: async () => {} },
+const model = { ...fixture.exportModelFixture(), sourcePoloId: fixture.exportScope.poloId,
+  sourcePoloName: 'MATRIZ SINTÉTICA', inherited: false, canManage: true };
+const state = { model, scope: fixture.exportScope, canManage: true, issuer: { data: fixture.exportIssuer, isPending: false, isFetching: false, error: null, refetch: async () => {} },
   catalogs: { data: fixture.exportCatalogs, isPending: false, error: null, refetch: async () => {} },
   blob: new Blob(['%PDF-1.3\nsynthetic test'], { type: 'application/pdf' }), downloads: [], previews: [], reports: [], failPdf: false };
 globalThis.__nfseExportHarness = state;
@@ -27,8 +28,8 @@ await build({ entryPoints: [fileURLToPath(new URL('../ModelosNfseTab.tsx', base)
   outfile: output, loader: { '.css': 'empty' }, logLevel: 'silent', plugins: [{ name: 'scoped-exports', setup(build) {
     build.onResolve({ filter: /^(react|react-dom)(\/|$)/ }, args => ({ path: require.resolve(args.path), external: true }));
     const mocks = [
-      [/useNfseQueries$/, 'export const useNfseModels=()=>({data:{rows:[globalThis.__nfseExportHarness.model]},isPending:false,error:null});'],
-      [/hooks\/useNfseModels$/, 'export const useNfseModels=()=>({data:{rows:[globalThis.__nfseExportHarness.model]},isPending:false,error:null});export const useMutateNfseModel=()=>({reset(){},isPending:false,error:null,mutateAsync(){throw Error("Model mutations are not allowed in the export test")}});'],
+      [/useNfseQueries$/, 'export const useNfseModels=()=>({data:{rows:[globalThis.__nfseExportHarness.model],canManage:globalThis.__nfseExportHarness.canManage},isPending:false,error:null});'],
+      [/hooks\/useNfseModels$/, 'export const useNfseModels=()=>({data:{rows:[globalThis.__nfseExportHarness.model],canManage:globalThis.__nfseExportHarness.canManage},isPending:false,error:null});export const useMutateNfseModel=()=>({reset(){},isPending:false,error:null,mutateAsync(){throw Error("Model mutations are not allowed in the export test")}});'],
       [/NfseTabContext$/, 'export const useNfseTabContext=()=>({scope:globalThis.__nfseExportHarness.scope});'],
       [/ToastNotification$/, 'export default()=>null;export const useToast=()=>({toasts:[],removeToast(){},toast:{success(){}}});'],
       [/NfseModelForm$/, 'export default()=>null;'],
@@ -75,6 +76,32 @@ test('Exportar opens the readonly preview, downloads its exact Blob and restores
   assert.equal(document.querySelector('[role="dialog"]'), null);
   assert.equal(document.activeElement, opener);
   assert.notEqual(document.getElementById('root').getAttribute('aria-hidden'), 'true');
+});
+
+test('a branch exports the inherited matrix model without management actions', async () => {
+  const issuer = state.issuer;
+  state.scope = { ...fixture.exportScope, poloId: '00000000-0000-0000-0000-000000000002' };
+  state.model = { ...model, inherited: true, canManage: false };
+  state.canManage = false;
+  state.issuer = { ...issuer, data: { ...fixture.exportIssuer, poloId: state.scope.poloId, name: 'FILIAL SINTÉTICA' } };
+  const original = JSON.stringify(state.model);
+  try {
+    await render();
+    assert.equal(button(`Editar modelo ${model.name}`), undefined);
+    assert.equal(button(`Mais ações do modelo ${model.name}`), undefined);
+    assert.equal(button('Novo modelo'), undefined);
+    const opener = button(`Exportar modelo ${model.name}`);
+    assert.ok(opener); assert.equal(opener.disabled, false);
+    await click(opener); await flush();
+    assert.ok(document.querySelector('iframe'));
+    assert.equal(button('Baixar PDF').disabled, false);
+    assert.equal(JSON.stringify(state.model), original);
+    await click(button('Fechar exportação'));
+    assert.equal(document.activeElement, opener);
+  } finally {
+    state.scope = fixture.exportScope; state.model = model; state.canManage = true; state.issuer = issuer;
+    await render();
+  }
 });
 
 test('generation failure offers retry and scope absence prevents export', async () => {

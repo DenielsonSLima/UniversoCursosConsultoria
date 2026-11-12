@@ -6,6 +6,7 @@ import {
 } from "../_shared/nfse-national/xml.ts";
 import type { IndividualRow } from "./handler.ts";
 import { queueDeclaredIbsCbs, queueIbsCbsSummary } from "./adapter-ibscbs.ts";
+import { publicIndividualServiceLocation, resolveIndividualServiceLocation } from "./service-location.ts";
 type Data = Record<string, unknown>;
 const object = (v: unknown): Data =>
   v !== null && typeof v === "object" && !Array.isArray(v) ? v as Data : {};
@@ -152,6 +153,7 @@ export function individualPublicPayload(row: IndividualRow): Data {
     opSimpNac: text(cfg.opSimpNac),
     regApTribSN: cfg.regApTribSN ?? null,
     municipalityCode: text(cfg.municipalityCode),
+    serviceLocation: publicIndividualServiceLocation(row),
     municipalRegistration: text(cfg.municipalRegistration) || null,
     simpleNationalTransparencyPercent: snPercent,
     ibsCbs: queueIbsCbsSummary(definition),
@@ -235,9 +237,11 @@ export function buildIndividualDps(
     definition.issTreatment === "TRIBUTAVEL",
     "INDIVIDUAL_ISS_TREATMENT_UNSUPPORTED",
   );
+  const serviceLocation = resolveIndividualServiceLocation(definition, cfg);
   requireContract(
-    service.version === 1 && service.countryCode === "BRA" &&
-      /^\d{7}$/.test(text(service.municipalityCode)),
+    serviceLocation?.countryCode === "BRA" &&
+      /^\d{7}$/.test(serviceLocation.municipalityCode || "") &&
+      (row.fiscalInput == null || object(object(row.fiscalInput).service).municipalityCode === serviceLocation.municipalityCode),
     "FISCAL_SERVICE_LOCATION_REVIEW_REQUIRED",
   );
   requireContract(
@@ -356,7 +360,7 @@ export function buildIndividualDps(
       name: text(recipient.name),
     },
     service: {
-      municipalityCode: text(service.municipalityCode),
+      municipalityCode: serviceLocation.municipalityCode!,
       nationalTaxCode: text(definition.nationalServiceCode),
       nbs: text(definition.nbsCode),
       description,

@@ -4,6 +4,7 @@ import { nfseQueryKeys } from './nfse.queryKeys';
 import { nfseQueueKeys } from '../fila/nfse-queue.types';
 import { nfseModelsKeys } from '../modelos/queries/nfse-models.keys';
 import { nfsePartnerServicesKeys } from '../parceiros/queries/nfse-partner-services.keys';
+import { nfseStudentKeys } from '../preparar/queries/nfse-students.keys';
 
 export type NfseCacheResource = 'operations' | 'models' | 'configuration' | 'cancellation-models' | 'services';
 export const nfseMetadataKeys = {
@@ -17,7 +18,8 @@ export const nfseMetadataKeys = {
 export function nfseCacheTargets(scope: NfseScope, resource: NfseCacheResource): readonly (readonly unknown[])[] {
   switch (resource) {
     case 'operations': return [nfseQueryKeys.scope(scope), nfseQueueKeys.scope(scope),
-      nfsePartnerServicesKeys.scope(scope), nfseMetadataKeys.numbering(scope)];
+      nfsePartnerServicesKeys.scope(scope), nfseMetadataKeys.numbering(scope),
+      nfseStudentKeys.authority({ contextId: scope.contextKey, poloId: scope.poloId, environment: scope.environment })];
     case 'models': return [nfseModelsKeys.scope(scope), nfseQueryKeys.workspace(scope),
       nfsePartnerServicesKeys.options(scope),
       ['nfse-fiscal-review', 'v1', scope.contextKey, scope.poloId, scope.environment, scope.month]];

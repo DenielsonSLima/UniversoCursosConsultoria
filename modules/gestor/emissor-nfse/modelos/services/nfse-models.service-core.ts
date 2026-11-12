@@ -29,7 +29,9 @@ export function createNfseModelsService(transport: NfseRpcTransport) {
       const totalItems = integer(payload.totalItems);
       if (page !== 1 || totalItems !== rows.length || pageSize < rows.length) throw new NfseContractError();
       assertUniqueIds(rows);
-      return { rows, page, pageSize, totalItems };
+      const canManage = payload.canManage === undefined ? false : payload.canManage;
+      if (typeof canManage !== 'boolean') throw new NfseContractError();
+      return { rows, page, pageSize, totalItems, canManage };
     },
     async mutate(scope: NfseScope, input: NfseModelActionInput) {
       return mapNfseMutation(await call('mutate_nfse_model_secure', scope, {

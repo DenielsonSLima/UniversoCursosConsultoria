@@ -4,12 +4,18 @@ import type { NfseCancellationModel } from '../cancelamento/nfse-cancellation-mo
 export interface IndividualDefinition {
   partnerId: string; modelId: string; modelVersion: number; amount: '1.00'; competenceDate: string; serviceDate: string;
 }
+export interface IndividualServiceLocation {
+  source: 'ISSUER_ESTABLISHMENT' | 'MODEL_FIXED' | 'ISSUED_SNAPSHOT';
+  countryCode: string; municipalityCode: string | null; modelMunicipalityCode: string | null;
+  operationIndicatorCode: string | null;
+}
 export interface IndividualPayload {
   issuerName: string; issuerCnpj: string; recipientName: string; recipientDocument: string;
   modelId: string; modelVersion: number; modelName: string; amount: string; competenceDate: string; serviceDate: string; series: string;
   nationalServiceCode: string; nbsCode: string; serviceDescription: string; opSimpNac: '1' | '2' | '3';
   regApTribSN: '1' | '2' | '3' | null; municipalityCode: string; municipalRegistration: string | null;
   simpleNationalTransparencyPercent?: string | null;
+  serviceLocation?: IndividualServiceLocation | null;
   ibsCbs?: { included: boolean; cst: string | null; classificationCode: string | null; operationIndicatorCode: string | null;
     recipientSameAsAcquirer: boolean | null; personalUse: boolean | null; governmentPurchase: boolean | null } | null;
 }
