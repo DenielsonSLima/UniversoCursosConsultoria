@@ -41,14 +41,14 @@ export const useAlunoCoursesCatalog = (alunoId?: string) => {
 
   const { data: courses = [], isLoading, isError } = useQuery<any[]>({
     queryKey: alunoCourseAccessKeys.catalog(alunoId || ''),
-    refetchInterval: (query) => query.state.data?.some(course => eadPurchaseNeedsRefresh(course.eadPurchase, hasEadAccess(course))) ? 30_000 : false,
+    refetchInterval: (query) => query.state.data?.some(course => (Boolean(course.alunoMatricula?.acessoTemporarioAte) || eadPurchaseNeedsRefresh(course.eadPurchase, hasEadAccess(course)))) ? 30_000 : false,
     queryFn: async () => {
       const [coursesResult, matriculasResult, turmasOnlineResult, purchasesResult] = await Promise.all([
         supabase.from('cursos').select('*').eq('status', 'ativo').order('nome', { ascending: true }),
         hasAlunoContext
           ? supabase
               .from('matriculas')
-              .select('id, status, data_matricula, turma_id, turmas(id, curso_id, cursos(id, modalidade))')
+              .select('id, status, acesso_temporario_ate, data_matricula, turma_id, turmas(id, curso_id, cursos(id, modalidade))')
               .eq('aluno_id', alunoId)
           : Promise.resolve({ data: [], error: null }),
         supabase
@@ -122,8 +122,9 @@ export const useAlunoCoursesCatalog = (alunoId?: string) => {
         const modality = curso?.modalidade;
         const hasActivePendingReceivable = pendingReceivableByMatricula.has(matricula.id);
         const current = enrollmentByCourse.get(courseId);
-        const currentRank = current ? getEnrollmentRank(current.status, modality) : -1;
-        const nextRank = getEnrollmentRank(matricula.status, modality);
+        const currentRank = current ? (normalizeStatus(modality) === 'EAD' && hasEadAccess({ alunoMatricula: current }) ? 3 : getEnrollmentRank(current.status, modality)) : -1;
+        const nextRank = normalizeStatus(modality) === 'EAD' && hasEadAccess({ alunoMatricula: { status: matricula.status, acessoTemporarioAte: matricula.acesso_temporario_ate } })
+          ? 3 : getEnrollmentRank(matricula.status, modality);
         const nextIsPending = EAD_PENDING_STATUSES.has(normalizeStatus(matricula.status));
         const currentIsPending = EAD_PENDING_STATUSES.has(normalizeStatus(current?.status));
         const nextEnrollmentTime = Date.parse(matricula.data_matricula || '') || 0;
@@ -142,6 +143,7 @@ export const useAlunoCoursesCatalog = (alunoId?: string) => {
           enrollmentByCourse.set(courseId, {
             id: matricula.id,
             status: matricula.status,
+            acessoTemporarioAte: matricula.acesso_temporario_ate,
             dataMatricula: matricula.data_matricula,
             turmaId: matricula.turma_id,
             hasActivePendingReceivable,

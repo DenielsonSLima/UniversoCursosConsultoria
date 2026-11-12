@@ -1,3 +1,4 @@
+import { EadTrustAccessAction } from './components/EadTrustAccessAction';
 import TurmaDetailsHeader from '../../components/TurmaDetailsHeader';
 import React, { useEffect, useState } from 'react';
 import {
@@ -279,7 +280,8 @@ const TurmaEadDetalhes: React.FC<TurmaEadDetalhesProps> = ({ turma, onBack, perm
                     <p className="text-[10px] font-normal text-slate-400">Prova: {aluno.notaProva ?? '-'}</p>
                   </div>
                   <div className="text-right">
-                    <span className="text-[10px] font-normal text-amber-700">Liberação automática após pagamento</span>
+                    <EadTrustAccessAction matriculaId={aluno.matriculaId} turmaId={turma.id}
+                      expiresAt={aluno.acessoTemporarioAte} allowed={canManageEnrollment} />
                   </div>
                 </div>
               ))}

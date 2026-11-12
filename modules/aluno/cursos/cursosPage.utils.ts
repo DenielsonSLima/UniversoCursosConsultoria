@@ -145,7 +145,13 @@ export const getEnrollmentRank = (status?: string | null, modality?: string | nu
   return 0;
 };
 
-export const hasEadAccess = (course: any) => EAD_ACCESS_STATUSES.has(normalizeStatus(course?.alunoMatricula?.status));
+export const hasEadAccess = (course: any, now = Date.now()) => {
+  const enrollment = course?.alunoMatricula;
+  const status = normalizeStatus(enrollment?.status);
+  if (EAD_ACCESS_STATUSES.has(status)) return true;
+  const expiresAt = Date.parse(enrollment?.acessoTemporarioAte || '');
+  return EAD_PENDING_STATUSES.has(status) && Number.isFinite(expiresAt) && expiresAt > now;
+};
 export const hasLinkedLiveEnrollment = (course: any) =>
   LIVE_LINKED_ENROLLMENT_STATUSES.has(normalizeStatus(course?.alunoMatricula?.status))
   && Boolean(course?.alunoMatricula?.turmaId);
