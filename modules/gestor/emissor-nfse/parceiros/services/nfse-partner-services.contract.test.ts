@@ -106,3 +106,19 @@ test('remote partner lookup is bounded, scoped and preserves students without fe
   await assert.rejects(crossed.searchPartners(scope, 'Aluno'), NfseContractError);
 });
 
+test('company lookup forwards name or masked document unchanged and trusts authorized remote matches', async () => {
+  const company = { id: id(7), name: 'MUNICIPIO SINTETICO', tradeName: 'Prefeitura sintética', document: '12.345.678/0001-95', type: ' pj ' };
+  const signal = new AbortController().signal, terms: unknown[] = [];
+  const service = createNfsePartnerServices(async (_name, args, receivedSignal) => {
+    assert.equal(receivedSignal, signal); assert.equal(args.p_polo_id, scope.poloId);
+    assert.equal(args.p_context_key, scope.contextKey); assert.equal(args.p_environment, scope.environment);
+    terms.push(args.p_search); return envelope({ rows: [company], page: 1, pageSize: 20, totalItems: 1 });
+  });
+  for (const query of [' Prefeitura ', '12.345.678/0001-95', '23']) {
+    const rows = await service.searchPartners(scope, query, null, signal);
+    assert.deepEqual(rows, [{ ...company, type: 'PJ' }]);
+  }
+  assert.deepEqual(terms, ['Prefeitura', '12.345.678/0001-95', '23']);
+  await assert.rejects(service.searchPartners(scope, 'x'.repeat(101)), NfseContractError);
+});
+

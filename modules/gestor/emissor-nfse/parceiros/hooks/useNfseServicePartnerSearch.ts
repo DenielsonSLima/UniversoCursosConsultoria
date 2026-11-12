@@ -11,7 +11,11 @@ export function useNfseServicePartnerSearch(scope: NfseScope, selectedId: string
     queryFn: ({ signal }) => nfsePartnerServices.searchPartners(scope, '', selectedId, signal) });
   const results = useQuery({ queryKey: [...key, 'search', term], enabled: term.length >= 2, retry: false, staleTime: 60_000, gcTime: 0,
     queryFn: ({ signal }) => nfsePartnerServices.searchPartners(scope, term, null, signal) });
-  const rows = [...new Map([...(selected.data || []), ...(results.data || [])].map(row => [row.id, row])).values()];
-  return { rows, search: setText, loading: selected.isFetching || results.isFetching, error: selected.error || results.error,
+  const pending = text.trim() !== term;
+  const options = !pending && term.length >= 2 && !results.error ? results.data || [] : [];
+  const selectedRow = selected.data?.find(row => row.id === selectedId) || results.data?.find(row => row.id === selectedId);
+  const rows = [...new Map([...(selectedRow ? [selectedRow] : []), ...options].map(row => [row.id, row])).values()];
+  return { rows, options, search: setText, loading: selected.isFetching || (text.trim().length >= 2 && (pending || results.isFetching)),
+    error: selected.error || (!pending && term.length >= 2 ? results.error : null),
     retry: () => { if (selectedId) void selected.refetch(); if (term.length >= 2) void results.refetch(); } };
 }

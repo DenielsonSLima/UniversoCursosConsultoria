@@ -25,11 +25,17 @@ interface InstitutionalSelectProps {
   required?: boolean;
   id?: string;
   ariaDescribedBy?: string;
+  remoteSearch?: {
+    onSearchChange: (query: string) => void;
+    selectedLabel?: string;
+    minLength?: number;
+    maxLength?: number;
+  };
 }
 
 const InstitutionalSelect: React.FC<InstitutionalSelectProps> = ({
   value, onValueChange, options, ariaLabel, placeholder = 'Selecionar…', className = '',
-  disabled = false, loading = false, error, allowClear = false, required = false, id, ariaDescribedBy,
+  disabled = false, loading = false, error, allowClear = false, required = false, id, ariaDescribedBy, remoteSearch,
 }) => {
   const generatedId = useId();
   const listId = `${generatedId}-options`;
@@ -43,21 +49,25 @@ const InstitutionalSelect: React.FC<InstitutionalSelectProps> = ({
   const [activeIndex, setActiveIndex] = useState(-1);
   const [position, setPosition] = useState({ left: 8, top: 0, width: 240, maxHeight: 240 });
   const selected = options.find((option) => option.value === value);
-  const filtered = useMemo(() => options.filter((option) => textMatchesSearch(query, [option.label, option.keywords])), [options, query]);
+  const serverFiltered = Boolean(remoteSearch);
+  const filtered = useMemo(() => serverFiltered ? options : options.filter((option) => textMatchesSearch(query, [option.label, option.keywords])), [options, query, serverFiltered]);
   const effectiveDisabled = disabled || ancestorDisabled;
   const showPanel = open && !effectiveDisabled;
-  const stateMessage = loading ? 'Carregando opções…' : error || (options.length === 0
+  const stateMessage = loading ? 'Carregando opções…' : error || (remoteSearch?.minLength && query.trim().length < remoteSearch.minLength
+    ? `Digite ao menos ${remoteSearch.minLength} caracteres para buscar.` : options.length === 0
     ? 'Nenhuma opção disponível.' : filtered.length === 0 ? 'Nenhum resultado para esta busca.' : `${filtered.length} opção(ões).`);
 
   const close = () => {
     setOpen(false);
     setQuery('');
+    remoteSearch?.onSearchChange('');
     setActiveIndex(-1);
   };
   const openPicker = () => {
     if (effectiveDisabled) return;
     if (!open) {
       setQuery('');
+      remoteSearch?.onSearchChange('');
       setActiveIndex(-1);
       setOpen(true);
     }
@@ -177,7 +187,8 @@ const InstitutionalSelect: React.FC<InstitutionalSelectProps> = ({
         spellCheck={false}
         disabled={disabled}
         required={required && !value}
-        value={showPanel ? query : selected?.label || ''}
+        value={showPanel ? query : selected?.label || (value ? remoteSearch?.selectedLabel : '') || ''}
+        maxLength={remoteSearch?.maxLength}
         placeholder={loading ? 'Carregando opções…' : error ? 'Opções indisponíveis' : placeholder}
         title={selected?.label}
         onFocus={openPicker}
@@ -185,6 +196,7 @@ const InstitutionalSelect: React.FC<InstitutionalSelectProps> = ({
         onBlur={close}
         onChange={(event) => {
           setQuery(event.target.value);
+          remoteSearch?.onSearchChange(event.target.value);
           setActiveIndex(-1);
           setOpen(true);
         }}

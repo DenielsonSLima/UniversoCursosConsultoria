@@ -28,6 +28,13 @@ Histórico arquivado: [13/10/2026 — versões 4.8.215 a 4.8.217](./changelog/20
 
 Histórico arquivado: [14/10/2026 — versões 4.8.218 a 4.8.226](./changelog/2026-10-14-versoes-4-8-218-a-226.md).
 
+Histórico arquivado: [19/10/2026 — versão 4.8.227](./changelog/2026-10-19-versao-4-8-227.md).
+
+## [4.8.299] - 2026-11-12
+
+- Serviços usa busca única por nome, nome fantasia, CPF ou CNPJ, com seleção de parceiros PF/PJ.
+- Modelos governamentais de palestra distinguem recebimento posterior e adiantamento para prestação futura, preservando o cadastro central da matriz.
+
 ## [4.8.298] - 2026-11-12
 
 - Emissão valida os dados automaticamente, com revisão/edição opcional; descrições acadêmicas e datas dos pagamentos compatíveis com o executor, após emissão e cancelamento reais nas filiais.
@@ -489,12 +496,3 @@ Histórico arquivado: [14/10/2026 — versões 4.8.218 a 4.8.226](./changelog/20
 
 - Corrige o timeout ao listar registros em conferência do mês e da carteira no Caixa.
 - Busca de evidências indexada preserva registros, valores, motivos, permissões e histórico.
-
-## [4.8.227] - 2026-10-19
-
-- Corrige timeout na prestação de contas do Caixa com busca limitada ao vínculo financeiro da parcela, preservando evidências e cálculos.
-- Cancela consultas de relatório ao fechar e impede repetição automática de timeout PostgreSQL.
-
-
-
-

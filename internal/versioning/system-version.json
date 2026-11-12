@@ -1,8 +1,8 @@
 {
-  "version": "4.8.298",
+  "version": "4.8.299",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 307,
+  "revision": 308,
   "releasedAt": "2026-11-12",
-  "summary": "Emissão com validação automática, revisão opcional e datas reais dos pagamentos nas filiais"
+  "summary": "Busca única de parceiros PF/PJ e palestra governamental com recebimento posterior ou antecipado"
 }

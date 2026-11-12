@@ -5,9 +5,9 @@ import {
   requireContract,
 } from "../_shared/nfse-national/xml.ts";
 import type { IndividualRow } from "./handler.ts";
-import { academicPaymentReference } from "./academic-competence.ts";
-import { queueDeclaredIbsCbs, queueIbsCbsSummary } from "./adapter-ibscbs.ts";
+import { queueDeclaredIbsCbs, queueIbsCbsSummary, supportedMunicipalGovernmentPurchase } from "./adapter-ibscbs.ts";
 import { publicIndividualServiceLocation, resolveIndividualServiceLocation } from "./service-location.ts";
+import { academicPaymentReference } from "./academic-competence.ts";
 type Data = Record<string, unknown>;
 const object = (v: unknown): Data =>
   v !== null && typeof v === "object" && !Array.isArray(v) ? v as Data : {};
@@ -246,11 +246,18 @@ export function buildIndividualDps(
     "FISCAL_SERVICE_LOCATION_REVIEW_REQUIRED",
   );
   requireContract(
-    (service.governmentPurchase == null ||
+    supportedMunicipalGovernmentPurchase(definition) || ((service.governmentPurchase == null ||
       service.governmentPurchase === false) &&
-      service.governmentEntityType == null && service.operationType == null,
+      service.governmentEntityType == null && service.operationType == null),
     "INDIVIDUAL_GOVERNMENT_OPERATION_UNSUPPORTED",
   );
+  if (service.governmentPurchase === true) {
+    requireContract(
+      object(snapshot.source).kind === "PARTNER_SERVICE" && object(command.source).kind === "PARTNER_SERVICE" &&
+        /^\d{14}$/.test(text(recipient.document)) && recipientMunicipalityCode === serviceLocation.municipalityCode,
+      "FISCAL_GOVERNMENT_PARTICIPANTS_REVIEW_REQUIRED",
+    );
+  }
   requireContract(values.version === 1, "FISCAL_VALUES_REVIEW_REQUIRED");
   requireContract(
     people.version === 2 && people.issuerRole === "PROVIDER" &&
