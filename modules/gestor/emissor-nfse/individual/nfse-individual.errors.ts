@@ -15,6 +15,7 @@ export async function individualTransportError(error: unknown): Promise<Error> {
       const code = body && typeof body === 'object' && 'error' in body ? body.error : null;
       if (typeof code === 'string' && Object.hasOwn(messages, code)) return new Error(messages[code]);
     } catch { /* Gateway HTML or malformed payload is not a fiscal rejection. */ }
+    if (context.status === 503) return new Error('O serviço de emissão está indisponível (HTTP 503). Não foi possível consultar ou concluir esta etapa. Isso não confirma envio nem rejeição da nota; consulte esta mesma operação quando o serviço voltar.');
     if (context.status === 401) return new Error('A sessão não foi aceita pelo emissor. Entre novamente e consulte a mesma operação para conferir o resultado.');
     if (context.status === 403) return new Error(messages.INDIVIDUAL_SCOPE_DENIED);
     if (context.status === 429) return new Error(messages.RATE_LIMITED);

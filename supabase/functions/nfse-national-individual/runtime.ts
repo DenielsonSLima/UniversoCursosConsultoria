@@ -82,6 +82,9 @@ export function createIndividualRuntime(
   >[] = [];
   async function rpc(name: string, args: Data, code: string): Promise<unknown> {
     const result = await options.rpc(name, args);
+    if (object(result.error).code === "42501") {
+      throw new NfseContractError("INDIVIDUAL_OPERATION_SCOPE_DENIED");
+    }
     if (result.error || !result.data) throw new NfseContractError(code);
     return result.data;
   }

@@ -17,7 +17,7 @@ test('services filter, paginate and confirm only eligible page selections, with 
     MutationObserver:dom.window.MutationObserver,MouseEvent:dom.window.MouseEvent,IS_REACT_ACT_ENVIRONMENT:true});
   dom.window.HTMLElement.prototype.scrollIntoView=()=>{};
   const {createRoot}=await import('react-dom/client'); const {QueryClient,QueryClientProvider}=await import('@tanstack/react-query');
-  const rows=[null,'REJECTED','AUTHORIZED','CANCELLED','PROCESSING'].map((state,n)=>({id:id(100+n),partnerName:`Parceiro sintético ${n}`,
+  const rows=['PREVIEWED','REJECTED','AUTHORIZED','CANCELLED','PROCESSING'].map((state,n)=>({id:id(100+n),partnerName:`Parceiro sintético ${n}`,
     partnerType:n===0?'PJ':n===1?'PF':'ALUNO',modelName:'Modelo',serviceDate:'2026-11-01',serviceDescription:'Serviço',amount:'10.00',
     receivableAction:'NONE',state,operationId:state?id(200+n):null,canRemove:n<2,number:n===2||n===3?'1':null}));
   const requested=[],removed=[],cache=new Map();let fail=false,pending=false,shrink=false;
@@ -51,7 +51,7 @@ test('services filter, paginate and confirm only eligible page selections, with 
     el.dispatchEvent(new dom.window.Event('input',{bubbles:true}));el.dispatchEvent(new dom.window.Event('change',{bubbles:true}));});await settle();
     if(blur){await act(async()=>el.dispatchEvent(new dom.window.FocusEvent('focusout',{bubbles:true})));await settle();}};
   try{
-    await render();await settle();assert.equal(requested.at(-1).partnerType,'');assert.equal(document.querySelectorAll('tbody tr').length,5);
+    await render();await settle();assert(button('Emitir NFS-e'));assert(document.body.textContent.includes('Não enviada (preparada)'));assert.equal(requested.at(-1).partnerType,'');assert.equal(document.querySelectorAll('tbody tr').length,5);
     assert.equal(input('Selecionar serviço de Parceiro sintético 4').disabled,false);
     await click(input('Selecionar serviço de Parceiro sintético 4'));
     assert.equal(button('Revisar lote (1)').disabled,false); assert.equal(button('Excluir selecionados (1)').disabled,true);

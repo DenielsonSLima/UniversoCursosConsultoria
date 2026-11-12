@@ -124,3 +124,17 @@ Deno.test("runtime resolves address municipality using a unique official city+UF
     second.close();
   }
 });
+
+Deno.test('runtime maps SQL permission failure without leaking SQL or changing actor identity', async () => {
+  let seen: Record<string, unknown> | undefined;
+  const runtime = createIndividualRuntime({
+    rpc: async (_name, args) => { seen = args; return { data: null, error: { code: '42501', message: 'PRIVATE_DETAIL' } }; },
+    authorize: async () => actor, respond: (_r, body, status) => Response.json(body, { status }), rateLimited: () => false,
+  });
+  try {
+    await assert.rejects(runtime.dependencies.ledger(command, actor, 'READ'), (error: unknown) =>
+      error instanceof Error && 'code' in error && error.code === 'INDIVIDUAL_OPERATION_SCOPE_DENIED' && !error.message.includes('PRIVATE'));
+    assert.equal(seen?.p_actor_id, actor);
+    assert.equal(seen?.p_context_key, command.scope.contextKey);
+  } finally { runtime.close(); }
+});

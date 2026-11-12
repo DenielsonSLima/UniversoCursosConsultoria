@@ -1,8 +1,8 @@
 {
-  "version": "4.8.314",
+  "version": "4.8.315",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 323,
+  "revision": 324,
   "releasedAt": "2026-11-12",
-  "summary": "Menor espera na consulta fiscal e prazo real de acompanhamento em lote"
+  "summary": "Emissão fiscal multiusuário autorizada e estado real de serviços preparados"
 }

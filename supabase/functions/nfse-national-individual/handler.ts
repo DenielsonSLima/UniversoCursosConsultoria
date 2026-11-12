@@ -273,7 +273,10 @@ export function createIndividualHandler(deps: IndividualDependencies) {
         message: cancelMessage(result),
       });
       return respond(publicCancel(row));
-    } catch {
+    } catch (error) {
+      if (error instanceof Error && "code" in error && error.code === "INDIVIDUAL_OPERATION_SCOPE_DENIED") {
+        return deps.respond(req, { error: "INDIVIDUAL_OPERATION_SCOPE_DENIED" }, 403);
+      }
       return deps.respond(
         req,
         { error: "INDIVIDUAL_OPERATION_UNCONFIRMED" },
