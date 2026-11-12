@@ -34,6 +34,7 @@ export function createNfseIndividualService(transport: (body: Record<string, unk
     },
     async issue(scope, requestId, previewId) { return bound(parseIndividualIssueResult(await call(scope, requestId, 'ISSUE', { previewId: queueUuid(previewId), confirmed: true })), previewId); },
     async reconcile(scope, requestId, previewId) { return bound(parseIndividualIssueResult(await call(scope, requestId, 'RECONCILE', { previewId: queueUuid(previewId) })), previewId); },
+    async observe(scope, requestId, previewId) { return bound(parseIndividualIssueResult(await call(scope, requestId, 'OBSERVE', { previewId: queueUuid(previewId) })), previewId); },
     async previewCancellation(scope, requestId, previewId, justification) {
       return bound(parseIndividualCancelPreview(await call(scope, requestId, 'CANCEL_PREVIEW', { previewId: queueUuid(previewId), reasonCode: '1', justification: individualJustification(justification) })), previewId);
     },
@@ -47,6 +48,8 @@ export function createNfseIndividualService(transport: (body: Record<string, unk
     async cancel(scope, requestId, previewId, cancelPreviewId) { return bound(parseIndividualCancelResult(await call(scope, requestId, 'CANCEL', {
       previewId: queueUuid(previewId), cancelPreviewId: queueUuid(cancelPreviewId), confirmed: true })), previewId, cancelPreviewId); },
     async reconcileCancellation(scope, requestId, previewId, cancelPreviewId) { return bound(parseIndividualCancelResult(await call(scope, requestId, 'RECONCILE_CANCEL', {
+      previewId: queueUuid(previewId), cancelPreviewId: queueUuid(cancelPreviewId) })), previewId, cancelPreviewId); },
+    async observeCancellation(scope, requestId, previewId, cancelPreviewId) { return bound(parseIndividualCancelResult(await call(scope, requestId, 'OBSERVE_CANCEL', {
       previewId: queueUuid(previewId), cancelPreviewId: queueUuid(cancelPreviewId) })), previewId, cancelPreviewId); },
     async retryCancellation(scope, requestId, previewId, cancelPreviewId, retryRequestId) { return bound(parseIndividualCancelResult(await call(scope, requestId, 'RETRY_CANCEL', {
       previewId: queueUuid(previewId), cancelPreviewId: queueUuid(cancelPreviewId), retryRequestId: queueUuid(retryRequestId), confirmed: true })), previewId, cancelPreviewId); },

@@ -12,7 +12,7 @@ const base = fileURLToPath(new URL('../../../../', import.meta.url));
 const id = n => `00000000-0000-0000-0000-${String(n).padStart(12, '0')}`;
 const scope = { contextKey: id(1), poloId: id(2), environment: 'PRODUCAO', month: '2026-11' };
 
-test('batch reviews each canonical note, pauses on uncertain result and reports final numbers in top-right toasts without repeating POST', async () => {
+test('batch waits for an uncertain note, then automatically sends the remaining approved notes and reports final numbers', async () => {
   await mkdir(resolve(base, 'tmp'), { recursive: true }); const temp = await mkdtemp(resolve(base, 'tmp/nfse-batch-ui-'));
   const dom = new JSDOM('<!doctype html><div id="root"></div>', { url: 'http://localhost/', pretendToBeVisual: true });
   Object.assign(globalThis, { window: dom.window, document: dom.window.document, HTMLElement: dom.window.HTMLElement, IS_REACT_ACT_ENVIRONMENT: true });
@@ -35,6 +35,7 @@ test('batch reviews each canonical note, pauses on uncertain result and reports 
       expiresAt: new Date(Date.now() + 60_000).toISOString(), capability: { available: true, reason: null } }; },
     issue: async (...args) => { calls.push({ action: 'ISSUE', args }); if (lost) { lost = false; throw new Error('Resposta perdida'); } return authorized(args[2]); },
     reconcile: async (...args) => { calls.push({ action: 'RECONCILE', args }); return authorized(args[2]); },
+    observe: async (...args) => { calls.push({ action: 'OBSERVE', args }); return authorized(args[2]); },
   };
   function App() { const { toasts, removeToast, toast } = useToast(); return React.createElement(React.Fragment, null,
     React.createElement(Toasts, { toasts, onRemove: removeToast }), React.createElement(Modal, { scope, items: inputs, service, onClose() {}, onChanged() {}, onNotice: notice => toast[notice.type](notice.title, notice.message) })); }
@@ -59,15 +60,15 @@ test('batch reviews each canonical note, pauses on uncertain result and reports 
     assert.equal(calls.filter(call => call.action === 'ISSUE').length, 1); assert.equal(button('Emitir notas').disabled, true);
     assert(document.body.textContent.includes('Aguardando retorno fiscal'));
     const progress = document.querySelector('progress'); assert(progress); assert.equal(progress.value, 0);
-    assert(document.body.textContent.includes('Consultando o retorno da mesma DPS'));
+    assert(document.body.textContent.includes('Acompanhando o retorno da mesma DPS'));
     await act(async () => { await new Promise(resolve => setTimeout(resolve, 1600)); }); await settle();
     const region = document.querySelector('[aria-label="Notificações"]'); assert(region); assert(region.className.includes('sm:right-6'));
     assert(region.textContent.includes('NFS-e nº 2 autorizada'));
-    assert.equal(calls.filter(call => call.action === 'RECONCILE').length, 1);
-    assert.equal(progress.value, 1);
+    assert.equal(calls.filter(call => call.action === 'OBSERVE').length, 1);
+    assert.equal(calls.filter(call => call.action === 'RECONCILE').length, 0);
+    assert.equal(progress.value, 2);
     assert(document.body.textContent.includes('NFS-e nº 2'));
-    assert.equal(calls.filter(call => call.action === 'ISSUE').length, 1);
-    await click(button('Emitir notas')); assert.equal(calls.filter(call => call.action === 'ISSUE').length, 2);
+    assert.equal(calls.filter(call => call.action === 'ISSUE').length, 2, 'The original click authorizes the remaining prepared note');
     assert(document.body.textContent.includes('2 de 2 nota(s) autorizada(s)'));
     assert(document.querySelector('[aria-label="Notificações"]').textContent.includes('NFS-e nº 3 autorizada'));
     for (let i = 0; i < window.sessionStorage.length; i++) assert.deepEqual(Object.keys(JSON.parse(window.sessionStorage.getItem(window.sessionStorage.key(i)))).sort(), ['previewId', 'requestId']);
@@ -94,6 +95,7 @@ test('explicit service issuance validates and sends once under StrictMode, witho
     previewSource: async () => { prepared++; return { previewId: id(30), state: 'PREVIEWED', payload, expiresAt: new Date(Date.now() + 60000).toISOString(), capability: { available: true, reason: null } }; },
     issue: async () => { sent++; return new Promise(resolve => { finish = resolve; }); },
     reconcile: async () => ({ previewId: id(30), state: 'AUTHORIZED', payload, number: '9', message: 'Autorizada' }),
+    observe: async () => ({ previewId: id(30), state: 'AUTHORIZED', payload, number: '9', message: 'Autorizada' }),
   };
   const root = createRoot(document.getElementById('root'));
   const settle = async () => act(async () => { await new Promise(resolve => setTimeout(resolve, 20)); });
@@ -115,4 +117,67 @@ test('explicit service issuance validates and sends once under StrictMode, witho
     assert.equal(cancellationTarget.previewId, id(30)); assert.equal(cancellationTarget.result.state, 'AUTHORIZED');
     assert.equal(sent, 1, 'Opening cancellation must not issue again');
   } finally { await act(async () => root.unmount()); dom.window.close(); await rm(temp, { recursive: true, force: true }); }
+});
+
+
+test('operation realtime observes queue confirmations immediately, isolates scope and recovers reconnect without retaining disposed callbacks', async () => {
+  await mkdir(resolve(base, 'tmp'), { recursive: true });
+  const temp = await mkdtemp(resolve(base, 'tmp/nfse-operation-realtime-'));
+  const dom = new JSDOM('<div id="root"></div>', { url: 'http://localhost/' });
+  Object.assign(globalThis, { window: dom.window, document: dom.window.document, IS_REACT_ACT_ENVIRONMENT: true });
+  const { createRoot } = await import('react-dom/client');
+  const channels = [], calls = [];
+  globalThis.__nfseOperationRealtimeClient = {
+    channel() {
+      const channel = { bindings: [], closed: false,
+        on(type, filter, callback) { this.bindings.push({ type, filter, callback }); return this; },
+        subscribe(callback) { this.status = callback; return this; } };
+      channels.push(channel); return channel;
+    },
+    removeChannel(channel) { channel.closed = true; return Promise.resolve('ok'); },
+  };
+  const output = resolve(temp, 'hook.mjs');
+  const compiled = await build({ stdin: { contents: `export {useNfseOperationRealtime} from './modules/gestor/emissor-nfse/emissao/useNfseBatchRealtime';`, resolveDir: base, loader: 'ts' },
+    bundle: true, write: false, format: 'esm', platform: 'node', packages: 'external', outfile: output,
+    plugins: [{ name: 'synthetic-realtime', setup(builder) {
+      builder.onResolve({ filter: /lib\/supabase$/ }, () => ({ path: 'client', namespace: 'fixture' }));
+      builder.onLoad({ filter: /.*/, namespace: 'fixture' }, () => ({ contents: 'export const supabase=globalThis.__nfseOperationRealtimeClient;', loader: 'js' }));
+    } }] });
+  await writeFile(output, compiled.outputFiles[0].contents);
+  const { useNfseOperationRealtime } = await import(pathToFileURL(output).href);
+  const changed = immediate => calls.push(immediate);
+  function View({ current = scope, enabled = true }) { useNfseOperationRealtime(current, changed, enabled); return null; }
+  const root = createRoot(document.getElementById('root'));
+  const render = props => act(async () => { root.render(React.createElement(View, props)); });
+  const settle = async () => { for (let index = 0; index < 20; index++) await Promise.resolve(); };
+  const payload = { new: { version: 1, polo_id: scope.poloId, environment: scope.environment, month: scope.month } };
+  const emit = (channel, table, event = payload) => channel.bindings.filter(binding => binding.filter.table === table).forEach(binding => binding.callback(event));
+  try {
+    await render({}); await settle();
+    assert.equal(channels.length, 1);
+    const first = channels[0];
+    assert(first.bindings.some(binding => binding.filter.table === 'nfse_queue_change_events'));
+    assert(first.bindings.every(binding => binding.filter.filter === `polo_id=eq.${scope.poloId}`));
+    for (const invalid of [{ polo_id: id(99) }, { environment: 'HOMOLOGACAO' }, { month: '2026-12' }, { version: 2 }])
+      emit(first, 'nfse_queue_change_events', { new: { ...payload.new, ...invalid } });
+    assert.equal(calls.length, 0);
+    emit(first, 'nfse_queue_change_events'); assert.deepEqual(calls, [true], 'A fiscal result bypasses the observer cooldown');
+    first.status('CHANNEL_ERROR'); assert.equal(calls.length, 1);
+    first.status('SUBSCRIBED'); assert.deepEqual(calls, [true, true], 'Reconnect catches missed canonical results');
+    window.dispatchEvent(new dom.window.Event('focus')); assert.equal(calls.at(-1), undefined);
+    await render({ current: { ...scope, contextKey: id(80), poloId: id(81) } }); await settle();
+    assert.equal(first.closed, true); assert.equal(channels.length, 2);
+    const before = calls.length; emit(first, 'nfse_queue_change_events'); first.status('SUBSCRIBED');
+    assert.equal(calls.length, before, 'Previous scope cannot update the current observer');
+    emit(channels[1], 'nfse_queue_change_events'); assert.equal(calls.length, before);
+    emit(channels[1], 'nfse_queue_change_events', { new: { ...payload.new, polo_id: id(81) } });
+    assert.equal(calls.at(-1), true);
+    await render({ current: scope, enabled: false }); await settle();
+    const closedCount = calls.length;
+    channels[1].status('SUBSCRIBED'); window.dispatchEvent(new dom.window.Event('online'));
+    assert.equal(calls.length, closedCount); assert.equal(channels[1].closed, true);
+  } finally {
+    await act(async () => root.unmount()); dom.window.close(); delete globalThis.__nfseOperationRealtimeClient;
+    await rm(temp, { recursive: true, force: true });
+  }
 });

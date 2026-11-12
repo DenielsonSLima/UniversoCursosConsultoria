@@ -112,12 +112,12 @@ export default function NfseDocumentsList({ status, issuedState, errorArchiveMod
             {item.state === 'CANCELLED' && <small>Autorização histórica preservada; cancelamento confirmado.</small>}
             {item.archivedAt && <small>Arquivado · histórico preservado</small>}
             {item.message && <small>{item.message}</small>}</td>
-          <td>{status === 'ERRO' ? <div className="nfse-error-detail">{item.errorCode && <strong>{item.errorCode} · </strong>}{item.errorMessage || 'Consulte o retorno fiscal antes de tentar novamente.'}<small>{item.retryable ? 'Pode ser reprocessada após correção.' : 'Requer conferência antes de nova tentativa.'}</small></div> : <>{item.number || 'Ainda não emitida'}{item.accessKey && <small className="break-all">Chave: {item.accessKey}</small>}{item.status === 'AGUARDANDO_CONFIRMACAO' && <small>Aguardando a consulta de confirmação para evitar duplicidade.</small>}</>}</td>
+          <td>{status === 'ERRO' ? <div className="nfse-error-detail">{item.errorCode && <strong>{item.errorCode} · </strong>}{item.errorMessage || 'Consulte o retorno fiscal antes de tentar novamente.'}<small>{item.retryable ? 'Pode ser reprocessada após correção.' : 'Requer conferência antes de nova tentativa.'}</small></div> : <>{item.number || 'Ainda não emitida'}{item.accessKey && <small className="break-all">Chave: {item.accessKey}</small>}{item.status === 'AGUARDANDO_CONFIRMACAO' && <small>Acompanhando automaticamente o retorno fiscal.</small>}</>}</td>
           <td>{documentActions?.(item, available)}{operationActions ? operationActions(item, available) : <NfseDocumentOperationAction document={item} disabled={!available} />}</td>
         </tr>)}</tbody>
       </table></div> : <NfseDataState loading={loading || (canRead && query.isPending)} unavailable={unavailable} error={query.error} onRetry={() => void query.refetch()} emptyTitle={emptyTitle} emptyDescription={emptyDescription} />}
       {!query.error && query.data && <NfsePager page={query.data.page} hasNext={query.data.page * query.data.pageSize < query.data.totalItems} busy={query.isFetching || selection?.disabled} onChange={next => { selection?.onReset(); setPage(next); }} />}
-      {status !== 'EMITIDA' && <div className="nfse-footer"><p>Consulte a operação vinculada antes de qualquer nova tentativa. As notas já autorizadas são preservadas.</p></div>}
+      {status !== 'EMITIDA' && <div className="nfse-footer"><p>O retorno das operações enviadas é acompanhado automaticamente. As notas já autorizadas são preservadas.</p></div>}
     </section>
   );
 }

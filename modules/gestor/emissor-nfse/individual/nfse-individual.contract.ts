@@ -74,6 +74,7 @@ export function parseIndividualIssueResult(value: unknown): IndividualIssueResul
   const accessKey = row.accessKey == null ? null : digits(row.accessKey, /^[0-9]{50}$/);
   if (state === 'AUTHORIZED' ? !number || !accessKey : number !== null || accessKey !== null) return fail();
   return { previewId: queueUuid(row.previewId), state, message: text(row.message), payload: individualPayload(row.payload), number, accessKey,
+    ...(row.cancelPreviewId === undefined ? {} : { cancelPreviewId: row.cancelPreviewId === null ? null : queueUuid(row.cancelPreviewId) }),
     ...(row.codes === undefined ? {} : { codes: resultCodes(row.codes) }), ...(row.expiresAt === undefined ? {} : { expiresAt: timestamp(row.expiresAt) }), ...(row.capability === undefined ? {} : { capability: capability(row.capability) }) };
 }
 export function individualJustification(value: unknown) { const result = text(value, 255); return result.length >= 15 && !/\{\{|\}\}/.test(result) ? result : fail(); }

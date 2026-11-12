@@ -74,7 +74,7 @@ test('daily workspace has seven operational tabs and preserves cancelled authori
     await click([...document.querySelectorAll('[role="tab"]')].find(tab => tab.textContent === 'Serviços'));
     assert(document.body.textContent.includes('Em processamento')); assert(document.body.textContent.includes('260,00'));
     assert(!document.querySelector('.nfse-partner-table').textContent.includes('Cancelada'));
-    await click([...document.querySelectorAll('button')].find(button => button.textContent === 'Consultar NFS-e'));
+    await click([...document.querySelectorAll('button')].find(button => button.textContent === 'Detalhes da NFS-e'));
     assert.deepEqual(opened.at(-1).source, { kind: 'PARTNER_SERVICE', id: serviceRow.id });
     assert.equal(opened.at(-1).operation.cancelPreviewId, null);
     await click([...document.querySelectorAll('button')].find(button => button.textContent === 'Fechar origem'));
@@ -89,7 +89,7 @@ test('daily workspace has seven operational tabs and preserves cancelled authori
     assert(document.querySelector('[aria-label="NFS-e 1"]').textContent.includes('Autorização histórica preservada'));
     await click(document.querySelector('button[aria-label="Mais ações da NFS-e 1"]'));
     assert.equal([...document.querySelectorAll('[role="menuitem"]')].find(item => item.textContent === 'Cancelar'), undefined);
-    await click([...document.querySelectorAll('[role="menuitem"]')].find(item => item.textContent === 'Consultar'));
+    await click([...document.querySelectorAll('[role="menuitem"]')].find(item => item.textContent === 'Detalhes'));
     assert.equal(opened.at(-1).intent, 'CONSULT');
     assert.equal(opened.at(-1).operation.state, 'CANCELLED'); assert.equal(opened.at(-1).source.id, serviceRow.id);
     assert.equal(document.querySelector('select,datalist'), null);

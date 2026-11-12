@@ -85,7 +85,7 @@ jobs:
       - name: Validar acompanhamento e mensagens sem transmissão
         run: |
           mkdir -p tmp
-          for source in modules/gestor/emissor-nfse/emissao/nfse-batch.core.test.ts modules/gestor/emissor-nfse/individual/nfse-individual.errors.test.ts modules/gestor/emissor-nfse/services/nfse.errors.test.ts; do
+          for source in modules/gestor/emissor-nfse/emissao/nfse-batch.core.test.ts modules/gestor/emissor-nfse/emissao/nfse-batch-rate-limit.test.ts modules/gestor/emissor-nfse/individual/nfse-individual.errors.test.ts modules/gestor/emissor-nfse/services/nfse.errors.test.ts; do
             node_modules/.bin/esbuild "$source" --bundle --platform=node --format=esm --outfile=tmp/nfse-focused-test.mjs
             node --test tmp/nfse-focused-test.mjs
           done
@@ -126,6 +126,8 @@ jobs:
         run: >-
           node --test
           modules/gestor/emissor-nfse/emissao/NfseSourceEmissionModal.interaction.test.mjs
+          modules/gestor/emissor-nfse/emissao/NfseIndividualObservation.interaction.test.mjs
+          modules/gestor/emissor-nfse/emissao/nfse-command-quota-retry.test.mjs
           modules/gestor/emissor-nfse/individual/NfseIndividualCancellation.interaction.test.mjs
           modules/gestor/emissor-nfse/emissao/NfseDailyFlow.interaction.test.mjs
           modules/gestor/emissor-nfse/emissao/NfseBatchEmissionModal.interaction.test.mjs
@@ -234,7 +236,11 @@ jobs:
         run: >-
           deno test --config supabase/functions/nfse-national-individual/deno.json
           --frozen --allow-read --allow-write=/tmp --allow-run=openssl
+          --allow-env=PORTAL_ALLOWED_REDIRECT_ORIGINS,ALLOWED_REDIRECT_ORIGINS,ALLOWED_ORIGINS,PUBLIC_SITE_URL,SITE_URL,APP_URL,VITE_PUBLIC_SITE_URL,SUPABASE_URL
           supabase/functions/nfse-national-individual/handler.test.ts
+          supabase/functions/nfse-national-individual/handler-auto-cancellation.test.ts
+          supabase/functions/nfse-national-individual/handler-observation.test.ts
+          supabase/functions/nfse-national-individual/rate-limit.test.ts
           supabase/functions/nfse-national-individual/adapter.test.ts
           supabase/functions/nfse-national-individual/adapter-government.test.ts
           supabase/functions/nfse-national-individual/academic-competence.test.ts

@@ -18,7 +18,8 @@ function fixture(overrides: Partial<NfseIndividualService> = {}, entries = input
     previewSource: async (...args: unknown[]) => { calls.push({ action: 'PREVIEW_QUEUE', args }); const source = args[2] as NfseBatchInput['source']; return {
       previewId: source.id === id(10) ? id(30) : id(31), expiresAt: new Date(Date.now() + 60_000).toISOString(), state: 'PREVIEWED', payload, capability: { available: true, reason: null } }; },
     issue: async (...args: unknown[]) => { calls.push({ action: 'ISSUE', args }); return result(String(args[2])); },
-    reconcile: async (...args: unknown[]) => { calls.push({ action: 'RECONCILE', args }); return result(String(args[2])); }, ...overrides,
+    reconcile: async (...args: unknown[]) => { calls.push({ action: 'RECONCILE', args }); return result(String(args[2])); },
+    observe: async (...args: unknown[]) => { calls.push({ action: 'OBSERVE', args }); return result(String(args[2])); }, ...overrides,
   } as unknown as NfseIndividualService;
   const storage = { getItem: (key: string) => stored.get(key) || null, setItem: (key: string, value: string) => { stored.set(key, value); } };
   const controller = createNfseBatchController(scope, entries, service, storage, { confirmationDelays, requestTimeoutMs, confirmationTimeoutMs, uuid: () => id(++serial), onNotice: notice => notices.push(notice) });
@@ -42,14 +43,14 @@ test('batch requires canonical server preview, preserves only IDs and dispatches
   await f.controller.issue(); assert.equal(sent.length, 2);
 });
 
-test('uncertain first POST pauses batch; recovery only GETs the same identity and remaining notes need an explicit continuation', async () => {
+test('uncertain first POST pauses dispatch until canonical recovery, then continues only the already approved notes', async () => {
   const sent: unknown[][] = [], consulted: unknown[][] = [];
   const f = fixture({ issue: async (...args) => { sent.push(args); if (sent.length === 1) throw new Error('Resposta perdida'); return result(args[2]); },
-    reconcile: async (...args) => { consulted.push(args); return result(args[2]); } });
+    observe: async (...args) => { consulted.push(args); return result(args[2]); } });
   await f.controller.review();
   await f.controller.issue(); assert.equal(sent.length, 1); assert.equal(f.controller.getSnapshot().paused, true);
   await f.controller.issue(); assert.equal(sent.length, 1);
-  await f.controller.consult(0); assert.equal(consulted.length, 1); assert.equal(sent.length, 1);
+  await f.controller.consult(0); await flushMicrotasks(); assert.equal(consulted.length, 1); assert.equal(sent.length, 2);
   assert.deepEqual(consulted[0].slice(1), sent[0].slice(1));
   await f.controller.issue(); assert.equal(sent.length, 2); assert.equal(sent[1][2], id(31));
 });
@@ -116,7 +117,7 @@ test('awaiting response is reconciled automatically with same DPS before advanci
   const sent: string[] = [], reads: string[] = [];
   const f = fixture({ issue: async (_scope, _request, previewId) => {
     sent.push(previewId); return result(previewId, 'AWAITING_CONFIRMATION');
-  }, reconcile: async (_scope, _request, previewId) => { reads.push(previewId); return result(previewId); } }, inputs, [0]);
+  }, observe: async (_scope, _request, previewId) => { reads.push(previewId); return result(previewId); } }, inputs, [0]);
   await f.controller.review(); await f.controller.issue();
   assert.deepEqual(sent, [id(30), id(31)]); assert.deepEqual(reads, sent);
   assert(f.controller.getSnapshot().items.every(item => item.result?.state === 'AUTHORIZED'));
@@ -126,26 +127,26 @@ test('awaiting response is reconciled automatically with same DPS before advanci
 test('confirmation exhaustion stays uncertain and never claims success or sends another note', async () => {
   let sent = 0, reads = 0;
   const f = fixture({ issue: async (_s, _r, previewId) => { sent++; return result(previewId, 'AWAITING_CONFIRMATION'); },
-    reconcile: async (_s, _r, previewId) => { reads++; return result(previewId, 'AWAITING_CONFIRMATION'); } }, inputs, [0, 0]);
+    observe: async (_s, _r, previewId) => { reads++; return result(previewId, 'AWAITING_CONFIRMATION'); } }, inputs, [0, 0]);
   await f.controller.review(); await f.controller.issue();
   assert.equal(sent, 1); assert.equal(reads, 2); assert.equal(f.controller.getSnapshot().paused, true);
   assert.equal(f.controller.getSnapshot().items[0].uncertain, true);
   assert(!JSON.stringify(f.notices).includes('success'));
 });
 
-test('transport exception reconciles without resending and requires explicit continuation of remaining notes', async () => {
+test('transport exception reconciles without resending and automatically continues remaining approved notes', async () => {
   let sent = 0;
   const f = fixture({ issue: async () => { sent++; throw new Error('Network timeout'); } }, inputs, [0]);
   await f.controller.review(); await f.controller.issue();
-  assert.equal(sent, 1); assert.equal(f.controller.getSnapshot().items[0].result?.state, 'AUTHORIZED');
-  assert.equal(f.controller.getSnapshot().paused, true);
+  assert.equal(sent, 2); assert(f.controller.getSnapshot().items.every(item => item.result?.state === 'AUTHORIZED'));
+  assert.equal(f.controller.getSnapshot().paused, false);
 });
 
 test('realtime wakes pending confirmation; disposal cancels waiting without dispatching another note', async () => {
   for (const dispose of [false, true]) {
     let sent = 0, reads = 0;
     const f = fixture({ issue: async (_s, _r, previewId) => { sent++; return result(previewId, 'AWAITING_CONFIRMATION'); },
-      reconcile: async (_s, _r, previewId) => { reads++; return result(previewId); } }, [inputs[0]], [60_000]);
+      observe: async (_s, _r, previewId) => { reads++; return result(previewId); } }, [inputs[0]], [60_000]);
     await f.controller.review();
     const pending = f.controller.issue();
     await Promise.resolve(); await Promise.resolve();
@@ -159,7 +160,7 @@ test('realtime wakes pending confirmation; disposal cancels waiting without disp
 test('idle realtime recovers exhausted confirmation once, ignores feedback and never reissues', async () => {
   let sent = 0, reads = 0;
   const f = fixture({ issue: async (_s, _r, previewId) => { sent++; return result(previewId, 'AWAITING_CONFIRMATION'); },
-    reconcile: async (_s, _r, previewId) => { reads++; f.controller.signalChange(); return result(previewId); } }, [inputs[0]], []);
+    observe: async (_s, _r, previewId) => { reads++; f.controller.signalChange(); return result(previewId); } }, [inputs[0]], []);
   await f.controller.review(); await f.controller.issue();
   f.controller.signalChange(); await new Promise(resolve => setTimeout(resolve, 5));
   assert.equal(reads, 1); assert.equal(sent, 1);
@@ -171,14 +172,14 @@ test('hanging ISSUE times out to uncertainty and bounded read-only recovery, no 
   let sent = 0;
   const f = fixture({ issue: async () => { sent++; return new Promise(() => {}); } }, inputs, [0], 5);
   await f.controller.review(); await f.controller.issue();
-  assert.equal(sent, 1); assert.equal(f.controller.getSnapshot().busy, false);
+  assert.equal(sent, 2); assert.equal(f.controller.getSnapshot().busy, false);
   assert.equal(f.controller.getSnapshot().items[0].result?.state, 'AUTHORIZED');
 });
 
 test('explicit pause releases hanging request and disables automatic event recovery', async () => {
   let sent = 0, reads = 0;
   const f = fixture({ issue: async () => { sent++; return new Promise(() => {}); },
-    reconcile: async (_s, _r, previewId) => { reads++; return result(previewId); } });
+    observe: async (_s, _r, previewId) => { reads++; return result(previewId); } });
   await f.controller.review(); const pending = f.controller.issue(); f.controller.stop(); await pending;
   f.controller.signalChange(); await Promise.resolve();
   assert.equal(f.controller.getSnapshot().busy, false); assert.equal(sent, 1); assert.equal(reads, 0);
@@ -189,7 +190,7 @@ test('explicit pause releases hanging request and disables automatic event recov
 test('confirmation wall clock includes slow requests and reuses unresolved physical read after timeout', async () => {
   let reads = 0, release!: (value: IndividualIssueResult) => void;
   const f = fixture({ issue: async (_s, _r, p) => result(p, 'AWAITING_CONFIRMATION'),
-    reconcile: async () => { reads++; return new Promise(resolve => { release = resolve; }); } }, [inputs[0]], [0, 0, 0, 0, 0, 0], 1000, 25);
+    observe: async () => { reads++; return new Promise(resolve => { release = resolve; }); } }, [inputs[0]], [0, 0, 0, 0, 0, 0], 1000, 25);
   await f.controller.review(); const start = globalThis.performance.now(); await f.controller.issue();
   assert(globalThis.performance.now() - start < 250, 'wall clock budget, not 6 individual timeouts');
   assert.equal(reads, 1); assert.equal(f.controller.getSnapshot().items[0].uncertain, true);
@@ -204,7 +205,7 @@ test('late ISSUE authorization is retained and stale GET cannot downgrade or ena
   let sent = 0, releaseIssue!: (value: IndividualIssueResult) => void;
   let releaseRead!: (value: IndividualIssueResult) => void;
   const f = fixture({ issue: async () => { sent++; return new Promise(resolve => { releaseIssue = resolve; }); },
-    reconcile: async () => new Promise(resolve => { releaseRead = resolve; }) }, [inputs[0]], [0], 5, 15);
+    observe: async () => new Promise(resolve => { releaseRead = resolve; }) }, [inputs[0]], [0], 5, 15);
   await f.controller.review(); await f.controller.issue();
   releaseIssue(result(id(30))); await new Promise(resolve => setTimeout(resolve, 0));
   releaseRead(result(id(30), 'AWAITING_CONFIRMATION')); await new Promise(resolve => setTimeout(resolve, 0));
@@ -215,14 +216,14 @@ test('late ISSUE authorization is retained and stale GET cannot downgrade or ena
 test('PREVIEWED during lost POST never resets dispatched flag or authorizes resend', async () => {
   let sent = 0;
   const f = fixture({ issue: async () => { sent++; return new Promise(() => {}); },
-    reconcile: async (_s, _r, p) => result(p, 'PREVIEWED') }, [inputs[0]], [0], 5, 15);
+    observe: async (_s, _r, p) => result(p, 'PREVIEWED') }, [inputs[0]], [0], 5, 15);
   await f.controller.review(); await f.controller.issue(); await f.controller.issue();
   assert.equal(sent, 1); assert.equal(f.controller.getSnapshot().items[0].uncertain, true);
 });
 
 test('dispose releases monitoring and consumes late rejection without callbacks or another request', async () => {
   let rejectRead!: (error: Error) => void, changed = 0, notifications = 0;
-  const f = fixture({ reconcile: async () => new Promise((_resolve, reject) => { rejectRead = reject; }) });
+  const f = fixture({ observe: async () => new Promise((_resolve, reject) => { rejectRead = reject; }) });
   const controller = createNfseBatchController(scope, [{ ...inputs[0], operation: { requestId: id(101), operationId: id(30) } } as NfseBatchInput],
     f.service, f.storage, { onChanged: () => { changed++; }, requestTimeoutMs: 1000 });
   controller.subscribe(() => { notifications++; });
@@ -238,7 +239,7 @@ test('late POST authorization immediately releases active confirmation even whil
   let startedRead!: () => void;
   const readStarted = new Promise<void>(resolve => { startedRead = resolve; });
   const f = fixture({ issue: async () => new Promise(resolve => { releaseIssue = resolve; }),
-    reconcile: async () => { startedRead(); return new Promise(resolve => { releaseRead = resolve; }); } }, [inputs[0]], [0, 0], 100, 1000);
+    observe: async () => { startedRead(); return new Promise(resolve => { releaseRead = resolve; }); } }, [inputs[0]], [0, 0], 100, 1000);
   await f.controller.review(); const running = f.controller.issue(); await readStarted;
   releaseIssue(result(id(30)));
   const ended = await Promise.race([running.then(() => true), new Promise<boolean>(resolve => setTimeout(() => resolve(false), 25))]);
@@ -246,4 +247,169 @@ test('late POST authorization immediately releases active confirmation even whil
   assert.equal(f.controller.getSnapshot().busy, false);
   assert.equal(f.controller.getSnapshot().items[0].result?.state, 'AUTHORIZED');
   releaseRead(result(id(30), 'AWAITING_CONFIRMATION')); await running;
+});
+
+const flushMicrotasks = async () => { for (let index = 0; index < 30; index++) await Promise.resolve(); };
+
+test('a hint inside cooldown schedules one trailing canonical observation without another event', async t => {
+  t.mock.timers.enable({ apis: ['setTimeout', 'Date'], now: new Date('2026-11-12T18:00:00Z') });
+  let reads = 0, sent = 0, authorized = false;
+  const f = fixture({ issue: async (_s, _r, p) => { sent++; return result(p, 'AWAITING_CONFIRMATION'); },
+    reconcile: async () => { throw new Error('Fiscal reconciliation forbidden in observation'); },
+    observe: async (_s, _r, p) => { reads++; return result(p, authorized ? 'AUTHORIZED' : 'AWAITING_CONFIRMATION'); } }, [inputs[0]]);
+  await f.controller.review(); await f.controller.issue();
+  f.controller.signalChange(); await flushMicrotasks(); assert.equal(reads, 1);
+  f.controller.signalChange(); f.controller.signalChange(); authorized = true;
+  t.mock.timers.tick(9999); await flushMicrotasks(); assert.equal(reads, 1);
+  t.mock.timers.tick(1); await flushMicrotasks();
+  assert.equal(reads, 2); assert.equal(sent, 1);
+  assert.equal(f.controller.getSnapshot().items[0].result?.state, 'AUTHORIZED');
+  assert.equal(f.controller.getSnapshot().paused, false, 'The one-note approved batch is now complete');
+  f.controller.dispose();
+});
+
+test('canonical realtime immediately recovers after the 32-second follow window, regardless of cooldown', async t => {
+  t.mock.timers.enable({ apis: ['setTimeout', 'Date'], now: new Date('2026-11-12T18:00:00Z') });
+  let reads = 0, sent = 0, authorized = false;
+  const f = fixture({ issue: async (_s, _r, p) => { sent++; return result(p, 'AWAITING_CONFIRMATION'); },
+    observe: async (_s, _r, p) => { reads++; return result(p, authorized ? 'AUTHORIZED' : 'AWAITING_CONFIRMATION'); } },
+  [inputs[0]], [10_000, 10_000, 10_000, 10_000]);
+  await f.controller.review(); const running = f.controller.issue(); await flushMicrotasks();
+  for (let index = 0; index < 3; index++) { t.mock.timers.tick(10_000); await flushMicrotasks(); }
+  t.mock.timers.tick(2000); await flushMicrotasks(); await running;
+  assert.equal(reads, 3); assert.equal(f.controller.getSnapshot().busy, false);
+  assert.equal(f.controller.getSnapshot().items[0].uncertain, true);
+  authorized = true; f.controller.signalChange(true); await flushMicrotasks();
+  assert.equal(reads, 4); assert.equal(sent, 1);
+  assert.equal(f.controller.getSnapshot().items[0].result?.state, 'AUTHORIZED');
+  f.controller.dispose();
+});
+
+test('events during a physical read coalesce into one fresh observation after its stale response', async () => {
+  let reads = 0, active = 0, maxActive = 0, sent = 0, release!: (value: IndividualIssueResult) => void;
+  const f = fixture({ issue: async (_s, _r, p) => { sent++; return result(p, 'AWAITING_CONFIRMATION'); },
+    observe: async (_s, _r, p) => {
+      reads++; active++; maxActive = Math.max(maxActive, active);
+      try { return reads === 1 ? await new Promise<IndividualIssueResult>(resolve => { release = resolve; }) : result(p); }
+      finally { active--; }
+    } }, [inputs[0]]);
+  await f.controller.review(); await f.controller.issue();
+  f.controller.signalChange(true); await flushMicrotasks();
+  f.controller.signalChange(true); f.controller.signalChange(true); await flushMicrotasks();
+  assert.equal(reads, 1);
+  release(result(id(30), 'AWAITING_CONFIRMATION')); await flushMicrotasks();
+  assert.equal(reads, 2); assert.equal(maxActive, 1); assert.equal(sent, 1);
+  assert.equal(f.controller.getSnapshot().items[0].result?.state, 'AUTHORIZED');
+  f.controller.dispose();
+});
+
+test('stop/dispose cancel trailing reads; activation recovers disposal but preserves an explicit user pause', async t => {
+  t.mock.timers.enable({ apis: ['setTimeout', 'Date'], now: new Date('2026-11-12T18:00:00Z') });
+  for (const explicitStop of [false, true]) {
+    let reads = 0, authorized = false;
+    const f = fixture({ issue: async (_s, _r, p) => result(p, 'AWAITING_CONFIRMATION'),
+      observe: async (_s, _r, p) => { reads++; return result(p, authorized ? 'AUTHORIZED' : 'AWAITING_CONFIRMATION'); } }, [inputs[0]]);
+    await f.controller.review(); await f.controller.issue();
+    f.controller.signalChange(); await flushMicrotasks(); assert.equal(reads, 1);
+    f.controller.signalChange();
+    if (explicitStop) f.controller.stop();
+    f.controller.dispose(); authorized = true;
+    t.mock.timers.tick(20_000); await flushMicrotasks(); assert.equal(reads, 1);
+    f.controller.activate(); f.controller.signalChange(true); await flushMicrotasks();
+    assert.equal(reads, explicitStop ? 1 : 2);
+    f.controller.dispose();
+  }
+});
+
+
+test('a late authorization event resumes the same approved batch in order, without a second click or repeated POST', async () => {
+  const sent: string[] = [], observed: string[] = [];
+  const f = fixture({ issue: async (_s, _r, p) => { sent.push(p); return result(p, sent.length === 1 ? 'AWAITING_CONFIRMATION' : 'AUTHORIZED'); },
+    observe: async (_s, _r, p) => { observed.push(p); return result(p); } });
+  await f.controller.review(); const identities = f.controller.getSnapshot().items.map(item => [item.requestId, item.previewId]);
+  await f.controller.issue(); assert.deepEqual(sent, [id(30)]);
+  assert.equal(f.controller.getSnapshot().monitoringPaused, false);
+  f.controller.signalChange(true); f.controller.signalChange(true); await flushMicrotasks();
+  assert.deepEqual(observed, [id(30)]); assert.deepEqual(sent, [id(30), id(31)]);
+  assert(f.controller.getSnapshot().items.every(item => item.result?.state === 'AUTHORIZED'));
+  assert.deepEqual(f.controller.getSnapshot().items.map(item => [item.requestId, item.previewId]), identities);
+  f.controller.signalChange(true); await flushMicrotasks(); assert.equal(sent.length, 2);
+  f.controller.dispose();
+});
+
+test('explicit pause and disposal cancel the original dispatch intent even when its POST later authorizes', async () => {
+  for (const dispose of [false, true]) {
+    const sent: string[] = []; let finish!: (value: IndividualIssueResult) => void;
+    const f = fixture({ issue: async (_s, _r, p) => { sent.push(p); return new Promise(resolve => { finish = resolve; }); } });
+    await f.controller.review(); const running = f.controller.issue();
+    if (dispose) f.controller.dispose(); else f.controller.stop();
+    finish(result(id(30))); await running;
+    f.controller.activate(); f.controller.signalChange(true); await flushMicrotasks();
+    assert.deepEqual(sent, [id(30)]);
+    assert.equal(f.controller.getSnapshot().monitoringPaused, !dispose);
+    f.controller.dispose();
+  }
+});
+
+test('reopening or reviewing stored identities observes status without inheriting an old dispatch approval', async () => {
+  let sent = 0;
+  const f = fixture({ issue: async (_s, _r, p) => { sent++; return result(p, 'AWAITING_CONFIRMATION'); },
+    reconcile: async (_s, _r, p) => p === id(30) ? result(p) : { ...result(p, 'PREVIEWED'), expiresAt: new Date(Date.now() + 60_000).toISOString(), capability: { available: true, reason: null } } });
+  await f.controller.review(); await f.controller.issue(); f.controller.dispose();
+  const reopened = createNfseBatchController(scope, inputs, f.service, f.storage, { confirmationDelays: [] });
+  await reopened.review(); reopened.signalChange(true); await flushMicrotasks();
+  assert.equal(sent, 1); assert.equal(batchCanIssue(reopened.getSnapshot().items[1]), true);
+  reopened.dispose();
+});
+
+test('rejection or blocking cancels automatic continuation of the previously approved remaining notes', async () => {
+  for (const state of ['REJECTED', 'BLOCKED'] as const) {
+    const sent: string[] = [];
+    const f = fixture({ issue: async (_s, _r, p) => { sent.push(p); return result(p, 'AWAITING_CONFIRMATION'); },
+      observe: async (_s, _r, p) => result(p, state) });
+    await f.controller.review(); await f.controller.issue();
+    f.controller.signalChange(true); await flushMicrotasks(); f.controller.signalChange(true); await flushMicrotasks();
+    assert.deepEqual(sent, [id(30)]); assert.equal(f.controller.getSnapshot().items[0].result?.state, state);
+    assert.equal(f.controller.getSnapshot().paused, true); assert.equal(f.controller.getSnapshot().monitoringPaused, false);
+    f.controller.dispose();
+  }
+});
+
+test('an approved preview expiring while the first note awaits confirmation stops continuation without renewing or changing data', async t => {
+  t.mock.timers.enable({ apis: ['setTimeout', 'Date'], now: new Date('2026-11-12T18:00:00Z') });
+  const sent: string[] = [];
+  const f = fixture({ issue: async (_s, _r, p) => { sent.push(p); return result(p, 'AWAITING_CONFIRMATION'); },
+    observe: async (_s, _r, p) => result(p) });
+  await f.controller.review(); await f.controller.issue();
+  t.mock.timers.tick(60_001); f.controller.signalChange(true); await flushMicrotasks();
+  assert.deepEqual(sent, [id(30)]); assert.equal(f.calls.filter(call => call.action === 'PREVIEW_QUEUE').length, 2);
+  assert.equal(f.controller.getSnapshot().items[1].dispatched, false); assert.equal(f.controller.getSnapshot().paused, true);
+  f.controller.dispose();
+});
+
+test('late POST authorization and a stale in-flight observation resume the next approved note only once', async () => {
+  const sent: string[] = [];
+  let finishIssue!: (value: IndividualIssueResult) => void, finishRead!: (value: IndividualIssueResult) => void;
+  const f = fixture({ issue: async (_s, _r, p) => {
+    sent.push(p); return p === id(30) ? new Promise(resolve => { finishIssue = resolve; }) : result(p);
+  }, observe: async () => new Promise(resolve => { finishRead = resolve; }) }, inputs, [0], 5, 10);
+  await f.controller.review(); await f.controller.issue();
+  f.controller.signalChange(true); finishIssue(result(id(30))); await flushMicrotasks();
+  assert.deepEqual(sent, [id(30), id(31)]);
+  finishRead(result(id(30), 'AWAITING_CONFIRMATION')); await flushMicrotasks();
+  f.controller.signalChange(true); await flushMicrotasks();
+  assert.deepEqual(sent, [id(30), id(31)]);
+  assert(f.controller.getSnapshot().items.every(item => item.result?.state === 'AUTHORIZED'));
+  f.controller.dispose();
+});
+
+
+test('an incomplete observation transport fails closed without invoking fiscal reconciliation', async () => {
+  let sent = 0;
+  const f = fixture({ issue: async (_s, _r, p) => { sent++; return result(p, 'AWAITING_CONFIRMATION'); } }, [inputs[0]]);
+  await f.controller.review(); Reflect.deleteProperty(f.service, 'observe');
+  await f.controller.issue(); f.controller.signalChange(true); await flushMicrotasks();
+  assert.equal(sent, 1); assert.equal(f.calls.filter(call => call.action === 'RECONCILE').length, 0);
+  assert.equal(f.controller.getSnapshot().items[0].uncertain, true);
+  f.controller.dispose();
 });

@@ -57,6 +57,15 @@ export default function NfseBatchEmissionModal({ scope, items, onClose, onChange
   const available = view.items.filter(item => batchCanIssue(item)).length;
   const uncertain = view.items.some(item => item.uncertain);
   const authorized = view.items.filter(item => item.result?.state === 'AUTHORIZED').length;
+  const progressMessage = view.busy
+    ? view.phase === 'CONFIRM' ? 'Acompanhando o retorno da mesma DPS…'
+      : view.phase === 'ISSUE' ? 'Enviando uma nota por vez…' : 'Validando dados…'
+    : view.retryAt ? 'Envio aguardando o limite do serviço. O lote será retomado automaticamente.'
+      : view.monitoringPaused ? 'Acompanhamento desta janela pausado. O retorno continua sendo registrado pelo sistema.'
+      : uncertain ? 'Acompanhando automaticamente o retorno das notas enviadas.'
+        : authorized === items.length ? 'Todas as notas foram autorizadas.'
+          : view.paused ? 'Envio interrompido. Confira os impedimentos das notas restantes.'
+            : 'Os dados são conferidos no servidor. Clique em Emitir para enviar as notas disponíveis.';
   if (typeof document === 'undefined') return null;
   return createPortal(<div ref={overlayRef} className="nfse-portal nfse-fiscal-review-overlay" role="presentation" onMouseDown={event => { if (event.currentTarget === event.target) close(); }}>
     <div ref={dialogRef} className="nfse-fiscal-review-dialog" role="dialog" aria-modal="true" aria-labelledby={id} tabIndex={-1} aria-busy={view.busy}>
@@ -64,7 +73,7 @@ export default function NfseBatchEmissionModal({ scope, items, onClose, onChange
         <button ref={initialFocusRef} type="button" className="nfse-button nfse-button-secondary" disabled={view.busy} aria-label="Fechar lote" onClick={close}><X size={17} /></button></header>
       <div className="nfse-fiscal-review-body nfse-individual-content">
         {scope.environment !== 'PRODUCAO' && <p role="status">O executor deste ambiente ainda não está disponível. As preparações foram preservadas.</p>}
-        <p role="status">{authorized} de {items.length} nota(s) autorizada(s). {view.busy ? view.phase === 'CONFIRM' ? 'Consultando o retorno da mesma DPS, sem reenviar…' : view.phase === 'ISSUE' ? 'Enviando uma nota por vez…' : 'Validando dados…' : view.paused ? 'Lote pausado. Feche e reabra para retomar a consulta automática; notas não serão reenviadas.' : 'Os dados são conferidos no servidor. Clique em Emitir para enviar as notas disponíveis.'}</p>
+        <p role="status">{authorized} de {items.length} nota(s) autorizada(s). {progressMessage}</p>
         <div aria-label="Andamento da emissão" role="status">
           <progress aria-label="Notas com resultado definitivo" max={items.length} value={view.items.filter(item => ['AUTHORIZED', 'REJECTED', 'BLOCKED'].includes(item.result?.state || '')).length} style={{ width: '100%', height: 12 }} />
           <small>{authorized} autorizada(s) · {view.items.filter(item => item.result?.state === 'REJECTED' || item.result?.state === 'BLOCKED').length} com impedimento · {view.items.filter(item => item.uncertain).length} aguardando retorno</small>
@@ -101,7 +110,7 @@ export default function NfseBatchEmissionModal({ scope, items, onClose, onChange
       <footer className="nfse-footer"><span>{available} nota(s) conferida(s) e disponível(is) para envio.</span><div className="nfse-queue-actions">
         {view.busy && <button type="button" className="nfse-button nfse-button-secondary" onClick={() => controller.stop()}>Pausar acompanhamento</button>}
         <button type="button" className="nfse-button nfse-button-secondary" disabled={view.busy} onClick={close}>Fechar</button>
-        <button type="button" className="nfse-button nfse-button-primary" disabled={view.busy || !available || uncertain || scope.environment !== 'PRODUCAO'} onClick={() => void controller.issue()}>Emitir notas ({available})</button>
+        <button type="button" className="nfse-button nfse-button-primary" disabled={view.busy || Boolean(view.retryAt) || !available || uncertain || scope.environment !== 'PRODUCAO'} onClick={() => void controller.issue()}>Emitir notas ({available})</button>
       </div></footer>
     </div>
   </div>, document.body);

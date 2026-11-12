@@ -7,9 +7,16 @@ import {
 } from "../_shared/http.ts";
 import { createIndividualHandler } from "./handler.ts";
 import { createIndividualRuntime } from "./runtime.ts";
+import { individualCommandRateLimited, individualEntryRateLimited } from "./rate-limit.ts";
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: buildCorsHeaders(req) });
+  }
+  if (individualEntryRateLimited(getClientIp(req), isRateLimitExceeded)) {
+    const response = json({ error: "RATE_LIMITED" }, 429, req);
+    response.headers.set("Cache-Control", "no-store");
+    response.headers.set("Retry-After", "60");
+    return response;
   }
   const options = { auth: { persistSession: false, autoRefreshToken: false } };
   const admin = createClient(
@@ -25,10 +32,11 @@ Deno.serve(async (req) => {
     respond(request, body, status) {
       const response = json(body, status, request);
       response.headers.set("Cache-Control", "no-store");
+      if (status === 429) response.headers.set("Retry-After", "60");
       return response;
     },
-    rateLimited: (request) =>
-      isRateLimitExceeded(`nfse-individual:${getClientIp(request)}`, 8, 60_000),
+    rateLimited: (request, command, actor) =>
+      individualCommandRateLimited(getClientIp(request), command, actor, isRateLimitExceeded),
     async authorize(request, command) {
       const token = request.headers.get("authorization") || "";
       if (!/^Bearer\s+\S+$/i.test(token)) throw new Error("AUTH_REQUIRED");

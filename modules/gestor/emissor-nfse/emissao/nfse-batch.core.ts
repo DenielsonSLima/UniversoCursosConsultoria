@@ -8,7 +8,7 @@ export interface NfseBatchItem extends NfseBatchInput {
   requestId: string; previewId: string | null; preview?: IndividualPreview; result?: IndividualIssueResult;
   dispatched: boolean; uncertain: boolean; error?: string;
 }
-export interface NfseBatchSnapshot { items: readonly NfseBatchItem[]; busy: boolean; phase: 'IDLE' | 'REVIEW' | 'ISSUE' | 'CONSULT' | 'CONFIRM'; paused: boolean }
+export interface NfseBatchSnapshot { items: readonly NfseBatchItem[]; busy: boolean; phase: 'IDLE' | 'REVIEW' | 'ISSUE' | 'CONSULT' | 'CONFIRM'; paused: boolean; monitoringPaused: boolean; retryAt: number | null }
 interface Storage { getItem(key: string): string | null; setItem(key: string, value: string): void }
 export const batchSourceStorageKey = (scope: NfseScope, source: NfseEmissionSource) => `${individualStorageKey(scope)}:${source.kind}:${source.id}`;
 export const batchCanIssue = (item: NfseBatchItem, now = Date.now()) => Boolean(!item.dispatched && !item.uncertain && !item.error
@@ -25,26 +25,40 @@ export function createNfseBatchController(scope: NfseScope, input: readonly Nfse
       previewId: item.operation?.operationId || saved?.previewId || null, dispatched: false, uncertain: false };
   });
   let busy = false, phase: NfseBatchSnapshot['phase'] = 'IDLE', paused = false, stopped = false, disposed = false, sourceChanged = false;
-  let snapshot: NfseBatchSnapshot = { items, busy, phase, paused };
+  let explicitlyStopped = false;
+  let dispatchIntent: ReadonlyMap<number, string> | null = null;
+  let retryAt: number | null = null, retryTimer: ReturnType<typeof setTimeout> | undefined;
+  const clearRetry = () => { if (retryTimer) clearTimeout(retryTimer); retryTimer = undefined; retryAt = null; };
+  let flushSignals: () => void = () => {};
+  let snapshot: NfseBatchSnapshot = { items, busy, phase, paused, monitoringPaused: explicitlyStopped, retryAt };
   const listeners = new Set<() => void>();
-  const emit = () => { snapshot = { items, busy, phase, paused }; if (!disposed) for (const listener of listeners) listener(); };
+  const emit = () => { snapshot = { items, busy, phase, paused, monitoringPaused: explicitlyStopped, retryAt }; if (!disposed) for (const listener of listeners) listener(); };
   const patch = (index: number, value: Partial<NfseBatchItem>) => { items = items.map((item, position) => position === index ? { ...item, ...value } : item); emit(); };
   const notice = (value: NfseFiscalNotice) => { if (!disposed) options.onNotice?.(value); };
   const changed = () => { sourceChanged = true; };
   const persist = (item: NfseBatchItem, previewId: string) => storage.setItem(batchSourceStorageKey(captured, item.source), JSON.stringify({ requestId: item.requestId, previewId }));
-  const run = async (nextPhase: NfseBatchSnapshot['phase'], action: () => Promise<void>) => {
-    if (busy || disposed || captured.environment !== 'PRODUCAO') return;
-    busy = true; phase = nextPhase; stopped = false; paused = false; emit();
+  const run = async (nextPhase: NfseBatchSnapshot['phase'], action: () => Promise<void>, automatic = false) => {
+    if (busy || disposed || captured.environment !== 'PRODUCAO' || automatic && stopped) return;
+    busy = true; phase = nextPhase;
+    if (!automatic) { stopped = false; explicitlyStopped = false; paused = false; }
+    emit();
     try { await action(); } finally {
       busy = false; phase = 'IDLE'; emit();
       if (sourceChanged && !disposed) options.onChanged?.();
       sourceChanged = false;
+      flushSignals();
     }
   };
   let wake: (() => void) | undefined;
   let signaled = false;
   let cancelRead: (() => void) | undefined;
   let lastEventRead = 0;
+  let signalTimer: ReturnType<typeof setTimeout> | undefined;
+  let pendingSignal = false, immediateSignal = false;
+  const clearSignals = () => {
+    if (signalTimer) clearTimeout(signalTimer);
+    signalTimer = undefined; pendingSignal = false; immediateSignal = false;
+  };
   const bounded = <T,>(promise: Promise<T>, timeoutMs = options.requestTimeoutMs ?? 45_000): Promise<T> => new Promise((resolve, reject) => {
     const finish = () => { clearTimeout(timer); if (cancelRead === cancel) cancelRead = undefined; };
     const cancel = () => { finish(); reject(new Error('Retorno ainda não confirmado. O sistema consultará a mesma DPS, sem reenviar.')); };
@@ -75,17 +89,20 @@ export function createNfseBatchController(scope: NfseScope, input: readonly Nfse
     }
     if (busy) changed();
     else if (!disposed) options.onChanged?.();
+    flushSignals();
   };
-  const read = async (index: number, timeoutMs = options.requestTimeoutMs ?? 45_000) => {
+  const read = async (index: number, timeoutMs = options.requestTimeoutMs ?? 45_000, observe = true) => {
     const item = items[index]; if (!item.previewId) return;
     let pending = reads.get(index);
     if (!pending) {
       lastEventRead = Date.now();
       // Keep the physical request single-flight even after its UI deadline. Consume late
       // success/rejection exactly once; never start overlapping reads on a focus storm.
-      pending = service.reconcile(captured, item.requestId, item.previewId)
+      const readState = observe ? service.observe : service.reconcile;
+      if (!readState) throw new Error('A observação canônica desta operação está indisponível. Nenhuma consulta fiscal foi iniciada.');
+      pending = readState(captured, item.requestId, item.previewId)
         .then(result => { accept(index, result); })
-        .finally(() => { reads.delete(index); lastEventRead = Date.now(); });
+        .finally(() => { reads.delete(index); lastEventRead = Date.now(); flushSignals(); });
       reads.set(index, pending);
     }
     let waiter: { index: number; done: () => void } | undefined;
@@ -109,30 +126,101 @@ export function createNfseBatchController(scope: NfseScope, input: readonly Nfse
       if (!items[index].uncertain) return;
     }
   };
-  return {
-    signalChange() {
-      if (disposed || stopped) return;
-      if (busy) { signaled = true; wake?.(); return; }
-      if (Date.now() - lastEventRead < 10_000 || !items.some(item => item.uncertain)) return;
-      lastEventRead = Date.now();
-      void run('CONSULT', async () => {
-        for (let index = 0; index < items.length && !disposed && !stopped; index++) {
-          if (!items[index].uncertain) continue;
-          try { await read(index); } catch { /* Retain uncertainty; focus or a later event can recover. */ }
+  const dispatchApproved = async (automatic = false) => {
+    const approved = dispatchIntent;
+    if (!approved) return;
+    await run('ISSUE', async () => {
+      paused = false; emit();
+      for (const [index, previewId] of approved) {
+        if (disposed || stopped || dispatchIntent !== approved) break;
+        const item = items[index];
+        if (item.dispatched && item.result?.state === 'AUTHORIZED') continue;
+        if (item.uncertain) { paused = true; break; }
+        if (item.previewId !== previewId || !batchCanIssue(item)) { dispatchIntent = null; paused = true; break; }
+        try { persist(item, previewId); }
+        catch {
+          const message = 'Não foi possível preservar os identificadores. O envio desta nota não foi iniciado.';
+          patch(index, { error: message }); dispatchIntent = null; paused = true;
+          notice({ type: 'error', title: 'Envio não iniciado', message }); break;
         }
-      });
+        try {
+          phase = 'ISSUE';
+          patch(index, { dispatched: true, result: undefined, error: undefined, preview: undefined });
+          await bounded(service.issue(captured, item.requestId, previewId).then(result => { accept(index, result); }));
+        } catch (error) {
+          const limited = error as { code?: string; status?: number; beforeDispatch?: boolean; retryAfterMs?: number };
+          if (limited.code === 'RATE_LIMITED' && limited.status === 429 && limited.beforeDispatch === true && items[index].result?.state !== 'AUTHORIZED') {
+            const delay = Math.max(60_000, Number.isFinite(limited.retryAfterMs) ? limited.retryAfterMs! : 0);
+            retryAt = Date.now() + delay; paused = true;
+            patch(index, { dispatched: false, uncertain: false, preview: item.preview, result: item.result, error: undefined });
+            notice({ type: 'error', title: 'Aguardando limite do emissor',
+              message: 'Nenhum envio foi iniciado. A mesma nota será enviada automaticamente após o prazo informado, se a prévia continuar válida.' });
+            break;
+          }
+          const message = error instanceof Error ? error.message : 'Resultado não confirmado. O acompanhamento continuará automaticamente.';
+          if (items[index].result?.state !== 'AUTHORIZED') patch(index, { uncertain: true, dispatched: true, error: message });
+        }
+        if (items[index].uncertain) await follow(index);
+        const final = items[index].result;
+        if (!items[index].uncertain && final) {
+          notice(individualIssueNotice(final));
+          if (final.state === 'AUTHORIZED') continue;
+          dispatchIntent = null;
+        } else notice({ type: 'error', title: 'Envio pausado: aguardando confirmação', message: items[index].error || 'O acompanhamento continuará automaticamente, sem reenviar esta nota.' });
+        paused = true; break;
+      }
+      if (dispatchIntent === approved && [...approved.keys()].every(index => items[index].result?.state === 'AUTHORIZED')) {
+        dispatchIntent = null; paused = false;
+      }
+    }, automatic);
+  };
+  flushSignals = () => {
+    if (disposed || stopped || busy) return;
+    if (dispatchIntent && ![...dispatchIntent.keys()].some(index => items[index].uncertain)) {
+      if (retryAt && retryAt > Date.now()) {
+        if (!retryTimer) retryTimer = setTimeout(() => { retryTimer = undefined; flushSignals(); }, retryAt - Date.now());
+        return;
+      }
+      clearRetry();
+      clearSignals(); void dispatchApproved(true); return;
+    }
+    if (!pendingSignal) return;
+    if (!items.some(item => item.uncertain)) { clearSignals(); return; }
+    // An event received during a physical read must be observed again after it
+    // settles: that response may predate the event. Never overlap the same read.
+    if (reads.size) return;
+    const delay = immediateSignal ? 0 : Math.max(0, lastEventRead + 10_000 - Date.now());
+    if (signalTimer) { clearTimeout(signalTimer); signalTimer = undefined; }
+    if (delay) { signalTimer = setTimeout(() => { signalTimer = undefined; flushSignals(); }, delay); return; }
+    pendingSignal = false; immediateSignal = false;
+    void run('CONSULT', async () => {
+      for (let index = 0; index < items.length && !disposed && !stopped; index++) {
+        if (!items[index].uncertain) continue;
+        try { await read(index); } catch { /* Keep the canonical state uncertain until a later hint. */ }
+      }
+    }, true);
+  };
+  return {
+    signalChange(immediate = false) {
+      if (disposed || stopped) return;
+      pendingSignal = true; immediateSignal ||= immediate;
+      if (busy) { signaled = true; wake?.(); return; }
+      flushSignals();
     },
     getSnapshot: () => snapshot,
     subscribe(listener: () => void) { listeners.add(listener); return () => { listeners.delete(listener); }; },
-    activate() { disposed = false; },
-    dispose() { disposed = true; stopped = true; wake?.(); cancelRead?.(); },
-    stop() { stopped = true; paused = true; wake?.(); cancelRead?.(); emit(); },
-    async review(competenceDate?: string) { await run('REVIEW', async () => {
+    activate() { disposed = false; stopped = explicitlyStopped; emit(); },
+    dispose() { disposed = true; stopped = true; dispatchIntent = null; clearRetry(); clearSignals(); wake?.(); cancelRead?.(); },
+    stop() { stopped = true; explicitlyStopped = true; paused = true; dispatchIntent = null; clearRetry(); clearSignals(); wake?.(); cancelRead?.(); emit(); },
+    async review(competenceDate?: string) {
+      if (busy || disposed) return;
+      dispatchIntent = null; clearRetry();
+      await run('REVIEW', async () => {
       for (let index = 0; index < items.length && !disposed && !stopped; index++) {
         const item = items[index];
         try {
           if (item.previewId) {
-            await read(index);
+            await read(index, undefined, false);
             if (items[index].uncertain) await follow(index);
             if (disposed || stopped) break;
             const current = items[index];
@@ -154,33 +242,13 @@ export function createNfseBatchController(scope: NfseScope, input: readonly Nfse
       try { await read(index); if (items[index].uncertain) await follow(index); }
       catch (error) { patch(index, { error: error instanceof Error ? error.message : 'Consulta não confirmada.' }); }
     }); },
-    async issue() { await run('ISSUE', async () => {
-      if (items.some(item => item.uncertain)) { paused = true; return; }
-      for (let index = 0; index < items.length && !disposed && !stopped; index++) {
-        const item = items[index]; if (!batchCanIssue(item) || !item.previewId) continue;
-        try { persist(item, item.previewId); }
-        catch {
-          const message = 'Não foi possível preservar os identificadores. O envio desta nota não foi iniciado.';
-          patch(index, { error: message }); paused = true;
-          notice({ type: 'error', title: 'Envio não iniciado', message }); break;
-        }
-        try {
-          // Persist the same operation before dispatch; uncertain responses are GET-only.
-          phase = 'ISSUE';
-          patch(index, { dispatched: true, result: undefined, error: undefined, preview: undefined });
-          await bounded(service.issue(captured, item.requestId, item.previewId).then(result => { accept(index, result); }));
-          if (items[index].uncertain) await follow(index);
-          const final = items[index].result!;
-          notice(individualIssueNotice(final));
-          if (final.state !== 'AUTHORIZED') { paused = true; break; }
-        } catch (error) {
-          const message = error instanceof Error ? error.message : 'Resultado não confirmado. Consulte a mesma operação.';
-          patch(index, { uncertain: true, dispatched: true, error: message }); paused = true;
-          await follow(index);
-          if (!items[index].uncertain && items[index].result) { notice(individualIssueNotice(items[index].result!)); break; }
-          notice({ type: 'error', title: 'Lote pausado: resultado não confirmado', message }); break;
-        }
-      }
-    }); },
+    async issue() {
+      if (busy || disposed || captured.environment !== 'PRODUCAO' || items.some(item => item.uncertain) || retryAt && retryAt > Date.now()) return;
+      // This click approves only the current canonical previews in this modal.
+      // No reopening, refresh or observation can create or expand this intent.
+      dispatchIntent = new Map(items.flatMap((item, index) => batchCanIssue(item) && item.previewId ? [[index, item.previewId] as const] : []));
+      if (!dispatchIntent.size) { dispatchIntent = null; return; }
+      await dispatchApproved();
+    },
   };
 }

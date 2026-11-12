@@ -72,6 +72,39 @@ Deno.test("queue RPC sends source identity only and never forwards browser amoun
   await access.ledger(automatic, id(11), "PREVIEW_QUEUE");
   assert.deepEqual(calls[1].args.p_input, { source: command.source });
 });
+Deno.test("issue observation reads the canonical cancellation reference without forwarding mutation fields", async () => {
+  const row = { ...reviewedIndividualFixture(), cancelPreviewId: id(92) };
+  const calls: { name: string; args: Record<string, unknown> }[] = [];
+  const access = createIndividualLedgerAccess(async (name, args) => { calls.push({name,args}); return row; });
+  const observe: IndividualCommand = {scope:command.scope,action:"OBSERVE",requestId:command.requestId,previewId:row.previewId};
+  assert.equal((await access.ledger(observe,id(11),"READ")).cancelPreviewId,id(92));
+  assert.deepEqual(calls[0], {name:"get_nfse_individual_observation_internal",args:{
+    p_actor_id:id(11),p_context_key:command.scope.contextKey,p_polo_id:command.scope.poloId,
+    p_environment:command.scope.environment,p_month:command.scope.month,
+    p_request_id:command.requestId,p_preview_id:row.previewId,
+  }});
+  await access.ledger({...observe,action:"RECONCILE"},id(11),"READ");
+  assert.equal(calls[1].name,"nfse_individual_operation_internal");
+  assert.equal(calls[1].args.p_action,"READ");
+  assert.equal(calls[1].args.p_input,null);
+});
+Deno.test("cancellation observation uses the authorized read RPC while mutation and manual reconciliation keep legacy guards", async () => {
+  const calls: {name:string;args:Record<string,unknown>}[] = [];
+  const access=createIndividualLedgerAccess(async(name,args)=>{calls.push({name,args});return {};});
+  const observe: IndividualCommand={scope:command.scope,action:"OBSERVE_CANCEL",requestId:command.requestId,previewId:id(90),cancelPreviewId:id(91)};
+  await access.cancellation(observe,id(11),"READ");
+  assert.deepEqual(calls[0],{name:"get_nfse_individual_cancellation_observation_internal",args:{
+    p_actor_id:id(11),p_context_key:command.scope.contextKey,p_polo_id:command.scope.poloId,
+    p_environment:command.scope.environment,p_month:command.scope.month,
+    p_request_id:command.requestId,p_preview_id:id(90),p_cancel_preview_id:id(91),
+  }});
+  for(const action of ["RECONCILE_CANCEL","CANCEL","RETRY_CANCEL"] as const) {
+    await access.cancellation({...observe,action},id(11),"READ");
+    assert.equal(calls.at(-1)!.name,"nfse_individual_cancellation_internal");
+    assert.equal(calls.at(-1)!.args.p_action,"READ");
+    assert.equal(calls.at(-1)!.args.p_input,null);
+  }
+});
 Deno.test("queue preview and reopening preserve server payload/capability without claiming or executing", async () => {
   const row = reviewedIndividualFixture();
   const calls: string[] = [];

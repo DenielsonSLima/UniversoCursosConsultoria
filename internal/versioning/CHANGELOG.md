@@ -59,6 +59,15 @@ Histórico arquivado: [05/11/2026 — versão 4.8.246](./changelog/2026-11-05-ve
 
 Histórico arquivado: [4.8.247 a 4.8.248](./changelog/2026-11-05-versao-4-8-247.md).
 
+Histórico arquivado: [06/11/2026 — versões 4.8.249 a 4.8.250](./changelog/2026-11-06-versoes-4-8-249-a-250.md).
+
+## [4.8.319] - 2026-11-12
+
+### Corrigido
+- Retorno de emissão e cancelamento acompanhado automaticamente, com atualização das listas e dos detalhes quando houver confirmação.
+- Lote aprovado continua nas próximas notas após a confirmação da anterior, preservando pausa explícita, validade e envio único.
+- Continuidade da fila e leituras de acompanhamento separadas do limite de envio fiscal; consulta manual deixa de ser etapa do fluxo.
+
 ## [4.8.318] - 2026-11-12
 
 ### Corrigido
@@ -484,17 +493,3 @@ Histórico arquivado: [4.8.247 a 4.8.248](./changelog/2026-11-05-versao-4-8-247.
 ### Alterado
 - Tabelas e modais das dez abas financeiras seguem um padrão compacto de fonte, contraste, espaçamento e alinhamento; documentos, dados e regras preservados.
 - Abas com linha inferior, buscas brancas e seletores próprios pesquisáveis; cabeçalhos repetidos removidos e ações alinhadas às abas/filtros, preservando permissões e operações.
-
-## [4.8.250] - 2026-11-06
-
-### Alterado
-- Formações com entrada e oito submódulos mais compactos, preservando cursos, grades, modelos e permissões.
-- Patrimônio e Relatórios com navegação, filtros, cartões e catálogos refinados.
-- Calendário e Comunicação com cabeçalhos e áreas de trabalho compactos, mantendo datas, exportações, atendimento e operações existentes.
-
-## [4.8.249] - 2026-11-06
-
-### Alterado
-- Financeiro com resumo, tesouraria, abas e cabeçalhos mais compactos.
-- Caixa com indicadores, trilhas e análises leves; valores extensos sem truncamento e navegação de capítulos ajustada ao cabeçalho móvel.
-- Configurações com catálogo compacto, ícones centralizados e retorno das seções refinado. Dados, regras financeiras, permissões, consultas e operações preservados.

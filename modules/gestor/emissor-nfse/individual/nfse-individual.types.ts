@@ -27,6 +27,7 @@ export type IndividualIssueState = 'PREVIEWED' | 'AUTHORIZED' | 'REJECTED' | 'AW
 export interface IndividualIssueResult {
   previewId: string; state: IndividualIssueState; message: string; payload: IndividualPayload;
   number: string | null; accessKey: string | null; codes?: string[]; capability?: IndividualCapability;
+  cancelPreviewId?: string | null;
   expiresAt?: string;
 }
 export interface IndividualCancelPayload { number: string; accessKey: string; reasonCode: '1' | '2' | '9'; justification: string;
@@ -46,10 +47,12 @@ export interface NfseIndividualService {
   preview(scope: NfseScope, requestId: string, definition: IndividualDefinition): Promise<IndividualPreview>;
   issue(scope: NfseScope, requestId: string, previewId: string): Promise<IndividualIssueResult>;
   reconcile(scope: NfseScope, requestId: string, previewId: string): Promise<IndividualIssueResult>;
+  observe(scope: NfseScope, requestId: string, previewId: string): Promise<IndividualIssueResult>;
   previewCancellation(scope: NfseScope, requestId: string, previewId: string, justification: string): Promise<IndividualCancelPreview>;
   previewCancellationModel(scope: NfseScope, requestId: string, previewId: string, model: { id: string; version: number }, detail: string | null): Promise<IndividualCancelPreview>;
   cancel(scope: NfseScope, requestId: string, previewId: string, cancelPreviewId: string): Promise<IndividualCancelResult>;
   reconcileCancellation(scope: NfseScope, requestId: string, previewId: string, cancelPreviewId: string): Promise<IndividualCancelResult>;
+  observeCancellation(scope: NfseScope, requestId: string, previewId: string, cancelPreviewId: string): Promise<IndividualCancelResult>;
   retryCancellation(scope: NfseScope, requestId: string, previewId: string, cancelPreviewId: string, retryRequestId: string): Promise<IndividualCancelResult>;
 }
 export interface IndividualAttempt { requestId: string; previewId: string; cancelPreviewId?: string; retryRequestId?: string }
