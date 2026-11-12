@@ -19,6 +19,7 @@ import {
   tiposParceriaService,
 } from '../../../../configuracoes/tipos-parceria/tipos-parceria.service';
 import { parceirosService } from '../../../parceiros.service';
+import { defaultPjScope, pjPoloSelection } from '../../../utils/pj-polo-scope';
 
 interface ParceiroPJFormProps {
   onCancel?: () => void;
@@ -45,7 +46,7 @@ const ParceiroPJForm: React.FC<ParceiroPJFormProps> = ({
   const [showCategoriaForm, setShowCategoriaForm] = useState(false);
   const [showTipoParceriaForm, setShowTipoParceriaForm] = useState(false);
   const [polos, setPolos] = useState<PoloOption[]>([]);
-  const [poloScope, setPoloScope] = useState<'active' | 'all' | string>('active');
+  const [poloScope, setPoloScope] = useState<'active' | 'all' | string>(defaultPjScope(defaultPoloId, canAssociateAllPolos));
 
   const categoriasQuery = useQuery({
     queryKey: categoriasQueryKeys.activeByType('pj'),
@@ -240,7 +241,7 @@ const ParceiroPJForm: React.FC<ParceiroPJFormProps> = ({
     setPoloScope(nextScope);
 
     if (nextScope === 'all') {
-      setFormData((previous) => ({ ...previous, poloId: '', poloIds: [] }));
+      setFormData((previous) => ({ ...previous, poloId: defaultPoloId || polos[0]?.id || '', poloIds: polos.map((polo) => polo.id) }));
       return;
     }
 
@@ -278,6 +279,10 @@ const ParceiroPJForm: React.FC<ParceiroPJFormProps> = ({
       onScopeError?.('Selecione um polo ativo no cabeçalho antes de cadastrar a parceria.');
       return;
     }
+    if (poloScope === 'all' && (!canAssociateAllPolos || !polos.length)) {
+      onScopeError?.('Aguarde o carregamento dos polos antes de salvar.');
+      return;
+    }
     const categoria = categoriasQuery.data?.find((item) => item.id === categoriaId);
     const tipoParceria = tiposParceriaQuery.data?.find((item) => item.id === tipoParceriaId);
 
@@ -285,6 +290,7 @@ const ParceiroPJForm: React.FC<ParceiroPJFormProps> = ({
 
     if (onSave) onSave({
       ...formData,
+      ...(poloScope === 'all' ? pjPoloSelection(polos.map((polo) => polo.id), defaultPoloId) : {}),
       nome: formData.razaoSocial,
       nomeCompleto: formData.razaoSocial,
       cpf_cnpj: formData.cnpj,

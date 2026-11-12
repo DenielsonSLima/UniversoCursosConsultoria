@@ -1,3 +1,4 @@
+import { nfseModelsForType } from '../modelos/nfse-model-type';
 import React, { useEffect, useMemo, useState } from 'react';
 import { ListPlus, UserPlus } from 'lucide-react';
 import InstitutionalSelect from '../../../shared/components/InstitutionalSelect';
@@ -39,7 +40,7 @@ export default function PrepararNfseTab() {
   } : null, [scope, open, month, draft.month]);
   const validScope = isNfseReceiptScopeValid(receiptScope);
   const modelsQuery = useNfseModels(scope, draft.ids.length > 0);
-  const models = modelsQuery.error ? [] : modelsQuery.data?.rows || [];
+  const models = modelsQuery.error ? [] : nfseModelsForType(modelsQuery.data?.rows || [], 'ALUNO');
   const selectedModel = models.find((model) => model.active && model.id === draft.modelId);
   const descriptionScope = useMemo(() => scope ? { ...scope, month: draft.month } : null, [scope, draft.month]);
   const descriptionPreview = useNfseModelDescriptionPreview(descriptionScope, draft.ids.length > 0 ? selectedModel?.serviceDescription || '' : '');
@@ -106,9 +107,10 @@ export default function PrepararNfseTab() {
       <div className="nfse-toolbar"><div className="nfse-field"><label htmlFor="nfse-model">Modelo de emissão</label>
         <InstitutionalSelect id="nfse-model" ariaLabel="Modelo de emissão" value={draft.modelId} onValueChange={modelId => setDraft(current => ({ ...current, modelId }))}
           options={models.filter(item => item.active).map(item => ({ value: item.id, label: item.name }))}
-          placeholder="Selecionar modelo" disabled={!validScope || prepare.isPending} loading={modelsQuery.isPending}
+          placeholder="Selecionar modelo para alunos" disabled={!validScope || prepare.isPending} loading={modelsQuery.isPending}
           error={modelsQuery.error ? 'Não foi possível consultar os modelos.' : undefined} />
       </div><button type="button" className="nfse-button nfse-button-secondary" disabled={prepare.isPending} onClick={() => { setLimitError(null); setDraft(current => ({ ...current, ids: [] })); }}>Limpar seleção</button></div>
+      {!modelsQuery.isPending && !modelsQuery.error && !models.length && <p className="nfse-inline-help">Nenhum modelo ativo do tipo Alunos. Defina o tipo em Modelos antes de emitir.</p>}
       {selectedModel && <div className="nfse-preparation-description"><NfseDescriptionPreview preview={descriptionPreview} label="Descrição para emissão" /></div>}
       {draftError ? <div className="nfse-footer" role="alert"><span>{draftError}</span>
         <button type="button" className="nfse-button nfse-button-secondary" onClick={() => void draftQuery.refetch()}>Atualizar</button>

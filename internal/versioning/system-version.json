@@ -1,8 +1,8 @@
 {
-  "version": "4.8.315",
+  "version": "4.8.318",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 324,
+  "revision": 327,
   "releasedAt": "2026-11-12",
-  "summary": "Emissão fiscal multiusuário autorizada e estado real de serviços preparados"
+  "summary": "Reconciliação fiscal central de operações submetidas, com consultas protegidas e continuidade sem sessão"
 }

@@ -87,15 +87,23 @@ test('saved source reviews canonical snapshot and recovers issue and cancellatio
     await act(async () => render({ key: 'reopened', operation: { operationId: id(5), requestId: stored.requestId } })); await settle();
     assert.equal(calls.filter(row => row.action === 'RECONCILE').length, 1);
     assert.equal(calls.filter(row => row.action === 'ISSUE').length, 1);
-    assert.equal(button('Revisar cancelamento').disabled, true);
+    assert.equal(document.querySelector('textarea'), null, 'Summary never exposes cancellation fields');
+    assert(button('Cancelar NFS-e').classList.contains('nfse-button-danger'));
+    assert.equal(button('Consultar resultado da emissão'), undefined, 'Authorized summary has no manual result query');
+    await click(button('Cancelar NFS-e'));
+    assert.equal(document.querySelector('[role="dialog"] h2').textContent, 'Cancelar NFS-e');
+    await click(button('Voltar ao resumo'));
+    assert.equal(document.querySelector('textarea'), null);
+    await click(button('Cancelar NFS-e'));
+    assert.equal(button('Revisar cancelamento'), undefined); assert.equal(button('Confirmar cancelamento').disabled, true);
     await act(async () => { const input = document.querySelector('textarea[aria-label="Justificativa do cancelamento"]'); Object.getOwnPropertyDescriptor(dom.window.HTMLTextAreaElement.prototype, 'value').set.call(input, cancelPayload.justification); input.dispatchEvent(new dom.window.Event('input', { bubbles: true })); input.dispatchEvent(new dom.window.Event('change', { bubbles: true })); }); await settle();
-    await click(button('Revisar cancelamento')); await check('Conferi a nota, o motivo');
-    const cancel = button('Cancelar esta NFS-e em produção'); await act(async () => { cancel.click(); cancel.click(); }); await settle();
+    await check('Conferi a nota, o motivo');
+    const cancel = button('Confirmar cancelamento'); await act(async () => { cancel.click(); cancel.click(); }); await settle();
     assert.equal(calls.filter(row => row.action === 'CANCEL').length, 1);
     await act(async () => cancelPending.reject(new Error('Resposta de cancelamento não confirmada.'))); await settle();
     await act(async () => render({ key: 'cancel-reopened', operation: { operationId: id(5), requestId: stored.requestId, cancelPreviewId: id(6), state: 'CANCELLED' } })); await settle();
     assert(document.body.textContent.includes('Cancelada')); assert.equal(calls.filter(row => row.action === 'RECONCILE_CANCEL').length, 1);
-    assert(document.querySelector('[aria-label="Evento de cancelamento confirmado"]').textContent.includes(cancelPayload.justification));
+    assert(document.querySelector('[aria-label="Consulta do cancelamento"]').textContent.includes(cancelPayload.justification));
     assert.equal(button('Revisar cancelamento'), undefined);
     for (const row of calls.filter(row => row.action !== 'PREVIEW_QUEUE')) assert.equal(row.args[1], stored.requestId);
     assert.equal(calls.filter(row => row.action === 'ISSUE').length, 1); assert.equal(calls.filter(row => row.action === 'CANCEL').length, 1);
@@ -110,15 +118,18 @@ test('saved source reviews canonical snapshot and recovers issue and cancellatio
     assert(document.body.textContent.includes('Orientação para o código:')); assert(document.body.textContent.includes('CNC NFS-e'));
     assert.equal(button('Emitir NFS-e'), undefined); assert.equal(calls.filter(row => row.action === 'ISSUE').length, 1);
     await act(async () => render({ key: 'unsent-cancel-review', source: { kind: 'PARTNER_SERVICE', id: id(45) }, operation: { operationId: id(5), requestId: id(44), cancelPreviewId: id(6), state: 'AUTHORIZED' } })); await settle();
+    assert(document.querySelector('.nfse-individual-state[role="status"] strong').textContent === 'Emitida');
+    await click(button('Cancelar NFS-e'));
     assert.equal(document.querySelector('textarea[aria-label="Justificativa do cancelamento"]').disabled, true);
-    assert(document.querySelector('.nfse-individual-state strong').textContent === 'Emitida');
     assert(!notices.some(notice => notice.title === 'Cancelamento ainda não enviado'), 'GET does not create a new confirmation toast');
-    await click(button('Revalidar este cancelamento'));
-    assert.equal(calls.at(-1).action, 'CANCEL_PREVIEW'); assert.equal(calls.at(-1).args[1], id(44));
-    assert.equal(calls.at(-1).args[3], cancelPayload.justification);
-    assert.equal(calls.filter(row => row.action === 'CANCEL').length, 1, 'Renewal only refreshes the same event preview');
-    assert.equal(button('Cancelar esta NFS-e em produção').disabled, true); await check('Conferi a nota, o motivo');
-    assert.equal(button('Cancelar esta NFS-e em produção').disabled, false);
+    assert.equal(button('Revalidar este cancelamento'), undefined);
+    assert.equal(button('Confirmar cancelamento').disabled, true);
+    await check('Conferi a nota, o motivo');
+    await click(button('Confirmar cancelamento'));
+    const renewed = calls.findLast(row => row.action === 'CANCEL_PREVIEW');
+    assert.equal(renewed.args[1], id(44)); assert.equal(renewed.args[3], cancelPayload.justification);
+    assert.equal(calls.filter(row => row.action === 'CANCEL').length, 2, 'One explicit confirm revalidates then submits');
+    await act(async () => cancelPending.reject(new Error('Resposta de cancelamento não confirmada.'))); await settle();
     await act(async () => render({ key: 'readonly-consult', intent: 'CONSULT', source: { kind: 'PARTNER_SERVICE', id: id(46) }, operation: { operationId: id(5), requestId: id(44), cancelPreviewId: id(6), state: 'AUTHORIZED' } })); await settle();
     assert(document.querySelector('[aria-label="Consulta do cancelamento"]'));
     assert.equal([...document.querySelectorAll('summary')].some(item => item.textContent === 'Ver dados da nota'), false, 'Consultation shows issue details directly');
@@ -126,13 +137,15 @@ test('saved source reviews canonical snapshot and recovers issue and cancellatio
     assert.equal(document.querySelector('textarea'), null);
     globalThis.__nfsePickerTest = props => React.createElement('button', { onClick: () => props.onApply(selectedModel) }, 'Selecionar modelo sintético');
     await act(async () => render({ key: 'selected-model', intent: 'CANCEL', source: { kind: 'PARTNER_SERVICE', id: id(48) }, operation: { operationId: id(5), requestId: id(47), state: 'AUTHORIZED' } })); await settle();
-    await click(button('Selecionar modelo sintético')); assert.equal(button('Revisar cancelamento').disabled, true);
+    await click(button('Selecionar modelo sintético')); assert.equal(button('Revisar cancelamento'), undefined); assert.equal(button('Confirmar cancelamento').disabled, true);
     await setValue('input[aria-label="Detalhe factual do cancelamento"]', 'Detalhe sintético confirmado pelo usuário.');
-    await click(button('Revisar cancelamento'));
-    assert.equal(calls.at(-1).action, 'CANCEL_PREVIEW_SELECTED'); assert.deepEqual(calls.at(-1).args[3], { id: selectedModel.id, version: 1 });
-    assert.equal(calls.at(-1).args[4], 'Detalhe sintético confirmado pelo usuário.');
-    assert.equal(document.querySelector('textarea[aria-label="Justificativa do cancelamento"]').disabled, true);
-    assert.equal(calls.filter(row => row.action === 'CANCEL').length, 1, 'Model selection and preview do not dispatch cancellation');
+    assert.equal(calls.filter(row => row.action === 'CANCEL').length, 2, 'Model selection alone never dispatches');
+    await check('Conferi a nota, o motivo'); await click(button('Confirmar cancelamento'));
+    const selectedCall = calls.findLast(row => row.action === 'CANCEL_PREVIEW_SELECTED');
+    assert.deepEqual(selectedCall.args[3], { id: selectedModel.id, version: 1 });
+    assert.equal(selectedCall.args[4], 'Detalhe sintético confirmado pelo usuário.');
+    assert.equal(calls.filter(row => row.action === 'CANCEL').length, 3);
+    await act(async () => cancelPending.reject(new Error('Resposta de cancelamento não confirmada.'))); await settle();
     await act(async () => render({ key: 'manual-retry', intent: 'CANCEL', source: { kind: 'PARTNER_SERVICE', id: id(51) }, operation: { operationId: id(5), requestId: id(50), cancelPreviewId: id(6), state: 'CANCELLATION_PENDING' } })); await settle();
     assert.equal(calls.filter(row => row.action === 'RETRY_CANCEL').length, 0);
     const retry = button('Retomar pedido'); assert.equal(retry.disabled, false);
@@ -142,6 +155,53 @@ test('saved source reviews canonical snapshot and recovers issue and cancellatio
     const retryStored = JSON.parse(dom.window.sessionStorage.getItem([...Array(dom.window.sessionStorage.length)].map((_, i) => dom.window.sessionStorage.key(i)).find(key => key.endsWith(id(51)))));
     assert.equal(retryStored.retryRequestId, retried.args[4]); assert.equal(retried.args[1], id(50)); assert.equal(retried.args[3], id(6));
     assert.equal(button('Retomar pedido'), undefined); assert(document.body.textContent.includes('Retomada pendente'));
+    const cancelCount = calls.filter(row => row.action === 'CANCEL').length;
+    const changedService = { ...service, previewCancellation: async () => ({ previewId: id(5), cancelPreviewId: id(6),
+      state: 'PREVIEWED', expiresAt: expiry(), capability: { available: true, reason: null },
+      payload: { ...cancelPayload, justification: 'Justificativa diferente da que o usuário confirmou.' } }) };
+    await act(async () => render({ key: 'canonical-mismatch', intent: 'CANCEL', service: changedService,
+      source: { kind: 'PARTNER_SERVICE', id: id(81) }, operation: { operationId: id(5), requestId: id(80), state: 'AUTHORIZED' } })); await settle();
+    assert(document.querySelector('[aria-label="Nota selecionada para cancelamento"]').textContent.includes('260,00'));
+    await act(async () => { const input = document.querySelector('textarea');
+      Object.getOwnPropertyDescriptor(dom.window.HTMLTextAreaElement.prototype, 'value').set.call(input, cancelPayload.justification);
+      input.dispatchEvent(new dom.window.Event('input', { bubbles: true })); }); await settle();
+    await check('Conferi a nota, o motivo'); await click(button('Confirmar cancelamento'));
+    assert(document.querySelector('[role="alert"]').textContent.includes('diferem dos confirmados'));
+    assert.equal(calls.filter(row => row.action === 'CANCEL').length, cancelCount, 'Canonical mismatch never dispatches');
+    let followReads = 0;
+    const followingService = { ...service, reconcileCancellation: async () => {
+      followReads++;
+      return { previewId: id(5), cancelPreviewId: id(6), state: followReads === 1 ? 'CANCELLATION_PENDING' : 'CANCELLED',
+        payload: cancelPayload, message: followReads === 1 ? 'Ainda sem confirmação.' : 'Cancelamento confirmado sintético.',
+        retry: { availableAt: new Date(Date.now() + 120000).toISOString(), used: false } };
+    } };
+    const normalTimeout = dom.window.setTimeout.bind(dom.window);
+    dom.window.setTimeout = (fn, delay, ...args) => normalTimeout(fn, delay === 3000 ? 50 : delay, ...args);
+    await act(async () => render({ key: 'auto-follow', intent: 'CANCEL', service: followingService,
+      source: { kind: 'PARTNER_SERVICE', id: id(83) }, operation: { operationId: id(5), requestId: id(82), cancelPreviewId: id(6), state: 'AUTHORIZED' } })); await settle();
+    assert(!document.body.textContent.includes('segundo(s)'), 'No countdown is exposed');
+    assert.equal(button('Retomar pedido').disabled, true, 'Safety cooldown remains enforced');
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 100)); });
+    assert.equal(followReads, 2); assert(document.body.textContent.includes('Cancelamento confirmado sintético.'));
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 100)); });
+    assert.equal(followReads, 2, 'Terminal confirmation stops automatic reads');
+    assert.equal(calls.filter(row => row.action === 'CANCEL').length, cancelCount, 'Automatic follow-up is GET-only');
+    let issueReads = 0;
+    const automaticIssueService = { ...service, reconcile: async () => {
+      issueReads++;
+      return issueReads === 1 ? { ...note, state: 'AWAITING_CONFIRMATION', number: null, accessKey: null, message: 'Resposta ainda não confirmada.' } : note;
+    } };
+    const issueCount = calls.filter(row => row.action === 'ISSUE').length;
+    await act(async () => render({ key: 'auto-issue', intent: 'CONSULT', service: automaticIssueService,
+      source: { kind: 'PARTNER_SERVICE', id: id(85) }, operation: { operationId: id(5), requestId: id(84), state: 'AWAITING_CONFIRMATION' } })); await settle();
+    assert.equal(button('Consultar resultado da emissão'), undefined);
+    assert(document.body.textContent.includes('Consultando o resultado automaticamente'));
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 100)); });
+    assert.equal(issueReads, 2); assert(document.body.textContent.includes('Autorização sintética'));
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 100)); });
+    assert.equal(issueReads, 2, 'Terminal issue stops polling');
+    assert.equal(calls.filter(row => row.action === 'ISSUE').length, issueCount, 'Automatic issue follow never sends again');
+    dom.window.setTimeout = normalTimeout;
     const count = calls.length;
     await act(async () => render({ key: 'academic', source: { kind: 'ACADEMIC_QUEUE', id: id(20) }, amount: '300.00' })); await settle();
     assert.equal(document.querySelector('input[type="date"]'), null);

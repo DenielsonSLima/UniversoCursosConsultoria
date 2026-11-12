@@ -73,3 +73,46 @@ test('batch reviews each canonical note, pauses on uncertain result and reports 
     for (let i = 0; i < window.sessionStorage.length; i++) assert.deepEqual(Object.keys(JSON.parse(window.sessionStorage.getItem(window.sessionStorage.key(i)))).sort(), ['previewId', 'requestId']);
   } finally { await act(async () => root.unmount()); dom.window.close(); await rm(temp, { recursive: true, force: true }); }
 });
+
+test('explicit service issuance validates and sends once under StrictMode, without a second prepare click', async () => {
+  await mkdir(resolve(base, 'tmp'), { recursive: true });
+  const temp = await mkdtemp(resolve(base, 'tmp/nfse-direct-ui-'));
+  const dom = new JSDOM('<!doctype html><div id="root"></div>', { url: 'http://localhost/', pretendToBeVisual: true });
+  Object.assign(globalThis, { window: dom.window, document: dom.window.document, HTMLElement: dom.window.HTMLElement, IS_REACT_ACT_ENVIRONMENT: true });
+  const { createRoot } = await import('react-dom/client');
+  const output = resolve(temp, 'test.mjs');
+  const compiled = await build({ stdin: { contents: `export {default as Modal} from './modules/gestor/emissor-nfse/emissao/NfseBatchEmissionModal';`, resolveDir: base, loader: 'tsx' },
+    bundle: true, write: false, format: 'esm', platform: 'node', packages: 'external', jsx: 'automatic', outfile: output, loader: { '.css': 'empty' },
+    plugins: [{ name: 'block-live', setup(b) { b.onResolve({ filter: /lib\/supabase$/ }, () => ({ path: 'blocked', namespace: 'fixture' }));
+      b.onLoad({ filter: /.*/, namespace: 'fixture' }, () => ({ contents: 'export const supabase=new Proxy({},{get(){throw new Error("Live client forbidden")}});', loader: 'js' })); } }] });
+  await writeFile(output, compiled.outputFiles[0].contents); const { Modal } = await import(pathToFileURL(output).href);
+  let sent = 0, prepared = 0, finish, cancellationTarget;
+  const payload = { issuerName: 'EMITENTE SINTÉTICO', issuerCnpj: '00000000000100', recipientName: 'ALUNO CANÔNICO', recipientDocument: '00000000000',
+    modelId: id(3), modelVersion: 3, modelName: 'MODELO SINTÉTICO', amount: '260.00', competenceDate: '2026-11-10', serviceDate: '2026-11-10', series: '49998', nationalServiceCode: '080201',
+    nbsCode: '122020000', serviceDescription: 'SERVIÇO SINTÉTICO', opSimpNac: '3', regApTribSN: '1', municipalityCode: '2803401', municipalRegistration: null };
+  const service = {
+    previewSource: async () => { prepared++; return { previewId: id(30), state: 'PREVIEWED', payload, expiresAt: new Date(Date.now() + 60000).toISOString(), capability: { available: true, reason: null } }; },
+    issue: async () => { sent++; return new Promise(resolve => { finish = resolve; }); },
+    reconcile: async () => ({ previewId: id(30), state: 'AUTHORIZED', payload, number: '9', message: 'Autorizada' }),
+  };
+  const root = createRoot(document.getElementById('root'));
+  const settle = async () => act(async () => { await new Promise(resolve => setTimeout(resolve, 20)); });
+  try {
+    await act(async () => root.render(React.createElement(React.StrictMode, null, React.createElement(Modal, {
+      scope, items: [{ source: { kind: 'PARTNER_SERVICE', id: id(10) }, label: 'Parceiro', amount: '10.00' }], service, issueRequested: true, onCancelOperation: item => { cancellationTarget = item; }, onClose() {}, onChanged() {},
+    })))); await settle();
+    assert.equal(prepared, 1); assert.equal(sent, 1);
+    assert(document.querySelector('progress'));
+    assert(document.body.textContent.includes('Enviando'));
+    const button = [...document.querySelectorAll('button')].find(b => b.textContent.includes('Emitir notas'));
+    assert.equal(button.disabled, true);
+    await act(async () => { button.click(); button.click(); }); assert.equal(sent, 1);
+    await act(async () => finish({ previewId: id(30), state: 'AUTHORIZED', payload, number: '9', message: 'Autorizada' })); await settle();
+    assert(document.body.textContent.includes('NFS-e nº 9')); assert.equal(sent, 1);
+    const cancel = [...document.querySelectorAll('button')].find(b => b.textContent === 'Cancelar NFS-e');
+    assert(cancel.classList.contains('nfse-button-danger'));
+    await act(async () => cancel.click());
+    assert.equal(cancellationTarget.previewId, id(30)); assert.equal(cancellationTarget.result.state, 'AUTHORIZED');
+    assert.equal(sent, 1, 'Opening cancellation must not issue again');
+  } finally { await act(async () => root.unmount()); dom.window.close(); await rm(temp, { recursive: true, force: true }); }
+});

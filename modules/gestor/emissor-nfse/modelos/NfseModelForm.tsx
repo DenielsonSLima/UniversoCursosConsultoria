@@ -27,6 +27,8 @@ import { createDefaultNfseModelAdditionalOptions, validateNfseModelAdditionalOpt
 import NfseModelAdditionalPeopleFields from './NfseModelAdditionalPeopleFields';
 import NfseModelAdditionalServiceFields from './NfseModelAdditionalServiceFields';
 import NfseModelPresetReview from './NfseModelPresetReview';
+import InstitutionalSelect from '../../../shared/components/InstitutionalSelect';
+import { nfseModelTypeOptions } from './nfse-model-type';
 
 const valuesCatalogs = { classifications: nfseIbsCbsClassifications, credits: nfsePresumedCredits };
 
@@ -46,7 +48,7 @@ const NfseModelForm: React.FC<NfseModelFormProps> = ({ model, onClose, onSaved }
   const issuer = useNfseModelIssuerMetadata(scope);
   const [step, setStep] = useState<NfseModelStep>('people');
   const [fields, setFields] = useState<NfseModelFormValues>(() => normalizeNfseModelDraft({
-    name: model?.name || '', nationalServiceCode: model?.nationalServiceCode || '',
+    name: model?.name || '', modelType: model?.modelType || '', nationalServiceCode: model?.nationalServiceCode || '',
     serviceDescription: model?.serviceDescription || '', nbsCode: model?.nbsCode || '',
     operationIndicatorCode: model?.operationIndicatorCode || '', issTreatment: model?.issTreatment || '',
     immunityType: model?.immunityType || '', technicalResponsibilityDocument: model?.technicalResponsibilityDocument || '',
@@ -74,6 +76,9 @@ const NfseModelForm: React.FC<NfseModelFormProps> = ({ model, onClose, onSaved }
   const presetContext = createNfseModelPresetContext(scope, fields, issuer.data);
   const pendingIssues = [
     ...(!fields.name.trim() ? ['Informe o nome do pré-modelo.'] : []),
+    ...(!fields.modelType ? ['Selecione se o modelo é para alunos, serviços ou ambos.'] : []),
+    ...((fields.modelType === 'ALUNO' || fields.modelType === 'AMBOS') && fields.nationalServiceCode !== '080201'
+      ? ['Modelos disponíveis para alunos exigem o código de curso técnico 080201.'] : []),
     ...(!issuer.data || issuer.isPending || issuer.error ? ['Confira o cadastro fiscal atual do estabelecimento em Configuração.'] : []),
     ...(!isNfseModelPeopleOptionsComplete(fields.peopleOptions, fields.serviceOptions?.includeIbsCbs ?? null)
       ? ['Complete as regras obrigatórias da etapa Configuração.'] : []),
@@ -153,10 +158,10 @@ const NfseModelForm: React.FC<NfseModelFormProps> = ({ model, onClose, onSaved }
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!allowed || save.isPending || !fields.issTreatment || specialTreatment === null) return;
+    if (!allowed || save.isPending || !fields.issTreatment || !fields.modelType || specialTreatment === null) return;
     if (fields.issTreatment === 'IMUNIDADE' && !fields.immunityType) return;
     const input = {
-      ...fields, id: model?.id, expectedVersion: model?.version,
+      ...fields, modelType: fields.modelType, id: model?.id, expectedVersion: model?.version,
       name: fields.name.trim(), serviceDescription: fields.serviceDescription.trim(),
       nationalServiceCode: fields.nationalServiceCode.trim(), nbsCode: fields.nbsCode.trim(),
       operationIndicatorCode: fields.operationIndicatorCode.trim(), issTreatment: fields.issTreatment,
@@ -209,6 +214,13 @@ const NfseModelForm: React.FC<NfseModelFormProps> = ({ model, onClose, onSaved }
       <div className="nfse-model-section nfse-model-grid nfse-model-identity">
         <label className="nfse-field"><span>Nome do pré-modelo<NfseRequiredMark /></span><input ref={initialFocusRef} required maxLength={120} disabled={save.isPending} value={fields.name} onChange={(event) => setField('name', event.target.value)} placeholder="Ex.: Mensalidade de curso técnico" /></label>
         <label className="nfse-model-active nfse-model-status"><input type="checkbox" disabled={save.isPending} checked={fields.active} onChange={(event) => setField('active', event.target.checked)} /><span>Pré-modelo ativo<small>Disponível ao preparar uma nota</small></span></label>
+      </div>
+      <div className="nfse-model-section">
+      <label htmlFor={`${titleId}-model-type`}>Tipo do modelo<NfseRequiredMark /></label>
+      <InstitutionalSelect id={`${titleId}-model-type`} ariaLabel="Tipo do modelo" required
+        value={fields.modelType || ''} options={nfseModelTypeOptions} placeholder="Selecione alunos, serviços ou ambos"
+        disabled={save.isPending} onValueChange={(value) => setField('modelType', value === 'ALUNO' ? 'ALUNO' : value === 'SERVICO' ? 'SERVICO' : value === 'AMBOS' ? 'AMBOS' : '')} />
+      <p className="nfse-inline-help">Alunos: emissão acadêmica. Serviços: prestação de serviços a clientes e parceiros. Ambos: disponível nos dois fluxos, respeitando os dados de cada emissão. O tipo não altera a tributação.</p>
       </div>
       <NfseModelSteps current={step} disabled={save.isPending} onChange={setStep} />
       <div ref={bodyRef} className="nfse-model-body">

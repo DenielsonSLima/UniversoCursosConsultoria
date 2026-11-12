@@ -13,12 +13,14 @@ import { useToast } from '../../shared/ToastNotification';
 import ToastNotification from '../../shared/ToastNotification';
 import InstitutionalSelect from '../../../../../shared/components/InstitutionalSelect';
 import PJIdentification from './PJIdentification';
+import PJPolos from './PJPolos';
 import { Field, PartnerLogo, inputCls, labelCls } from './pj-details.presentation';
 import './pj-details.css';
 import { formatCnpj, formatCpf } from '../../../../../../lib/documentFormatters';
 
 interface ParceiroPJDetalhesProps {
   pjInicial: any;
+  canManagePolos?: boolean;
   onBack: () => void;
 }
 
@@ -26,7 +28,7 @@ type TabPJ = 'dados' | 'parceria';
 
 const UFS = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
 
-const ParceiroPJDetalhes: React.FC<ParceiroPJDetalhesProps> = ({ pjInicial, onBack }) => {
+const ParceiroPJDetalhes: React.FC<ParceiroPJDetalhesProps> = ({ pjInicial, onBack, canManagePolos = false }) => {
   const [activeTab, setActiveTab] = useState<TabPJ>('dados');
   const [isEditing, setIsEditing] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -368,6 +370,8 @@ const ParceiroPJDetalhes: React.FC<ParceiroPJDetalhesProps> = ({ pjInicial, onBa
           </div>
         )}
 
+        <PJPolos data={d} isEditing={isEditing} canManage={canManagePolos} onChange={setEditData} />
+
         {/* ══════════ ABA: PARCERIA / CONVÊNIO ══════════ */}
         {activeTab === 'parceria' && (
           <div className="space-y-6 ">
@@ -379,7 +383,7 @@ const ParceiroPJDetalhes: React.FC<ParceiroPJDetalhesProps> = ({ pjInicial, onBa
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <Field label="Tipo de Parceria / Convênio" value={pjData.tipoParceriaNome || pjData.tipoConvenio} />
                 <Field label="Categoria da Empresa" value={pjData.categoriaNome} />
-                <Field label="Polo de Atuação" value={pjData.poloNome} />
+                <Field label="Polo principal" value={pjData.poloNome} />
               </div>
             </div>
 

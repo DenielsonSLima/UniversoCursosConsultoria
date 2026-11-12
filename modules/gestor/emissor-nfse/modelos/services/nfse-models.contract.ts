@@ -29,6 +29,7 @@ export function parseNfseModelFields(value: unknown): NfseModelServiceFields {
     throw new NfseContractError();
   }
   return {
+    ...(row.modelType === undefined ? {} : { modelType: row.modelType === null ? null : oneOf(row.modelType, ['ALUNO', 'SERVICO', 'AMBOS']) }),
     nationalServiceCode: code(row.nationalServiceCode, 6),
     nbsCode: code(row.nbsCode, 9),
     operationIndicatorCode: code(row.operationIndicatorCode, 6, true),
@@ -60,7 +61,7 @@ export function parseNfseStoredModel(value: unknown): NfseModel {
 
 export function nfseModelDefinition(input: NfseModelInput) {
   const fields = parseNfseModelFields(input);
-  return { ...fields, name: text(input.name, 120), active: boolean(input.active),
+  return { ...fields, modelType: oneOf(input.modelType, ['ALUNO', 'SERVICO', 'AMBOS']), name: text(input.name, 120), active: boolean(input.active),
     ...(fields.serviceOptions !== undefined ? { serviceOptions: serializeNfseModelServiceOptions(fields.serviceOptions,
       fields.issTreatment, fields.nationalServiceCode, fields.operationIndicatorCode) } : {}),
     ...(fields.peopleOptions !== undefined ? { peopleOptions: serializeNfseModelPeopleOptions(fields.peopleOptions,

@@ -1,8 +1,8 @@
 # Lote ativo
 
-## Lote: 2026-11-12-nfse-multiusuario-servicos
-Objetivo: corrigir autorização entre operadores e distinguir preparação de envio fiscal.
-Status: integração 4.8.315; testes locais aprovados, CI e publicação pendentes.
-Autorização: usuário pediu correção e publicação; sem emitir/cancelar notas reais.
-Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-12-nfse-multiusuario-servicos.md`.
-Limitações: concorrência PostgreSQL e smoke Safari autenticado aguardam validação.
+## Lote: 2026-11-12-nfse-worker-central
+Objetivo: acompanhar operações fiscais já submetidas sem depender da sessão, sem novos envios fiscais.
+Status: integração 4.8.318 sobre a 4.8.317; gates finais antes da publicação e ativação.
+Autorização: usuário solicitou correção e publicação do acompanhamento central; sem emitir ou cancelar notas reais.
+Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-12-nfse-worker-central.md`.
+Limitações: scheduler permanece desativado até implantação JWT verificado e smoke protegido sem claim fiscal.

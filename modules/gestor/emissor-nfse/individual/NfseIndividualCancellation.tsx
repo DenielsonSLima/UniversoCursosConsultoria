@@ -3,9 +3,10 @@ import { individualReason } from './nfse-individual.contract';
 import { individualCancellationDetail, individualJustification } from './nfse-individual.contract';
 import type { NfseScope } from '../types/nfse.types';
 import { cancellationReasons, type NfseCancellationModel } from '../cancelamento/nfse-cancellation-models.contract';
+import NfseCancellationReadOnlyResult from '../emissao/NfseCancellationReadOnlyResult';
 import NfseCancellationTemplatePicker from '../cancelamento/NfseCancellationTemplatePicker';
 interface Props { preview?: IndividualCancelPreview; result?: IndividualCancelResult; busy: boolean; sent: boolean; expired: boolean; existing?: boolean;
-  justification: string; confirmed: boolean; onJustification: (value: string) => void; onConfirm: (value: boolean) => void; onPrepare: () => void; onCancel: () => void;
+  justification: string; confirmed: boolean; onJustification: (value: string) => void; onConfirm: (value: boolean) => void; onPrepare: () => void; onCancel: () => void; onSubmit?: () => void;
   scope?: NfseScope; model?: NfseCancellationModel | null; detail?: string | null; onModel?: (model: NfseCancellationModel) => void; onDetail?: (value: string) => void }
 export default function NfseIndividualCancellation(props: Props) {
   const { preview, result, busy, sent, expired, justification, confirmed, onJustification, onConfirm, onPrepare, onCancel } = props;
@@ -14,6 +15,8 @@ export default function NfseIndividualCancellation(props: Props) {
       <div><dt>NFS-e</dt><dd>{result.payload.number}</dd></div><div><dt>Motivo do evento</dt><dd>{cancellationReasons.find(item => item.value === result.payload.reasonCode)?.label}</dd></div>
       <div><dt>Justificativa registrada</dt><dd>{result.payload.justification}</dd></div></dl><p>{result.message}</p>
   </section>;
+  if (props.onSubmit && sent) return result ? <NfseCancellationReadOnlyResult result={result} />
+    : <p role="status">Consultando o resultado do cancelamento. Nenhum novo pedido será enviado automaticamente.</p>;
   const selectedDraft = Boolean(props.model && !props.existing);
   let ready = false;
   const draftText = props.model?.textTemplate.replaceAll('{{detalhe}}', props.detail || '') || '';
@@ -27,23 +30,29 @@ export default function NfseIndividualCancellation(props: Props) {
   return <section className="nfse-individual-review" aria-label="Cancelamento da nota autorizada"><h3>Cancelar a nota desta operação</h3>
     <p className="nfse-inline-help">Referência interna: solicitar cancelamento em até 24 horas da emissão. Após esse período, a solicitação continua disponível e será validada pelo emissor.</p>
     <p>Motivo {cancellationReasons.find(item => item.value === reasonCode)?.label}</p>
-    {props.scope && props.onModel && !props.existing && <NfseCancellationTemplatePicker scope={props.scope} disabled={busy || sent} onApply={props.onModel} />}
+    {props.scope && props.onModel && !props.existing && <NfseCancellationTemplatePicker scope={props.scope} applyOnSelect={Boolean(props.onSubmit)} disabled={busy || sent} onApply={props.onModel} />}
     {props.model && <p>Modelo: {props.model.name} · versão {props.model.version}</p>}
     {selectedDraft ? <>
-      <p className="nfse-inline-help">{props.model!.textTemplate}</p>
+      {!props.onSubmit && <p className="nfse-inline-help">{props.model!.textTemplate}</p>}
       {props.model!.requiresDetail && <label className="nfse-field"><span>Detalhe factual do cancelamento</span><input aria-label="Detalhe factual do cancelamento" value={props.detail || ''} maxLength={255} disabled={busy || sent}
         onChange={event => props.onDetail?.(event.target.value)} /></label>}
-      <p className="nfse-inline-help">Prévia para conferência: {draftText} O texto final será resolvido e validado pelo servidor.</p>
+      <p className="nfse-inline-help">Justificativa a enviar: {draftText}</p>
     </> : <label className="nfse-field"><span>Justificativa do cancelamento</span><textarea aria-label="Justificativa do cancelamento" minLength={15} maxLength={255}
       value={justification} disabled={busy || sent || props.existing} onChange={event => onJustification(event.target.value)} /></label>}
-    <button type="button" className="nfse-button nfse-button-secondary" disabled={busy || sent || !ready} onClick={onPrepare}>{props.existing ? 'Revalidar este cancelamento' : 'Revisar cancelamento'}</button>
-    {preview && <><dl className="nfse-individual-grid"><div><dt>NFS-e</dt><dd>{preview.payload.number}</dd></div><div><dt>Chave de acesso</dt><dd>{preview.payload.accessKey}</dd></div>
+    {!props.onSubmit && <button type="button" className="nfse-button nfse-button-secondary" disabled={busy || sent || !ready} onClick={onPrepare}>{props.existing ? 'Revalidar este cancelamento' : 'Revisar cancelamento'}</button>}
+    {!props.onSubmit && preview && <><dl className="nfse-individual-grid"><div><dt>NFS-e</dt><dd>{preview.payload.number}</dd></div><div><dt>Chave de acesso</dt><dd>{preview.payload.accessKey}</dd></div>
       <div><dt>Motivo</dt><dd>{cancellationReasons.find(item => item.value === preview.payload.reasonCode)?.label}</dd></div><div><dt>Justificativa conferida</dt><dd>{preview.payload.justification}</dd></div></dl>
       {!preview.capability.available && <p role="status">{individualReason(preview.capability.reason)}</p>}
       {expired && !sent && <p role="status">A revisão do cancelamento expirou. Confira novamente.</p>}
       {!sent && <label className="nfse-individual-confirm"><input type="checkbox" checked={confirmed} disabled={busy || expired || !preview.capability.available}
         onChange={event => onConfirm(event.target.checked)} />Conferi a nota, o motivo e a justificativa e autorizo este cancelamento em produção.</label>}
       <button type="button" className="nfse-button nfse-button-danger" disabled={!confirmed || busy || sent || expired || !preview.capability.available} onClick={onCancel}>Cancelar esta NFS-e em produção</button></>}
+    {props.onSubmit && !sent && <>
+      <label className="nfse-individual-confirm"><input type="checkbox" checked={confirmed} disabled={busy || !ready}
+        onChange={event => onConfirm(event.target.checked)} />Conferi a nota, o motivo e a justificativa e autorizo este cancelamento em produção.</label>
+      <button type="button" className="nfse-button nfse-button-danger" disabled={busy || !ready || !confirmed} onClick={props.onSubmit}>
+        {busy ? 'Solicitando cancelamento…' : 'Confirmar cancelamento'}</button>
+    </>}
     {result && <div role="status"><strong>{{ PREVIEWED: 'Cancelamento ainda não enviado', CANCELLED: 'Cancelamento confirmado', CANCELLATION_PENDING: 'Cancelamento aguardando confirmação',
       CANCELLATION_REJECTED: 'Cancelamento rejeitado', AWAITING_ANALYSIS: 'Solicitação aguardando análise fiscal', BLOCKED: 'Cancelamento bloqueado' }[result.state]}</strong><p>{result.message}</p>
       {Boolean(result.codes?.length) && <p>Código(s) retornado(s): {result.codes!.join(', ')}</p>}

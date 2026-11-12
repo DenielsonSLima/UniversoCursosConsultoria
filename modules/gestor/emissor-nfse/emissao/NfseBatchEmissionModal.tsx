@@ -9,15 +9,15 @@ import { individualReason } from '../individual/nfse-individual.contract';
 import NfseIndividualSnapshot from '../individual/NfseIndividualSnapshot';
 import { formatNfseMoney } from '../components/nfse.presentation';
 import { operationLabel } from './nfse-operation.contract';
-import { batchCanIssue, createNfseBatchController, type NfseBatchInput } from './nfse-batch.core';
+import { batchCanIssue, createNfseBatchController, type NfseBatchInput, type NfseBatchItem } from './nfse-batch.core';
 import type { NfseFiscalNotice } from './nfse-fiscal-notice';
 import { useNfseBatchRealtime } from './useNfseBatchRealtime';
 import '../individual/nfse-individual.css';
 import '../fila/fiscal-review/nfse-fiscal-review.css';
 import './nfse-batch.css';
 interface Props { scope: NfseScope; items: readonly NfseBatchInput[]; onClose: () => void; onChanged: () => void;
-  onNotice?: (notice: NfseFiscalNotice) => void; service?: NfseIndividualService }
-export default function NfseBatchEmissionModal({ scope, items, onClose, onChanged, onNotice, service = nfseIndividualService }: Props) {
+  onNotice?: (notice: NfseFiscalNotice) => void; service?: NfseIndividualService; issueRequested?: boolean; onCancelOperation?: (item: NfseBatchItem) => void }
+export default function NfseBatchEmissionModal({ scope, items, onClose, onChanged, onNotice, service = nfseIndividualService, issueRequested = false, onCancelOperation }: Props) {
   const id = useId();
   const [expanded, setExpanded] = useState<Set<number>>(() => new Set());
   const [controller] = useState(() => createNfseBatchController(scope, items, service, {
@@ -28,9 +28,14 @@ export default function NfseBatchEmissionModal({ scope, items, onClose, onChange
   useEffect(() => {
     controller.activate();
     let current = true;
-    globalThis.queueMicrotask(() => { if (current) void controller.review(); });
+    globalThis.queueMicrotask(() => { if (current) void (async () => {
+      await controller.review();
+      // Only the explicit Emitir action in the caller authorizes this chain.
+      // StrictMode cleanup/unmount and uncertain reconciliation must never dispatch.
+      if (current && issueRequested && !controller.getSnapshot().paused) await controller.issue();
+    })(); });
     return () => { current = false; controller.dispose(); };
-  }, [controller]);
+  }, [controller, issueRequested]);
   const [clock, setClock] = useState(Date.now);
   useEffect(() => {
     const expiries = view.items.flatMap(item => item.preview && Date.parse(item.preview.expiresAt) > Date.now() ? [Date.parse(item.preview.expiresAt)] : []);
@@ -55,7 +60,7 @@ export default function NfseBatchEmissionModal({ scope, items, onClose, onChange
   if (typeof document === 'undefined') return null;
   return createPortal(<div ref={overlayRef} className="nfse-portal nfse-fiscal-review-overlay" role="presentation" onMouseDown={event => { if (event.currentTarget === event.target) close(); }}>
     <div ref={dialogRef} className="nfse-fiscal-review-dialog" role="dialog" aria-modal="true" aria-labelledby={id} tabIndex={-1} aria-busy={view.busy}>
-      <header className="nfse-section-heading"><div><h2 id={id}>Emitir notas</h2><p>{items.length} preparação(ões) · {scope.environment === 'PRODUCAO' ? 'Produção' : 'Homologação'}</p></div>
+      <header className="nfse-section-heading"><div><h2 id={id}>Emitir notas</h2><p>{items.length} nota(s) selecionada(s) · {scope.environment === 'PRODUCAO' ? 'Produção' : 'Homologação'}</p></div>
         <button ref={initialFocusRef} type="button" className="nfse-button nfse-button-secondary" disabled={view.busy} aria-label="Fechar lote" onClick={close}><X size={17} /></button></header>
       <div className="nfse-fiscal-review-body nfse-individual-content">
         {scope.environment !== 'PRODUCAO' && <p role="status">O executor deste ambiente ainda não está disponível. As preparações foram preservadas.</p>}
@@ -79,6 +84,8 @@ export default function NfseBatchEmissionModal({ scope, items, onClose, onChange
               <button type="button" className="nfse-button nfse-button-secondary" aria-expanded={expanded.has(index)} aria-controls={detailsId}
                 onClick={() => setExpanded(previous => { const next = new Set(previous); if (next.has(index)) next.delete(index); else next.add(index); return next; })}>Ver dados da nota</button>
             </div>
+            {state === 'AUTHORIZED' && onCancelOperation && <button type="button" className="nfse-button nfse-button-danger" disabled={view.busy}
+              onClick={() => onCancelOperation(item)}>Cancelar NFS-e</button>}
             {(state === 'REJECTED' || state === 'BLOCKED') && item.result?.message && <p className="nfse-download-error" role="alert">{item.result.codes?.length ? `${item.result.codes.join(', ')}: ` : ''}{item.result.message}</p>}
             {item.error && <p className="nfse-download-error" role="alert">{item.error}</p>}
             {item.preview && !item.preview.capability.available && <p role="alert">{individualReason(item.preview.capability.reason)}</p>}

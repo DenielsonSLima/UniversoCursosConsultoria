@@ -1,4 +1,5 @@
 export const nfseDescriptionVariables = [
+  { token: '{{periodo}}', label: 'Período do serviço', help: 'Datas inicial e final escolhidas ao preparar cada serviço; não altera a competência fiscal.' },
   { token: '{{curso}}', label: 'Curso da turma', help: 'Nome real do curso da turma selecionada nos recebimentos.' },
   { token: '{{matricula}}', label: 'Matrícula', help: 'Número da matrícula vinculada a cada recebimento, no padrão acadêmico da unidade.' },
   { token: '{{parcelas}}', label: 'Mensalidades/parcelas', help: 'Números estruturados das parcelas e seus meses efetivos de pagamento.' },
