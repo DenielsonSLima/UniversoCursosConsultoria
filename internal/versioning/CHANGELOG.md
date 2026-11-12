@@ -36,6 +36,13 @@ Histórico arquivado: [21/10/2026 — versão4.8.230](./changelog/2026-10-21-ver
 
 Histórico arquivado: [21/10/2026 — versão4.8.231](./changelog/2026-10-21-versao-4-8-231.md).
 
+Histórico arquivado: [22/10/2026 — versão 4.8.232](./changelog/2026-10-22-versao-4-8-232.md).
+
+## [4.8.304] - 2026-11-12
+
+- Relatório NFS-e: resumos paralelos por tributação, NBS e polo; identificação completa, geração com data/hora e estados coloridos/textuais.
+- Totais somente de autorizadas sem cancelamento confirmado; erros e operações sem emissão identificados separadamente, sem valores fiscais inventados.
+
 ## [4.8.303] - 2026-11-12
 
 - Financeiro do aluno organizado por tipo e curso, recolhido por padrão.
@@ -490,9 +497,3 @@ Histórico arquivado: [21/10/2026 — versão4.8.231](./changelog/2026-10-21-ver
 
 - Consulta financeira passa a negar identidade ausente e restringir resultados aos polos autorizados; calculadora mantém resultados com search_path fixo.
 - Dependências de segurança atualizadas, prévias adaptadas ao PDF.js 6 e conferência do runtime Node separada do build. Aplicação das migrations, produção e distribuição móvel ainda pendentes.
-
-## [4.8.232] - 2026-10-22
-
-- Build exige Node estável 24.22.1 ou posterior na linha 24.x antes de gerar o site; CI seleciona esse piso e testa o gate, sem reutilizar Node antigo em cache.
-- Função de prévia social registra apenas a versão Node em log privado, uma vez por instância, sem alterar respostas ou expor dados.
-- A versão efetiva em produção deve ser confirmada nos logs após a publicação; a configuração 24.x não comprova o patch.

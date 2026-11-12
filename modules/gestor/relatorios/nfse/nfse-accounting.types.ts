@@ -4,20 +4,24 @@ import { integer, money, record, string, nullableString, oneOf, boolean } from '
 
 export type NfseAccountingMode = 'POLO' | 'GERAL';
 export interface NfseAccountingRow {
-  id: string; number: string; accessKey: string; emittedAt: string;
-  poloId: string; poloName: string; recipientName: string | null; recipientDocument: string | null;
+  id: string; number: string | null; accessKey: string | null; validForTotals: boolean; dateSource: 'EMISSION' | 'CREATED'; emittedAt: string;
+  poloId: string; poloName: string; poloCnpj: string | null; poloCity: string | null; poloState: string | null; recipientName: string | null; recipientDocument: string | null;
   serviceDate: string | null; competenceDate: string | null;
   nationalServiceCode: string | null; nbsCode: string | null;
   amount: string | null; issAmount: string | null; issRetention: string | null;
   state: string; origin: string | null; xmlAvailable: boolean;
 }
 export interface NfseAccountingCodeTotal { code: string | null; count: number; amount: string | null }
-export interface NfseAccountingPoloTotal { poloId: string; poloName: string; count: number; amount: string | null }
+export interface NfseAccountingPoloTotal { poloId: string; poloName: string; poloCnpj: string | null; poloCity: string | null; poloState: string | null; count: number; amount: string | null }
 export type NfseAccountingSummary = ({ kind: 'CODE' | 'NBS' } & NfseAccountingCodeTotal) | ({ kind: 'POLO' } & NfseAccountingPoloTotal);
+export interface NfseAccountingColumnPage {
+  code: NfseAccountingCodeTotal[]; nbs: NfseAccountingCodeTotal[]; polo: NfseAccountingPoloTotal[];
+  codeLast: boolean; nbsLast: boolean; poloLast: boolean;
+}
 export interface NfseAccountingReport {
   scope: NfseScope; mode: NfseAccountingMode; dateFrom: string; dateTo: string; generatedAt: string;
-  pages: NfseAccountingRow[][]; totalItems: number; totalAmount: string | null;
-  summaryPages: NfseAccountingSummary[][]; byCode: NfseAccountingCodeTotal[]; byNbs: NfseAccountingCodeTotal[]; byPolo: NfseAccountingPoloTotal[]; unitsDescription: string;
+  pages: NfseAccountingRow[][]; totalItems: number; validItems: number; totalAmount: string | null;
+  summaryPages: NfseAccountingSummary[][]; summaryColumnPages: NfseAccountingColumnPage[]; byCode: NfseAccountingCodeTotal[]; byNbs: NfseAccountingCodeTotal[]; byPolo: NfseAccountingPoloTotal[]; unitsDescription: string;
 }
 export function accountingDate(value: unknown): string {
   const text = string(value);
@@ -33,16 +37,19 @@ export function parseNfseAccountingReport(value: unknown, scope: NfseScope): Nfs
   const data = record(value);
   const mode = oneOf(data.mode, ['POLO', 'GERAL'] as const);
   const dateFrom = accountingDate(data.dateFrom), dateTo = accountingDate(data.dateTo);
-  if (dateFrom > dateTo || !Array.isArray(data.pages) || data.pages.length > 1250
+  if (dateFrom > dateTo || !Array.isArray(data.pages) || data.pages.length > 1667
     || !Array.isArray(data.byCode) || !Array.isArray(data.byNbs) || !Array.isArray(data.byPolo)) throw new NfseContractError();
   const pages = data.pages.map(page => {
-    if (!Array.isArray(page) || page.length === 0 || page.length > 8) throw new NfseContractError();
+    if (!Array.isArray(page) || page.length === 0 || page.length > 6) throw new NfseContractError();
     return page.map(value => {
       const row = record(value);
-      const number = string(row.number), accessKey = string(row.accessKey), state = string(row.state);
-      if (!/^\d{1,15}$/.test(number) || !/^\d{50}$/.test(accessKey) || state === 'CANCELLED') throw new NfseContractError();
-      return { id: string(row.id), number, accessKey, state, emittedAt: timestamp(row.emittedAt),
+      const number = nullableString(row.number), accessKey = nullableString(row.accessKey), state = string(row.state);
+      const validForTotals = boolean(row.validForTotals), dateSource = oneOf(row.dateSource, ['EMISSION', 'CREATED'] as const);
+      if ((number !== null && !/^\d{1,15}$/.test(number)) || (accessKey !== null && !/^\d{50}$/.test(accessKey))
+        || (validForTotals && (state === 'CANCELLED' || dateSource !== 'EMISSION' || !number || !accessKey))) throw new NfseContractError();
+      return { id: string(row.id), number, accessKey, state, validForTotals, dateSource, emittedAt: timestamp(row.emittedAt),
         poloId: string(row.poloId), poloName: string(row.poloName),
+        poloCnpj: nullableString(row.poloCnpj), poloCity: nullableString(row.poloCity), poloState: nullableString(row.poloState),
         recipientName: nullableString(row.recipientName), recipientDocument: nullableString(row.recipientDocument),
         serviceDate: dateOrNull(row.serviceDate), competenceDate: dateOrNull(row.competenceDate),
         nationalServiceCode: nullableString(row.nationalServiceCode), nbsCode: nullableString(row.nbsCode),
@@ -50,16 +57,17 @@ export function parseNfseAccountingReport(value: unknown, scope: NfseScope): Nfs
         origin: nullableString(row.origin), xmlAvailable: boolean(row.xmlAvailable) };
     });
   });
-  const rows = pages.flat(); const totalItems = integer(data.totalItems);
-  if (rows.length !== totalItems || rows.length > 10000 || new Set(rows.map(r => r.id)).size !== rows.length
-    || new Set(rows.map(r => r.accessKey)).size !== rows.length
+  const rows = pages.flat(); const totalItems = integer(data.totalItems); const validItems = integer(data.validItems);
+  if (rows.filter(r => r.validForTotals).length !== validItems || rows.length !== totalItems || rows.length > 10000 || new Set(rows.map(r => r.id)).size !== rows.length
+    || new Set(rows.filter(r => r.accessKey).map(r => r.accessKey)).size !== rows.filter(r => r.accessKey).length
     || (mode === 'POLO' && rows.some(r => r.poloId !== scope.poloId))) throw new NfseContractError();
   const byCode = data.byCode.map(value => { const row = record(value);
     return { code: nullableString(row.code), count: integer(row.count), amount: money(row.amount) }; });
   const byNbs = data.byNbs.map(value => { const row = record(value);
     return { code: nullableString(row.code), count: integer(row.count), amount: money(row.amount) }; });
   const byPolo = data.byPolo.map(value => { const row = record(value);
-    return { poloId: string(row.poloId), poloName: string(row.poloName), count: integer(row.count), amount: money(row.amount) }; });
+    return { poloId: string(row.poloId), poloName: string(row.poloName),
+        poloCnpj: nullableString(row.poloCnpj), poloCity: nullableString(row.poloCity), poloState: nullableString(row.poloState), count: integer(row.count), amount: money(row.amount) }; });
   if (byPolo.length === 0 || new Set(byPolo.map(p => p.poloId)).size !== byPolo.length
     || new Set(byCode.map(c => c.code)).size !== byCode.length
     || rows.some(r => !byPolo.some(p => p.poloId === r.poloId))
@@ -71,11 +79,32 @@ export function parseNfseAccountingReport(value: unknown, scope: NfseScope): Nfs
       const row = record(value), kind = oneOf(row.kind, ['CODE', 'NBS', 'POLO'] as const);
       if (kind === 'CODE' || kind === 'NBS') return { kind, code: nullableString(row.code), count: integer(row.count), amount: money(row.amount) };
       if (mode !== 'GERAL') throw new NfseContractError();
-      return { kind, poloId: string(row.poloId), poloName: string(row.poloName), count: integer(row.count), amount: money(row.amount) };
+      return { kind, poloId: string(row.poloId), poloName: string(row.poloName),
+        poloCnpj: nullableString(row.poloCnpj), poloCity: nullableString(row.poloCity), poloState: nullableString(row.poloState), count: integer(row.count), amount: money(row.amount) };
     });
   });
   const expectedSummaries = [...byCode.map(c => ({ kind: 'CODE', ...c })), ...byNbs.map(c => ({ kind: 'NBS', ...c })), ...(mode === 'GERAL' ? byPolo.map(p => ({ kind: 'POLO', ...p })) : [])];
   if (JSON.stringify(summaryPages.flat()) !== JSON.stringify(expectedSummaries)) throw new NfseContractError();
-  return { scope, mode, dateFrom, dateTo, generatedAt: timestamp(data.generatedAt), pages, totalItems,
-    totalAmount: money(data.totalAmount), summaryPages, byCode, byNbs, byPolo, unitsDescription: string(data.unitsDescription) };
+  if (!Array.isArray(data.summaryColumnPages)) throw new NfseContractError();
+  const pageCount = Math.max(1, Math.ceil(byCode.length / 8), Math.ceil(byNbs.length / 8), mode === 'GERAL' ? Math.ceil(byPolo.length / 8) : 1);
+  if (data.summaryColumnPages.length !== pageCount) throw new NfseContractError();
+  const summaryColumnPages = data.summaryColumnPages.map((value, index) => {
+    const page = record(value);
+    const expected = { code: byCode.slice(index * 8, index * 8 + 8), nbs: byNbs.slice(index * 8, index * 8 + 8),
+      polo: mode === 'GERAL' ? byPolo.slice(index * 8, index * 8 + 8) : [],
+      codeLast: index === Math.max(0, Math.ceil(byCode.length / 8) - 1),
+      nbsLast: index === Math.max(0, Math.ceil(byNbs.length / 8) - 1),
+      poloLast: mode === 'GERAL' && index === Math.max(0, Math.ceil(byPolo.length / 8) - 1) };
+    for (const key of ['code', 'nbs', 'polo'] as const) {
+      if (!Array.isArray(page[key]) || page[key].length !== expected[key].length) throw new NfseContractError();
+      page[key].forEach((item, i) => {
+        const actual = record(item), target = expected[key][i];
+        for (const field of Object.keys(target)) if (actual[field] !== target[field as keyof typeof target]) throw new NfseContractError();
+      });
+    }
+    for (const key of ['codeLast', 'nbsLast', 'poloLast'] as const) if (page[key] !== expected[key]) throw new NfseContractError();
+    return expected;
+  });
+  return { scope, mode, dateFrom, dateTo, generatedAt: timestamp(data.generatedAt), pages, totalItems, validItems,
+    totalAmount: money(data.totalAmount), summaryPages, summaryColumnPages, byCode, byNbs, byPolo, unitsDescription: string(data.unitsDescription) };
 }

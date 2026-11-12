@@ -1,8 +1,8 @@
 {
-  "version": "4.8.303",
+  "version": "4.8.304",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 312,
+  "revision": 313,
   "releasedAt": "2026-11-12",
-  "summary": "Financeiro do aluno recolhido por tipo e curso"
+  "summary": "Relatório NFS-e com situações, resumos paralelos e totais válidos"
 }

@@ -10,7 +10,7 @@ const xml=({amount='10.01',code='080201',date='2026-11-15T12:00:00Z',name='Empre
 
 test('relatório contábil: XML autorizado, escopo matriz, agregados, páginas e somente leitura',async t=>{
  const db=new PGlite();const query=async(sql,args)=>(await db.query(sql,args)).rows[0]?.value;
- const report=(mode='GERAL',polo=id(1),context=id(10),from='2026-11-01',to='2026-11-30')=>query('select public.get_nfse_accounting_report_secure($1,$2,$3,$4,$5,$6,$7) value',[context,polo,'PRODUCAO','2026-11',from,to,mode]);
+ const report=(mode='GERAL',polo=id(1),context=id(10),from='2026-11-01',to='2026-11-30')=>query('select public.get_nfse_accounting_report_v2_secure($1,$2,$3,$4,$5,$6,$7) value',[context,polo,'PRODUCAO','2026-11',from,to,mode]);
  const insert=async(n,polo=1,options={})=>{
    await db.query('insert into private.nfse_individual_operations values($1,$2)',[id(n),xml(options)]);
    await db.query(`insert into private.nfse_operation_source_projection(operation_id,source_id,source_kind,polo_id,environment,month,issue_state,state,snapshot,command,result,number,access_key)
@@ -30,11 +30,14 @@ test('relatório contábil: XML autorizado, escopo matriz, agregados, páginas e
   await db.exec(await readFile(new URL('../migrations/20261111120000_nfse_issued_period_report.sql',import.meta.url),'utf8'));
   await db.exec(await readFile(new URL('../migrations/20261112121741_nfse_accounting_xml_fields.sql',import.meta.url),'utf8'));
   await db.exec(await readFile(new URL('../migrations/20261112121751_nfse_accounting_report.sql',import.meta.url),'utf8'));
+  await db.exec("alter table public.polos add column cnpj text, add column cidade text, add column estado text; update public.polos set cnpj='00000000000000',cidade=nome,estado='SE';");
+  await db.exec(await readFile(new URL('../migrations/20261112131549_nfse_accounting_summary_columns.sql',import.meta.url),'utf8'));
   await insert(101);await insert(102,2,{amount:'20.02',code:'170101'});await insert(103,4,{amount:'500.00'});
   await insert(104,1,{amount:'900.00'});await db.query('insert into private.nfse_confirmed_cancellations values($1)',[id(104)]);
   await insert(105,1,{date:'2026-12-01T03:00:00Z',amount:'300.00'});
-  await t.test('usa XML, exclui canceladas/outra empresa, total exato e inclui polo sem notas',async()=>{
-    const data=(await report()).data;assert.equal(data.totalItems,2);assert.equal(data.totalAmount,'30.03');
+  await t.test('usa XML, mostra canceladas sem somar/outra empresa excluída, total exato e inclui polo sem notas',async()=>{
+    const data=(await report()).data;assert.equal(data.totalItems,3);assert.equal(data.validItems,2);assert.equal(data.totalAmount,'30.03');
+    const cancelled=data.pages.flat().find(r=>r.id===id(104));assert.equal(cancelled.state,'CANCELLED');assert.equal(cancelled.validForTotals,false);
     assert.equal(data.pages.length,1);assert.equal(data.pages[0][0].recipientName,'Empresa & Teste');
     assert.equal(data.pages[0][0].serviceDate,'2026-10-31');assert.equal(data.pages[0][0].competenceDate,'2026-10-31');
     assert.deepEqual(data.byCode,[{code:'080201',count:1,amount:'10.01'},{code:'170101',count:1,amount:'20.02'}]);
@@ -50,6 +53,33 @@ test('relatório contábil: XML autorizado, escopo matriz, agregados, páginas e
     await assert.rejects(()=>report('POLO',id(1),id(10),'2026-02-30'),/Datas de emissão/);
     await assert.rejects(()=>report('POLO',id(1),id(10),'2026-12-01','2026-11-01'),/Intervalo/);
   });
+  await t.test('estados reais, cancelamento confirmado e não emitidas não contaminam totais',async()=>{
+    const statuses=['REJECTED','BLOCKED','PROCESSING','AWAITING_CONFIRMATION','PREVIEWED'];
+    for(let i=0;i<statuses.length;i++){
+      await insert(300+i,1,{amount:'9999.00'});
+      await db.query('update private.nfse_operation_source_projection set issue_state=$1,state=$1 where operation_id=$2',[statuses[i],id(300+i)]);
+    }
+    await insert(310,1,{amount:'5.00'});
+    await db.query("update private.nfse_operation_source_projection set state='CANCELLED' where operation_id=$1",[id(310)]);
+    const data=(await report()).data,rows=data.pages.flat();
+    assert.equal(data.totalItems,8);assert.equal(data.validItems,3);assert.equal(data.totalAmount,'35.03');
+    const ambiguous=rows.find(r=>r.id===id(310));assert.equal(ambiguous.state,'CANCELLATION_PENDING');assert.equal(ambiguous.validForTotals,true);
+    assert(!rows.some(r=>r.id===id(304)));
+    for(let i=0;i<4;i++){
+      const row=rows.find(r=>r.id===id(300+i));assert(row);assert.equal(row.state,statuses[i]);
+      assert.equal(row.dateSource,'CREATED');assert.equal(row.number,null);assert.equal(row.accessKey,null);
+      assert.equal(row.amount,null);assert.equal(row.issAmount,null);assert.equal(row.xmlAvailable,false);assert.equal(row.validForTotals,false);
+      assert.equal(row.recipientName,'Não usar cadastro atual');
+    }
+    assert.equal(rows.find(r=>r.id===id(101)).dateSource,'EMISSION');
+    for(const groups of [data.byCode,data.byNbs,data.byPolo]){
+      assert.equal(groups.reduce((n,g)=>n+g.count,0),3);
+      assert.equal(Math.round(groups.reduce((n,g)=>n+Number(g.amount),0)*100),3503);
+    }
+    await db.query("update private.nfse_operation_source_projection set created_at='2026-12-01T03:00:00Z' where operation_id=$1",[id(300)]);
+    assert(!(await report()).data.pages.flat().some(r=>r.id===id(300)));
+    await db.query('delete from private.nfse_operation_source_projection where operation_id=any($1::uuid[])',[[300,301,302,303,304,310].map(id)]);
+  });
   await t.test('valores desconhecidos não geram soma parcial e parser XML rejeita entidades/malformed',async()=>{
     await insert(106,1,{amount:null});const data=(await report()).data;assert.equal(data.totalAmount,null);
     assert.equal(data.byCode.find(c=>c.code==='080201').amount,null);assert.equal(data.byPolo.find(p=>p.poloId===id(1)).amount,null);
@@ -57,12 +87,22 @@ test('relatório contábil: XML autorizado, escopo matriz, agregados, páginas e
       assert.equal(await query('select private.nfse_accounting_xml_fields($1) value',[payload]),null);
     await db.query('delete from private.nfse_operation_source_projection where operation_id=$1',[id(106)]);
   });
-  await t.test('página de 8 notas determinística sem perda e recursos privados sem grants',async()=>{
+  await t.test('resumos paralelos paginam códigos extensos sem perda e somam cada visão uma única vez',async()=>{
+    for(let n=200;n<218;n++)await insert(n,1,{code:String(880000+n)});
+    const data=(await report()).data,columns=data.summaryColumnPages;
+    assert.equal(columns.length,3);assert.deepEqual(columns.map(p=>p.code.length),[8,8,4]);
+    assert.deepEqual(columns.flatMap(p=>p.code),data.byCode);assert.deepEqual(columns.flatMap(p=>p.nbs),data.byNbs);
+    assert.deepEqual(columns.flatMap(p=>p.polo),data.byPolo);
+    for(const field of ['codeLast','nbsLast','poloLast'])assert.equal(columns.filter(p=>p[field]).length,1);
+    const local=(await report('POLO')).data;assert(local.summaryColumnPages.every(p=>p.polo.length===0&&!p.poloLast));
+    await db.query('delete from private.nfse_operation_source_projection where operation_id = any($1::uuid[])',[Array.from({length:18},(_,i)=>id(200+i))]);
+  });
+  await t.test('página de 6 notas determinística sem perda e recursos privados sem grants',async()=>{
     for(let n=110;n<128;n++)await insert(n,1);
-    const data=(await report()).data;assert.deepEqual(data.pages.map(p=>p.length),[8,8,4]);
-    assert.equal(data.pages.flat().length,data.totalItems);assert.equal(new Set(data.pages.flat().map(r=>r.id)).size,20);
-    const grants=await query(`select jsonb_build_object('anon',has_function_privilege('anon','public.get_nfse_accounting_report_secure(uuid,uuid,text,text,text,text,text)','execute'),
-      'auth',has_function_privilege('authenticated','public.get_nfse_accounting_report_secure(uuid,uuid,text,text,text,text,text)','execute'),
+    const data=(await report()).data;assert.deepEqual(data.pages.map(p=>p.length),[6,6,6,3]);
+    assert.equal(data.pages.flat().length,data.totalItems);assert.equal(new Set(data.pages.flat().map(r=>r.id)).size,21);
+    const grants=await query(`select jsonb_build_object('anon',has_function_privilege('anon','public.get_nfse_accounting_report_v2_secure(uuid,uuid,text,text,text,text,text)','execute'),
+      'auth',has_function_privilege('authenticated','public.get_nfse_accounting_report_v2_secure(uuid,uuid,text,text,text,text,text)','execute'),
       'xml',has_function_privilege('authenticated','private.nfse_accounting_xml_fields(text)','execute')) value`);
     assert.deepEqual(grants,{anon:false,auth:true,xml:false});
   });
