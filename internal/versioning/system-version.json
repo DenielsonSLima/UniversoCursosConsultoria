@@ -1,8 +1,8 @@
 {
-  "version": "4.8.299",
+  "version": "4.8.300",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 308,
+  "revision": 309,
   "releasedAt": "2026-11-12",
-  "summary": "Busca única de parceiros PF/PJ e palestra governamental com recebimento posterior ou antecipado"
+  "summary": "Nome do município do tomador no DANFSe resolvido pelo catálogo IBGE"
 }

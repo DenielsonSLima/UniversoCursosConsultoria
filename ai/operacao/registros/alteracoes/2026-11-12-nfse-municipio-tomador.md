@@ -13,7 +13,11 @@ Status: validado localmente, catálogo remoto conferido por leitura. Publicaçã
 - `modules/gestor/emissor-nfse/visualizador/services/nfse-issued-pdf.service.ts`
 - `ai/operacao/registros/alteracoes/2026-11-12-nfse-municipio-tomador.md`
 
-Total: 8 arquivos.
+- `internal/versioning/system-version.json`
+- `internal/versioning/CHANGELOG.md`
+- `internal/versioning/changelog/2026-10-20-a-21-versoes-4-8-228-a-229.md`
+
+Total: 11 arquivos.
 
 ## Aceite e validação
 
