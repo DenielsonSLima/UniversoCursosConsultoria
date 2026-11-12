@@ -288,7 +288,9 @@ const GestorModuleContentView: React.FC<GestorModuleContentProps> = ({
       );
     case 'comunicacao-mensagem': return <UnifiedCommunicationPage gestorProfile={profile} canAccessInternal canAccessWhatsApp={canAccessTab(permissions, 'comunicacao', 'comunicacao-whatsapp')} />;
     case 'comunicacao-whatsapp': return <UnifiedCommunicationPage gestorProfile={profile} canAccessInternal={canAccessTab(permissions, 'comunicacao', 'comunicacao-mensagem')} canAccessWhatsApp />;
-    case 'relatorios': return <RelatoriosPage poloId={scopedPoloId} />;
+    case 'relatorios': return <RelatoriosPage poloId={scopedPoloId} fiscalPoloId={currentPoloId}
+      contextKey={profile.contextId || ''} isMatriz={isMatrizSelected}
+      canAccessNfse={!isNfseAccessChecking && canOpenModule('emissor-nfse')} />;
     case 'meu-perfil':
       return (
         <MeuPerfilPage

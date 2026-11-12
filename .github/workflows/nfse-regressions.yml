@@ -5,6 +5,7 @@ on:
     paths:
       - '.github/workflows/nfse-regressions.yml'
       - 'modules/gestor/emissor-nfse/**'
+      - 'modules/gestor/relatorios/nfse/**'
       - 'modules/gestor/configuracoes/nfse-portal-contribuinte/**'
       - 'modules/gestor/access-control*'
       - 'modules/gestor/gestor-navigation*'
@@ -28,6 +29,7 @@ on:
     paths:
       - '.github/workflows/nfse-regressions.yml'
       - 'modules/gestor/emissor-nfse/**'
+      - 'modules/gestor/relatorios/nfse/**'
       - 'modules/gestor/configuracoes/nfse-portal-contribuinte/**'
       - 'modules/gestor/access-control*'
       - 'modules/gestor/gestor-navigation*'
@@ -132,11 +134,15 @@ jobs:
           node --test
           modules/gestor/emissor-nfse/emitidas/exportacao/nfse-issued-export.service.test.mjs
           modules/gestor/emissor-nfse/exportacao/interno/nfse-issued-export.pdf.test.mjs
+          modules/gestor/relatorios/nfse/nfse-accounting.pdf.test.mjs
       - name: Instalar PostgreSQL isolado para os contratos fiscais
         run: npm install --prefix "$RUNNER_TEMP/nfse-sql" --no-save --package-lock=false --ignore-scripts @electric-sql/pglite@0.3.14
+      - name: Instalar parser XML real para o relatório contábil
+        run: npm install --prefix "$RUNNER_TEMP/nfse-accounting-sql" --no-save --package-lock=false --ignore-scripts @electric-sql/pglite@0.5.16
       - name: Validar recebimentos, modelos e serviços em banco isolado
         env:
           NFSE_TEST_PGLITE_MODULE: ${{ runner.temp }}/nfse-sql/node_modules/@electric-sql/pglite/dist/index.js
+          NFSE_ACCOUNTING_PGLITE_MODULE: ${{ runner.temp }}/nfse-accounting-sql/node_modules/@electric-sql/pglite/dist/index.js
         run: node --test supabase/tests/nfse*.isolated.test.mjs
 
   nfse-provider-offline:

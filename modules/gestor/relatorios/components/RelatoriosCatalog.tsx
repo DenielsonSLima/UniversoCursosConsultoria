@@ -1,7 +1,7 @@
 import React from 'react';
 import { Users, GraduationCap, Landmark, DollarSign, ChevronRight } from 'lucide-react';
 
-export type ReportType = 'turmas' | 'polos' | 'cursos' | 'extrato-financeiro-conta' | 'financeiro-entradas' | 'financeiro-saidas' | 'financeiro-receitas' | 'financeiro-despesas' | 'financeiro-resumo-categorias' | 'financeiro-resumo-entradas' | 'financeiro-fluxo-caixa' | 'dre' | 'inadimplencia' | 'estagios' | 'financeiro-turma-mensal' | 'financeiro-pre-estagio' | 'alunos-cursando' | 'alunos-finalizados' | 'matriculas' | 'matricula-inicial' | 'situacao-aluno' | 'lucro-turma';
+export type ReportType = 'nfse-emitidas' | 'turmas' | 'polos' | 'cursos' | 'extrato-financeiro-conta' | 'financeiro-entradas' | 'financeiro-saidas' | 'financeiro-receitas' | 'financeiro-despesas' | 'financeiro-resumo-categorias' | 'financeiro-resumo-entradas' | 'financeiro-fluxo-caixa' | 'dre' | 'inadimplencia' | 'estagios' | 'financeiro-turma-mensal' | 'financeiro-pre-estagio' | 'alunos-cursando' | 'alunos-finalizados' | 'matriculas' | 'matricula-inicial' | 'situacao-aluno' | 'lucro-turma';
 
 export interface ReportMenuItem {
   id: ReportType;

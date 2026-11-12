@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { lazy, Suspense, useState } from 'react';
 import RelatoriosCatalog, { type ReportMenuItem, type ReportType } from './components/RelatoriosCatalog';
 import './relatorios-workspace.css';
 import { useQuery } from '@tanstack/react-query';
@@ -26,11 +26,17 @@ import RelatorioMatriculas from './matriculas/RelatorioMatriculas';
 import DiagnosticoMatriculaInicial from './censo-escolar/matricula-inicial/DiagnosticoMatriculaInicial';
 import { useRelatoriosRealtime } from './hooks/useRelatoriosRealtime';
 
+const RelatorioNfse = lazy(() => import('./nfse/RelatorioNfse'));
+
 interface RelatoriosPageProps {
   poloId?: string | null;
+  fiscalPoloId?: string | null;
+  contextKey?: string;
+  isMatriz?: boolean;
+  canAccessNfse?: boolean;
 }
 
-const RelatoriosPage: React.FC<RelatoriosPageProps> = ({ poloId }) => {
+const RelatoriosPage: React.FC<RelatoriosPageProps> = ({ poloId, fiscalPoloId, contextKey, isMatriz = false, canAccessNfse = false }) => {
   const [activeReport, setActiveReport] = useState<ReportType | null>(null);
   useRelatoriosRealtime({
     enabled: activeReport === 'matriculas' || activeReport === 'matricula-inicial',
@@ -70,6 +76,9 @@ const RelatoriosPage: React.FC<RelatoriosPageProps> = ({ poloId }) => {
   });
 
   const menuItems: ReportMenuItem[] = [
+    ...(canAccessNfse ? [{ id: 'nfse-emitidas' as const, label: 'NFS-e Emitidas',
+      description: 'Relatório contábil em paisagem, por polo ou consolidado da matriz, com resumo por tributação nacional.',
+      icon: <FileText size={22} />, category: 'financeiro' as const }] : []),
     {
       id: 'turmas',
       label: 'Relatório por Turmas',
@@ -228,6 +237,10 @@ const RelatoriosPage: React.FC<RelatoriosPageProps> = ({ poloId }) => {
 
   const renderActiveReport = () => {
     switch (activeReport) {
+      case 'nfse-emitidas':
+        return <Suspense fallback={<p role="status">Carregando relatório fiscal…</p>}><RelatorioNfse
+          key={`${fiscalPoloId}:${contextKey}`} poloId={fiscalPoloId} contextKey={contextKey}
+          isMatriz={isMatriz} canAccessNfse={canAccessNfse} /></Suspense>;
       case 'turmas':
         return <RelatorioTurmas company={company} polo={polo} />;
       case 'polos':
