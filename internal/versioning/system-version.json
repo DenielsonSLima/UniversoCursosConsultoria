@@ -1,8 +1,8 @@
 {
-  "version": "4.8.308",
+  "version": "4.8.309",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 317,
+  "revision": 318,
   "releasedAt": "2026-11-12",
-  "summary": "Emissor usa política comum de cache e atualização realtime entre usuários"
+  "summary": "Acesso Google acompanha identidade canônica após correção do contato"
 }

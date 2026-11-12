@@ -208,7 +208,7 @@ const renderBundle = await build({
         client.setQueryData(['partner-email-confirmation-status', 'review-student'], {
           partnerId: 'review-student', status: 'confirmed', emailConfirmed: true, emailValidatedByManager: true,
         });
-        client.setQueryData(['partner-google-identity-status', 'review-student'], {
+        client.setQueryData(['partner-google-identity-status', 'review-student', 'review@example.invalid'], {
           email: 'review@example.invalid', has_auth_user: true, google_linked: false,
         });
         const html = renderToStaticMarkup(<QueryClientProvider client={client}><ParceiroAcesso

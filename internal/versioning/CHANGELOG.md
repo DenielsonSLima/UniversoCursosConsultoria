@@ -43,6 +43,13 @@ Histórico arquivado: [24/10/2026 a 27/10/2026 — versões 4.8.234 a 4.8.235](.
 
 Histórico arquivado: [27/10/2026 — versões 4.8.236 a 4.8.237](./changelog/2026-10-27-versoes-4-8-236-a-237.md).
 
+Histórico arquivado: [4.8.239](./changelog/2026-10-27-versao-4-8-239.md).
+
+## [4.8.309] - 2026-11-12
+
+- Status Google usa conta institucional vinculada, sem confundir contato corrigido com conta inexistente.
+- Cache acompanha alteração do contato; escopo e proteção do último método de acesso preservados.
+
 ## [4.8.308] - 2026-11-12
 
 - Indicadores e fila do Emissor usam a política de leitura comum do sistema, sem duração isolada por módulo.
@@ -486,14 +493,3 @@ Histórico arquivado: [27/10/2026 — versões 4.8.236 a 4.8.237](./changelog/20
 
 - Matemática Básica e Matemática para Enem recebem aulas próprias, exercícios resolvidos, atividades por habilidade e provas matemáticas revisadas com fontes INEP e OBMEP/IMPA.
 - A sala mantém avaliações anteriores por versão e oferece início explícito da revisão, preservando tentativas, notas e certificados; resoluções seguem somente no feedback após resposta.
-
-## [4.8.239] - 2026-10-27
-
-- Acompanhamento da emissão consulta a mesma operação por matrícula e ciclo, independentemente da lista da turma; apresenta dados confirmados, revisão e erro de leitura sem inventar progresso zero.
-- Uma única solicitação de emissão é observada por consultas independentes; conclusão integral pode ser confirmada mesmo quando a resposta inicial atrasa. Recarga e saída do acompanhamento não reenviam cobranças.
-- Reduz o custo repetido da projeção financeira, preservando contagens, proveniência, permissões e regras de emissão. Nenhum título, valor, pagamento ou vencimento é alterado por esta atualização.
-
-- Adiciona preparação estrita de rematrícula rejeitada por vencimento anterior à emissão, condicionada à consulta oficial da mesma identidade bancária, com prazo, comparação de estado e arquivo imutável da tentativa anterior.
-- A correção preserva mensalidades, composição e histórico do ciclo. Nova tentativa exige consentimento do gestor autenticado e mantém retomada da mesma identidade sem duplicar título após resposta perdida.
-- Nenhuma taxa é modificada automaticamente pela implantação; ausência genérica, conflito, pagamento e falha de consulta impedem o preparo.
-
