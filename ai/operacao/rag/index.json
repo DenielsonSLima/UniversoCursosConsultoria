@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "retrieval": "lexical-bm25-with-source-citations",
-  "builtAt": "2026-11-12T14:21:46.195Z",
+  "builtAt": "2026-11-12T14:33:13.721Z",
   "manifestVersion": 2,
-  "sourceSignature": "18b63d8ef9177d8cd0eaf3b4b1e91ed8154e0e85f87f636737876bd773d25f59",
+  "sourceSignature": "8dca9e7e9e3c144d647523eb38b784ab41b2c9b3519e421d24aef537ac6650ec",
   "sources": [
     {
       "path": "AGENTS.md",
@@ -11,7 +11,7 @@
     },
     {
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "hash": "1b7753b5941e8b57892a3d0d200038e48cab86e0553527248901e86e1fe8d5f4"
+      "hash": "6b1e120736ea75a72138d33ea827c47c0c56ecdaa5a1c07ba5eb689a6b114a01"
     },
     {
       "path": "ai/operacao/MEMORIA_CANONICA.md",
@@ -208,13 +208,13 @@
       "part": 1
     },
     {
-      "id": "7a810240ce2eca6f3ac7",
-      "hash": "7a810240ce2eca6f3ac712fd813320f247f836f9b39b754ac49f3772a6dd86ba",
+      "id": "4c667aedbfef43aa3e2e",
+      "hash": "4c667aedbfef43aa3e2ee22368771cfa61a6c47ce6d36d01f834d433e2ad9de5",
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Lote: 2026-11-12-ead-confianca",
-      "text": "Objetivo: estudo EAD por confiança por 24 horas sem baixa financeira. Autorização: usuário solicitou recurso e publicação; liberação individual separada após implantação. Status: testes locais e revisão de segurança; banco e CI em fechamento. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-12-ead-confianca.md`. Sem alteração de recebimentos ou emissão de certificados. Smoke Safari autenticado pendente.",
-      "normalizedText": "objetivo estudo ead por confianca por 24 horas sem baixa financeira autorizacao usuario solicitou recurso e publicacao liberacao individual separada apos implantacao status testes locais e revisao de seguranca banco e ci em fechamento manifesto explicito ai operacao registros alteracoes 2026 11 12 ead confianca md sem alteracao de recebimentos ou emissao de certificados smoke safari autenticado pendente",
-      "tokenCount": 55,
+      "section": "Lote: 2026-11-12-cache-comum-emissor",
+      "text": "Objetivo: aplicar política comum de leitura ao Emissor mantendo realtime e isolamento. Autorização: usuário solicitou padrão global em vez de prazo isolado. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-12-cache-comum-emissor.md`. Status: testes locais verdes, CI e publicação em fechamento. Sem migrations ou operações fiscais.",
+      "normalizedText": "objetivo aplicar politica comum de leitura ao emissor mantendo realtime e isolamento autorizacao usuario solicitou padrao global em vez de prazo isolado manifesto explicito ai operacao registros alteracoes 2026 11 12 cache comum emissor md status testes locais verdes ci e publicacao em fechamento sem migrations ou operacoes fiscais",
+      "tokenCount": 47,
       "part": 1
     },
     {

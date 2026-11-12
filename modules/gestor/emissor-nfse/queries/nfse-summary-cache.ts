@@ -1,7 +1,9 @@
-/** Retain scoped read projections across short navigation, in memory only.
- * Query keys include portal context, polo, environment and month/filters.
- * Session replacement clears the QueryClient. Realtime/reconnect still invalidate
- * these projections, including recovery after time spent outside the module.
- * Do not use placeholderData from a previous key or retain authorization decisions.
+import { applicationReadCachePolicy } from '../../../../lib/query-cache-policy';
+
+/** Use the same retention/freshness policy as the application, not a module timer.
+ * Keys isolate portal context, polo, environment, month and filters. Realtime
+ * events from any authorized actor invalidate each session's own projections;
+ * subscription recovery covers events missed while this module was closed.
+ * Never retain authorization decisions or copy data from a previous query key.
  */
-export const nfseSummaryCacheOptions = { gcTime: 5 * 60_000 } as const;
+export const nfseSummaryCacheOptions = applicationReadCachePolicy;

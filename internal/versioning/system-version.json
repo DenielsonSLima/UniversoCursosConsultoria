@@ -1,8 +1,8 @@
 {
-  "version": "4.8.307",
+  "version": "4.8.308",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 316,
+  "revision": 317,
   "releasedAt": "2026-11-12",
-  "summary": "Acesso EAD por confiança com prazo auditado de 24 horas"
+  "summary": "Emissor usa política comum de cache e atualização realtime entre usuários"
 }
