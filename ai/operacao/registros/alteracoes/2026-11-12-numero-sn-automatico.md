@@ -8,6 +8,8 @@ Cadastro administrativo e público web/app normalizam vazio, removem obrigatorie
 
 Refresh já publicado aceita00 ou ausência→S/N apenas PREVIEWED não assinada, mesma operação/request/DPS e histórico append-only. Regressão explícita7/7, teste SN/auditoria/CAS/rollback,DOM cadastro e contratos signup aprovados; revisão independente sem bloqueantes. CI/build/deploy registrados na PR. Sem transmissão fiscal; smoke Safari autenticado pendente.
 
+CI detectou contrato estático lendo só card pai após extração; teste passou a compor pai+form filho mantendo todas as verificações Turnstile e vínculo explícito entre componentes.
+
 ## Manifesto explícito
 
 - `.github/workflows/nfse-regressions.yml`
@@ -32,4 +34,6 @@ Refresh já publicado aceita00 ou ausência→S/N apenas PREVIEWED não assinada
 - `supabase/tests/nfse_unsigned_address_refresh.isolated.test.mjs`
 - `supabase/tests/student_address_number_sn.pglite.mjs`
 
-Total: 21 arquivos
+- `scripts/test-portal-auth-flow.mjs`
+
+Total: 22 arquivos
