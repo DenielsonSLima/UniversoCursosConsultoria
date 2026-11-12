@@ -1,3 +1,4 @@
+import { hasScopedEadBoletoReadAccess, isIssuedPayableEadBoleto } from "./ead-read-access.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import {
   bearerTokenFromRequest,
@@ -165,7 +166,7 @@ Deno.serve(async (req: Request) => {
     const { data: row, error: receivableError } = await admin
       .from("contas_receber")
       .select(`
-        id, cliente_id, matricula_id, turma_id, polo_id, descricao, valor, data_vencimento,
+        id, cliente_id, matricula_id, turma_id, polo_id, descricao, valor, data_vencimento, status,
         tipo_lancamento, regra_financeira_dependencia_snapshot,
         gateway_boleto_issued_at,
         gateway_environment, gateway_payment_id, gateway_pix_payload,
@@ -212,7 +213,15 @@ Deno.serve(async (req: Request) => {
     if (!isOwner) {
       try {
         const gestor = await requireGestorAtivo(req, admin);
-        requireBaneseBoletoDocumentReadAccess(gestor, row.tipo_lancamento);
+        try {
+          requireBaneseBoletoDocumentReadAccess(gestor, row.tipo_lancamento);
+        } catch {
+          const caller = createClient(supabaseUrl, serviceRoleKey, {
+            global: { headers: { Authorization: `Bearer ${token}` } },
+            auth: { persistSession: false, autoRefreshToken: false },
+          });
+          if (!isIssuedPayableEadBoleto(row) || !await hasScopedEadBoletoReadAccess(caller, receivableId)) throw new Error("Acesso negado.");
+        }
         requireGestorForPolo(gestor, row.polo_id);
       } catch {
         throw new HttpError(403, "Sem permissão para visualizar este boleto.");

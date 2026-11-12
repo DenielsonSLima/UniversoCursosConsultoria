@@ -1,10 +1,12 @@
 import React, { useMemo } from 'react';
 import { CheckCircle2, Clock3, DollarSign, Loader2, PauseCircle, ReceiptText } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '../../../../../../lib/supabase';
+import { loadStudentFinanceView, type StudentFinanceView, type StudentReceivable } from './parceiro-aluno-financeiro.service';
+import EadBoletoButton from './EadBoletoButton';
 
 interface Props {
   alunoId: string;
+  cacheScope?: string;
 }
 
 const currency = (value: number) =>
@@ -21,33 +23,20 @@ const statusStyle: Record<string, string> = {
   CANCELADO: 'bg-slate-100 text-slate-500',
 };
 
-const ParceiroAlunoFinanceiro: React.FC<Props> = ({ alunoId }) => {
-  const { data: receivables = [], isLoading, isError, refetch } = useQuery<any[]>({
-    queryKey: ['financeiro-aluno-receivables', alunoId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('contas_receber')
-        .select(`
-          *,
-          matriculas(id, status, data_matricula),
-          turmas(nome, codigo, cursos(nome), polos(nome))
-        `)
-        .eq('cliente_id', alunoId)
-        .order('data_vencimento', { ascending: false });
-      if (error) throw error;
-      return data || [];
-    },
-    staleTime: 15_000,
+const ParceiroAlunoFinanceiro: React.FC<Props> = ({ alunoId, cacheScope }) => {
+  const { data, isLoading, isError, refetch } = useQuery<StudentFinanceView>({
+    queryKey: ['financeiro-aluno-receivables', alunoId, cacheScope],
+    queryFn: () => loadStudentFinanceView(alunoId),
+    enabled: Boolean(cacheScope),
+    staleTime: 0,
+    gcTime: 0,
+    refetchOnMount: 'always',
   });
-
-  const summary = useMemo(() => ({
-    paid: receivables.filter((item) => item.status === 'PAGO').reduce((sum, item) => sum + Number(item.valor_pago || item.valor || 0), 0),
-    open: receivables.filter((item) => ['PENDENTE', 'VENCIDO'].includes(item.status)).reduce((sum, item) => sum + Number(item.valor || 0), 0),
-    suspended: receivables.filter((item) => item.status === 'SUSPENSO').reduce((sum, item) => sum + Number(item.valor || 0), 0),
-  }), [receivables]);
+  const receivables = data?.items || [];
+  const summary = data?.summary || { paid: 0, open: 0, suspended: 0 };
 
   const groups = useMemo(() => {
-    const map = new Map<string, any>();
+    const map = new Map<string, { id: string; turma: StudentReceivable['turmas']; matricula: StudentReceivable['matriculas']; items: StudentReceivable[] }>();
     receivables.forEach((item) => {
       const key = item.matricula_id || 'sem-matricula';
       const group = map.get(key) || {
@@ -62,7 +51,7 @@ const ParceiroAlunoFinanceiro: React.FC<Props> = ({ alunoId }) => {
     return Array.from(map.values());
   }, [receivables]);
 
-  if (isLoading) {
+  if (isLoading || !cacheScope) {
     return <div className="flex justify-center py-12"><Loader2 className="animate-spin text-blue-600" /></div>;
   }
 
@@ -127,21 +116,27 @@ const ParceiroAlunoFinanceiro: React.FC<Props> = ({ alunoId }) => {
                     <th className="px-5 py-3">Valor</th>
                     <th className="px-5 py-3">Pagamento</th>
                     <th className="px-5 py-3">Status</th>
+                    <th className="px-5 py-3">Boleto EAD</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {group.items.map((item: any) => (
+                  {group.items.map((item: StudentReceivable) => (
                     <tr key={item.id}>
                       <td className="px-5 py-4">
                         <div className="flex items-center gap-2">
                           <ReceiptText size={14} className="text-slate-500" />
-                          <div><p className="text-sm font-medium text-slate-700">{item.descricao}</p><span className="text-xs font-semibold text-slate-500">{item.tipo_lancamento || item.categoria}</span></div>
+                          <div><p className="text-sm font-medium text-slate-700">{item.descricao}</p><span className="text-xs font-semibold text-slate-500">{item.tipo_lancamento}</span></div>
                         </div>
                       </td>
                       <td className="px-5 py-4 text-sm font-medium text-slate-600">{date(item.data_vencimento)}</td>
                       <td className="px-5 py-4 text-sm font-semibold text-[#001a33]">{currency(Number(item.valor))}</td>
                       <td className="px-5 py-4 text-sm text-slate-500">{item.data_pagamento ? date(item.data_pagamento) : '—'}</td>
                       <td className="px-5 py-4"><span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${statusStyle[item.status] || 'bg-slate-100 text-slate-500'}`}>{item.status}</span></td>
+                      <td className="px-5 py-4">
+                        {item.can_open_boleto === true
+                          ? <EadBoletoButton receivableId={item.id} />
+                          : <span className="text-sm text-slate-400">—</span>}
+                      </td>
                     </tr>
                   ))}
                 </tbody>

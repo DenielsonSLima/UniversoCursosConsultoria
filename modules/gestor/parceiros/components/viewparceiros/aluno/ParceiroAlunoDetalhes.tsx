@@ -23,12 +23,13 @@ import ParceiroAlunoNavigation, { alunoTabs, type AlunoTab } from './ParceiroAlu
 import AlunoDiscardChangesDialog from './AlunoDiscardChangesDialog';
 
 interface ParceiroAlunoDetalhesProps {
+  financeCacheScope?: string;
   alunoInicial: any;
   onBack: () => void;
   onRequestScrollTop?: () => void;
 }
 
-const ParceiroAlunoDetalhes: React.FC<ParceiroAlunoDetalhesProps> = ({ alunoInicial, onBack, onRequestScrollTop }) => {
+const ParceiroAlunoDetalhes: React.FC<ParceiroAlunoDetalhesProps> = ({ alunoInicial, onBack, onRequestScrollTop, financeCacheScope }) => {
   const queryClient = useQueryClient();
   const { toasts, removeToast, toast } = useToast();
   const [activeTab, setActiveTab] = useState<AlunoTab>('dados');
@@ -271,7 +272,7 @@ const ParceiroAlunoDetalhes: React.FC<ParceiroAlunoDetalhesProps> = ({ alunoInic
           <ParceiroAlunoDocumentos alunoId={alunoData.id} toast={toast} />
         )}
         {activeTab === 'vacinas' && <ParceiroAlunoVacinas alunoId={alunoData.id} />}
-        {activeTab === 'financeiro' && <ParceiroAlunoFinanceiro alunoId={alunoData.id} />}
+        {activeTab === 'financeiro' && <ParceiroAlunoFinanceiro key={`${alunoData.id}:${financeCacheScope}`} alunoId={alunoData.id} cacheScope={financeCacheScope} />}
         {activeTab === 'secretaria' && <div className="partner-secretaria"><ParceiroAlunoSecretaria alunoId={alunoData.id} /></div>}
         {activeTab === 'acesso' && (
           <ParceiroAcesso
