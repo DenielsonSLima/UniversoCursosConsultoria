@@ -1,8 +1,8 @@
 {
-  "version": "4.8.321",
+  "version": "4.8.322",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 330,
+  "revision": 331,
   "releasedAt": "2026-11-12",
-  "summary": "Início compacto e filtros de A Receber padronizados com Contas a Pagar"
+  "summary": "Correção segura do e-mail e reenvio do primeiro acesso em Parceiros"
 }

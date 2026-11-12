@@ -78,6 +78,7 @@ export function toCamel(s: any) {
     matriculaAcesso: s.matricula_acesso,
     authUserId: s.auth_user_id || null,
     authLoginEmail: s.auth_login_email,
+    primeiroAcessoInstitucionalPendente: s.primeiro_acesso_institucional_pendente,
     telefone: s.telefone,
     contato1: s.telefone,
     cep: s.cep,

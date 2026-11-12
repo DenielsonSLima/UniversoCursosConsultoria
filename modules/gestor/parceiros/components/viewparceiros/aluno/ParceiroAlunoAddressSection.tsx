@@ -3,6 +3,7 @@ import { Loader2 } from 'lucide-react';
 
 import ParceiroAlunoDisplayField from './ParceiroAlunoDisplayField';
 import { formatPhoneDisplay } from './parceiro-aluno-dados.utils';
+import { canCorrectPendingPartnerEmail } from '../../../partner-email-update';
 
 export type CepStatus = 'idle' | 'loading' | 'resolved' | 'not-found' | 'error';
 
@@ -61,6 +62,9 @@ const ParceiroAlunoAddressSection: React.FC<AddressSectionProps> = ({ formData, 
           <div className="md:col-span-2 space-y-1.5">
             <label htmlFor="aluno-email" className="block text-xs font-medium text-slate-600">E-mail</label>
             <input id="aluno-email" type="email" name="email" value={formData.email || ''} onChange={onChange} className="w-full min-h-11 sm:min-h-10 px-3 py-2 text-base sm:text-sm bg-slate-50 border border-slate-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none" />
+            {formData.authUserId && <p className="text-xs text-slate-500">{canCorrectPendingPartnerEmail(formData)
+              ? 'Ao salvar, o e-mail do primeiro acesso será corrigido e um novo link será enviado.'
+              : 'Altera o contato; o e-mail de acesso e a senha já existentes serão preservados.'}</p>}
           </div>
           <div className="space-y-1.5">
             <label htmlFor="aluno-telefone" className="block text-xs font-medium text-slate-600">Telefone / WhatsApp</label>

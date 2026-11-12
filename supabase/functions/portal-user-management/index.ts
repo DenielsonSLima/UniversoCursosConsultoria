@@ -7,6 +7,7 @@ import {
 } from "../_shared/http.ts";
 import { ensureAuthorizedGestor, loadManagedPartner } from "./gestor-access.ts";
 import { handleConfirmPartnerEmail } from "./handlers/confirm-partner-email.ts";
+import { handleCorrectPartnerEmail } from "./handlers/correct-partner-email.ts";
 import { handleConfirmResponsavelEmail } from "./handlers/confirm-responsavel-email.ts";
 import { handleDeletePartner } from "./handlers/delete-partner.ts";
 import { handleEnsureProfessorAccess } from "./handlers/ensure-professor-access.ts";
@@ -42,6 +43,7 @@ const VALID_ACTIONS = [
   "delete-gestor-user",
   "list-partner-email-statuses",
   "confirm-partner-email",
+  "correct-partner-email",
   "issue-student-temporary-password",
   "link-professor-auth-identity",
   "ensure-professor-access",
@@ -222,6 +224,21 @@ Deno.serve(async (req: Request) => {
     json,
   );
   if (partner instanceof Response) return partner;
+
+  if (action === "correct-partner-email") {
+    return handleCorrectPartnerEmail(context, partner, {
+      requestId: String(payload.requestId || ""),
+      email: String(payload.email || ""),
+      expectedEmail: typeof payload.expectedEmail === "string"
+        ? payload.expectedEmail
+        : null,
+      expectedAuthUserId: String(payload.expectedAuthUserId || ""),
+      expectedAuthEmail: String(payload.expectedAuthEmail || ""),
+      redirectTo: payload.redirectTo,
+      supabaseUrl,
+      publicApiKey,
+    });
+  }
 
   if (action === "confirm-partner-email") {
     return handleConfirmPartnerEmail(

@@ -1,9 +1,9 @@
 # Lote ativo
 
-## Lote: 2026-11-12-inicio-receber-compactos
-Objetivo: remover redundância no Início e compactar filtros/ordenar KPIs de A Receber como Contas a Pagar.
-Status: concluído e publicado em produção 4.8.321; PR #414 integrada, seis workflows aprovados, Vercel READY e HTTP200 no domínio oficial.
-Autorização: usuário solicitou publicação no GitHub e produção; conferência visual permanece com o usuário, sem navegador do agente.
-Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-12-inicio-receber-compactos.md`.
-Implantação: commit de produto 297cbefcbabbcb69d9979719af5a65cf05ae00f9; sem operação de banco ou Edge.
-Limitações: conferência visual de A Receber pelo usuário; lote paralelo Parceiros/4.8.320 preservado fora deste pacote.
+## Lote: 2026-11-12-parceiro-email-primeiro-acesso
+Objetivo: corrigir o e-mail do primeiro acesso pendente de Aluno/Professor preservando a identidade e acompanhar o envio real do novo link.
+Status: implementação local e revisão com três agentes concluídas; candidato 4.8.322 em validação de CI.
+Autorização: usuário solicitou revisão com três agentes e ajuste do fluxo. Nenhum envio de e-mail real nem alteração de conta de produção integra os testes.
+Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-12-parceiro-email-primeiro-acesso.md`.
+Base atual: main c02ea08ed6dd7897419abb5720d00479fbefe20d e produção 4.8.321 (PR #414); portal-user-management v40 ativa. Histórico da interface publicada preservado no registro 2026-11-12-inicio-receber-compactos.md.
+Limitações: navegador permanece sob controle do usuário; publicação de produto será tratada após validação e fechamento do lote.

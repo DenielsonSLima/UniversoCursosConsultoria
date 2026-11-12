@@ -13,6 +13,7 @@ type RecoveryOptions = {
   state: StudentInviteState;
   authUserId: string;
   authEmail: string;
+  contactEmail?: string;
   canDeliverByEmail: boolean;
   passwordWasCreated: boolean;
   accessWasActive: boolean;
@@ -28,6 +29,7 @@ export const handleStudentInviteRecovery = async (input: RecoveryOptions) => {
     state,
     authUserId,
     authEmail,
+    contactEmail,
     canDeliverByEmail,
     passwordWasCreated,
     accessWasActive,
@@ -140,6 +142,8 @@ export const handleStudentInviteRecovery = async (input: RecoveryOptions) => {
       ? "A senha já criada foi preservada. Geramos um link de recuperação para envio manual."
       : canDeliverByEmail
       ? "Geramos um link seguro para envio manual por um canal previamente verificado."
+      : contactEmail
+      ? "O e-mail de contato é diferente do e-mail de acesso. Nenhum e-mail foi enviado; entregue o link somente por um canal previamente verificado."
       : "Aluno sem e-mail: envie o link seguro por um canal previamente verificado, como o WhatsApp cadastrado.",
   });
 };

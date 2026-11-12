@@ -63,6 +63,15 @@ Histórico arquivado: [06/11/2026 — versões 4.8.249 a 4.8.250](./changelog/20
 
 Histórico arquivado: [07/11/2026 — versão 4.8.251](./changelog/2026-11-07-versao-4-8-251.md).
 
+Histórico arquivado: [07/11/2026 — versão 4.8.252](./changelog/2026-11-07-versao-4-8-252.md).
+
+## [4.8.322] - 2026-11-12
+
+### Corrigido
+- Parceiros: correção do e-mail de primeiro acesso pendente preserva a conta, o CPF e a senha, invalidando links antigos antes do novo envio.
+- Aluno e Professor apresentam o retorno real da entrega, recuperam a mesma tentativa e preservam contas já utilizadas ou compartilhadas.
+- Falha parcial de salvamento distingue o e-mail já corrigido dos demais dados e atualiza os caches de acesso.
+
 ## [4.8.321] - 2026-11-12
 
 ### Alterado
@@ -489,10 +498,3 @@ Histórico arquivado: [07/11/2026 — versão 4.8.251](./changelog/2026-11-07-ve
 ### Alterado
 - Caixa prioriza a prestação mensal na fila de leitura, preservando consultas, valores canônicos, escopo e cancelamento.
 - Linha de corte acompanha a invalidação Realtime do polo e consolidado; diagnóstico distingue métricas históricas e ensaio sintético de ganho real em produção.
-
-## [4.8.252] - 2026-11-07
-
-### Alterado
-- Cadastros Aluno, Professor, Pessoa Física e Pessoa Jurídica com campos, etapas e seções compactos; seletores próprios pesquisáveis preservam valores e validações.
-- Cartões e Responsáveis seguem o padrão compacto, mantendo informações, permissões e quatro colunas no desktop amplo; análise de carregamento separada de alterações de dados.
-
