@@ -11,7 +11,7 @@ const { JSDOM } = await import(jsdomPath ? pathToFileURL(resolve(jsdomPath)).hre
 const base = fileURLToPath(new URL('../../../../', import.meta.url));
 const scope = { contextKey: 'synthetic-context', poloId: 'synthetic-polo', environment: 'PRODUCAO', month: '2026-11' };
 
-test('issued list keeps three horizontal rows per note, visible actions and server filters with page-scoped ZIP selection', async () => {
+test('issued list keeps three compact columns per note, visible actions and server filters with page-scoped ZIP selection', async () => {
   await mkdir(resolve(base, 'tmp'), { recursive: true }); const temp = await mkdtemp(resolve(base, 'tmp/nfse-issued-list-'));
   const dom = new JSDOM('<!doctype html><div id="root"></div>', { url: 'http://localhost/', pretendToBeVisual: true });
   Object.assign(globalThis, { window: dom.window, document: dom.window.document, HTMLElement: dom.window.HTMLElement,
@@ -58,7 +58,10 @@ test('issued list keeps three horizontal rows per note, visible actions and serv
     assert(document.querySelector('.nfse-issued-utility input[type="checkbox"]'));
     assert.equal(document.querySelectorAll('.nfse-issued-note').length, 2);
     assert(document.body.textContent.includes('CNPJ 00.100.203/0001-00'));
-    assert(document.body.textContent.includes('Canhoba / SE')); assert.equal(document.querySelectorAll('.nfse-issued-line').length, 6);
+    assert(document.body.textContent.includes('Canhoba / SE')); assert.equal(document.querySelectorAll('.nfse-issued-note > div').length, 6);
+    assert(document.querySelector('.nfse-issued-controls .nfse-issued-note-summary'));
+    assert(document.querySelector('.nfse-issued-controls .nfse-issued-note-actions'));
+    assert(document.querySelector('.nfse-issued-note-context .nfse-issued-model'));
     assert(document.querySelector('[aria-label="NFS-e 2"]').textContent.includes('Cancelada'));
     assert.equal(document.querySelector('[aria-haspopup="menu"]'), null);
     await click(button('Visualizar')); await click(button('PDF')); await click(button('XML'));

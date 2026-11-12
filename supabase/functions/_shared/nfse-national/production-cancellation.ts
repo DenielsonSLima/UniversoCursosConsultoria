@@ -105,7 +105,25 @@ export function createNationalProductionCancellation(deps: ProductionCancellatio
           return { state: 'REJECTED', ...identity, codes };
         }
         if (response.status === 200 || response.status === 201) {
-          // Always read the registered event back. Do not infer cancellation from an acknowledgement.
+          // The live contract validates POST's EventosPostResponseSucesso separately
+          // from GET's archive encoding. Accept only the complete registered XML,
+          // never the status/acknowledgement alone. Unknown/invalid bodies fall back
+          // to the same GET-only reconciliation; no second POST is permitted.
+          if (['SINGLE_EVENT', 'ARCHIVE_DOUBLE_BASE64_GZIP'].includes(deps.eventContract.responseMode || '')) {
+            try {
+              const events = await readProductionEvents(parseFiscalJson(response.body), {
+                requestProperty: deps.eventContract.requestProperty, listProperty: null,
+                xmlProperty: 'eventoXmlGZipB64', eventIdProperty: null,
+                responseMode: 'SINGLE_EVENT', lookupSequence: '001',
+              }, prepared, deps.schema);
+              const registered = events.find(event => event.code === prepared.input.eventCode);
+              const cancellationState = projectCancellationState(prepared.input.accessKey, 'PRODUCAO', events);
+              if (registered && cancellationState !== 'UNCHANGED') return {
+                state: 'CONFIRMED', code: 'CONFIRMED', ...identity, eventId: registered.id,
+                eventCode: registered.code, eventXml: registered.xml, cancellationState,
+              };
+            } catch { /* Preserve strict XML validation and recover through GET. */ }
+          }
           return await consult(prepared, diagnostics, 'AFTER_POST') || { state: 'AWAITING_CONFIRMATION', ...identity,
             code: 'REGISTERED_EVENT_NOT_FOUND', diagnostics };
         }
