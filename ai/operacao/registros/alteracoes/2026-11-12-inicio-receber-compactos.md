@@ -29,3 +29,11 @@ Total: 10 arquivos
 - `ai/operacao/qualidade/limite-linhas-manifestos.json`
 - `ai/operacao/registros/alteracoes/2026-11-12-inicio-receber-compactos.md`
 
+
+## Publicação concluída
+- PR [#414](https://github.com/DenielsonSLima/UniversoCursosConsultoria/pull/414) integrada em main; commit de produto `297cbefcbabbcb69d9979719af5a65cf05ae00f9`.
+- Candidato `07a916643c3bd0d6fe0f7bf23667f2547f4ba9e6`: seis workflows concluídos com sucesso, incluindo TypeScript, lint, testes e build completo; Preview Vercel READY e HTTP200.
+- Produção `dpl_1p6bhcvYCumxKKfmStqdbBGHaPjN` READY, target production, aliases oficiais atribuídos ao commit do merge.
+- `https://www.universocc.com.br/gestor` e `/assets/main-BYWYNYGA.js` retornaram HTTP200; bundle contém a versão 4.8.321.
+- Conferência HTTP realizada pelo conector Vercel, sem navegador. DNS do terminal estava indisponível; não substituiu nem invalidou a verificação pelo conector.
+- Teto de linhas aprovado e índice local regenerado uma vez. Conferência visual de A Receber permanece com o usuário.
