@@ -134,3 +134,33 @@ test('DANFSe is one native A4 page with selectable values, fixed official QR and
       fields: { ...fields, xLocEmi: ['cidade '.repeat(1000)] } }, assets), /município excede/);
   } finally { await rm(directory, { recursive: true, force: true }); }
 });
+
+test('DANFSe renders catalog names for other cities and preserves XML labels and IBGE codes', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'nfse-danfse-municipality-'));
+  try {
+    const output = join(directory, 'danfse.cjs');
+    await build({ entryPoints: [fileURLToPath(new URL('danfse.pdf.ts', base))], outfile: output,
+      bundle: true, platform: 'node', format: 'cjs', logLevel: 'silent' });
+    const { createDanfsePdf } = createRequire(import.meta.url)(output);
+    const assets = {
+      logo: new Uint8Array(await readFile(new URL('assets/nfse-national-logo.png', base))),
+      regularFont: (await readFile(new URL('assets/LiberationSans-Regular.ttf', base))).toString('base64'),
+      boldFont: (await readFile(new URL('assets/LiberationSans-Bold.ttf', base))).toString('base64'),
+    };
+    const blob = createDanfsePdf({ accessKey: '1'.repeat(50), number: '25', environment: '2',
+      fields: { ...fields, xLocEmi: ['Aquidabã'], 'emit/enderNac/cMun': ['2800209'],
+        'DPS/infDPS/toma/end/endNac/cMun': ['2801108'] },
+      municipalityNames: { 2801108: 'Canhoba', 2800209: 'Must not override XML' },
+    }, assets);
+    const task = getDocument({ data: new Uint8Array(await blob.arrayBuffer()) });
+    try {
+      const pdf = await task.promise;
+      const content = await (await pdf.getPage(1)).getTextContent();
+      const text = content.items.map(item => item.str).join('\n');
+      assert.match(text, /Canhoba \/ SE/);
+      assert.match(text, /Aquidabã \/ SE/);
+      assert.match(text, /28\.01108/);
+      assert.doesNotMatch(text, /Must not override XML|2801108 \/ SE/);
+    } finally { await task.destroy(); }
+  } finally { await rm(directory, { recursive: true, force: true }); }
+});

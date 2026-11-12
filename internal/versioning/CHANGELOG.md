@@ -30,6 +30,12 @@ Histórico arquivado: [14/10/2026 — versões 4.8.218 a 4.8.226](./changelog/20
 
 Histórico arquivado: [19/10/2026 — versão 4.8.227](./changelog/2026-10-19-versao-4-8-227.md).
 
+Histórico arquivado: [20–21/10/2026 — versões 4.8.228 a 4.8.229](./changelog/2026-10-20-a-21-versoes-4-8-228-a-229.md).
+
+## [4.8.300] - 2026-11-12
+
+- DANFSe resolve nomes de municípios ausentes no XML pelo código IBGE exato, preservando a nota e os nomes já identificados.
+
 ## [4.8.299] - 2026-11-12
 
 - Serviços usa busca única por nome, nome fantasia, CPF ou CNPJ, com seleção de parceiros PF/PJ.
@@ -483,16 +489,3 @@ Histórico arquivado: [19/10/2026 — versão 4.8.227](./changelog/2026-10-19-ve
 
 - Parceiros: nomes dos cards de pessoas jurídicas menores em aproximadamente15%.
 - Prévia ao passar o mouse ou focar pelo teclado com nome completo, razão social, CNPJ e demais dados disponíveis, sem abrir o cadastro.
-
-
-## [4.8.229] - 2026-10-21
-
-- Caixa: consultas pesadas com concorrência controlada e prioridade para a conferência aberta pelo usuário.
-- Banco: busca da última evidência e validação histórica de composição com índices específicos, preservando regras e valores.
-- Proesc: confirmação individual auditável de quatro pagamentos comprovados, sem duplicar recebimentos ou presumir composição de encargos.
-
-
-## [4.8.228] - 2026-10-20
-
-- Corrige o timeout ao listar registros em conferência do mês e da carteira no Caixa.
-- Busca de evidências indexada preserva registros, valores, motivos, permissões e histórico.

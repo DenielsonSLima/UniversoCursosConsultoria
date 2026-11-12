@@ -4,6 +4,8 @@ export interface DanfseDocument {
   number: string;
   environment: '1' | '2';
   fields: Readonly<Record<string, readonly string[]>>;
+  /** Display-only official catalog labels; never serialized into the authorization XML. */
+  municipalityNames?: Readonly<Record<string, string>>;
 }
 
 export interface DanfseAssets {

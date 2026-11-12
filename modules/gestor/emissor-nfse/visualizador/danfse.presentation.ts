@@ -44,7 +44,7 @@ export function danfsePhone(value: string): string {
 export const danfseCep = (value: string) => /^\d{8}$/.test(value) ? value.replace(/^(\d{2})(\d{3})(\d{3})$/, '$1.$2-$3') : shown(value);
 export const codeLabel = (value: string, labels: Record<string, string>) => labels[value] ?? shown(value);
 
-// IBGE municipality prefixes identify states; city names are only taken from the XML.
+// IBGE prefixes identify states; XML names take priority over official catalog labels.
 const UF_BY_PREFIX: Record<string, string> = {
   11: 'RO', 12: 'AC', 13: 'AM', 14: 'RR', 15: 'PA', 16: 'AP', 17: 'TO',
   21: 'MA', 22: 'PI', 23: 'CE', 24: 'RN', 25: 'PB', 26: 'PE', 27: 'AL', 28: 'SE', 29: 'BA',
@@ -59,8 +59,8 @@ export function municipalityName(document: DanfseDocument, code: string): string
     ['emit/enderNac/cMun', 'xLocEmi'], ['cLocIncid', 'xLocIncid'],
     ['DPS/infDPS/serv/locPrest/cLocPrestacao', 'xLocPrestacao'],
     ['IBSCBS/cLocalidadeIncid', 'IBSCBS/xLocalidadeIncid'],
-  ]) if (xmlValue(document, codePath) === code) return xmlValue(document, namePath) || code;
-  return code;
+  ]) if (xmlValue(document, codePath) === code && xmlValue(document, namePath)) return xmlValue(document, namePath);
+  return document.municipalityNames?.[code] || code;
 }
 
 export function danfseComplements(document: DanfseDocument): string {
