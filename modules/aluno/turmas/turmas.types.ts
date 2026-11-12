@@ -25,6 +25,7 @@ export interface TurmaAluno {
 }
 
 export interface MatriculaAluno {
+  acesso_temporario_ate?: string | null;
   id: string;
   aluno_id?: string | null;
   turma_id?: string | null;

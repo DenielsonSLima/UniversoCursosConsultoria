@@ -51,6 +51,13 @@ Histórico arquivado: [27/10/2026 — versão 4.8.241](./changelog/2026-10-27-ve
 
 Histórico arquivado: [27/10/2026 — versão 4.8.242](./changelog/2026-10-27-versao-4-8-242.md).
 
+Histórico arquivado: [28/10/2026 — versão 4.8.243](./changelog/2026-10-28-versao-4-8-243.md).
+
+## [4.8.313] - 2026-11-12
+
+- Início e Meus Cursos reconhecem acesso temporário EAD autorizado, sem exigir pagamento confirmado durante a vigência.
+- Expiração, matrícula cancelada, provas e certificados continuam sujeitos às regras canônicas, sem baixa financeira.
+
 ## [4.8.312] - 2026-11-12
 
 - Emissão em lote com linhas compactas, dados expansíveis e progresso do retorno fiscal.
@@ -490,10 +497,3 @@ Histórico arquivado: [27/10/2026 — versão 4.8.242](./changelog/2026-10-27-ve
 - Chat e anexos aplicam identidade, polo e setor; diretório e categorias usam projeções mínimas autorizadas.
 - Transcrição por IA bloqueada por padrão, com aprovação documentada, aviso e texto efêmero; política pública descreve saúde, operadores e conservação.
 - Conferência de três agentes corrigiu N+1 das assinaturas e seleção de categoria fora do setor. Migrations, Edges e migração operacional continuam pendentes de aplicação autorizada em produção.
-
-## [4.8.243] - 2026-10-28
-
-### Corrigido
-- Portal do Aluno consulta somente o modelo EAD do próprio certificado finalizado, com identidade ativa verificada no servidor e sem liberar o registro administrativo de modelos.
-- Erro de carregamento deixa de aparecer como geração permanente de PDF; repetição explícita e troca de conta/curso descartam respostas antigas.
-- Certificados, códigos, datas, notas, progresso e modelos administrativos permanecem inalterados. Testes isolados cobrem autorização e recuperação da interface; smoke autenticado permanece pendente.
