@@ -34,6 +34,13 @@ Histórico arquivado: [20–21/10/2026 — versões 4.8.228 a 4.8.229](./changel
 
 Histórico arquivado: [21/10/2026 — versão4.8.230](./changelog/2026-10-21-versao-4-8-230.md).
 
+Histórico arquivado: [21/10/2026 — versão4.8.231](./changelog/2026-10-21-versao-4-8-231.md).
+
+## [4.8.303] - 2026-11-12
+
+- Financeiro do aluno organizado por tipo e curso, recolhido por padrão.
+- Matrículas, histórico e abertura autenticada dos boletos EAD preservados.
+
 ## [4.8.302] - 2026-11-12
 
 - Botão Abrir no financeiro do cadastro do aluno para boletos EAD já emitidos.
@@ -489,10 +496,3 @@ Histórico arquivado: [21/10/2026 — versão4.8.230](./changelog/2026-10-21-ver
 - Build exige Node estável 24.22.1 ou posterior na linha 24.x antes de gerar o site; CI seleciona esse piso e testa o gate, sem reutilizar Node antigo em cache.
 - Função de prévia social registra apenas a versão Node em log privado, uma vez por instância, sem alterar respostas ou expor dados.
 - A versão efetiva em produção deve ser confirmada nos logs após a publicação; a configuração 24.x não comprova o patch.
-
-## [4.8.231] - 2026-10-21
-
-### Caixa: conferência da composição
-- Adicionado botão Ver registros no aviso dos recebimentos, com lista completa paginada e filtro separado para ausência de detalhamento sem diferença.
-- Modal somente leitura exibe aluno, parcela, recebido, base, componentes identificados, diferença e origem da composição. Valores ausentes não são presumidos zero.
-- Reutilizada RPC segura do relatório mensal sob demanda, sem alteração de cobranças, saldos, banco ou permissões.

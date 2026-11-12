@@ -11,7 +11,7 @@ export interface StudentReceivable {
   tipo_lancamento: string | null;
   can_open_boleto: boolean;
   matriculas: { id: string; status: string; data_matricula: string } | null;
-  turmas: { nome: string; codigo: string; cursos: { nome: string }; polos: { nome: string } } | null;
+  turmas: { nome: string; codigo: string; cursos: { id?: string; nome: string; modalidade?: string | null }; polos: { nome: string } } | null;
 }
 export interface StudentFinanceView {
   items: StudentReceivable[];
