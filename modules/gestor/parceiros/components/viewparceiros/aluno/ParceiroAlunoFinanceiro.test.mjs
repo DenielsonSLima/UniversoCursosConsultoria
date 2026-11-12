@@ -50,3 +50,11 @@ test('PDF usa apenas endpoint de leitura com AbortSignal e rejeita resposta não
   globalThis.fixture.invoke=async()=>({data:new Blob(['html'],{type:'text/html'}),error:null});
   await assert.rejects(loadExistingBoletoPdf('r1',signal),/PDF válido/);
 });
+
+ test('grupos por tipo e curso começam recolhidos com controles nativos',()=>{
+  fixture();const html=render();
+  assert.equal((html.match(/<details /g)||[]).length,2);
+  assert.doesNotMatch(html,/<details[^>]*\sopen(?:=|\s|>)/);
+  assert.equal((html.match(/<summary /g)||[]).length,2);
+  assert.match(html,/focus-visible:ring-2/);
+ });

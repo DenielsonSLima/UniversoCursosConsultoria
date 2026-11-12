@@ -17,6 +17,7 @@ on:
       - 'modules/aluno/financeiro/**'
       - 'modules/gestor/parceiros/components/viewparceiros/aluno/**'
       - 'supabase/tests/partner_ead_boleto_read.pglite.mjs'
+      - 'supabase/tests/partner_finance_course_groups.pglite.mjs'
       - 'package-lock.json'
   push:
     branches: [main]
@@ -35,6 +36,7 @@ on:
       - 'modules/aluno/financeiro/**'
       - 'modules/gestor/parceiros/components/viewparceiros/aluno/**'
       - 'supabase/tests/partner_ead_boleto_read.pglite.mjs'
+      - 'supabase/tests/partner_finance_course_groups.pglite.mjs'
       - 'package-lock.json'
 
 permissions:
@@ -74,5 +76,7 @@ jobs:
         run: PGLITE_MODULE_PATH="$RUNNER_TEMP/student-banese-sql/node_modules/@electric-sql/pglite/dist/index.js" node supabase/tests/student_banese_discount.isolated.test.mjs
       - name: Validar leitura EAD e abertura autenticada
         run: |
-          node --test modules/gestor/parceiros/components/viewparceiros/aluno/ParceiroAlunoFinanceiro.test.mjs modules/gestor/parceiros/components/viewparceiros/aluno/ead-boleto-tab.test.ts supabase/functions/banese-boleto-document/ead-read-access.test.ts
+          node --test modules/gestor/parceiros/components/viewparceiros/aluno/parceiro-aluno-financeiro.groups.test.ts modules/gestor/parceiros/components/viewparceiros/aluno/ParceiroAlunoFinanceiro.test.mjs modules/gestor/parceiros/components/viewparceiros/aluno/ead-boleto-tab.test.ts supabase/functions/banese-boleto-document/ead-read-access.test.ts
           PGLITE_MODULE_URL="$RUNNER_TEMP/student-banese-sql/node_modules/@electric-sql/pglite/dist/index.js" node supabase/tests/partner_ead_boleto_read.pglite.mjs
+      - name: Validar agrupamento do financeiro por modalidade e curso
+        run: PGLITE_MODULE_URL="$RUNNER_TEMP/student-banese-sql/node_modules/@electric-sql/pglite/dist/index.js" node supabase/tests/partner_finance_course_groups.pglite.mjs

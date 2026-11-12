@@ -1,69 +1,69 @@
 {
   "schemaVersion": 1,
   "retrieval": "lexical-bm25-with-source-citations",
-  "builtAt": "2026-11-10T12:37:09.795Z",
+  "builtAt": "2026-11-12T13:16:10.445Z",
   "manifestVersion": 2,
-  "sourceSignature": "65dd579f602aa1633b082779fd7efe062804e567aa3bbae6f1814cc700f0d971",
+  "sourceSignature": "26009f6e3587d1612c3934612167299d0ec369d2f733e8ad1658463245f0269e",
   "sources": [
     {
       "path": "AGENTS.md",
-      "hash": "fef5216752ace96a705bc83649afe74bd0642e43d288fef7d1eb0c56e3df4ef0"
+      "hash": "445165b2f5eeb04dee3c85f9cbdc250e6d4e12dad6dcd57a23799a50cd5b9f09"
     },
     {
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "hash": "b26e14741f44889a7e9699d94976238e6de6f3c7eba0afc2d6dc4279358fb06e"
+      "hash": "41d51982c10a3b19ea91ad41e3cde9cd877c357068881e0955dd6583c74e8c48"
     },
     {
       "path": "ai/operacao/MEMORIA_CANONICA.md",
-      "hash": "9ce215bdd7a5f526a0f3fab772a39f1335371237da85916799a01b71928bf6f1"
+      "hash": "946532201a484334f401d51cf655fa7800811555181308014e8af40375c2e3a0"
     },
     {
       "path": "ai/operacao/PROTOCOLO_DE_LOTES.md",
-      "hash": "842ddd49da135b039f88013f1137aeb66418c29d7a410f9fda8532148ad6fbbf"
+      "hash": "ba7c48f77d5700149052619e51d9aa2541ecfc71a398de9c4f1b873e4a29423f"
     },
     {
       "path": "ai/operacao/politicas/FINANCEIRO.md",
-      "hash": "3fd20902d4c6e1276b6adfc2de7f4be696aa4b16908b6b5f585ded731dc3fba3"
+      "hash": "e58a24e89be875e9e10429ec06197dcfac76a95e34bc3a3cf09827039c7a479f"
     },
     {
       "path": "ai/operacao/politicas/INTERFACE.md",
-      "hash": "8cfefbc697cd59fad02700b515b47ea9b3a54a953405d2aad2b070b4b0866ae3"
+      "hash": "6a3c9e0f21c1214617647f63f6bb5a67af49d2a2b31a59d24deb371aa83d246e"
     },
     {
       "path": "ai/operacao/politicas/PDFS_OFICIAIS.md",
-      "hash": "c78bfd230a92c4f496951d2df53c4fd43dd3ea1b60229801996589ee39a0bda7"
+      "hash": "22fbefd4c156557445b2c97973455bc14c6365e673d7d319fdf78788cec165fa"
     },
     {
       "path": "ai/operacao/politicas/PLANO_CURSO.md",
-      "hash": "b0f1c504dd79d5a0c3de5e2c554d69fd0210d38d665d7d61ee59f49f7c267de1"
+      "hash": "c7587eb979f79296b7a311ac02db72f3a11323eb303a64b6b41b3f556034cff4"
     },
     {
       "path": "ai/operacao/politicas/SUPABASE_E_SEGURANCA.md",
-      "hash": "052e2b41b4ee65530927ab5c979d65c13b6a495311dddbb32da01d02db9dcfe4"
+      "hash": "f3bee8f4273a7f7e4ff5569b09316ee8ee6d2dfe598272dddcd4eb13fe96b465"
     },
     {
       "path": "docs/decisions/2026-08-04-native-auth-and-rich-push.md",
-      "hash": "5d6a64de4b3d6ffbf7d430aa98ca2671ad42eaaade8f0520e4c533fcf58bb263"
+      "hash": "d586683ff323f8fd7785e81edd80da0a15e9e1008cee46f8de5507fddcc7252e"
     },
     {
       "path": "docs/decisions/caixa-workspace-v2-semantica.md",
-      "hash": "eddc8adaf24fd12b72cf1d40282fc4a67f8c43e37a2d539b8a9a4f93bab0ad11"
+      "hash": "bdf1a0180e67018b9b0e9858898592f461f2446bec1f6b4f635b8deec263db44"
     },
     {
       "path": "docs/decisions/ciclos-tecnicos-cobrancas.md",
-      "hash": "fcf22366347248847113b1277ce0de85e294a31eaf67d5a772f3898377818698"
+      "hash": "e141a27efb4afeb4f39b32a9477553318fe00dae6f72a75455c9efede8e97e5d"
     },
     {
       "path": "docs/decisions/patrimonio-contas-a-pagar-emprestimos.md",
-      "hash": "0306bee3f9a8cf4b25bb26a2bed1bca28daf1d426e9a8cfcc55dad7bf8aa7082"
+      "hash": "7a888d21c6756b741a5b3dbc5b3e5179db46ea5581c98ee762d07139d529a6cd"
     },
     {
       "path": "docs/decisions/proesc-v2-operacional.md",
-      "hash": "c9f121e1321a52def2b0ecc22db0c0821c383135793b4e721ca2c71c5e0f9f12"
+      "hash": "1ae6efe9e5014f595bfcb62fab2903797fe090f7d61172235965ac31445bfd14"
     },
     {
       "path": "docs/decisions/transferencias-tecnicas.md",
-      "hash": "b98e8e1bd7eb41a3e573d13fafffebe1dcc3b69d5d2dc4d789eeb35c6c57685b"
+      "hash": "54c211d52eb2858f7c0fe35026c2b05a69d5d16eda73734d75a58708d068c850"
     }
   ],
   "chunks": [
@@ -208,23 +208,13 @@
       "part": 1
     },
     {
-      "id": "128c5a87b2e38ede6083",
-      "hash": "128c5a87b2e38ede6083756a432d5b637a255ececa78a801b9f89ffbc07c7e65",
+      "id": "303a5de962a66624bb9f",
+      "hash": "303a5de962a66624bb9f5741d065be798ab77fe503d5a5f688322f91d96faac3",
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Lote: 2026-11-10-nfse-certificado-runtime-edge",
-      "text": "Corrigir a validação A1 após a publicação 4.8.281, removendo dependência de APIs X509 ausentes no Deno 2.1.4. Preservar interface, senha UTF-8, confiança, CNPJ, validade, credenciais e bloqueio de emissão.",
-      "normalizedText": "corrigir a validacao a1 apos a publicacao 4 8 281 removendo dependencia de apis x509 ausentes no deno 2 1 4 preservar interface senha utf 8 confianca cnpj validade credenciais e bloqueio de emissao",
-      "tokenCount": 25,
-      "part": 1
-    },
-    {
-      "id": "bec1b0289203474cc639",
-      "hash": "bec1b0289203474cc639077fc0a6e12f15b83c20a4dcd940c400677532494454",
-      "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Lote: 2026-11-10-nfse-certificado-runtime-edge",
-      "text": "Mudança crítica por segurança/Edge/publicação. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-10-nfse-certificado-runtime-edge.md`. Base main 678b4264f00df6f6ea48c6b01992450f3395c49c, versão 4.8.281, revisão 290; candidata 4.8.282, revisão 291. Quinze testes sintéticos passaram em Deno 2.1.4 e 2.9.6; tipos do index/testes passaram no atual. CI do SHA final, Preview e implantação deste lote pendentes. Novo job 2.1.4 preserva CI atual; modo node-modules-dir=none ainda exige confirmação no runner limpo. Smoke Safari autenticado indisponível com o computador offline. Somente certificados sintéticos; sem senha real, migrações ou permissões novas. A publicação deve observar a autorização do novo lote e PR.",
-      "normalizedText": "mudanca critica por seguranca edge publicacao manifesto explicito ai operacao registros alteracoes 2026 11 10 nfse certificado runtime edge md base main 678b4264f00df6f6ea48c6b01992450f3395c49c versao 4 8 281 revisao 290 candidata 4 8 282 revisao 291 quinze testes sinteticos passaram em deno 2 1 4 e 2 9 6 tipos do index testes passaram no atual ci do sha final preview e implantacao deste lote pendentes novo job 2 1 4 preserva ci atual modo node modules dir none ainda exige confirmacao no runner limpo smoke safari autenticado indisponivel com o computador offline somente certificados sinteticos sem senha real migracoes ou permissoes novas a publicacao deve observar a autorizacao do novo lote e pr",
-      "tokenCount": 94,
+      "section": "Lote: 2026-11-12-financeiro-aluno-agrupamento",
+      "text": "Objetivo: financeiro do aluno agrupado por tipo/curso e recolhido por padrão. Status: testes locais e migration read-only verificados; CI e publicação em preparação. Autorização: usuário autorizou publicação específica; preservar dados e boletos. Manifesto: `ai/operacao/registros/alteracoes/2026-11-12-financeiro-aluno-agrupamento.md`. Limitação: smoke autenticado Safari pendente por indisponibilidade do Mac.",
+      "normalizedText": "objetivo financeiro do aluno agrupado por tipo curso e recolhido por padrao status testes locais e migration read only verificados ci e publicacao em preparacao autorizacao usuario autorizou publicacao especifica preservar dados e boletos manifesto ai operacao registros alteracoes 2026 11 12 financeiro aluno agrupamento md limitacao smoke autenticado safari pendente por indisponibilidade do mac",
+      "tokenCount": 51,
       "part": 1
     },
     {

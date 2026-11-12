@@ -1,8 +1,8 @@
 {
-  "version": "4.8.302",
+  "version": "4.8.303",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 311,
+  "revision": 312,
   "releasedAt": "2026-11-12",
-  "summary": "Visualização autenticada de boletos EAD no cadastro do aluno"
+  "summary": "Financeiro do aluno recolhido por tipo e curso"
 }
