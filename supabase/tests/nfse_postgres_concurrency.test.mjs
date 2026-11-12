@@ -3,7 +3,8 @@ import test from 'node:test';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { id, sql, installAutomaticReviewFixture } from './nfse_automatic_review.fixture.mjs';
-const { Client } = await import(pathToFileURL(resolve(process.env.NFSE_PG_MODULE)).href);
+const pgModule = await import(pathToFileURL(resolve(process.env.NFSE_PG_MODULE)).href);
+const { Client } = pgModule.default ?? pgModule;
 const connect = async name => {
   const client = new Client({connectionString:process.env.NFSE_TEST_DATABASE_URL,application_name:name});
   await client.connect(); client.exec = q => client.query(q); return client;
