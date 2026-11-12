@@ -1,3 +1,4 @@
+import { productionContractCache } from "./contract-cache.ts";
 import { createIndividualLedgerAccess } from "./queue-bridge.ts";
 import {
   assertOwnedIndividualCancellation,
@@ -126,8 +127,11 @@ export function createIndividualRuntime(
       },
     );
     transports.push(transport);
-    let evidence: ProductionContractEvidence | null = null;
-    for (const path of ["/swagger/docs/v1", "/swagger/v1/swagger.json"]) {
+    // Scope metadata only. Rotation/configuration changes cannot reuse another credential's proof.
+    const contractKey = JSON.stringify([actor, command.scope, material.configurationVersion,
+      material.certificate.fingerprint, config.url]);
+    let evidence = productionContractCache.get(contractKey);
+    for (const path of evidence ? [] : ["/swagger/docs/v1", "/swagger/v1/swagger.json"]) {
       try {
         const response = await transport.request("GET", path);
         if (response.status !== 200) continue;
@@ -147,6 +151,7 @@ export function createIndividualRuntime(
     }
     requireContract(evidence !== null, "PRODUCTION_MTLS_SPEC_UNVERIFIED");
     const proof: ProductionContractEvidence = evidence;
+    productionContractCache.put(contractKey, proof);
     const assessment = assessNationalProductionContract(proof);
     const common = {
       credential: material.material,
@@ -159,6 +164,7 @@ export function createIndividualRuntime(
     return {
       material,
       assessment,
+      invalidateContract: () => productionContractCache.invalidate(contractKey),
       issuer: createNationalProductionIssuer(common),
       cancellation: (operation: IndividualRow, row: CancellationRow) => {
         requireContract(
@@ -338,9 +344,13 @@ export function createIndividualRuntime(
         signedDpsXml: row.signedDpsXml,
       };
       if (!reconcile) ctx.allowPost("ISSUE", row.dispatch);
-      return await (reconcile
+      const result = await (reconcile
         ? ctx.issuer.reconcile(prepared)
         : ctx.issuer.issue(prepared));
+      if ('code' in result && /^(RESPONSE_|INVALID_AUTHORIZED_|PRODUCTION_.*CONTRACT)/.test(result.code || '')) {
+        ctx.invalidateContract();
+      }
+      return result;
     },
     async prepareCancellation(command, actor, row) {
       const ctx = await context(command, actor);

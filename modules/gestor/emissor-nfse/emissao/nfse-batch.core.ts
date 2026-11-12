@@ -16,7 +16,7 @@ export const batchCanIssue = (item: NfseBatchItem, now = Date.now()) => Boolean(
   && (!item.result || item.result.state === 'PREVIEWED'));
 /** Browser orchestrates single durable operations. No money, model or person is reconstructed here. */
 export function createNfseBatchController(scope: NfseScope, input: readonly NfseBatchInput[], service: NfseIndividualService,
-  storage: Storage, options: { uuid?: () => string; onChanged?: () => void; onNotice?: (notice: NfseFiscalNotice) => void; confirmationDelays?: readonly number[]; requestTimeoutMs?: number } = {}) {
+  storage: Storage, options: { uuid?: () => string; onChanged?: () => void; onNotice?: (notice: NfseFiscalNotice) => void; confirmationDelays?: readonly number[]; requestTimeoutMs?: number; confirmationTimeoutMs?: number } = {}) {
   if (!input.length || input.length > 100 || new Set(input.map(item => `${item.source.kind}:${item.source.id}`)).size !== input.length) throw new Error('Selecione preparações distintas para o lote.');
   const captured = { ...scope }, uuid = options.uuid || (() => crypto.randomUUID());
   let items: NfseBatchItem[] = input.map(item => {
@@ -42,46 +42,77 @@ export function createNfseBatchController(scope: NfseScope, input: readonly Nfse
     }
   };
   let wake: (() => void) | undefined;
+  let signaled = false;
   let cancelRead: (() => void) | undefined;
   let lastEventRead = 0;
-  const bounded = <T,>(promise: Promise<T>): Promise<T> => new Promise((resolve, reject) => {
+  const bounded = <T,>(promise: Promise<T>, timeoutMs = options.requestTimeoutMs ?? 45_000): Promise<T> => new Promise((resolve, reject) => {
     const finish = () => { clearTimeout(timer); if (cancelRead === cancel) cancelRead = undefined; };
     const cancel = () => { finish(); reject(new Error('Retorno ainda não confirmado. O sistema consultará a mesma DPS, sem reenviar.')); };
-    const timer = setTimeout(cancel, options.requestTimeoutMs ?? 45_000);
+    const timer = setTimeout(cancel, Math.max(0, timeoutMs));
     cancelRead = cancel;
     promise.then(value => { finish(); resolve(value); }, error => { finish(); reject(error); });
   });
   const wait = (milliseconds: number) => new Promise<void>(resolve => {
-    const timer = setTimeout(done, milliseconds);
+    const timer = setTimeout(done, signaled ? 0 : milliseconds);
+    signaled = false;
     function done() { clearTimeout(timer); wake = undefined; resolve(); }
     wake = done;
   });
-  const read = async (index: number) => {
-    const item = items[index]; if (!item.previewId) return;
-    lastEventRead = Date.now();
-    let result: IndividualIssueResult;
-    try { result = await bounded(service.reconcile(captured, item.requestId, item.previewId)); }
-    finally { lastEventRead = Date.now(); }
+  const reads = new Map<number, Promise<void>>();
+  let wakeRead: { index: number; done: () => void } | undefined;
+  const accept = (index: number, result: IndividualIssueResult) => {
+    // A delayed uncertain response must never downgrade an authorization already observed.
+    if (items[index].result?.state === 'AUTHORIZED' && result.state !== 'AUTHORIZED') return;
+    if (items[index].dispatched && result.state === 'PREVIEWED') return;
     const preview = result.state === 'PREVIEWED' && result.expiresAt && result.capability ? { previewId: result.previewId, expiresAt: result.expiresAt,
       state: 'PREVIEWED' as const, capability: result.capability, payload: result.payload } : undefined;
     patch(index, { result, preview, error: undefined, uncertain: result.state === 'AWAITING_CONFIRMATION', dispatched: result.state !== 'PREVIEWED' });
-    changed();
+    if (result.state === 'AUTHORIZED') {
+      // A late POST may confirm while GET is still physically pending. Release only
+      // this item's local waiter, retaining the GET single-flight until settlement.
+      if (wakeRead?.index === index) wakeRead.done();
+      wake?.();
+    }
+    if (busy) changed();
+    else if (!disposed) options.onChanged?.();
+  };
+  const read = async (index: number, timeoutMs = options.requestTimeoutMs ?? 45_000) => {
+    const item = items[index]; if (!item.previewId) return;
+    let pending = reads.get(index);
+    if (!pending) {
+      lastEventRead = Date.now();
+      // Keep the physical request single-flight even after its UI deadline. Consume late
+      // success/rejection exactly once; never start overlapping reads on a focus storm.
+      pending = service.reconcile(captured, item.requestId, item.previewId)
+        .then(result => { accept(index, result); })
+        .finally(() => { reads.delete(index); lastEventRead = Date.now(); });
+      reads.set(index, pending);
+    }
+    let waiter: { index: number; done: () => void } | undefined;
+    const confirmed = new Promise<void>((resolve, reject) => {
+      waiter = { index, done: resolve }; wakeRead = waiter;
+      pending!.then(resolve, reject);
+    });
+    try { await bounded(confirmed, timeoutMs); }
+    finally { if (wakeRead === waiter) wakeRead = undefined; }
   };
   // Bounded GET-only recovery while the explicit batch action is active, never a second ISSUE.
   const follow = async (index: number) => {
     phase = 'CONFIRM'; emit();
+    const deadline = Date.now() + (options.confirmationTimeoutMs ?? 32_000);
     for (const delay of options.confirmationDelays || [1500, 2500, 4000, 6000, 8000, 10000]) {
-      if (disposed || stopped) return;
-      await wait(delay);
-      if (disposed || stopped) return;
-      try { await read(index); } catch { continue; }
+      if (disposed || stopped || !items[index].uncertain) return;
+      if (Date.now() >= deadline) return;
+      await wait(Math.min(delay, deadline - Date.now()));
+      if (disposed || stopped || !items[index].uncertain || Date.now() >= deadline) return;
+      try { await read(index, Math.min(options.requestTimeoutMs ?? 45_000, deadline - Date.now())); } catch { continue; }
       if (!items[index].uncertain) return;
     }
   };
   return {
     signalChange() {
       if (disposed || stopped) return;
-      if (busy) { wake?.(); return; }
+      if (busy) { signaled = true; wake?.(); return; }
       if (Date.now() - lastEventRead < 10_000 || !items.some(item => item.uncertain)) return;
       lastEventRead = Date.now();
       void run('CONSULT', async () => {
@@ -137,8 +168,7 @@ export function createNfseBatchController(scope: NfseScope, input: readonly Nfse
           // Persist the same operation before dispatch; uncertain responses are GET-only.
           phase = 'ISSUE';
           patch(index, { dispatched: true, result: undefined, error: undefined, preview: undefined });
-          const result = await bounded(service.issue(captured, item.requestId, item.previewId));
-          patch(index, { result, uncertain: result.state === 'AWAITING_CONFIRMATION' }); changed();
+          await bounded(service.issue(captured, item.requestId, item.previewId).then(result => { accept(index, result); }));
           if (items[index].uncertain) await follow(index);
           const final = items[index].result!;
           notice(individualIssueNotice(final));

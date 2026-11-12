@@ -244,6 +244,8 @@ jobs:
           supabase/functions/nfse-national-individual/cancellation-review.test.ts
           supabase/functions/nfse-national-individual/queue-bridge.test.ts
           supabase/functions/nfse-national-individual/runtime.test.ts
+          supabase/functions/nfse-national-individual/contract-cache.test.ts
+          supabase/functions/nfse-national-individual/runtime-contract-cache.test.ts
       - name: Conferir tipos do executor individual de produção
         run: >-
           deno check --config supabase/functions/nfse-national-individual/deno.json

@@ -11,7 +11,7 @@ const payload: IndividualPayload = { issuerName: 'EMITENTE SINTÉTICO', issuerCn
   nationalServiceCode: '080201', nbsCode: '122020000', serviceDescription: 'SERVIÇO SINTÉTICO', opSimpNac: '3', regApTribSN: '1', municipalityCode: '2803401', municipalRegistration: null };
 const result = (previewId: string, state: IndividualIssueResult['state'] = 'AUTHORIZED'): IndividualIssueResult => ({ previewId, state, message: 'Retorno sintético', payload,
   number: state === 'AUTHORIZED' ? previewId.slice(-2).replace(/^0/, '') : null, accessKey: state === 'AUTHORIZED' ? '1'.repeat(50) : null });
-function fixture(overrides: Partial<NfseIndividualService> = {}, entries = inputs, confirmationDelays: readonly number[] = [], requestTimeoutMs?: number) {
+function fixture(overrides: Partial<NfseIndividualService> = {}, entries = inputs, confirmationDelays: readonly number[] = [], requestTimeoutMs?: number, confirmationTimeoutMs?: number) {
   const calls: { action: string; args: unknown[] }[] = [], stored = new Map<string, string>(), notices: unknown[] = [];
   let serial = 100;
   const service = {
@@ -21,7 +21,7 @@ function fixture(overrides: Partial<NfseIndividualService> = {}, entries = input
     reconcile: async (...args: unknown[]) => { calls.push({ action: 'RECONCILE', args }); return result(String(args[2])); }, ...overrides,
   } as unknown as NfseIndividualService;
   const storage = { getItem: (key: string) => stored.get(key) || null, setItem: (key: string, value: string) => { stored.set(key, value); } };
-  const controller = createNfseBatchController(scope, entries, service, storage, { confirmationDelays, requestTimeoutMs, uuid: () => id(++serial), onNotice: notice => notices.push(notice) });
+  const controller = createNfseBatchController(scope, entries, service, storage, { confirmationDelays, requestTimeoutMs, confirmationTimeoutMs, uuid: () => id(++serial), onNotice: notice => notices.push(notice) });
   return { controller, calls, stored, storage, notices, service };
 }
 
@@ -183,4 +183,67 @@ test('explicit pause releases hanging request and disables automatic event recov
   f.controller.signalChange(); await Promise.resolve();
   assert.equal(f.controller.getSnapshot().busy, false); assert.equal(sent, 1); assert.equal(reads, 0);
   assert.equal(f.controller.getSnapshot().items[0].uncertain, true);
+});
+
+
+test('confirmation wall clock includes slow requests and reuses unresolved physical read after timeout', async () => {
+  let reads = 0, release!: (value: IndividualIssueResult) => void;
+  const f = fixture({ issue: async (_s, _r, p) => result(p, 'AWAITING_CONFIRMATION'),
+    reconcile: async () => { reads++; return new Promise(resolve => { release = resolve; }); } }, [inputs[0]], [0, 0, 0, 0, 0, 0], 1000, 25);
+  await f.controller.review(); const start = globalThis.performance.now(); await f.controller.issue();
+  assert(globalThis.performance.now() - start < 250, 'wall clock budget, not 6 individual timeouts');
+  assert.equal(reads, 1); assert.equal(f.controller.getSnapshot().items[0].uncertain, true);
+  const pending = f.controller.consult(0);
+  f.controller.signalChange(); f.controller.signalChange();
+  assert.equal(reads, 1, 'underlying request remains single-flight');
+  release(result(id(30))); await pending;
+  assert.equal(f.controller.getSnapshot().items[0].result?.state, 'AUTHORIZED');
+});
+
+test('late ISSUE authorization is retained and stale GET cannot downgrade or enable resend', async () => {
+  let sent = 0, releaseIssue!: (value: IndividualIssueResult) => void;
+  let releaseRead!: (value: IndividualIssueResult) => void;
+  const f = fixture({ issue: async () => { sent++; return new Promise(resolve => { releaseIssue = resolve; }); },
+    reconcile: async () => new Promise(resolve => { releaseRead = resolve; }) }, [inputs[0]], [0], 5, 15);
+  await f.controller.review(); await f.controller.issue();
+  releaseIssue(result(id(30))); await new Promise(resolve => setTimeout(resolve, 0));
+  releaseRead(result(id(30), 'AWAITING_CONFIRMATION')); await new Promise(resolve => setTimeout(resolve, 0));
+  assert.equal(f.controller.getSnapshot().items[0].result?.state, 'AUTHORIZED');
+  await f.controller.issue(); assert.equal(sent, 1);
+});
+
+test('PREVIEWED during lost POST never resets dispatched flag or authorizes resend', async () => {
+  let sent = 0;
+  const f = fixture({ issue: async () => { sent++; return new Promise(() => {}); },
+    reconcile: async (_s, _r, p) => result(p, 'PREVIEWED') }, [inputs[0]], [0], 5, 15);
+  await f.controller.review(); await f.controller.issue(); await f.controller.issue();
+  assert.equal(sent, 1); assert.equal(f.controller.getSnapshot().items[0].uncertain, true);
+});
+
+test('dispose releases monitoring and consumes late rejection without callbacks or another request', async () => {
+  let rejectRead!: (error: Error) => void, changed = 0, notifications = 0;
+  const f = fixture({ reconcile: async () => new Promise((_resolve, reject) => { rejectRead = reject; }) });
+  const controller = createNfseBatchController(scope, [{ ...inputs[0], operation: { requestId: id(101), operationId: id(30) } } as NfseBatchInput],
+    f.service, f.storage, { onChanged: () => { changed++; }, requestTimeoutMs: 1000 });
+  controller.subscribe(() => { notifications++; });
+  const running = controller.consult(0); controller.dispose(); await running;
+  const before = notifications; rejectRead(new Error('late transport failure'));
+  await new Promise(resolve => setTimeout(resolve, 0));
+  assert.equal(notifications, before); assert.equal(changed, 0); assert.equal(controller.getSnapshot().busy, false);
+});
+
+test('late POST authorization immediately releases active confirmation even while GET hangs', async () => {
+  let releaseIssue!: (value: IndividualIssueResult) => void;
+  let releaseRead!: (value: IndividualIssueResult) => void;
+  let startedRead!: () => void;
+  const readStarted = new Promise<void>(resolve => { startedRead = resolve; });
+  const f = fixture({ issue: async () => new Promise(resolve => { releaseIssue = resolve; }),
+    reconcile: async () => { startedRead(); return new Promise(resolve => { releaseRead = resolve; }); } }, [inputs[0]], [0, 0], 100, 1000);
+  await f.controller.review(); const running = f.controller.issue(); await readStarted;
+  releaseIssue(result(id(30)));
+  const ended = await Promise.race([running.then(() => true), new Promise<boolean>(resolve => setTimeout(() => resolve(false), 25))]);
+  assert.equal(ended, true, 'must not wait for GET timeout after confirmed authorization');
+  assert.equal(f.controller.getSnapshot().busy, false);
+  assert.equal(f.controller.getSnapshot().items[0].result?.state, 'AUTHORIZED');
+  releaseRead(result(id(30), 'AWAITING_CONFIRMATION')); await running;
 });

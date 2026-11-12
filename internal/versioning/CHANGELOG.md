@@ -53,6 +53,13 @@ Histórico arquivado: [27/10/2026 — versão 4.8.242](./changelog/2026-10-27-ve
 
 Histórico arquivado: [28/10/2026 — versão 4.8.243](./changelog/2026-10-28-versao-4-8-243.md).
 
+Histórico arquivado: [01/11/2026 — versão 4.8.244](./changelog/2026-11-01-versao-4-8-244.md).
+
+## [4.8.314] - 2026-11-12
+
+- Contrato público fiscal validado reutilizado por até 60 segundos, com autorização e certificado revalidados em cada solicitação.
+- Acompanhamento da mesma DPS limitado por tempo real, preservando consultas em andamento e respostas tardias sem duplicar emissão.
+
 ## [4.8.313] - 2026-11-12
 
 - Início e Meus Cursos reconhecem acesso temporário EAD autorizado, sem exigir pagamento confirmado durante a vigência.
@@ -488,12 +495,3 @@ Histórico arquivado: [28/10/2026 — versão 4.8.243](./changelog/2026-10-28-ve
 - Outros créditos recebidos localmente permitem estorno auditado com motivo e preservação do histórico financeiro; liquidações de gateway exigem tratamento próprio.
 - Créditos avulsos sem classificação legada são reconhecidos para seleção e cancelamento com as mesmas guardas dos demais títulos.
 - Resumo e painel EAD usam fatos financeiros, sem inferir pagamento ou receita a partir do acesso acadêmico. Produção autorizada; implantação e conferência registradas no lote.
-
-## [4.8.244] - 2026-11-01
-
-### Corrigido
-- Fotos pessoais passam a referências privadas, assinatura em lote por sessão e capability documental válida; migração administrativa com SHA-256, retomada e quarentena.
-- Início deixa de autorizar cadastro completo; vacinas exigem atribuição explícita e polo, inclusive em acesso global.
-- Chat e anexos aplicam identidade, polo e setor; diretório e categorias usam projeções mínimas autorizadas.
-- Transcrição por IA bloqueada por padrão, com aprovação documentada, aviso e texto efêmero; política pública descreve saúde, operadores e conservação.
-- Conferência de três agentes corrigiu N+1 das assinaturas e seleção de categoria fora do setor. Migrations, Edges e migração operacional continuam pendentes de aplicação autorizada em produção.
