@@ -15,7 +15,7 @@ for (const scenario of [
   { name: 'last payment among different days, not month end', paymentDates: ['2026-10-09', '2026-10-08'], preconfigured: true, expectedDate: '2026-10-09' },
   { name: 'old saved dates require a new confirmation', paymentDates: ['2026-10-09', '2026-10-08'], preconfigured: true, expectedDate: '2026-10-09', oldSavedDate: '2026-10-08' },
   { name: 'automatic payment month', paymentDates: ['2026-10-09'], preconfigured: false, expectedDate: '2026-10-09' },
-  { name: 'prepared model reused without opening the picker', paymentDates: ['2026-10-09'], preconfigured: true, expectedDate: '2026-10-09' },
+  { name: 'shared model reused without opening the picker', modelType: 'AMBOS', paymentDates: ['2026-10-09'], preconfigured: true, expectedDate: '2026-10-09' },
 ]) test(`optional fiscal editor: ${scenario.name}; canonical validation without checkboxes or issue`, async () => {
   await mkdir(resolve(base, 'tmp'), { recursive: true });
   const temp = await mkdtemp(resolve(base, 'tmp/nfse-fiscal-review-ui-'));
@@ -41,8 +41,10 @@ for (const scenario of [
   await writeFile(bundle, compiled.outputFiles[0].contents);
   const { Modal, fiscalReview, fiscalScope, fiscalId } = await import(pathToFileURL(bundle).href);
   globalThis.__fiscalModels = [
-    { id: fiscalId(4), version: 1, active: true, name: 'Modelo anterior', nationalServiceCode: '080101' },
-    { id: fiscalId(6), version: 2, active: true, name: 'Ensino técnico revisado', nationalServiceCode: '080201' },
+    { id: fiscalId(4), version: 1, active: true, name: 'Modelo anterior', modelType: 'ALUNO', nationalServiceCode: '080101' },
+    { id: fiscalId(6), version: 2, active: true, name: 'Ensino técnico revisado', modelType: scenario.modelType || 'ALUNO', nationalServiceCode: '080201' },
+    { id: fiscalId(12), version: 1, active: true, name: 'Somente serviços', modelType: 'SERVICO', nationalServiceCode: '080201' },
+    { id: fiscalId(13), version: 1, active: true, name: 'Legado sem classificação', nationalServiceCode: '080201' },
   ];
   const calls = [], savedMessages = [];
   let revision = scenario.oldSavedDate ? 1 : 0;
@@ -103,6 +105,7 @@ for (const scenario of [
     await click(combobox);
     assert.equal(document.querySelectorAll('[role="option"]').length, 1);
     assert(document.querySelector('[role="option"]').textContent.includes('080201'));
+    assert(![...document.querySelectorAll('[role="option"]')].some(option => /Somente serviços|Legado sem classificação/.test(option.textContent)), 'Service-only and unclassified models must not become academic options');
     assert.equal(document.querySelector('select'), null);
     await click(document.querySelector('[role="option"]'));
     assert(document.body.textContent.includes('Descrição fiscal revisada sintética'));

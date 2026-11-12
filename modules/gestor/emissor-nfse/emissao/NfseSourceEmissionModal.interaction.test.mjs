@@ -186,6 +186,21 @@ test('saved source reviews canonical snapshot and recovers issue and cancellatio
     await act(async () => { await new Promise(resolve => setTimeout(resolve, 100)); });
     assert.equal(followReads, 2, 'Terminal confirmation stops automatic reads');
     assert.equal(calls.filter(row => row.action === 'CANCEL').length, cancelCount, 'Automatic follow-up is GET-only');
+    let issueReads = 0;
+    const automaticIssueService = { ...service, reconcile: async () => {
+      issueReads++;
+      return issueReads === 1 ? { ...note, state: 'AWAITING_CONFIRMATION', number: null, accessKey: null, message: 'Resposta ainda não confirmada.' } : note;
+    } };
+    const issueCount = calls.filter(row => row.action === 'ISSUE').length;
+    await act(async () => render({ key: 'auto-issue', intent: 'CONSULT', service: automaticIssueService,
+      source: { kind: 'PARTNER_SERVICE', id: id(85) }, operation: { operationId: id(5), requestId: id(84), state: 'AWAITING_CONFIRMATION' } })); await settle();
+    assert.equal(button('Consultar resultado da emissão'), undefined);
+    assert(document.body.textContent.includes('Consultando o resultado automaticamente'));
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 100)); });
+    assert.equal(issueReads, 2); assert(document.body.textContent.includes('Autorização sintética'));
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 100)); });
+    assert.equal(issueReads, 2, 'Terminal issue stops polling');
+    assert.equal(calls.filter(row => row.action === 'ISSUE').length, issueCount, 'Automatic issue follow never sends again');
     dom.window.setTimeout = normalTimeout;
     const count = calls.length;
     await act(async () => render({ key: 'academic', source: { kind: 'ACADEMIC_QUEUE', id: id(20) }, amount: '300.00' })); await settle();

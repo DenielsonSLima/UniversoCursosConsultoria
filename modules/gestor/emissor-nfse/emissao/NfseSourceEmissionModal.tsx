@@ -41,7 +41,7 @@ export default function NfseSourceEmissionModal({ scope, source, label, amount, 
   const [cancellationModel, setCancellationModel] = useState<NfseCancellationModel | null>(null), [detail, setDetail] = useState<string | null>(null);
   const [error, setError] = useState<string>(), [busy, setBusy] = useState(false), [clock, setClock] = useState(Date.now);
   const request = useRef<{ key: string; id: string } | null>(null), active = useRef(false), mounted = useRef(true), opened = useRef(false);
-  const cancellationReadActive = useRef(false);
+  const cancellationReadActive = useRef(false), issueReadActive = useRef(false);
   const close = () => {
     if (active.current) return;
     if (cancellationOpen) { setCancellationOpen(false); setCancelConfirmed(false); }
@@ -172,6 +172,26 @@ export default function NfseSourceEmissionModal({ scope, source, label, amount, 
     return () => document.removeEventListener('visibilitychange', resume);
   }, []);
   useEffect(() => {
+    if (document.hidden || busy || !attempt || !supported || operation?.state === 'CANCELLED'
+      || issued && issued.state !== 'AWAITING_CONFIRMATION') return;
+    let disposed = false;
+    const timer = window.setTimeout(async () => {
+      if (document.hidden) return;
+      if (active.current || issueReadActive.current) { setClock(Date.now()); return; }
+      issueReadActive.current = true;
+      try {
+        const result = await service.reconcile(scope, attempt.requestId, attempt.previewId);
+        if (disposed || !mounted.current) return;
+        setIssued(result); setError(undefined); onChanged();
+        setPreview(result.state === 'PREVIEWED' && result.expiresAt && result.capability ? {
+          previewId: result.previewId, expiresAt: result.expiresAt, state: 'PREVIEWED', payload: result.payload, capability: result.capability } : undefined);
+        if (['AUTHORIZED', 'REJECTED', 'BLOCKED'].includes(result.state)) onNotice?.(individualIssueNotice(result));
+      } catch { if (!disposed && mounted.current) setClock(Date.now()); }
+      finally { issueReadActive.current = false; }
+    }, 3000);
+    return () => { disposed = true; window.clearTimeout(timer); };
+  }, [attempt?.requestId, attempt?.previewId, issued, busy, supported, clock, scope, service, operation?.state]);
+  useEffect(() => {
     if (document.hidden || busy || !attempt?.cancelPreviewId || !supported || issued?.state !== 'AUTHORIZED'
       || cancellation && !['CANCELLATION_PENDING', 'AWAITING_ANALYSIS'].includes(cancellation.state)) return;
     let disposed = false;
@@ -223,7 +243,10 @@ export default function NfseSourceEmissionModal({ scope, source, label, amount, 
           {expired && <p role="status">A prévia expirou. Atualize os dados para continuar.</p>}
           {(expired || !preview.capability.available) && attempt && <button type="button" className="nfse-button nfse-button-secondary" disabled={busy} onClick={renew}>Atualizar dados desta operação</button>}
         </>}
-        {!cancellationOpen && attempt && issued?.state !== 'AUTHORIZED' && operation?.state !== 'CANCELLED' && <button type="button" className="nfse-button nfse-button-secondary" disabled={busy} onClick={() => consult(attempt)}>Consultar resultado da emissão</button>}
+        {attempt && !busy && (!issued || issued.state === 'AWAITING_CONFIRMATION') && operation?.state !== 'CANCELLED'
+          && <p role="status" aria-live="polite">Consultando o resultado automaticamente. Nenhum novo envio será feito.</p>}
+        {attempt?.cancelPreviewId && (!cancellation || ['CANCELLATION_PENDING', 'AWAITING_ANALYSIS'].includes(cancellation.state))
+          && <p role="status" aria-live="polite">Acompanhando o cancelamento automaticamente, sem reenviar o pedido.</p>}
         {operation?.state === 'CANCELLED' && !cancellation && <p role="status"><strong>Cancelada</strong> · {operation.message || 'O cancelamento desta nota está registrado.'}</p>}
         {!cancellationOpen && issued && <div className="nfse-individual-state" role="status"><strong>{operationLabel(issued.state)}</strong><p>{issued.message}</p>
           {cancellation?.state === 'CANCELLED' && <p>Autorização histórica preservada. O cancelamento confirmado está registrado no evento abaixo.</p>}

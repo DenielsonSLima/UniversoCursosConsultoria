@@ -16,7 +16,7 @@
 - A validação visual autenticada não é substituída por testes sintéticos.
 
 ## Manifesto explícito
-Total: 52 arquivos
+Total: 53 arquivos
 - `ai/operacao/LOTE_ATIVO.md`
 - `ai/operacao/qualidade/limite-linhas-manifestos.json`
 - `ai/operacao/registros/alteracoes/2026-11-12-nfse-tipos-periodo-fluxo.md`
@@ -30,6 +30,7 @@ Total: 52 arquivos
 - `modules/gestor/emissor-nfse/emissao/NfseCancellationRetry.tsx`
 - `modules/gestor/emissor-nfse/emissao/NfseSourceEmissionModal.interaction.test.mjs`
 - `modules/gestor/emissor-nfse/emissao/NfseSourceEmissionModal.tsx`
+- `modules/gestor/emissor-nfse/fila/fiscal-review/NfseFiscalReviewModal.interaction.test.mjs`
 - `modules/gestor/emissor-nfse/fila/fiscal-review/NfseFiscalReviewModal.tsx`
 - `modules/gestor/emissor-nfse/individual/NfseIndividualCancellation.tsx`
 - `modules/gestor/emissor-nfse/modelos/NfseEmissionModelsSection.tsx`
