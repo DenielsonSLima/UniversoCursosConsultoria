@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
-const { PGlite } = await import(process.argv[2]);
+import {testModule} from './nfse-reconciliation-fixture.mjs';
+const { PGlite } = await import(testModule(process.argv[2]));
 const db = new PGlite();
 await db.exec(`
  CREATE ROLE anon; CREATE ROLE authenticated; CREATE ROLE service_role;

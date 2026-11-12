@@ -1,10 +1,15 @@
 import fs from 'node:fs/promises';
+import {pathToFileURL} from 'node:url';
 export const uid=n=>`00000000-0000-4000-8000-${String(n).padStart(12,'0')}`;
 export const issuer='12345678000199';
 export const accessKey='123456782'+issuer+'0'.repeat(27);
 export const relayUrl='https://universo-cursos-consultoria-6w67gc985-denielson-limas-projects.vercel.app/api/nfse-production-relay';
+export function testModule(module){
+ const value=module||process.env.NFSE_TEST_PGLITE_MODULE||'@electric-sql/pglite';
+ return value.startsWith('/')?pathToFileURL(value).href:value;
+}
 export async function fixture(module){
- const {PGlite}=await import(module); const db=new PGlite();
+ const {PGlite}=await import(testModule(module)); const db=new PGlite();
  await db.exec(`CREATE ROLE anon; CREATE ROLE authenticated; CREATE ROLE service_role;
  CREATE SCHEMA private; CREATE SCHEMA auth; CREATE SCHEMA vault;
  CREATE FUNCTION auth.role() RETURNS text LANGUAGE sql AS $$SELECT current_setting('request.jwt.claim.role',true)$$;

@@ -1,3 +1,4 @@
+import {TextDecoder} from 'node:util';
 import { safeEqual } from '../banese-reconciliation-worker/request-guards.ts';
 async function readSmallBody(req: Request): Promise<string> {
  const reader = req.body?.getReader();

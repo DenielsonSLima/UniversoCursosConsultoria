@@ -9,7 +9,7 @@ jobs:
   postgres:
     strategy:
       matrix:
-        suite: [concurrency, material-proof, scheduler]
+        suite: [concurrency, material-proof, scheduler, proof-concurrency]
     runs-on: ubuntu-latest
     timeout-minutes: 8
     services:
@@ -29,6 +29,8 @@ jobs:
       - run: |
           if [ "${{ matrix.suite }}" = concurrency ]; then
             node supabase/tests/nfse-worker-postgres-concurrency.test.mjs
+          elif [ "${{ matrix.suite }}" = proof-concurrency ]; then
+            node supabase/tests/nfse-reconciliation-proof.concurrent.test.mjs
           else
             node "supabase/tests/nfse-reconciliation-${{ matrix.suite }}.isolated.test.mjs" "file://$PWD/supabase/tests/nfse-worker-postgres-adapter.mjs"
           fi
