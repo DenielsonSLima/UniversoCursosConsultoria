@@ -10,6 +10,7 @@ import { parceirosMatriculasService } from './parceiros-matriculas.service';
 import { documentosAlunoService } from './documentos-aluno.service';
 import { academicosService } from '../configuracoes/academicos/academicos.service';
 import { comparePrimaryEnrollments, formatAcademicEnrollment } from './utils/aluno-primary-enrollment';
+import { createPartnerEmailUpdater } from './partner-email-update';
 
 const ensureProfessorInstitutionalAccess = async (partner: any) => {
   if (partner?.tipo !== 'Professor' || !partner?.id) return partner;
@@ -38,6 +39,27 @@ const ensureProfessorInstitutionalAccess = async (partner: any) => {
     };
   }
 };
+
+const updatePartnerEmail = createPartnerEmailUpdater({
+  getCurrent: async id => {
+    const current = await parceirosService.getById(id);
+    if (!current) throw new Error('O cadastro não foi encontrado para conferir o e-mail.');
+    return current;
+  },
+  getIdentity: id => portalActivationService.getPartnerGoogleIdentityStatus(id),
+  correct: payload => portalActivationService.correctPartnerEmail(payload),
+  save: async (id, data, omitEmail) => {
+    const dbData = toSnake(data);
+    if (omitEmail) delete dbData.email;
+    const { data: updated, error } = await supabase.from('parceiros').update(dbData).eq('id', id).select().single();
+    if (error) throw error;
+    const partner = toCamel(updated);
+    if (!partner) throw new Error('A atualização do cadastro não foi confirmada.');
+    return partner;
+  },
+  ensureStudent: (partnerId, email) => portalActivationService.ensureStudentAccess({ partnerId, email }),
+  ensureProfessor: ensureProfessorInstitutionalAccess,
+});
 
 export const parceirosService = {
   async getAll(tipo?: string, filters?: { poloId?: string; includeGlobal?: boolean }) {
@@ -237,20 +259,7 @@ export const parceirosService = {
 
   async update(id: string, data: any) {
     validateAlunoProfessorIdentity(data);
-    const dbData = toSnake(data);
-    const { data: updated, error } = await supabase
-      .from('parceiros')
-      .update(dbData)
-      .eq('id', id)
-      .select()
-      .single();
-      
-    if (error) {
-      console.error('Erro ao atualizar parceiro:', error);
-      throw error;
-    }
-    
-    return ensureProfessorInstitutionalAccess(toCamel(updated));
+    return updatePartnerEmail(id, data);
   },
 
   async uploadProfilePhoto(profileId: string, _currentProfile: any, file: File) {

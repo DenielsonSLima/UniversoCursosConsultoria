@@ -408,6 +408,7 @@ export const handleSendStudentInvite = async (
     state,
     authUserId: authUser.id,
     authEmail,
+    contactEmail,
     canDeliverByEmail,
     passwordWasCreated,
     accessWasActive,

@@ -1,14 +1,15 @@
 // File: modules/gestor/parceiros/components/viewparceiros/professor/ParceiroProfessorDados.tsx
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Save, Edit2, Camera, Loader2, User } from 'lucide-react';
 import { parceirosService } from '../../../parceiros.service';
 import { formatCpf } from '../../../../../../lib/documentFormatters';
 import { RACA_COR_OPTIONS } from '../../../utils/parceiros.constants';
+import { canCorrectPendingPartnerEmail } from '../../../partner-email-update';
 
 interface ParceiroProfessorDadosProps {
   data: any;
-  onChange: (data: any) => void;
+  onChange: (data: any) => Promise<unknown>;
   onPhotoUploaded?: (fotoUrl: string, professor: any) => void;
   onPhotoUploadError?: (message: string) => void;
 }
@@ -18,10 +19,14 @@ const ParceiroProfessorDados: React.FC<ParceiroProfessorDadosProps> = ({ data, o
   const [formData, setFormData] = useState(data);
   const [polosList, setPolosList] = useState<any[]>([]);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const [isSaving, setIsSaving] = useState(false), [saveError, setSaveError] = useState('');
+  const saving = useRef(false);
+  const hasLinkedAccess = Boolean(data.authUserId || formData.authUserId);
+  const emailReadOnly = hasLinkedAccess && !canCorrectPendingPartnerEmail(data);
 
   useEffect(() => {
-    setFormData(data);
-  }, [data]);
+    if (!isEditing) setFormData(data);
+  }, [data, isEditing]);
 
   useEffect(() => {
     const fetchPolos = async () => {
@@ -54,7 +59,7 @@ const ParceiroProfessorDados: React.FC<ParceiroProfessorDadosProps> = ({ data, o
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
-    if (name === 'email' && (data.authUserId || formData.authUserId)) return;
+    if (name === 'email' && emailReadOnly) return;
     let finalValue = value;
     if (type === 'text' || e.target.tagName === 'SELECT') {
       if (name !== 'email') {
@@ -74,12 +79,13 @@ const ParceiroProfessorDados: React.FC<ParceiroProfessorDadosProps> = ({ data, o
     setFormData({ ...formData, [name]: finalValue });
   };
 
-  const handleSave = () => {
-    onChange(formData);
-    setIsEditing(false);
+  const handleSave = async () => {
+    if (saving.current || isUploadingPhoto) return;
+    saving.current = true; setIsSaving(true); setSaveError('');
+    try { await onChange(formData); setIsEditing(false); }
+    catch (error) { setSaveError(error instanceof Error ? error.message : 'Não foi possível salvar. Seus dados continuam em edição.'); }
+    finally { saving.current = false; setIsSaving(false); }
   };
-
-  const hasLinkedAccess = Boolean(data.authUserId || formData.authUserId);
 
   // Helper para renderizar os campos
   const DisplayField = ({ label, value }: { label: string, value: any }) => (
@@ -97,7 +103,7 @@ const ParceiroProfessorDados: React.FC<ParceiroProfessorDadosProps> = ({ data, o
             <h3 className="text-lg font-bold text-[#001a33] tracking-tight">Dados Pessoais</h3>
             {!isEditing && (
                 <button 
-                  onClick={() => setIsEditing(true)}
+                  onClick={() => { setSaveError(''); setIsEditing(true); }}
                   className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-blue-100 transition-colors"
                 >
                   <Edit2 size={14} /> Editar
@@ -183,10 +189,10 @@ const ParceiroProfessorDados: React.FC<ParceiroProfessorDadosProps> = ({ data, o
                     <label className="text-xs font-bold text-slate-500 uppercase ml-1">E-mail</label>
                     {hasLinkedAccess && (
                       <p className="text-[10px] font-semibold leading-relaxed text-slate-400">
-                        O e-mail de login já está vinculado a uma identidade de acesso e não pode ser alterado por esta tela.
+                        {emailReadOnly ? 'O e-mail de acesso já existente será preservado.' : 'Ao salvar, o e-mail do primeiro acesso será corrigido e um novo link será enviado.'}
                       </p>
                     )}
-                    <input type="email" name="email" value={formData.email || ''} onChange={handleChange} readOnly={hasLinkedAccess} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:border-purple-500 outline-none read-only:cursor-not-allowed read-only:text-slate-500" />
+                    <input type="email" name="email" value={formData.email || ''} onChange={handleChange} readOnly={emailReadOnly} disabled={isSaving} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:border-purple-500 outline-none read-only:cursor-not-allowed read-only:text-slate-500" />
                 </div>
               </div>
             ) : (
@@ -305,11 +311,14 @@ const ParceiroProfessorDados: React.FC<ParceiroProfessorDadosProps> = ({ data, o
       </section>
 
       {/* Form Actions */}
+      {saveError && <p role="alert" className="mb-4 text-sm text-red-700">{saveError}</p>}
       {isEditing && (
         <div className="flex justify-end gap-3 pt-6 border-t border-slate-100">
            <button 
+             disabled={isSaving}
              onClick={() => {
                  setFormData(data);
+                 setSaveError('');
                  setIsEditing(false);
              }}
              className="px-6 py-3 rounded-xl border border-slate-200 font-bold text-slate-500 uppercase tracking-widest text-xs hover:bg-slate-50 transition-colors"
@@ -318,9 +327,10 @@ const ParceiroProfessorDados: React.FC<ParceiroProfessorDadosProps> = ({ data, o
            </button>
            <button 
              onClick={handleSave}
+             disabled={isSaving || isUploadingPhoto}
              className="flex items-center gap-2 px-6 py-3 rounded-xl bg-[#001a33] text-white font-bold uppercase tracking-widest text-xs hover:bg-purple-900 transition-colors shadow-lg shadow-purple-900/20"
            >
-              <Save size={16} /> Salvar Alterações
+              {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />} {isSaving ? 'Salvando…' : 'Salvar Alterações'}
            </button>
         </div>
       )}

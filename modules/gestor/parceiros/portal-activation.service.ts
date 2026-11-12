@@ -114,18 +114,41 @@ type EnsureProfessorAccessResult = {
   message?: string;
 };
 
+export type CorrectPartnerEmailPayload = {
+  partnerId: string;
+  email: string;
+  expectedEmail: string | null;
+  expectedAuthUserId: string;
+  expectedAuthEmail: string;
+  requestId: string;
+  redirectTo?: string;
+};
+
+export type CorrectPartnerEmailResult = {
+  success: boolean;
+  emailCorrected: boolean;
+  loginEmailChanged: boolean;
+  emailSent: boolean;
+  deliveryPending: boolean;
+  message: string;
+  userId: string;
+  email: string;
+};
+
 const invokeAdminFunction = async <T>(payload: Record<string, unknown>): Promise<T> => {
   const { data, error } = await supabase.functions.invoke('portal-user-management', {
     body: payload,
   });
 
   if (error) {
-    const response = error as { message?: string; context?: { json: () => Promise<unknown> } };
+    const response = error as { message?: string; context?: { status?: number; json: () => Promise<unknown> } };
     const body = response.context ? await response.context.json().catch(() => null) : null;
     const serverMessage = body && typeof body === 'object' && 'error' in body
       ? (body as { error?: string }).error
       : null;
-    throw new Error(serverMessage || response.message || 'Não foi possível enviar o convite de acesso.');
+    throw Object.assign(new Error(serverMessage || response.message || 'Não foi possível enviar o convite de acesso.'), {
+      ...(typeof response.context?.status === 'number' ? { status: response.context.status } : {}),
+    });
   }
 
   const response = (data || {}) as InviteStudentResult & InvokeErrorPayload & Record<string, unknown>;
@@ -137,6 +160,17 @@ const invokeAdminFunction = async <T>(payload: Record<string, unknown>): Promise
 };
 
 export const portalActivationService = {
+  async correctPartnerEmail(payload: CorrectPartnerEmailPayload): Promise<CorrectPartnerEmailResult> {
+    const result = await invokeAdminFunction<CorrectPartnerEmailResult>({ ...payload, action: 'correct-partner-email' });
+    if (result.success !== true || result.emailCorrected !== true
+      || result.userId !== payload.expectedAuthUserId
+      || typeof result.emailSent !== 'boolean' || typeof result.deliveryPending !== 'boolean'
+      || String(result.email || '').trim().toLowerCase() !== payload.email.trim().toLowerCase()) {
+      throw new Error('A correção do e-mail não foi confirmada para este cadastro. Atualize os dados antes de tentar novamente.');
+    }
+    return result;
+  },
+
   async getPartnerEmailStatuses(partnerIds: string[]): Promise<PartnerEmailConfirmationStatus[]> {
     if (partnerIds.length === 0) return [];
     const statuses: PartnerEmailConfirmationStatus[] = [];

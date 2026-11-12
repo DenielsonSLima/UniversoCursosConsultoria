@@ -1,0 +1,56 @@
+name: Partner email correction security
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - 'supabase/migrations/*partner_email_correction*'
+      - 'supabase/functions/portal-user-management/handlers/correct-partner-email*'
+      - 'supabase/tests/partner*email*correction*'
+      - 'supabase/tests/fixtures/partner-email-correction*'
+      - '.github/workflows/partner-email-correction.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  auth-email-correction:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: fixture-password
+          POSTGRES_DB: partner_email_correction_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '>=24.22.1 <25'
+          cache: npm
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Install isolated UI and SQL dependencies
+        run: |
+          npm ci --ignore-scripts
+          npm install --prefix "$RUNNER_TEMP/partner-email-runtime" --no-save --package-lock=false --ignore-scripts jsdom@26.1.0 @electric-sql/pglite@0.3.16
+      - name: Test canonical handler without network
+        run: deno test --allow-env supabase/functions/portal-user-management/handlers/correct-partner-email.test.ts
+      - name: Verify profile editing, replay, partial delivery and real identity triggers
+        run: |
+          node_modules/.bin/esbuild modules/gestor/parceiros/partner-email-update.test.ts --bundle --packages=external --platform=node --format=esm --outfile=tmp/partner-email-update.test.mjs
+          node --test tmp/partner-email-update.test.mjs modules/gestor/parceiros/partner-email-update.interaction.test.mjs modules/gestor/parceiros/utils/parceiro-mappers.test.ts modules/gestor/parceiros/parceiros.service.contract.test.ts supabase/tests/partner_email_correction.isolated.test.mjs
+        env:
+          NFSE_TEST_JSDOM_MODULE: ${{ runner.temp }}/partner-email-runtime/node_modules/jsdom/lib/api.js
+          PGLITE_MODULE_PATH: ${{ runner.temp }}/partner-email-runtime/node_modules/@electric-sql/pglite/dist/index.js
+      - name: Install isolated PostgreSQL driver
+        run: npm install --prefix "$RUNNER_TEMP/partner-email-pg" --no-audit --no-fund pg@8.16.3
+      - name: Verify real PostgreSQL concurrency and token fences
+        run: node supabase/tests/partner-email-correction-postgres-concurrency.mjs
+        env:
+          PORTAL_PG_MODULE: ${{ runner.temp }}/partner-email-pg/node_modules/pg/lib/index.js
+          PORTAL_TEST_DATABASE_URL: postgresql://postgres:fixture-password@localhost:5432/partner_email_correction_test

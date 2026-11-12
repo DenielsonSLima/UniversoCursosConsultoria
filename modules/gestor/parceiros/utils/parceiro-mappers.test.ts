@@ -111,6 +111,7 @@ test('expõe a identidade Auth do professor sem reenviá-la em atualizações', 
     nome: 'Professor de Teste',
     auth_user_id: 'auth-professor-1',
     auth_login_email: 'professor@example.com',
+    primeiro_acesso_institucional_pendente: true,
   });
   const update = toSnake({
     ...professor,
@@ -118,6 +119,7 @@ test('expõe a identidade Auth do professor sem reenviá-la em atualizações', 
   });
 
   assert.equal(professor.authUserId, 'auth-professor-1');
+  assert.equal(professor.primeiroAcessoInstitucionalPendente, true);
   assert.equal(professor.authLoginEmail, 'professor@example.com');
   assert.equal('auth_user_id' in update, false);
 });

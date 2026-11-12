@@ -12,6 +12,9 @@ export type IncomingPayload = {
   responsavelLegalId?: string;
   responsavelLegalIds?: string[];
   requestId?: string;
+  expectedEmail?: string | null;
+  expectedAuthUserId?: string;
+  expectedAuthEmail?: string;
 };
 
 export type GestorUserManagementState = {
@@ -47,6 +50,13 @@ export type FunctionResponse = {
   responsavelLegalId?: string | null;
   code?: string;
   error?: string;
+  partnerId?: string;
+  email?: string;
+  emailCorrected?: boolean;
+  loginEmailChanged?: boolean;
+  emailSent?: boolean;
+  deliveryPending?: boolean;
+  retryAfterSeconds?: number;
 };
 
 export type InstitutionalProfileLinkState =

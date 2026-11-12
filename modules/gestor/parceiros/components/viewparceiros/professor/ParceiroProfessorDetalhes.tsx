@@ -7,6 +7,8 @@ import ParceiroAcesso from '../shared/ParceiroAcesso';
 import ParceiroProfessorDados from './ParceiroProfessorDados';
 import { parceirosService } from '../../../parceiros.service';
 import ToastNotification, { useToast } from '../../shared/ToastNotification';
+import { invalidatePartnerEmailAccess, partnerEmailUpdateFeedback } from '../../../partner-email-feedback';
+import { PartnerEmailPartialSaveError } from '../../../partner-email-update';
 
 interface ParceiroProfessorDetalhesProps {
   professorInicial: any;
@@ -27,8 +29,16 @@ const ParceiroProfessorDetalhes: React.FC<ParceiroProfessorDetalhesProps> = ({ p
 
   const updateMutation = useMutation({
     mutationFn: (newData: any) => parceirosService.update(professorData.id, newData),
-    onSuccess: (updated) => {
+    onSuccess: async (updated) => {
       queryClient.setQueryData(['parceiro', professorData.id], updated);
+      const emailFeedback = partnerEmailUpdateFeedback(updated.emailUpdateResult);
+      if (emailFeedback) {
+        await invalidatePartnerEmailAccess(queryClient, professorData.id);
+        toast[emailFeedback.type](emailFeedback.title, emailFeedback.message, {
+          avatarUrl: updated.foto || professorData.foto, avatarName: updated.nome || professorData.nome, contextLabel: 'E-mail e acesso do professor',
+        });
+        return;
+      }
       queryClient.invalidateQueries({ queryKey: ['parceiros'] });
       if (updated?.professorAccessInviteSent) {
         toast.success(
@@ -87,7 +97,14 @@ const ParceiroProfessorDetalhes: React.FC<ParceiroProfessorDetalhesProps> = ({ p
         contextLabel: 'Cadastro do professor',
       });
     },
-    onError: (err: any) => {
+    onError: async (err: any) => {
+      await invalidatePartnerEmailAccess(queryClient, professorData.id);
+      if (err instanceof PartnerEmailPartialSaveError) {
+        toast.warning('E-mail corrigido, demais dados pendentes', err.message, {
+          avatarUrl: professorData.foto, avatarName: professorData.nome, contextLabel: 'Cadastro do professor',
+        });
+        return;
+      }
       toast.error('Professor não atualizado', err?.message || 'Revise os dados e tente salvar novamente.', {
         avatarUrl: professorData.foto,
         avatarName: professorData.nome,
@@ -98,7 +115,7 @@ const ParceiroProfessorDetalhes: React.FC<ParceiroProfessorDetalhesProps> = ({ p
   });
 
   const handleDataChange = async (newData: any) => {
-    updateMutation.mutate(newData);
+    return updateMutation.mutateAsync(newData);
   };
 
   const handlePhotoUploaded = (fotoUrl: string, nextData: any) => {

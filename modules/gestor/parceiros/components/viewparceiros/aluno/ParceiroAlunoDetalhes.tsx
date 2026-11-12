@@ -21,6 +21,8 @@ import { supabase } from '../../../../../../lib/supabase';
 import ToastNotification, { useToast } from '../../shared/ToastNotification';
 import ParceiroAlunoNavigation, { alunoTabs, type AlunoTab } from './ParceiroAlunoNavigation';
 import AlunoDiscardChangesDialog from './AlunoDiscardChangesDialog';
+import { invalidatePartnerEmailAccess, partnerEmailUpdateFeedback } from '../../../partner-email-feedback';
+import { PartnerEmailPartialSaveError } from '../../../partner-email-update';
 
 interface ParceiroAlunoDetalhesProps {
   financeCacheScope?: string;
@@ -143,8 +145,16 @@ const ParceiroAlunoDetalhes: React.FC<ParceiroAlunoDetalhesProps> = ({ alunoInic
       }
       return updated;
     },
-    onSuccess: (updated) => {
+    onSuccess: async (updated) => {
       queryClient.setQueryData(['parceiro', updated.id], updated);
+      const emailFeedback = partnerEmailUpdateFeedback(updated.emailUpdateResult);
+      if (emailFeedback) {
+        await invalidatePartnerEmailAccess(queryClient, updated.id);
+        toast[emailFeedback.type](emailFeedback.title, emailFeedback.message, {
+          avatarUrl: updated.foto, avatarName: updated.nome, contextLabel: 'E-mail e acesso do aluno',
+        });
+        return;
+      }
       queryClient.invalidateQueries({ queryKey: ['parceiros'] });
       toast.success('Aluno atualizado', `${updated.nome || 'Aluno'} teve os dados salvos com sucesso.`, {
         avatarUrl: updated.foto,
@@ -152,7 +162,14 @@ const ParceiroAlunoDetalhes: React.FC<ParceiroAlunoDetalhesProps> = ({ alunoInic
         contextLabel: 'Cadastro do aluno',
       });
     },
-    onError: (err: any) => {
+    onError: async (err: any) => {
+      await invalidatePartnerEmailAccess(queryClient, alunoInicial.id);
+      if (err instanceof PartnerEmailPartialSaveError) {
+        toast.warning('E-mail corrigido, demais dados pendentes', err.message, {
+          avatarUrl: alunoData.foto, avatarName: alunoData.nome, contextLabel: 'Cadastro do aluno',
+        });
+        return;
+      }
       toast.error('Aluno não atualizado', err?.message || 'Revise os dados e tente salvar novamente.', {
         avatarUrl: alunoData.foto,
         avatarName: alunoData.nome,
