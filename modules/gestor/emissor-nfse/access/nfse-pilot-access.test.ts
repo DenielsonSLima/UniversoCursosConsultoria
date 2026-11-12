@@ -13,7 +13,7 @@ const identity = {
 };
 const otherId = '33333333-3333-3333-3333-333333333333';
 
-test('permissão editável não supera a recusa do gate piloto', () => {
+test('permissão da interface não supera recusa de autorização no servidor', () => {
   const permissions = normalizeGestorPermissions({
     modules: ['emissor-nfse', 'configuracoes', 'financeiro'], allPolos: true,
   });
