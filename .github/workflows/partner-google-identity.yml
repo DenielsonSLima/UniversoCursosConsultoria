@@ -1,0 +1,30 @@
+name: Identidade Google de parceiros
+on:
+  pull_request:
+    paths:
+      - 'modules/gestor/parceiros/components/viewparceiros/shared/**'
+      - 'supabase/migrations/*partner_google_canonical_identity.sql'
+      - 'supabase/tests/partner-google-canonical-identity.isolated.test.mjs'
+      - '.github/workflows/partner-google-identity.yml'
+permissions:
+  contents: read
+jobs:
+  contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm ci
+      - run: npm install --prefix "$RUNNER_TEMP/partner-google-deps" --no-save --no-package-lock @electric-sql/pglite@0.5.8
+      - name: Validar identidade canônica, escopo e cache de contato
+        env:
+          PGLITE_MODULE_PATH: ${{ runner.temp }}/partner-google-deps/node_modules/@electric-sql/pglite/dist/index.js
+        run: >-
+          node --test
+          supabase/tests/partner-google-canonical-identity.isolated.test.mjs
+          modules/gestor/parceiros/components/viewparceiros/shared/partner-google-status.test.ts
+          modules/gestor/parceiros/components/viewparceiros/shared/student-access-refresh.test.ts

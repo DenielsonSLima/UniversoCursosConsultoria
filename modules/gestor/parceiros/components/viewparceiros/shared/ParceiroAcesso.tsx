@@ -15,6 +15,7 @@ import StudentEmailAccessStatus from './StudentEmailAccessStatus';
 import StudentRegistrationAccess from './StudentRegistrationAccess';
 import { buildStudentAccessState, type StudentCredentialEvidence } from './student-access-state';
 import StudentAccessSummary from './StudentAccessSummary';
+import { describePartnerGoogleIdentity, partnerGoogleStatusKey } from './partner-google-status';
 import type { StudentAccessRefreshStatus } from './student-access-refresh';
 
 type AccessToast = {
@@ -73,7 +74,7 @@ const ParceiroAcesso: React.FC<ParceiroAcessoProps> = ({
   const isAccessRefreshing = accessRefreshStatus === 'idle' || accessRefreshStatus === 'loading';
 
   const googleStatusQuery = useQuery({
-    queryKey: ['partner-google-identity-status', parceiroId],
+    queryKey: partnerGoogleStatusKey(parceiroId, email),
     queryFn: () => portalActivationService.getPartnerGoogleIdentityStatus(parceiroId),
     enabled: Boolean(parceiroId),
     staleTime: 15_000,
@@ -88,6 +89,8 @@ const ParceiroAcesso: React.FC<ParceiroAcessoProps> = ({
     enabled: tipo === 'Aluno' && Boolean(parceiroId) && hasContactEmail,
     staleTime: 15_000,
   });
+
+  useEffect(() => { setGoogleHint(''); }, [parceiroId, email]);
 
   const googleStatus = googleStatusQuery.data;
   const googleLinked = Boolean(googleStatus?.google_linked);
@@ -229,12 +232,7 @@ const ParceiroAcesso: React.FC<ParceiroAcessoProps> = ({
         : 'Não foi possível verificar o vínculo Google.';
     }
     if (googleHint) return googleHint;
-    if (!googleStatus?.email) return 'Este cadastro ainda não possui e-mail informado.';
-    if (!googleStatus.has_auth_user) return 'Nenhum usuário de autenticação foi encontrado para este e-mail.';
-    if (googleLinked) {
-      return `Google vinculado${googleStatus.google_email ? ` em ${googleStatus.google_email}` : ''}.`;
-    }
-    return `Nenhum Google vinculado para este ${tipo.toLowerCase()}.`;
+    return describePartnerGoogleIdentity(googleStatus, tipo);
   })();
 
   return (

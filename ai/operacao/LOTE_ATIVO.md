@@ -1,8 +1,8 @@
 # Lote ativo
 
-## Lote: 2026-11-12-cache-comum-emissor
-
-Objetivo: aplicar política comum de leitura ao Emissor mantendo realtime e isolamento.
-Autorização: usuário solicitou padrão global em vez de prazo isolado.
-Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-12-cache-comum-emissor.md`.
-Status: testes locais verdes, CI e publicação em fechamento. Sem migrations ou operações fiscais.
+## Lote: 2026-11-12-partner-google-canonical
+Objetivo: status Google coerente com conta canônica após corrigir contato.
+Status: versão4.8.309; migration aplicada e contrato remoto verificado; CI/deploy pendentes.
+Autorização: usuário autorizou revisão e produção; sem emails/credenciais.
+Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-12-partner-google-canonical.md`.
+Limitação: smoke Safari autenticado pendente.

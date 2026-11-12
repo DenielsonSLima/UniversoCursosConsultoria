@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "retrieval": "lexical-bm25-with-source-citations",
-  "builtAt": "2026-11-12T14:33:13.721Z",
+  "builtAt": "2026-11-12T14:36:05.041Z",
   "manifestVersion": 2,
-  "sourceSignature": "8dca9e7e9e3c144d647523eb38b784ab41b2c9b3519e421d24aef537ac6650ec",
+  "sourceSignature": "d0bd272a5d6df14f4dfef2fb8d57f6c6f4285d185fedbf87d229858e400040d4",
   "sources": [
     {
       "path": "AGENTS.md",
@@ -11,7 +11,7 @@
     },
     {
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "hash": "6b1e120736ea75a72138d33ea827c47c0c56ecdaa5a1c07ba5eb689a6b114a01"
+      "hash": "55b85753015f7bfa0ffa5370590420f5ed3ae2d29ff34b132e9fb45370289178"
     },
     {
       "path": "ai/operacao/MEMORIA_CANONICA.md",
@@ -208,12 +208,12 @@
       "part": 1
     },
     {
-      "id": "4c667aedbfef43aa3e2e",
-      "hash": "4c667aedbfef43aa3e2ee22368771cfa61a6c47ce6d36d01f834d433e2ad9de5",
+      "id": "85467e9ca478239c21bc",
+      "hash": "85467e9ca478239c21bc9cbfcf1bebad1856c4868f6f4d39e4b7578ae29168b6",
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Lote: 2026-11-12-cache-comum-emissor",
-      "text": "Objetivo: aplicar política comum de leitura ao Emissor mantendo realtime e isolamento. Autorização: usuário solicitou padrão global em vez de prazo isolado. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-12-cache-comum-emissor.md`. Status: testes locais verdes, CI e publicação em fechamento. Sem migrations ou operações fiscais.",
-      "normalizedText": "objetivo aplicar politica comum de leitura ao emissor mantendo realtime e isolamento autorizacao usuario solicitou padrao global em vez de prazo isolado manifesto explicito ai operacao registros alteracoes 2026 11 12 cache comum emissor md status testes locais verdes ci e publicacao em fechamento sem migrations ou operacoes fiscais",
+      "section": "Lote: 2026-11-12-partner-google-canonical",
+      "text": "Objetivo: status Google coerente com conta canônica após corrigir contato. Status: versão4.8.309; migration aplicada e contrato remoto verificado; CI/deploy pendentes. Autorização: usuário autorizou revisão e produção; sem emails/credenciais. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-12-partner-google-canonical.md`. Limitação: smoke Safari autenticado pendente.",
+      "normalizedText": "objetivo status google coerente com conta canonica apos corrigir contato status versao4 8 309 migration aplicada e contrato remoto verificado ci deploy pendentes autorizacao usuario autorizou revisao e producao sem emails credenciais manifesto explicito ai operacao registros alteracoes 2026 11 12 partner google canonical md limitacao smoke safari autenticado pendente",
       "tokenCount": 47,
       "part": 1
     },
