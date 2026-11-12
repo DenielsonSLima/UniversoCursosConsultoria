@@ -6,14 +6,14 @@ import { StatusTurma, Turma, TurmasSortBy } from '../gestao.types';
 
 const PAGE_SIZE = 9;
 
-export const useTurmasPaginadas = (modalidade: Turma['modalidade'], poloId?: string) => {
+export const useTurmasPaginadas = (modalidade: Turma['modalidade'], poloId?: string, pageSize = PAGE_SIZE) => {
   const [status, setStatus] = useState<StatusTurma>('EM_ANDAMENTO');
   const [search, setSearch] = useState('');
   const [dataInicial, setDataInicial] = useState('');
   const [dataFinal, setDataFinal] = useState('');
   const [sortBy, setSortBy] = useState<TurmasSortBy>('NOME_ASC');
   const [applied, setApplied] = useState({ search: '', dataInicial: '', dataFinal: '' });
-  const scopeKey = `${modalidade}:${poloId || 'todos'}`;
+  const scopeKey = `${modalidade}:${poloId || 'todos'}:${pageSize}`;
   const [pageState, setPageState] = useState({ scopeKey, page: 1 });
   const page = pageState.scopeKey === scopeKey ? pageState.page : 1;
   const setPage = (next: number) => setPageState({ scopeKey, page: next });
@@ -35,9 +35,9 @@ export const useTurmasPaginadas = (modalidade: Turma['modalidade'], poloId?: str
     status,
     sortBy,
     page,
-    pageSize: PAGE_SIZE,
+    pageSize,
     ...applied,
-  }), [applied, modalidade, page, poloId, sortBy, status]);
+  }), [applied, modalidade, page, pageSize, poloId, sortBy, status]);
 
   const query = useQuery({
     queryKey: gestaoQueryKeys.classPage(filters),
@@ -66,7 +66,7 @@ export const useTurmasPaginadas = (modalidade: Turma['modalidade'], poloId?: str
     loading: query.isPending || query.isPlaceholderData,
     refreshing: query.isFetching && !query.isPending,
     error: query.error instanceof Error ? query.error : null,
-    page, pageSize: PAGE_SIZE, status, sortBy,
+    page, pageSize, status, sortBy,
     search, dataInicial, dataFinal, setSearch: changeSearch, setDataInicial, setDataFinal,
     setPage, changeStatus, changeSortBy, applyFilters, reload,
   };

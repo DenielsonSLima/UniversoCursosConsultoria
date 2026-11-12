@@ -66,6 +66,38 @@
     outline: 2px solid #2563eb;
     outline-offset: 3px;
   }
+  .gestao-ead-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px 16px;
+    margin-bottom: 16px;
+    border-bottom: 1px solid #e3e9ee;
+  }
+  .gestao-ead-workspace .gestao-catalog-statuses {
+    max-width: 100%;
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: 0;
+  }
+  .gestao-ead-create {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    gap: 8px;
+    min-height: 38px;
+    margin-bottom: 4px;
+    padding: 8px 14px;
+    border-radius: 8px;
+    background: #0c2942;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 500;
+  }
+  .gestao-ead-create:hover:not(:disabled) { background: #143851; }
+  .gestao-ead-create:disabled { cursor: not-allowed; opacity: .4; }
   @media (max-width: 767px) {
     .gestao-catalog-workspace .gestao-catalog-heading {
       align-items: stretch;
@@ -78,6 +110,7 @@
     .gestao-catalog-statuses > button {
       min-height: 44px;
     }
+    .gestao-ead-create { min-height: 44px; }
     .gestao-catalog-card button[aria-expanded] {
       min-width: 44px;
       min-height: 44px;

@@ -1,8 +1,8 @@
 {
-  "version": "4.8.322",
+  "version": "4.8.323",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 331,
+  "revision": 332,
   "releasedAt": "2026-11-12",
-  "summary": "Correção segura do e-mail e reenvio do primeiro acesso em Parceiros"
+  "summary": "Turmas EAD compactas em quatro colunas com atualização automática"
 }

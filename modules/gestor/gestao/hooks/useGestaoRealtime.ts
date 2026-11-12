@@ -35,10 +35,15 @@ export const useGestaoRealtime = (poloId?: string) => {
     const channel = supabase
       .channel(`gestao-resumo-${poloId || 'global'}`)
       .on('postgres_changes', eventConfig, refresh)
-      .subscribe();
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') refresh();
+      });
+    const onVisible = () => { if (!document.hidden) refresh(); };
+    document.addEventListener('visibilitychange', onVisible);
 
     return () => {
       if (refreshTimer) window.clearTimeout(refreshTimer);
+      document.removeEventListener('visibilitychange', onVisible);
       supabase.removeChannel(channel);
     };
   }, [poloId, queryClient]);
