@@ -1,4 +1,4 @@
-import { useEffect, useId, useState, useSyncExternalStore, type ComponentRef } from 'react';
+import { useEffect, useId, useRef, useState, useSyncExternalStore, type ComponentRef } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import type { NfseScope } from '../types/nfse.types';
@@ -11,15 +11,19 @@ import { formatNfseMoney } from '../components/nfse.presentation';
 import { operationLabel } from './nfse-operation.contract';
 import { batchCanIssue, createNfseBatchController, type NfseBatchInput } from './nfse-batch.core';
 import type { NfseFiscalNotice } from './nfse-fiscal-notice';
+import { useNfseBatchRealtime } from './useNfseBatchRealtime';
 import '../individual/nfse-individual.css';
 import '../fila/fiscal-review/nfse-fiscal-review.css';
+import './nfse-batch.css';
 interface Props { scope: NfseScope; items: readonly NfseBatchInput[]; onClose: () => void; onChanged: () => void;
   onNotice?: (notice: NfseFiscalNotice) => void; service?: NfseIndividualService }
 export default function NfseBatchEmissionModal({ scope, items, onClose, onChanged, onNotice, service = nfseIndividualService }: Props) {
   const id = useId();
+  const [expanded, setExpanded] = useState<Set<number>>(() => new Set());
   const [controller] = useState(() => createNfseBatchController(scope, items, service, {
     getItem: key => window.sessionStorage.getItem(key), setItem: (key, value) => window.sessionStorage.setItem(key, value),
   }, { onChanged, onNotice }));
+  useNfseBatchRealtime(scope, controller.signalChange, service === nfseIndividualService);
   const view = useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot);
   useEffect(() => {
     controller.activate();
@@ -33,7 +37,16 @@ export default function NfseBatchEmissionModal({ scope, items, onClose, onChange
     if (!expiries.length) return;
     const timer = setTimeout(() => setClock(Date.now()), Math.min(2_147_483_647, Math.max(1, Math.min(...expiries) - Date.now() + 1)));
     return () => clearTimeout(timer);
-  }, [view.items, clock]);
+  }, [view.items, clock, controller]);
+  const refreshedExpiries = useRef(new Set<string>());
+  useEffect(() => {
+    if (view.busy || view.paused) return;
+    const expired = view.items.filter(item => !item.dispatched && !item.uncertain && item.preview && Date.parse(item.preview.expiresAt) <= Date.now());
+    const keys = expired.map(item => `${item.previewId}:${item.preview!.expiresAt}`);
+    if (!keys.some(key => !refreshedExpiries.current.has(key))) return;
+    keys.forEach(key => refreshedExpiries.current.add(key));
+    void controller.review();
+  }, [view.items, view.busy, view.paused, clock, controller]);
   const close = () => { if (!view.busy) onClose(); };
   const { overlayRef, dialogRef, initialFocusRef } = useNfseStudentsDialog<ComponentRef<'button'>>(close);
   const available = view.items.filter(item => batchCanIssue(item)).length;
@@ -46,31 +59,40 @@ export default function NfseBatchEmissionModal({ scope, items, onClose, onChange
         <button ref={initialFocusRef} type="button" className="nfse-button nfse-button-secondary" disabled={view.busy} aria-label="Fechar lote" onClick={close}><X size={17} /></button></header>
       <div className="nfse-fiscal-review-body nfse-individual-content">
         {scope.environment !== 'PRODUCAO' && <p role="status">O executor deste ambiente ainda não está disponível. As preparações foram preservadas.</p>}
-        <p>A competência de cada serviço seguirá a regra do seu pré-modelo. Nas preparações acadêmicas, os dados e as datas serão validados no servidor.</p>
-        <button type="button" className="nfse-button nfse-button-secondary" disabled={view.busy || scope.environment !== 'PRODUCAO'}
-          onClick={() => void controller.review()}>Atualizar dados do lote</button>
-        <p role="status">{authorized} de {items.length} nota(s) autorizada(s). {view.busy ? view.phase === 'ISSUE' ? 'Enviando uma nota por vez…' : 'Validando dados…' : view.paused ? 'Lote pausado; confira o resultado de cada nota.' : 'Os dados são conferidos no servidor. Clique em Emitir para enviar as notas disponíveis.'}</p>
-        {uncertain && <p role="status">Há resultado não confirmado. Consulte a mesma operação antes de continuar o lote.</p>}
+        <p role="status">{authorized} de {items.length} nota(s) autorizada(s). {view.busy ? view.phase === 'CONFIRM' ? 'Consultando o retorno da mesma DPS, sem reenviar…' : view.phase === 'ISSUE' ? 'Enviando uma nota por vez…' : 'Validando dados…' : view.paused ? 'Lote pausado. Feche e reabra para retomar a consulta automática; notas não serão reenviadas.' : 'Os dados são conferidos no servidor. Clique em Emitir para enviar as notas disponíveis.'}</p>
+        <div aria-label="Andamento da emissão" role="status">
+          <progress aria-label="Notas com resultado definitivo" max={items.length} value={view.items.filter(item => ['AUTHORIZED', 'REJECTED', 'BLOCKED'].includes(item.result?.state || '')).length} style={{ width: '100%', height: 12 }} />
+          <small>{authorized} autorizada(s) · {view.items.filter(item => item.result?.state === 'REJECTED' || item.result?.state === 'BLOCKED').length} com impedimento · {view.items.filter(item => item.uncertain).length} aguardando retorno</small>
+        </div>
+        {uncertain && <p role="status">Aguardando retorno fiscal da mesma DPS. Nenhuma nota será reenviada automaticamente.</p>}
         {view.items.map((item, index) => {
           const payload = item.result?.payload || item.preview?.payload;
           const expired = item.preview && Date.parse(item.preview.expiresAt) <= Date.now();
           const state = item.operation?.state === 'CANCELLED' ? 'CANCELLED' : item.result?.state;
-          return <section key={`${item.source.kind}:${item.source.id}`} className="nfse-individual-review" aria-label={`Preparação ${index + 1}: ${item.label}`}>
-            <h3>{index + 1}. {payload?.recipientName || item.label} · {formatNfseMoney(payload?.amount || item.amount)}</h3>
-            <p>{item.uncertain ? 'Aguardando confirmação' : item.dispatched && !item.result ? 'Envio iniciado; aguarde o resultado' : state ? operationLabel(state) : item.preview ? (item.preview.capability.available ? 'Pronta para emissão' : 'Dados cadastrais ou fiscais pendentes') : 'Validando dados'}</p>
-            {item.result?.number && <p>NFS-e nº {item.result.number}</p>}
-            {item.result?.message && <p>{item.result.message}</p>}
-            {Boolean(item.result?.codes?.length) && <p>Código(s): {item.result!.codes!.join(', ')}</p>}
+          const status = item.uncertain ? 'Aguardando retorno' : item.dispatched && !item.result ? 'Enviando…' : state ? operationLabel(state) : item.preview ? (item.preview.capability.available ? 'Pronta para emissão' : 'Dados pendentes') : 'Validando…';
+          const detailsId = `${id}-note-${index}`;
+          return <section key={`${item.source.kind}:${item.source.id}`} className="nfse-batch-row" aria-label={`Preparação ${index + 1}: ${item.label}`}>
+            <div className="nfse-batch-line">
+              <h3>{index + 1}. {payload?.recipientName || item.label}</h3>
+              <strong className="nfse-batch-amount">{formatNfseMoney(payload?.amount || item.amount)}</strong>
+              <span className="nfse-batch-status" data-state={item.uncertain ? 'PENDING' : state || 'PREVIEWED'}>{item.result?.number ? `NFS-e nº ${item.result.number} · ` : ''}{status}</span>
+              <button type="button" className="nfse-button nfse-button-secondary" aria-expanded={expanded.has(index)} aria-controls={detailsId}
+                onClick={() => setExpanded(previous => { const next = new Set(previous); if (next.has(index)) next.delete(index); else next.add(index); return next; })}>Ver dados da nota</button>
+            </div>
+            {(state === 'REJECTED' || state === 'BLOCKED') && item.result?.message && <p className="nfse-download-error" role="alert">{item.result.codes?.length ? `${item.result.codes.join(', ')}: ` : ''}{item.result.message}</p>}
             {item.error && <p className="nfse-download-error" role="alert">{item.error}</p>}
-            {item.preview && !item.preview.capability.available && <p>{individualReason(item.preview.capability.reason)}</p>}
-            {payload && <details><summary>Ver dados da nota</summary><NfseIndividualSnapshot payload={payload} /></details>}
-            {expired && <p>Prévia expirada. Atualize os dados para continuar com a mesma operação.</p>}
-            {item.previewId && <button type="button" className="nfse-button nfse-button-secondary" disabled={view.busy} onClick={() => void controller.consult(index)}>Consultar esta operação</button>}
+            {item.preview && !item.preview.capability.available && <p role="alert">{individualReason(item.preview.capability.reason)}</p>}
+            {expired && <p>Atualizando os dados da mesma operação…</p>}
+            <div id={detailsId} hidden={!expanded.has(index)} className="nfse-batch-details">
+              {item.result?.message && state !== 'PREVIEWED' && <p>{item.result.message}</p>}
+              {Boolean(item.result?.codes?.length) && <p>Código(s): {item.result!.codes!.join(', ')}</p>}
+              {payload ? <NfseIndividualSnapshot payload={payload} /> : <p>Dados ainda não disponíveis.</p>}
+            </div>
           </section>;
         })}
       </div>
       <footer className="nfse-footer"><span>{available} nota(s) conferida(s) e disponível(is) para envio.</span><div className="nfse-queue-actions">
-        {view.busy && <button type="button" className="nfse-button nfse-button-secondary" onClick={() => controller.stop()}>Pausar após a nota atual</button>}
+        {view.busy && <button type="button" className="nfse-button nfse-button-secondary" onClick={() => controller.stop()}>Pausar acompanhamento</button>}
         <button type="button" className="nfse-button nfse-button-secondary" disabled={view.busy} onClick={close}>Fechar</button>
         <button type="button" className="nfse-button nfse-button-primary" disabled={view.busy || !available || uncertain || scope.environment !== 'PRODUCAO'} onClick={() => void controller.issue()}>Emitir notas ({available})</button>
       </div></footer>

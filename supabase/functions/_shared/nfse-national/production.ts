@@ -20,13 +20,18 @@ export function readProductionRejection(envelope: Record<string, unknown>): stri
   return codes;
 }
 
-/** Identifiers only. Never retain the raw envelope, access key, XML or credential material. */
+/** Shape only: no raw identifier, access key, XML, arbitrary response text or credential material. */
 export function productionDpsIdentityDiagnostics(envelope: Record<string, unknown>, expectedDpsId: string): ProductionDpsIdentityDiagnostics {
-  const result: ProductionDpsIdentityDiagnostics = { expectedDpsId, chaveAcessoPresent: Object.hasOwn(envelope, 'chaveAcesso') };
+  const result: ProductionDpsIdentityDiagnostics = { expectedDpsLength: expectedDpsId.length,
+    chaveAcessoPresent: Object.hasOwn(envelope, 'chaveAcesso') };
   for (const name of ['idDps', 'idDPS'] as const) {
+    if (!Object.hasOwn(envelope, name)) continue;
     const value = envelope[name];
-    if (typeof value === 'string') result[name] = value.slice(0, 100).replace(/[^A-Za-z0-9_-]/g, '?');
-    else if (value === null || typeof value === 'boolean' || (typeof value === 'number' && Number.isFinite(value))) result[name] = value;
+    if (typeof value === 'string') result[name] = value === expectedDpsId ? 'MATCH_EXPECTED_DPS'
+      : expectedDpsId.startsWith('DPS') && value === expectedDpsId.slice(3) ? 'MATCH_WITHOUT_DPS_PREFIX'
+      : value.startsWith('NFS') ? 'NFS_PREFIX' : 'OTHER_STRING';
+    else result[name] = value === null ? 'NULL' : typeof value === 'number' ? 'NUMBER'
+      : typeof value === 'boolean' ? 'BOOLEAN' : typeof value === 'undefined' ? 'UNDEFINED' : 'OBJECT';
   }
   return result;
 }
@@ -105,12 +110,16 @@ export function createNationalProductionIssuer(deps: ProductionDependencies) {
       try { await assertPrepared(prepared, true); deps.assertLiveContract('ISSUE'); }
       catch (error) { return { state: 'BLOCKED', code: productionErrorCode(error) }; }
       const identity = { dpsId: prepared.dpsId, signedDpsXml: prepared.signedDpsXml };
+      let postIdentityDiagnostics: ProductionDpsIdentityDiagnostics | undefined;
       try {
         const existing = await consult(prepared);
         if (existing) return existing;
         const response = await deps.transport.request('POST', '/nfse',
           JSON.stringify({ dpsXmlGZipB64: encodeFiscalXml(prepared.signedDpsXml) }));
         const envelope = parseFiscalJson(response.body);
+        // Preserve only non-identifying response-shape evidence when a POST response conflicts.
+        // Never retain raw response bodies, fiscal XML or credential material.
+        postIdentityDiagnostics = productionDpsIdentityDiagnostics(envelope, prepared.dpsId);
         if (response.status === 201) {
           assertProductionDpsEnvelope(envelope, prepared.dpsId);
           const accessKey = readAccessKey(envelope);
@@ -122,7 +131,12 @@ export function createNationalProductionIssuer(deps: ProductionDependencies) {
           return { state: 'REJECTED', ...identity, codes: readProductionRejection(envelope) };
         }
         return { state: 'AWAITING_CONFIRMATION', ...identity, code: 'TRANSMISSION_RESULT_UNCONFIRMED' };
-      } catch (error) { return { state: 'AWAITING_CONFIRMATION', ...identity, code: productionErrorCode(error) }; }
+      } catch (error) {
+        const code = productionErrorCode(error);
+        return { state: 'AWAITING_CONFIRMATION', ...identity, code,
+          ...(code === 'RESPONSE_DPS_MISMATCH' && postIdentityDiagnostics
+            ? { diagnostics: postIdentityDiagnostics } : {}) };
+      }
     },
     async reconcile(prepared: PreparedProductionDps): Promise<ProductionIssueResult> {
       // Once dispatch may have happened, even a local validation failure is uncertain, never terminal.

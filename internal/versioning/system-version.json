@@ -1,8 +1,8 @@
 {
-  "version": "4.8.311",
+  "version": "4.8.312",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 320,
+  "revision": 321,
   "releasedAt": "2026-11-12",
-  "summary": "Número S/N automático quando ausente, preservando histórico fiscal"
+  "summary": "Acompanhamento automático da emissão em lote e mensagens fiscais claras"
 }

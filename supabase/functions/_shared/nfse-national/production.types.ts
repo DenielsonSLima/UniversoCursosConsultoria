@@ -23,10 +23,12 @@ export interface PreparedProductionDps {
   dpsId: string;
   signedDpsXml: string;
 }
+export type ProductionDpsIdentityShape = 'MATCH_EXPECTED_DPS' | 'MATCH_WITHOUT_DPS_PREFIX' |
+  'NFS_PREFIX' | 'OTHER_STRING' | 'NULL' | 'NUMBER' | 'BOOLEAN' | 'OBJECT' | 'UNDEFINED';
 export interface ProductionDpsIdentityDiagnostics {
-  expectedDpsId: string;
-  idDps?: string | number | boolean | null;
-  idDPS?: string | number | boolean | null;
+  expectedDpsLength: number;
+  idDps?: ProductionDpsIdentityShape;
+  idDPS?: ProductionDpsIdentityShape;
   chaveAcessoPresent: boolean;
 }
 export type ProductionIssueResult =

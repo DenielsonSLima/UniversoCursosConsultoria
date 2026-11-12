@@ -21,7 +21,11 @@ export function useNfseStudentsDialog<T extends HTMLElement = HTMLInputElement>(
       item.element.inert = true;
       item.element.setAttribute('aria-hidden', 'true');
     }
-    const frame = window.requestAnimationFrame(() => initialFocusRef.current?.focus());
+    const frame = window.requestAnimationFrame(() => {
+      const target = initialFocusRef.current;
+      if (target && !target.matches(':disabled') && !target.hidden) target.focus();
+      if (!dialogRef.current?.contains(document.activeElement)) dialogRef.current?.focus();
+    });
     const onKeyDown = (event: KeyboardEvent) => {
       // InstitutionalSelect handles its own Escape and arrows first. Its portal
       // is appended after opening and stays outside the inert background.
