@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
-const { PGlite } = await import(pathToFileURL(process.argv[2]));
+const { PGlite } = await import(process.env.NFSE_TEST_PGLITE_MODULE || process.argv[2] ? pathToFileURL(process.env.NFSE_TEST_PGLITE_MODULE || process.argv[2]).href : '@electric-sql/pglite');
 const db = new PGlite();
 const migration = name => readFileSync(new URL(`../migrations/2026111220300${name}.sql`, import.meta.url), 'utf8');
 const period = migration('0_nfse_model_period_contract');
