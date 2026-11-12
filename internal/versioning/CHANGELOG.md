@@ -63,7 +63,12 @@ Histórico arquivado: [06/11/2026 — versões 4.8.249 a 4.8.250](./changelog/20
 
 Histórico arquivado: [07/11/2026 — versão 4.8.251](./changelog/2026-11-07-versao-4-8-251.md).
 
-Histórico arquivado: [07/11/2026 — versão 4.8.252](./changelog/2026-11-07-versao-4-8-252.md).
+Histórico arquivado: 07/11/2026 — versões [4.8.252](./changelog/2026-11-07-versao-4-8-252.md) e [4.8.253](./changelog/2026-11-07-versao-4-8-253.md).
+
+## [4.8.323] - 2026-11-12
+
+- Turmas EAD: quatro cartões por linha em telas largas e doze turmas por página, com barra compacta para situação e abertura de turma.
+- Busca de turmas responde à digitação; Realtime recupera listas na reconexão e ao voltar à tela, preservando filtros, paginação e erros de consulta.
 
 ## [4.8.322] - 2026-11-12
 
@@ -492,9 +497,3 @@ Histórico arquivado: [07/11/2026 — versão 4.8.252](./changelog/2026-11-07-ve
 - Seletores pesquisáveis preservam IDs, escolhas múltiplas, herança de acesso e bloqueios existentes.
 - Mensageria e integração bancária divididas por responsabilidade, mantendo operações, documentos e modelos.
 - CI focado cobre IDs dos seletores, limites de acesso e impressoras, sem serviços remotos.
-
-## [4.8.253] - 2026-11-07
-
-### Alterado
-- Caixa prioriza a prestação mensal na fila de leitura, preservando consultas, valores canônicos, escopo e cancelamento.
-- Linha de corte acompanha a invalidação Realtime do polo e consolidado; diagnóstico distingue métricas históricas e ensaio sintético de ganho real em produção.
