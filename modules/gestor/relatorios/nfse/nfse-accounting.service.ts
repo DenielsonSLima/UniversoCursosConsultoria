@@ -9,7 +9,7 @@ export async function fetchNfseAccountingReport(scope: NfseScope, mode: NfseAcco
   if (dateFrom > dateTo) throw new Error('A data inicial deve ser anterior à data final.');
   const { supabase } = await import('../../../../lib/supabase');
   signal?.throwIfAborted();
-  const request = supabase.rpc('get_nfse_accounting_report_secure', {
+  const request = supabase.rpc('get_nfse_accounting_report_v2_secure', {
     p_context_key: scope.contextKey, p_polo_id: scope.poloId, p_environment: scope.environment,
     p_month: scope.month, p_mode: mode, p_date_from: dateFrom, p_date_to: dateTo,
   });

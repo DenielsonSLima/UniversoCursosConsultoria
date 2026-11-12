@@ -1,8 +1,9 @@
 # Lote ativo
 
-## Lote: 2026-11-12-financeiro-aluno-agrupamento
-Objetivo: financeiro do aluno agrupado por tipo/curso e recolhido por padrão.
-Status: testes locais e migration read-only verificados; CI e publicação em preparação.
-Autorização: usuário autorizou publicação específica; preservar dados e boletos.
-Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-12-financeiro-aluno-agrupamento.md`.
-Limitação: smoke autenticado Safari pendente por indisponibilidade do Mac.
+## Lote: 2026-11-12-nfse-resumos-status
+
+Objetivo: publicar revisão aprovada de Relatórios > NFS-e Emitidas, sem emissão/cancelamento.
+Status: versão 4.8.304; migration v2 20261112131549 aplicada, build e testes focados aprovados; CI/deploy pendentes.
+Autorização: usuário aprovou prévias e pediu atualizar produção.
+Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-12-nfse-resumos-colunas-previa.md`.
+Limitação: smoke Safari autenticado pendente; não foi executada leitura de registros fiscais reais.

@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "retrieval": "lexical-bm25-with-source-citations",
-  "builtAt": "2026-11-12T13:16:10.445Z",
+  "builtAt": "2026-11-12T13:19:37.567Z",
   "manifestVersion": 2,
-  "sourceSignature": "26009f6e3587d1612c3934612167299d0ec369d2f733e8ad1658463245f0269e",
+  "sourceSignature": "0b28945957155f082906c8c46493641d8261766d53d9897b6f4aae7c59c58dc3",
   "sources": [
     {
       "path": "AGENTS.md",
@@ -11,7 +11,7 @@
     },
     {
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "hash": "41d51982c10a3b19ea91ad41e3cde9cd877c357068881e0955dd6583c74e8c48"
+      "hash": "090efd084fb970755111023b886bb06923c3268f6f73af8de8984c4ebf243118"
     },
     {
       "path": "ai/operacao/MEMORIA_CANONICA.md",
@@ -208,13 +208,13 @@
       "part": 1
     },
     {
-      "id": "303a5de962a66624bb9f",
-      "hash": "303a5de962a66624bb9f5741d065be798ab77fe503d5a5f688322f91d96faac3",
+      "id": "6e3c9305713d46f02a67",
+      "hash": "6e3c9305713d46f02a676e614ea952938a323dfb4ae53188ca9c4936b2b57674",
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Lote: 2026-11-12-financeiro-aluno-agrupamento",
-      "text": "Objetivo: financeiro do aluno agrupado por tipo/curso e recolhido por padrão. Status: testes locais e migration read-only verificados; CI e publicação em preparação. Autorização: usuário autorizou publicação específica; preservar dados e boletos. Manifesto: `ai/operacao/registros/alteracoes/2026-11-12-financeiro-aluno-agrupamento.md`. Limitação: smoke autenticado Safari pendente por indisponibilidade do Mac.",
-      "normalizedText": "objetivo financeiro do aluno agrupado por tipo curso e recolhido por padrao status testes locais e migration read only verificados ci e publicacao em preparacao autorizacao usuario autorizou publicacao especifica preservar dados e boletos manifesto ai operacao registros alteracoes 2026 11 12 financeiro aluno agrupamento md limitacao smoke autenticado safari pendente por indisponibilidade do mac",
-      "tokenCount": 51,
+      "section": "Lote: 2026-11-12-nfse-resumos-status",
+      "text": "Objetivo: publicar revisão aprovada de Relatórios > NFS-e Emitidas, sem emissão/cancelamento. Status: versão 4.8.304; migration v2 20261112131549 aplicada, build e testes focados aprovados; CI/deploy pendentes. Autorização: usuário aprovou prévias e pediu atualizar produção. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-12-nfse-resumos-colunas-previa.md`. Limitação: smoke Safari autenticado pendente; não foi executada leitura de registros fiscais reais.",
+      "normalizedText": "objetivo publicar revisao aprovada de relatorios nfs e emitidas sem emissao cancelamento status versao 4 8 304 migration v2 20261112131549 aplicada build e testes focados aprovados ci deploy pendentes autorizacao usuario aprovou previas e pediu atualizar producao manifesto explicito ai operacao registros alteracoes 2026 11 12 nfse resumos colunas previa md limitacao smoke safari autenticado pendente nao foi executada leitura de registros fiscais reais",
+      "tokenCount": 59,
       "part": 1
     },
     {

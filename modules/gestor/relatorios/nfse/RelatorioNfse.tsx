@@ -37,8 +37,8 @@ export default function RelatorioNfse({ poloId, contextKey, isMatriz, canAccessN
   return <div className="h-full overflow-y-auto space-y-4">
     <section className="rounded-xl border border-slate-200 bg-white p-4 space-y-4">
       <div className="flex flex-wrap items-end gap-3">
-        <FilterField label="Data inicial de emissão"><FilterInput type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} /></FilterField>
-        <FilterField label="Data final de emissão"><FilterInput type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} /></FilterField>
+        <FilterField label="Data inicial"><FilterInput type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} /></FilterField>
+        <FilterField label="Data final"><FilterInput type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} /></FilterField>
         <span className="pb-2 text-xs text-slate-500">{environment === 'PRODUCAO' ? 'Produção' : 'Homologação'} · A4 paisagem</span>
       </div>
       <div className="grid gap-3 sm:grid-cols-2" aria-label="Modelo do relatório fiscal">
@@ -53,7 +53,7 @@ export default function RelatorioNfse({ poloId, contextKey, isMatriz, canAccessN
           <p className="mt-1 text-xs text-slate-500">Polos ativos da mesma instituição, resumo por unidade e por tributação. Exige acesso a todos os polos incluídos.</p>
         </button>}
       </div>
-      <p className="text-xs leading-relaxed text-slate-500">Duas linhas por nota, com emissão, competência, número, chave, parceiro, CPF/CNPJ, data do serviço, tributação nacional, NBS, valor bruto e ISS. Cancelamentos confirmados ficam fora deste relatório.</p>
+      <p className="text-xs leading-relaxed text-slate-500">Registros compactos com emissão, competência, número, chave, parceiro, CPF/CNPJ, data do serviço, tributação nacional, NBS, valor bruto, ISS e identificação completa do polo. Canceladas e operações sem emissão são identificadas e não somam. Período pela emissão fiscal ou, se não emitida, pela criação do registro. Rascunhos não incluídos.</p>
       {!allowed && <p role="status" className="text-sm text-amber-700">Selecione um polo e confirme seu acesso ao Emissor NFS-e. O consolidado só pode ser aberto na matriz.</p>}
       {!validPeriod && <p role="alert" className="text-sm text-rose-700">Informe um período de emissão válido.</p>}
       <button type="button" disabled={!allowed || !validPeriod} onClick={() => setPreview(true)}
@@ -61,6 +61,6 @@ export default function RelatorioNfse({ poloId, contextKey, isMatriz, canAccessN
     </section>
     {preview && allowed && <ReportPdfPreviewModal key={`${scope.poloId}:${scope.contextKey}:${environment}:${mode}:${dateFrom}:${dateTo}`}
       title={mode === 'GERAL' ? 'NFS-e emitidas · Geral da matriz' : 'NFS-e emitidas · Por polo'}
-      description="Modelo contábil em paisagem · 2 linhas por nota" preparePdf={preparePdf} onClose={() => setPreview(false)} />}
+      description="Modelo contábil em paisagem · Identificação completa por nota" preparePdf={preparePdf} onClose={() => setPreview(false)} />}
   </div>;
 }
