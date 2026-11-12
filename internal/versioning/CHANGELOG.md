@@ -47,6 +47,14 @@ Histórico arquivado: [4.8.239](./changelog/2026-10-27-versao-4-8-239.md).
 
 Histórico arquivado: [27/10/2026 — versão 4.8.240](./changelog/2026-10-27-versao-4-8-240.md).
 
+Histórico arquivado: [27/10/2026 — versão 4.8.241](./changelog/2026-10-27-versao-4-8-241.md).
+
+## [4.8.311] - 2026-11-12
+
+- Cadastro de aluno normaliza número ausente para S/N conforme orientação expressa, sem alterar números reais informados.
+- Substituição auditada somente dos 00 provisórios ainda intocados; notas emitidas preservadas.
+- Regressão cobre prévias não assinadas passando de 00 ou ausência para S/N, com identidade e histórico fiscal preservados.
+
 ## [4.8.310] - 2026-11-12
 
 - Cadastro de aluno exige número; regularização auditada de números ausentes com 00 provisório, sem alterar os existentes.
@@ -490,9 +498,3 @@ Histórico arquivado: [27/10/2026 — versão 4.8.240](./changelog/2026-10-27-ve
 - Cursos de NR-10, máquinas e transporte escolar delimitados como cursos livres teóricos, sem comprovação de prática ou habilitação profissional.
 - Explicações antecipadas de Serviços Gerais e Vigia reservadas no snapshot privado, sem trocar currículo, gabaritos ou histórico.
 - Área nativa de foco das alternativas vinculada ao retângulo visível; tela branca relatada no Android segue dependente de reteste após atualização.
-
-## [4.8.241] - 2026-10-27
-
-- Retomada de rematrícula aprovada pelo serviço consulta a mesma tentativa sem alterar o consentimento histórico.
-- Substituição individual autorizada confirma baixa e ausência de pagamento antes de reservar um único título novo; resposta Pix da criação fica preservada e retries consultam a mesma identidade.
-- Operação desta entrega concluiu 13/13 títulos, mantendo valor, vencimento e as doze mensalidades. Dois QR Codes do PDF nativo foram conferidos contra o Pix oficial.

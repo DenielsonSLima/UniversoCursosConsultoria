@@ -37,12 +37,14 @@ test('unsigned academic address-number refresh preserves identity and immutable 
    const prepared=await value('SELECT public.prepare_nfse_batch_secure($1,$2,$3,$4,$5,$6,$7,1,$8) value',
      [...scope,id(request),[`${id(20)}:${id(student)}`],id(60),'2026-11']);docs.push(prepared.data.documentIds[0]);
   }
+  // Cover both prior provisional 00 and a genuinely missing number before S/N.
+  await db.exec(`UPDATE public.parceiros SET numero='00' WHERE id='${id(30)}'`);
   await db.exec("SET test.role='service_role'");ops=[await preview(0),await preview(1)];
   const originalLinks=await rows('private.nfse_queue_operation_links');
   const originalReviews=await rows('private.nfse_fiscal_review_revisions');
   const finance=await rows('public.contas_receber');const preparations=await rows('private.nfse_queue_documents');
   for(const migration of migrations)await db.exec(await sql(migration));
-  await t.test('both paid-source labels refresh before expiry without new operation or DPS number',async()=>{
+  await t.test('both paid sources refresh 00 or missing number to S/N without new operation or DPS number',async()=>{
    await db.exec("UPDATE public.parceiros SET numero='S/N'");
    for(let i=0;i<2;i++){
     const before=ops[i];const after=await preview(i);

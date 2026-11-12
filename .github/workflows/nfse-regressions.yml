@@ -154,7 +154,9 @@ jobs:
       - name: Validar número, auditoria e rollback de alunos
         env:
           PGLITE_MODULE_URL: file://${{ runner.temp }}/nfse-sql/node_modules/@electric-sql/pglite/dist/index.js
-        run: node supabase/tests/student_address_number.pglite.mjs
+        run: |
+          node supabase/tests/student_address_number.pglite.mjs
+          node supabase/tests/student_address_number_sn.pglite.mjs
       - name: Instalar parser XML real para o relatório contábil
         run: npm install --prefix "$RUNNER_TEMP/nfse-accounting-sql" --no-save --package-lock=false --ignore-scripts @electric-sql/pglite@0.5.16
       - name: Validar recebimentos, modelos e serviços em banco isolado

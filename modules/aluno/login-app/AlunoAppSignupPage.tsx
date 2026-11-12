@@ -209,8 +209,8 @@ const AlunoAppSignupPage: React.FC = () => {
       showError('Informe um CEP válido com 8 números.');
       return;
     }
-    if (!form.endereco.trim() || !form.numero.trim() || !form.bairro.trim() || !form.cidade.trim() || form.uf.trim().length !== 2) {
-      showError('Complete endereço, número, bairro, cidade e UF.');
+    if (!form.endereco.trim() || !form.bairro.trim() || !form.cidade.trim() || form.uf.trim().length !== 2) {
+      showError('Complete endereço, bairro, cidade e UF.');
       return;
     }
 
@@ -440,7 +440,7 @@ const AlunoAppSignupPage: React.FC = () => {
                 <div className="grid grid-cols-[0.72fr_1.28fr] gap-2.5">
                   <label className="block">
                     <span className="mb-1.5 block text-[10px] font-black uppercase tracking-wider text-blue-100/70">Número</span>
-                    <input required value={form.numero} onChange={(event) => updateField('numero', event.target.value.toLocaleUpperCase('pt-BR'))} placeholder="123" className={INPUT_CLASS} />
+                    <input maxLength={60} value={form.numero} onChange={(event) => updateField('numero', event.target.value.toLocaleUpperCase('pt-BR'))} placeholder="S/N quando não informado" className={INPUT_CLASS} />
                   </label>
                   <label className="block">
                     <span className="mb-1.5 block text-[10px] font-black uppercase tracking-wider text-blue-100/70">Complemento</span>

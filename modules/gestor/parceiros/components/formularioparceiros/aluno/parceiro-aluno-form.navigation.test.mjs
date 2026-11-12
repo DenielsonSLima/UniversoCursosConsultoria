@@ -103,13 +103,13 @@ test('Próximo da etapa 4 abre contato e só o clique explícito em Salvar envia
 
     await enter('numero', '   ');
     await click(saveButton);
-    assert.equal(saved.length, 0, 'número só com espaços não deve salvar');
-    assert.match(dom.window.document.querySelector('[role="alert"]').textContent, /número do endereço/);
+    assert.equal(saved.length, 1, 'número ausente usa S/N automaticamente');
+    assert.equal(saved[0].numero, 'S/N');
     await enter('numero', ' 123 ');
     await click(saveButton);
-    assert.equal(saved[0].numero, '123');
+    assert.equal(saved[1].numero, '123');
     assert.equal(submissions, 2);
-    assert.equal(saved.length, 1);
+    assert.equal(saved.length, 2);
     assert.equal(saved[0].matricularAgora, false);
     assert.equal(saved[0].cep, '00000-000');
     assert.equal(requests, 0);

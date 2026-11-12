@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "retrieval": "lexical-bm25-with-source-citations",
-  "builtAt": "2026-11-12T15:21:04.646Z",
+  "builtAt": "2026-11-12T15:42:45.693Z",
   "manifestVersion": 2,
-  "sourceSignature": "d4fd67e35de4817a0f6d8d33b76329cc0af0685a8d89fd6c537738689a306bd2",
+  "sourceSignature": "7d3a44eee816a870de5747462e771cf4d329ba932eef0af306ad0e551c2e7eff",
   "sources": [
     {
       "path": "AGENTS.md",
@@ -11,7 +11,7 @@
     },
     {
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "hash": "dadc4b701399ba27a217f471245e24e2fd84891909c7db456515342a34c13d5b"
+      "hash": "8e763183cf7578fff54e78de18c20ddb8d7cb355b91dc07eb53135380343a49b"
     },
     {
       "path": "ai/operacao/MEMORIA_CANONICA.md",
@@ -208,13 +208,13 @@
       "part": 1
     },
     {
-      "id": "05d7a4ba4517aee32280",
-      "hash": "05d7a4ba4517aee32280e3429bdf3a5f003c3ce55fbbddbdb0d1196ff2afce23",
+      "id": "e4addfa078b19fb191fd",
+      "hash": "e4addfa078b19fb191fd438f78f0b3bfdc7a87435366463980a0c5333bd94af5",
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Lote: 2026-11-12-nfse-endereco-consistente",
-      "text": "Objetivo: desbloquear preparação de NFS-e por número ausente, preservando revisão fiscal canônica, histórico e idempotência. Status: integração4.8.310; testes locais aprovados, backend complementar/CI/deploy em andamento. Autorização: usuário autorizou ajustes e publicação; 00 provisório explícito nos cadastros legados. Sem emissão/cancelamento de nota real. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-12-nfse-endereco-consistente.md`. Limitações: demais lacunas cadastrais continuam bloqueando; smoke Safari autenticado pendente; concorrência PGlite cobre interleavings serializados, não multi-sessão real.",
-      "normalizedText": "objetivo desbloquear preparacao de nfs e por numero ausente preservando revisao fiscal canonica historico e idempotencia status integracao4 8 310 testes locais aprovados backend complementar ci deploy em andamento autorizacao usuario autorizou ajustes e publicacao 00 provisorio explicito nos cadastros legados sem emissao cancelamento de nota real manifesto explicito ai operacao registros alteracoes 2026 11 12 nfse endereco consistente md limitacoes demais lacunas cadastrais continuam bloqueando smoke safari autenticado pendente concorrencia pglite cobre interleavings serializados nao multi sessao real",
-      "tokenCount": 75,
+      "section": "Lote: 2026-11-12-numero-sn-automatico",
+      "text": "Objetivo: seguir orientação posterior do proprietário: ausência de número vira S/N, não 00; preservar números reais e documentos fiscais emitidos. Status: integração4.8.311; migration e substituição auditada439 aplicadas; testes/CI/deploy em fechamento. Autorização: usuário determinou S/N automático e correção dos00 provisórios. Sem emissão/cancelamento de nota real. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-12-numero-sn-automatico.md`. Limitações: S/N é marcador autorizado de ausência; demais campos ausentes continuam bloqueando. Smoke Safari autenticado pendente.",
+      "normalizedText": "objetivo seguir orientacao posterior do proprietario ausencia de numero vira s n nao 00 preservar numeros reais e documentos fiscais emitidos status integracao4 8 311 migration e substituicao auditada439 aplicadas testes ci deploy em fechamento autorizacao usuario determinou s n automatico e correcao dos00 provisorios sem emissao cancelamento de nota real manifesto explicito ai operacao registros alteracoes 2026 11 12 numero sn automatico md limitacoes s n e marcador autorizado de ausencia demais campos ausentes continuam bloqueando smoke safari autenticado pendente",
+      "tokenCount": 70,
       "part": 1
     },
     {

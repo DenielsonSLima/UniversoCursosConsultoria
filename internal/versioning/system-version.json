@@ -1,8 +1,8 @@
 {
-  "version": "4.8.310",
+  "version": "4.8.311",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 319,
+  "revision": 320,
   "releasedAt": "2026-11-12",
-  "summary": "Emissão NFS-e com endereço consistente e diagnóstico objetivo"
+  "summary": "Número S/N automático quando ausente, preservando histórico fiscal"
 }

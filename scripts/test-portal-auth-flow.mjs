@@ -8,7 +8,7 @@ const readSource = (relativePath) =>
 const [
   turnstileWidget,
   institutionalLoginForm,
-  studentLoginForm,
+  studentLoginFormEntry,
   passwordRecoveryEntry,
   portalAuthEntry,
   portalAuthSecurity,
@@ -44,6 +44,9 @@ const [
   readSource('modules/shared/auth/NativeAuthBridge.tsx'),
   readSource('lib/supabase.ts'),
 ])
+
+const studentSignupAddressForm = await readSource('modules/public/login/AlunoSignupAddressForm.tsx')
+const studentLoginForm = `${studentLoginFormEntry}\n${studentSignupAddressForm}`
 
 const portalAuthFunction = `${portalAuthEntry}\n${portalAuthSecurity}`
 const passwordRecoveryPage = [
@@ -84,6 +87,8 @@ test('Turnstile exposes explicit loading, verification and recovery states', () 
 })
 
 test('all credential flows wait for a verified Turnstile token', () => {
+  assert.match(studentLoginFormEntry, /<AlunoSignupAddressForm/)
+  assert.match(studentSignupAddressForm, /action="signup"/)
   for (const source of [
     institutionalLoginForm,
     studentLoginForm,

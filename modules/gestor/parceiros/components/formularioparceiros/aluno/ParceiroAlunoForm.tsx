@@ -233,7 +233,7 @@ const ParceiroAlunoForm: React.FC<ParceiroAlunoFormProps> = ({
       alert('E-mail do responsável inválido.');
       return;
     }
-    if (!formData.numero.trim() || formData.numero.trim().length > 60) {
+    if (formData.numero.trim().length > 60) {
       setAddressNumberError(true);
       setCurrentStep(5);
       return;
@@ -245,7 +245,7 @@ const ParceiroAlunoForm: React.FC<ParceiroAlunoFormProps> = ({
     try {
       await onSave?.(uppercaseAlunoTextFields({
         ...formData,
-        numero: formData.numero.trim(),
+        numero: formData.numero.trim() || 'S/N',
         email: normalizeEmail(formData.email),
         responsavelEmail: normalizeEmail(formData.responsavelEmail),
         // O módulo Parceiros só cria o cadastro. A matrícula é iniciada em Gestão.
@@ -336,7 +336,7 @@ const ParceiroAlunoForm: React.FC<ParceiroAlunoFormProps> = ({
         {currentStep === 5 && <ParceiroAlunoFormStepContact formData={formData} onChange={handleChange} onCepBlur={handleCepBlur} />}
 
         {currentStep === 5 && addressNumberError && (
-          <p role="alert" className="mt-2 text-sm text-red-600">Informe o número do endereço (até 60 caracteres). Use S/N somente se o endereço não possuir número.</p>
+          <p role="alert" className="mt-2 text-sm text-red-600">O número do endereço deve ter até 60 caracteres.</p>
         )}
         <div className="partner-registration-footer flex justify-between gap-3 pt-6 mt-6 border-t border-slate-100">
           <button
