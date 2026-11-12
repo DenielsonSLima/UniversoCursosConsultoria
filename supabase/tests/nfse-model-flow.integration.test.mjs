@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { pathToFileURL } from 'node:url';
 import { id,scope,sql,installAutomaticReviewFixture } from './nfse_automatic_review.fixture.mjs';
-const {PGlite}=await import(pathToFileURL(process.argv[2]));
+const {PGlite}=await import(process.env.NFSE_TEST_PGLITE_MODULE || process.argv[2] ? pathToFileURL(process.env.NFSE_TEST_PGLITE_MODULE || process.argv[2]).href : '@electric-sql/pglite');
 const db=new PGlite();
 const value=async(query,args=[])=>(await db.query(query,args)).rows[0].value;
 await installAutomaticReviewFixture(db);
