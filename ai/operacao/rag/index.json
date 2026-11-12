@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "retrieval": "lexical-bm25-with-source-citations",
-  "builtAt": "2026-11-12T13:48:41.255Z",
+  "builtAt": "2026-11-12T14:11:02.064Z",
   "manifestVersion": 2,
-  "sourceSignature": "211185fdfd993b4086c48ea9e16a2b0d55fab20966c5de4e447596e866a00b56",
+  "sourceSignature": "7227009ea37f9a539f78a45644894239c4b74af837c407b45338f703872bfa87",
   "sources": [
     {
       "path": "AGENTS.md",
@@ -11,7 +11,7 @@
     },
     {
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "hash": "b176d50d0bc88b2d1018033308bc600e78040d3b20a67f37c5a2ccea88c6fa2d"
+      "hash": "3f63e67b2b370413c8ea3f9f1a89ada2566889ab6a6c00b5d09bea9c6b58b810"
     },
     {
       "path": "ai/operacao/MEMORIA_CANONICA.md",
@@ -208,13 +208,13 @@
       "part": 1
     },
     {
-      "id": "4395df05a5b77f10d0b1",
-      "hash": "4395df05a5b77f10d0b1f21bec228301a9e52bce17531c72c6ed98763fa9ee3b",
+      "id": "30b3bb26aca92b122ab1",
+      "hash": "30b3bb26aca92b122ab113cbf3dbeb9dc7c928de375e485cc0c016d0894f9506",
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Lote: 2026-11-12-nfse-effective-access",
-      "text": "Objetivo: respeitar permissão efetiva do módulo Emissor NFS-e. Status: migration 20261112134516 aplicada; testes focados e revisão independente aprovados. Autorização: usuário autorizou correção geral e publicação. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-12-nfse-effective-access.md`. Limitação: smoke visual autenticado pendente. Nenhuma operação fiscal realizada.",
-      "normalizedText": "objetivo respeitar permissao efetiva do modulo emissor nfs e status migration 20261112134516 aplicada testes focados e revisao independente aprovados autorizacao usuario autorizou correcao geral e publicacao manifesto explicito ai operacao registros alteracoes 2026 11 12 nfse effective access md limitacao smoke visual autenticado pendente nenhuma operacao fiscal realizada",
-      "tokenCount": 45,
+      "section": "Lote: 2026-11-12-emissor-lista-cache",
+      "text": "Objetivo: lista de notas compacta e indicadores estáveis. Status: migration 20261112140440 aplicada; testes locais aprovados; CI e publicação em fechamento. Autorização: usuário autorizou revisão e produção. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-12-emissor-lista-cache.md`. Limitação: smoke visual autenticado Safari pendente por Mac indisponível. Nenhuma operação fiscal realizada.",
+      "normalizedText": "objetivo lista de notas compacta e indicadores estaveis status migration 20261112140440 aplicada testes locais aprovados ci e publicacao em fechamento autorizacao usuario autorizou revisao e producao manifesto explicito ai operacao registros alteracoes 2026 11 12 emissor lista cache md limitacao smoke visual autenticado safari pendente por mac indisponivel nenhuma operacao fiscal realizada",
+      "tokenCount": 49,
       "part": 1
     },
     {

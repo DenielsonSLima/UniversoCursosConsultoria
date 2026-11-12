@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import type { NfseDocument } from '../types/nfse.types';
 import { formatNfseMoney } from '../components/nfse.presentation';
 import { operationLabel } from '../emissao/nfse-operation.contract';
+import { recipientDocumentLabel, recipientLocationLabel } from './nfse-recipient.presentation';
 import NfseDocumentOperationAction from '../emissao/NfseDocumentOperationAction';
 interface Props { rows: NfseDocument[]; available: boolean; disabled: boolean; selected?: ReadonlySet<string>;
   onToggle?: (document: NfseDocument, checked: boolean) => void; actions?: (document: NfseDocument, available: boolean) => ReactNode }
@@ -14,17 +15,22 @@ export default function NfseIssuedRows({ rows, available, disabled, selected, on
         checked={Boolean(selected?.has(item.id))} disabled={!available || disabled || !/^\d{50}$/.test(item.accessKey || '')}
         onChange={event => onToggle(item, event.target.checked)} />}
         <strong>NFS-e nº {item.number}</strong><span>{date(item.emittedAt)}</span></div>
-      <span className="nfse-status" data-tone={item.state === 'AUTHORIZED' ? 'success' : item.state === 'CANCELLATION_REJECTED' ? 'error' : 'warning'}>{item.state ? operationLabel(item.state) : 'Emitida'}</span>
+      <div className="nfse-issued-note-summary"><span className="nfse-status" data-tone={item.state === 'AUTHORIZED' ? 'success' : item.state === 'CANCELLATION_REJECTED' ? 'error' : 'warning'}>{item.state ? operationLabel(item.state) : 'Emitida'}</span>
+        <strong className="nfse-amount">{formatNfseMoney(item.amount)}</strong></div>
     </div>
-    <div className="nfse-issued-line nfse-issued-note-context">
-      <span><strong>{item.studentName}</strong>{item.classLabel && <small> · {item.classLabel}</small>}</span>
-      <span>{item.modelLabel}{item.courseTypeLabel && <small> · {item.courseTypeLabel}</small>}</span>
-      <span>{item.origin === 'ALUNO' ? 'Origem: aluno' : item.origin === 'SERVICO' ? 'Origem: serviço' : 'Origem não informada'}</span>
+    <div className="nfse-issued-line nfse-issued-recipient">
+      <strong className="nfse-issued-recipient-name">{item.studentName}</strong>
+      <div className="nfse-issued-recipient-meta"><span>{recipientDocumentLabel(item.recipientDocument)}</span>
+        <span>{recipientLocationLabel(item.recipientCity, item.recipientState)}</span></div>
     </div>
-    <div className="nfse-issued-line">
-      <div className="nfse-issued-note-result"><strong className="nfse-amount">{formatNfseMoney(item.amount)}</strong>
-        {(item.state === 'CANCELLED' || item.message) && <span className="nfse-issued-message" title={item.state === 'CANCELLED' ? 'Autorização histórica preservada; cancelamento confirmado.' : item.message || undefined}>
-          {item.state === 'CANCELLED' ? 'Autorização histórica preservada; cancelamento confirmado.' : item.message}</span>}</div>
+    <div className="nfse-issued-line nfse-issued-note-footer">
+      <div className="nfse-issued-note-context">
+        <span>{item.origin === 'ALUNO' ? 'Aluno' : item.origin === 'SERVICO' ? 'Serviço' : 'Origem não informada'}
+          {item.classLabel && item.classLabel !== 'Serviço' && <> · {item.classLabel}</>}{item.courseTypeLabel && <> · {item.courseTypeLabel}</>}</span>
+        {item.modelLabel && <span className="nfse-issued-model" title={item.modelLabel}>{item.modelLabel}</span>}
+        {(item.state === 'CANCELLED' || item.message) && <details className="nfse-issued-note-detail"><summary>Detalhes da nota</summary>
+          <p>{item.state === 'CANCELLED' ? 'Autorização histórica preservada; cancelamento confirmado.' : item.message}</p></details>}
+      </div>
       <div className="nfse-issued-note-actions">{actions?.(item, available)}<NfseDocumentOperationAction document={item} disabled={!available || disabled} /></div>
     </div>
   </article>)}</div>;

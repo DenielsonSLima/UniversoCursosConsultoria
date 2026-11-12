@@ -39,6 +39,14 @@ Histórico arquivado: [21/10/2026 — versão4.8.231](./changelog/2026-10-21-ver
 Histórico arquivado: [22/10/2026 — versão 4.8.232](./changelog/2026-10-22-versao-4-8-232.md).
 Histórico arquivado: [23/10/2026 — versão 4.8.233](./changelog/2026-10-23-versao-4-8-233.md).
 
+Histórico arquivado: [24/10/2026 a 27/10/2026 — versões 4.8.234 a 4.8.235](./changelog/2026-10-24-a-27-versoes-4-8-234-a-235.md).
+
+## [4.8.306] - 2026-11-12
+
+- Lista de notas emitidas compacta com CPF/CNPJ formatado, cidade e UF do tomador quando presentes no XML autorizado.
+- Indicadores preservam valores durante atualização da mesma consulta e mantêm cache breve de leitura na navegação, sem relaxar permissões ou isolamento.
+- Regressões de interação e XML verificam identificação, ações e limites de acesso; sem alteração de valores ou operação fiscal.
+
 ## [4.8.305] - 2026-11-12
 
 - Emissor NFS-e respeita liberação efetiva do módulo, própria ou herdada, sem cadastro oculto do piloto.
@@ -488,13 +496,3 @@ Histórico arquivado: [23/10/2026 — versão 4.8.233](./changelog/2026-10-23-ve
 - Intenção auditada acompanha geração, autorização e primeiro claim após COMMIT; retomada por ciclo preserva request, valores, datas, pagamentos e identidade bancária. Compatibilidade legada exige prova histórica estrita, sem backfill.
 - Diagnóstico individual impede que uma matrícula inválida derrube a lista; regressões de UI e PostgreSQL isolado cobrem origens mistas, composição, concorrência simulada e recuperação ambígua.
 
-## [4.8.235] - 2026-10-27
-
-- Retomada da mesma emissão por gestor autorizado preserva autorização original, chave e dados financeiros, com auditoria idempotente; divergências de conteúdo ou vínculo exigem revisão.
-- Catálogo individual explica motivos de indisponibilidade documental e permite preparar um ou dois boletos pelo fluxo existente; validações bancárias preservadas.
-- Regressão SQL isolada cobre papéis reais e primeiro claim, com testes do serviço, orquestração e catálogo. Implantação do backend e validação autenticada são etapas separadas da preparação desta versão.
-
-## [4.8.234] - 2026-10-24
-
-- Caixa preserva status HTTP e interrompe tentativas após negação de acesso, sem trocar para versão anterior da consulta.
-- Composição do Caixa agrega totais e classificação na mesma leitura de cada relatório, preservando valores e permissões; conexões antecipadas Cloudflare removidas e captcha sob demanda.

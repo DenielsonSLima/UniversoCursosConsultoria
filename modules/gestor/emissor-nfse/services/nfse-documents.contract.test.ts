@@ -63,3 +63,12 @@ test('a mismatched partition response fails rather than filtering just the visib
     await assert.rejects(service.documents(scope, invalid as never), NfseContractError);
   }
 });
+
+test('issued recipient details remain optional and come from the server', () => {
+  const enriched = mapNfseDocument({ ...row, recipientDocument: '00100200300', recipientCity: 'Canhoba', recipientState: 'SE' });
+  assert.equal(enriched.recipientDocument, '00100200300');
+  assert.equal(enriched.recipientCity, 'Canhoba');
+  assert.equal(enriched.recipientState, 'SE');
+  assert.equal(mapNfseDocument(row).recipientCity, undefined);
+  assert.throws(() => mapNfseDocument({ ...row, recipientCity: 123 }), NfseContractError);
+});

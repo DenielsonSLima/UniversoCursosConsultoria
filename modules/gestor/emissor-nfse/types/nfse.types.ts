@@ -96,6 +96,9 @@ export interface NfseCandidate {
 
 export type NfseDocumentStatus = 'PENDENTE' | 'EM_PROCESSAMENTO' | 'AGUARDANDO_CONFIRMACAO' | 'EMITIDA' | 'ERRO';
 export interface NfseDocument extends NfseOperationReference {
+  recipientDocument?: string | null;
+  recipientCity?: string | null;
+  recipientState?: string | null;
   id: string;
   studentName: string;
   classLabel: string;

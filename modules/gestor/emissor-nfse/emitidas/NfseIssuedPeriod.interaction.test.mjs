@@ -19,7 +19,7 @@ test('period provider synchronizes date inputs, KPI and query filters with month
  const output=resolve(temp,'test.mjs'),requests=[];
  globalThis.__periodQuery=(queryScope,filters)=>{
   requests.push({queryScope,filters});return {data:{rows:[],page:filters.page,pageSize:25,totalItems:100,totalAmount:'12345.67',courseTypes:[]},
-    isPending:false,isFetching:false,error:globalThis.__periodFailure?new Error('Synthetic failure'):null,refetch:async()=>{}};
+    isPending:false,isFetching:Boolean(globalThis.__periodFetching),error:globalThis.__periodFailure?new Error('Synthetic failure'):null,refetch:async()=>{}};
  };
  const compiled=await build({stdin:{contents:`export {default as List} from './modules/gestor/emissor-nfse/components/NfseDocumentsList';
   export {default as Metric} from './modules/gestor/emissor-nfse/emitidas/NfseIssuedTotalMetric';
@@ -76,9 +76,13 @@ test('period provider synchronizes date inputs, KPI and query filters with month
   await setDate('Data inicial de emissão','0002-02-01');
   assert.equal(exportButton().disabled,false,'Cancelled filters never change active issued period pending state');
   assert(document.querySelector('.nfse-metric').textContent.includes('12.345,67'));
+  globalThis.__periodFetching=true;await act(async()=>root.render(React.createElement(App,{month:'2028-02'})));await settle();
+  assert(document.querySelector('.nfse-metric').textContent.includes('12.345,67'),'Background refresh retains the same scope/period aggregate');
+  assert.equal(document.querySelector('.nfse-metric').getAttribute('aria-busy'),'true');
+  globalThis.__periodFetching=false;
   globalThis.__periodFailure=true;await act(async()=>root.render(React.createElement(App,{month:'2028-02'})));await settle();
   assert.equal(document.querySelector('.nfse-metric strong').textContent,'—');
   globalThis.__periodFailure=false;await act(async()=>root.render(React.createElement(App,{enabled:false})));await settle();
   assert.equal(document.querySelector('.nfse-metric strong').textContent,'—');
- }finally{await act(async()=>root.unmount());dom.window.close();delete globalThis.__periodQuery;delete globalThis.__periodFailure;await rm(temp,{recursive:true,force:true});}
+ }finally{await act(async()=>root.unmount());dom.window.close();delete globalThis.__periodQuery;delete globalThis.__periodFailure;delete globalThis.__periodFetching;await rm(temp,{recursive:true,force:true});}
 });

@@ -112,6 +112,7 @@ jobs:
           modules/gestor/emissor-nfse/emissao/NfseBatchEmissionModal.interaction.test.mjs
           modules/gestor/emissor-nfse/emitidas/NfseIssuedList.interaction.test.mjs
           modules/gestor/emissor-nfse/emitidas/NfseIssuedPeriod.interaction.test.mjs
+          modules/gestor/emissor-nfse/queries/nfse-summary-cache.interaction.test.mjs
           modules/gestor/emissor-nfse/emitidas/exportacao/NfseIssuedExportModal.interaction.test.mjs
           modules/gestor/emissor-nfse/visualizador/NfseXmlViewerModal.interaction.test.mjs
           modules/gestor/emissor-nfse/parceiros/ServicosParceirosNfseTab.interaction.test.mjs

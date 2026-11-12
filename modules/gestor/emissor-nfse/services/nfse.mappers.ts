@@ -62,6 +62,9 @@ export function mapNfseCandidate(value: unknown): NfseCandidate {
 export function mapNfseDocument(value: unknown): NfseDocument {
   const row = record(value);
   const document: NfseDocument = {
+    ...(row.recipientDocument === undefined ? {} : { recipientDocument: nullableString(row.recipientDocument) }),
+    ...(row.recipientCity === undefined ? {} : { recipientCity: nullableString(row.recipientCity) }),
+    ...(row.recipientState === undefined ? {} : { recipientState: nullableString(row.recipientState) }),
     id: string(row.id), studentName: string(row.studentName), classLabel: string(row.classLabel),
     amount: money(row.amount), modelLabel: string(row.modelLabel),
     status: oneOf(row.status, ['PENDENTE', 'EM_PROCESSAMENTO', 'AGUARDANDO_CONFIRMACAO', 'EMITIDA', 'ERRO']),

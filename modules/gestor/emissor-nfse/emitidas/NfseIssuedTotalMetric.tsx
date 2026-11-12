@@ -9,7 +9,7 @@ export default function NfseIssuedTotalMetric({ scope, enabled }: { scope: NfseS
   const filters = period?.queryFilters ?? nfseIssuedQueryFilters(createNfseIssuedPeriod(scope?.month));
   const validDates = !filters.dateFrom || !filters.dateTo || filters.dateFrom <= filters.dateTo;
   const query = useNfseDocuments(enabled ? scope : null, filters, validDates);
-  const current = enabled && validDates && !period?.isSettling && !query.error && !query.isFetching && query.data;
+  const current = enabled && validDates && !period?.isSettling && !query.error && query.data;
   return <div className="nfse-metric" aria-busy={enabled && query.isFetching}>
     <span>Total emitido no período</span>
     <strong>{formatNfseMoney(current ? query.data?.totalAmount : null)}</strong>
