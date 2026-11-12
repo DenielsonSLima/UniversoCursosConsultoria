@@ -65,41 +65,33 @@ export const ModalidadeReceberToolbar: React.FC<ModalidadeReceberToolbarProps> =
   onClearFilters,
 }) => (
   <>
-    <ReceivablesPeriodFilter period={period} error={periodError} onChange={onPeriodChange} />
+    <ReceivablesSummaryCards
+      summary={summary}
+      upcoming={upcoming}
+      scope={statusScope}
+      disabled={Boolean(periodError)}
+      onScopeChange={onStatusScopeChange}
+    />
 
     <div className="flex flex-wrap items-center gap-3">
-      <div className="relative min-w-[220px] flex-1">
-        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-        <input
-          type="text"
-          placeholder="Aluno, turma, CPF ou cobrança..."
-          value={search}
-          onChange={(event) => onSearchChange(event.target.value)}
-          className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-4 text-sm outline-none transition-all focus:ring-2 focus:ring-emerald-500"
+      <div className="min-w-0 flex-1">
+        <FinancialUnderlineTabs
+          compact
+          items={[
+            { id: 'pending' as const, label: 'Pendentes', badge: summary.loading || summary.error || periodError ? undefined : statusCounts.pending },
+            { id: 'upcoming' as const, label: 'A vencer', badge: upcoming.loading || upcoming.error || periodError ? undefined : upcoming.data?.pendingCount },
+            { id: 'received' as const, label: 'Recebidos', badge: summary.loading || summary.error || periodError ? undefined : statusCounts.received },
+            { id: 'overdue' as const, label: 'Vencidos', badge: summary.loading || summary.error || periodError ? undefined : statusCounts.overdue },
+            { id: 'canceled' as const, label: 'Cancelados', badge: summary.loading || summary.error || periodError ? undefined : statusCounts.canceled },
+            { id: 'all' as const, label: 'Todos', badge: summary.loading || summary.error || periodError ? undefined : statusCounts.all },
+          ]}
+          value={statusScope}
+          onChange={onStatusScopeChange}
+          ariaLabel="Situação das contas a receber"
+          indicatorClassName="bg-emerald-600"
+          activeIconClassName="text-emerald-600"
         />
       </div>
-
-      <FinancialSelect
-        value={turmaId}
-        onValueChange={onTurmaIdChange}
-        options={[{ value: '', label: turmasLoading ? 'Carregando turmas...' : 'Todas as turmas' }, ...turmas.map(turma => ({ value: turma.id, label: turma.codigo ? `${turma.nome} · ${turma.codigo}` : turma.nome, keywords: `${turma.id} ${turma.codigo || ''}` }))]}
-        ariaLabel="Filtrar por turma ativa"
-        placeholder="Todas as turmas"
-        disabled={turmasLoading}
-        loading={turmasLoading}
-        className="w-full min-w-0 sm:w-[280px]"
-      />
-
-      {search || period.preset !== 'CURRENT_MONTH' || turmaId || statusScope !== 'pending' ? (
-        <button
-          type="button"
-          onClick={onClearFilters}
-          className="rounded-xl bg-slate-100 px-4 py-2.5 text-xs font-bold uppercase text-slate-500 transition-colors hover:bg-slate-200"
-        >
-          Redefinir filtros
-        </button>
-      ) : null}
-
       <div className="ml-auto flex flex-wrap items-center gap-2">
         <ReceberActions>
           <FinancialReportExportButton
@@ -139,30 +131,42 @@ export const ModalidadeReceberToolbar: React.FC<ModalidadeReceberToolbarProps> =
       </div>
     </div>
 
-    <ReceivablesSummaryCards
-      summary={summary}
-      upcoming={upcoming}
-      scope={statusScope}
-      disabled={Boolean(periodError)}
-      onScopeChange={onStatusScopeChange}
-    />
+    <div className="flex flex-wrap items-center gap-3">
+      <div className="relative min-w-[220px] flex-1">
+        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+        <input
+          type="text"
+          placeholder="Aluno, turma, CPF ou cobrança..."
+          value={search}
+          onChange={(event) => onSearchChange(event.target.value)}
+          className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-4 text-sm outline-none transition-all focus:ring-2 focus:ring-emerald-500"
+        />
+      </div>
 
-    <FinancialUnderlineTabs
-      compact
-      items={[
-        { id: 'pending' as const, label: 'Pendentes', badge: summary.loading || summary.error || periodError ? undefined : statusCounts.pending },
-        { id: 'upcoming' as const, label: 'A vencer', badge: upcoming.loading || upcoming.error || periodError ? undefined : upcoming.data?.pendingCount },
-        { id: 'received' as const, label: 'Recebidos', badge: summary.loading || summary.error || periodError ? undefined : statusCounts.received },
-        { id: 'overdue' as const, label: 'Vencidos', badge: summary.loading || summary.error || periodError ? undefined : statusCounts.overdue },
-        { id: 'canceled' as const, label: 'Cancelados', badge: summary.loading || summary.error || periodError ? undefined : statusCounts.canceled },
-        { id: 'all' as const, label: 'Todos', badge: summary.loading || summary.error || periodError ? undefined : statusCounts.all },
-      ]}
-      value={statusScope}
-      onChange={onStatusScopeChange}
-      ariaLabel="Situação das contas a receber"
-      indicatorClassName="bg-emerald-600"
-      activeIconClassName="text-emerald-600"
-    />
+      <ReceivablesPeriodFilter period={period} error={periodError} onChange={onPeriodChange} />
+
+      <FinancialSelect
+        value={turmaId}
+        onValueChange={onTurmaIdChange}
+        options={[{ value: '', label: turmasLoading ? 'Carregando turmas...' : 'Todas as turmas' }, ...turmas.map(turma => ({ value: turma.id, label: turma.codigo ? `${turma.nome} · ${turma.codigo}` : turma.nome, keywords: `${turma.id} ${turma.codigo || ''}` }))]}
+        ariaLabel="Filtrar por turma ativa"
+        placeholder="Todas as turmas"
+        disabled={turmasLoading}
+        loading={turmasLoading}
+        className="w-full min-w-0 sm:w-[280px]"
+      />
+
+      {search || period.preset !== 'CURRENT_MONTH' || turmaId || statusScope !== 'pending' ? (
+        <button
+          type="button"
+          onClick={onClearFilters}
+          className="rounded-xl bg-slate-100 px-4 py-2.5 text-xs font-bold uppercase text-slate-500 transition-colors hover:bg-slate-200"
+        >
+          Redefinir filtros
+        </button>
+      ) : null}
+    </div>
+
     {!periodError ? <ReceivablesResultTotal scope={statusScope} state={statusScope === 'upcoming' ? upcoming : summary} /> : null}
   </>
 );

@@ -1,9 +1,9 @@
 # Lote ativo
 
-## Lote: 2026-11-12-nfse-retorno-automatico
-Objetivo: acompanhar automaticamente o retorno de emissão/cancelamento e atualizar o Emissor via Realtime/TanStack Query, sem consulta manual.
-Status: concluído e publicado em produção na versão 4.8.319; PR #412 integrada, 15 workflows aprovados e domínio público verificado por HTTP.
-Autorização: usuário autorizou correção, automação e publicação em produção. Nenhuma emissão ou cancelamento real foi realizado como teste.
-Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-12-nfse-retorno-automatico.md`.
-Implantação: duas migrations aplicadas; nfse-national-individual v33 ativa com JWT verificado; worker e cron habilitados; Vercel READY no domínio público.
-Limitações: validação visual pelo usuário; latência de uma nova emissão/cancelamento fiscal após a publicação ainda não medida.
+## Lote: 2026-11-12-inicio-receber-compactos
+Objetivo: remover redundância no Início e compactar filtros/ordenar KPIs de A Receber como Contas a Pagar.
+Status: implementação e revisão concluídas; candidato 4.8.321 para CI, Preview e produção autorizada.
+Autorização: usuário solicitou publicação no GitHub e produção; conferência visual permanece com o usuário, sem navegador do agente.
+Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-12-inicio-receber-compactos.md`.
+Base: main abaa26532dc646a1797431b4f7843aa99dae2fa5, produção 4.8.319.
+Limitações: sem smoke visual de A Receber; lote paralelo Parceiros/4.8.320 preservado fora deste pacote.
