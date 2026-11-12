@@ -82,6 +82,13 @@ jobs:
           node --test
           modules/gestor/configuracoes/nfse-portal-contribuinte/components/*.test.ts
           modules/gestor/emissor-nfse/services/configuration/certificate-upload.errors.test.ts
+      - name: Validar acompanhamento e mensagens sem transmissão
+        run: |
+          mkdir -p tmp
+          for source in modules/gestor/emissor-nfse/emissao/nfse-batch.core.test.ts modules/gestor/emissor-nfse/individual/nfse-individual.errors.test.ts modules/gestor/emissor-nfse/services/nfse.errors.test.ts; do
+            node_modules/.bin/esbuild "$source" --bundle --platform=node --format=esm --outfile=tmp/nfse-focused-test.mjs
+            node --test tmp/nfse-focused-test.mjs
+          done
       - name: Preparar DOM isolado para cadastro A1
         run: npm install --prefix "$RUNNER_TEMP/nfse-certificate-ui" --no-save --package-lock=false --ignore-scripts jsdom@26.1.0
       - name: Exercitar cadastro A1 com transporte simulado
@@ -195,6 +202,7 @@ jobs:
           supabase/functions/_shared/nfse-national/production-relay.test.ts
           supabase/functions/_shared/nfse-national/production-live-contract.test.ts
           supabase/functions/_shared/nfse-national/production-diagnostics.test.ts
+          supabase/functions/_shared/nfse-national/production-post-identity.test.ts
           supabase/functions/_shared/nfse-national/production-event-detail.test.ts
           supabase/functions/_shared/nfse-national/production-event-archive.test.ts
           supabase/functions/_shared/nfse-national/production-event-representation.test.ts

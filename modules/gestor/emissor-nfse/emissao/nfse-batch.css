@@ -1,0 +1,17 @@
+.nfse-batch-row { border-top: 1px solid #e3e9ee; padding: 10px 0; min-width: 0; }
+.nfse-batch-line { display: grid; grid-template-columns: minmax(160px, 1fr) auto auto auto; align-items: center; gap: 12px; }
+.nfse-batch-line h3 { margin: 0; font-size: 12px; font-weight: 600; overflow-wrap: anywhere; }
+.nfse-batch-amount { font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.nfse-batch-status { font-size: 11px; color: #536579; background: #f1f5f9; padding: 4px 7px; border-radius: 5px; }
+.nfse-batch-status[data-state="AUTHORIZED"] { color: #166534; background: #edf8f0; }
+.nfse-batch-status[data-state="REJECTED"], .nfse-batch-status[data-state="BLOCKED"] { color: #991b1b; background: #fff1f1; }
+.nfse-batch-status[data-state="PENDING"] { color: #854d0e; background: #fff8e5; }
+.nfse-batch-line .nfse-button { min-height: 30px; font-size: 11px; padding: 5px 8px; white-space: nowrap; }
+.nfse-batch-details { padding-top: 10px; }
+.nfse-batch-details[hidden] { display: none; }
+.nfse-batch-row > p { font-size: 12px; margin: 6px 0 0; }
+@media (max-width: 700px) {
+  .nfse-batch-line { grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+  .nfse-batch-status { justify-self: start; }
+  .nfse-batch-line .nfse-button { justify-self: end; }
+}

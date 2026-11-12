@@ -1,5 +1,5 @@
 import type { NfseScope } from '../types/nfse.types';
-import { NfseContractError } from '../services/nfse.errors';
+import { NfseContractError, mapNfseTransportError } from '../services/nfse.errors';
 import { assertScope, boolean, integer, oneOf, record, string, unwrapNfseEnvelope } from '../services/nfse.validation';
 import { queueUuid } from '../fila/nfse-queue.contract';
 export interface IndividualPreparationReview {
@@ -38,6 +38,6 @@ export function createIndividualPreparationService(transport: (name: string, arg
 export const individualPreparationService = createIndividualPreparationService(async (name, args) => {
   const { supabase } = await import('../../../../lib/supabase');
   const { data, error } = await supabase.rpc(name, args);
-  if (error) throw new Error('Não foi possível confirmar a preparação de produção. Atualize a revisão antes de continuar.');
+  if (error) throw mapNfseTransportError(error, 'Não foi possível confirmar a preparação de produção. Atualize a mesma operação antes de continuar.');
   return data;
 });

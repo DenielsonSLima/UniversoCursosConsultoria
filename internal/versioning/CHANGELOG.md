@@ -49,6 +49,14 @@ Histórico arquivado: [27/10/2026 — versão 4.8.240](./changelog/2026-10-27-ve
 
 Histórico arquivado: [27/10/2026 — versão 4.8.241](./changelog/2026-10-27-versao-4-8-241.md).
 
+Histórico arquivado: [27/10/2026 — versão 4.8.242](./changelog/2026-10-27-versao-4-8-242.md).
+
+## [4.8.312] - 2026-11-12
+
+- Emissão em lote com linhas compactas, dados expansíveis e progresso do retorno fiscal.
+- Reconciliação limitada e automática da mesma DPS, sem repetir emissão incerta, acompanhada por Realtime e eventos de retomada.
+- Mensagens específicas para regras conhecidas, sem expor conteúdo sensível ou afirmar autorização sem prova fiscal.
+
 ## [4.8.311] - 2026-11-12
 
 - Cadastro de aluno normaliza número ausente para S/N conforme orientação expressa, sem alterar números reais informados.
@@ -489,12 +497,3 @@ Histórico arquivado: [27/10/2026 — versão 4.8.241](./changelog/2026-10-27-ve
 - Portal do Aluno consulta somente o modelo EAD do próprio certificado finalizado, com identidade ativa verificada no servidor e sem liberar o registro administrativo de modelos.
 - Erro de carregamento deixa de aparecer como geração permanente de PDF; repetição explícita e troca de conta/curso descartam respostas antigas.
 - Certificados, códigos, datas, notas, progresso e modelos administrativos permanecem inalterados. Testes isolados cobrem autorização e recuperação da interface; smoke autenticado permanece pendente.
-
-## [4.8.242] - 2026-10-27
-
-### Corrigido
-- Revisão dos 61 cursos EAD restantes: 58 percursos com ensino, prática, atividades e provas próprias; três cursos adequados preservados com sete vínculos de atividades corrigidos.
-- Novos materiais e gabaritos passam por revisão independente e mantêm versões, progresso, notas e certificados anteriores; a troca de versão permanece explícita.
-- Cursos de NR-10, máquinas e transporte escolar delimitados como cursos livres teóricos, sem comprovação de prática ou habilitação profissional.
-- Explicações antecipadas de Serviços Gerais e Vigia reservadas no snapshot privado, sem trocar currículo, gabaritos ou histórico.
-- Área nativa de foco das alternativas vinculada ao retângulo visível; tela branca relatada no Android segue dependente de reteste após atualização.

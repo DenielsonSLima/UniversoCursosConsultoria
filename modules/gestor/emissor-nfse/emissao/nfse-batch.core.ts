@@ -8,7 +8,7 @@ export interface NfseBatchItem extends NfseBatchInput {
   requestId: string; previewId: string | null; preview?: IndividualPreview; result?: IndividualIssueResult;
   dispatched: boolean; uncertain: boolean; error?: string;
 }
-export interface NfseBatchSnapshot { items: readonly NfseBatchItem[]; busy: boolean; phase: 'IDLE' | 'REVIEW' | 'ISSUE' | 'CONSULT'; paused: boolean }
+export interface NfseBatchSnapshot { items: readonly NfseBatchItem[]; busy: boolean; phase: 'IDLE' | 'REVIEW' | 'ISSUE' | 'CONSULT' | 'CONFIRM'; paused: boolean }
 interface Storage { getItem(key: string): string | null; setItem(key: string, value: string): void }
 export const batchSourceStorageKey = (scope: NfseScope, source: NfseEmissionSource) => `${individualStorageKey(scope)}:${source.kind}:${source.id}`;
 export const batchCanIssue = (item: NfseBatchItem, now = Date.now()) => Boolean(!item.dispatched && !item.uncertain && !item.error
@@ -16,7 +16,7 @@ export const batchCanIssue = (item: NfseBatchItem, now = Date.now()) => Boolean(
   && (!item.result || item.result.state === 'PREVIEWED'));
 /** Browser orchestrates single durable operations. No money, model or person is reconstructed here. */
 export function createNfseBatchController(scope: NfseScope, input: readonly NfseBatchInput[], service: NfseIndividualService,
-  storage: Storage, options: { uuid?: () => string; onChanged?: () => void; onNotice?: (notice: NfseFiscalNotice) => void } = {}) {
+  storage: Storage, options: { uuid?: () => string; onChanged?: () => void; onNotice?: (notice: NfseFiscalNotice) => void; confirmationDelays?: readonly number[]; requestTimeoutMs?: number } = {}) {
   if (!input.length || input.length > 100 || new Set(input.map(item => `${item.source.kind}:${item.source.id}`)).size !== input.length) throw new Error('Selecione preparações distintas para o lote.');
   const captured = { ...scope }, uuid = options.uuid || (() => crypto.randomUUID());
   let items: NfseBatchItem[] = input.map(item => {
@@ -41,26 +41,68 @@ export function createNfseBatchController(scope: NfseScope, input: readonly Nfse
       sourceChanged = false;
     }
   };
+  let wake: (() => void) | undefined;
+  let cancelRead: (() => void) | undefined;
+  let lastEventRead = 0;
+  const bounded = <T,>(promise: Promise<T>): Promise<T> => new Promise((resolve, reject) => {
+    const finish = () => { clearTimeout(timer); if (cancelRead === cancel) cancelRead = undefined; };
+    const cancel = () => { finish(); reject(new Error('Retorno ainda não confirmado. O sistema consultará a mesma DPS, sem reenviar.')); };
+    const timer = setTimeout(cancel, options.requestTimeoutMs ?? 45_000);
+    cancelRead = cancel;
+    promise.then(value => { finish(); resolve(value); }, error => { finish(); reject(error); });
+  });
+  const wait = (milliseconds: number) => new Promise<void>(resolve => {
+    const timer = setTimeout(done, milliseconds);
+    function done() { clearTimeout(timer); wake = undefined; resolve(); }
+    wake = done;
+  });
   const read = async (index: number) => {
     const item = items[index]; if (!item.previewId) return;
-    const result = await service.reconcile(captured, item.requestId, item.previewId);
+    lastEventRead = Date.now();
+    let result: IndividualIssueResult;
+    try { result = await bounded(service.reconcile(captured, item.requestId, item.previewId)); }
+    finally { lastEventRead = Date.now(); }
     const preview = result.state === 'PREVIEWED' && result.expiresAt && result.capability ? { previewId: result.previewId, expiresAt: result.expiresAt,
       state: 'PREVIEWED' as const, capability: result.capability, payload: result.payload } : undefined;
     patch(index, { result, preview, error: undefined, uncertain: result.state === 'AWAITING_CONFIRMATION', dispatched: result.state !== 'PREVIEWED' });
     changed();
   };
+  // Bounded GET-only recovery while the explicit batch action is active, never a second ISSUE.
+  const follow = async (index: number) => {
+    phase = 'CONFIRM'; emit();
+    for (const delay of options.confirmationDelays || [1500, 2500, 4000, 6000, 8000, 10000]) {
+      if (disposed || stopped) return;
+      await wait(delay);
+      if (disposed || stopped) return;
+      try { await read(index); } catch { continue; }
+      if (!items[index].uncertain) return;
+    }
+  };
   return {
+    signalChange() {
+      if (disposed || stopped) return;
+      if (busy) { wake?.(); return; }
+      if (Date.now() - lastEventRead < 10_000 || !items.some(item => item.uncertain)) return;
+      lastEventRead = Date.now();
+      void run('CONSULT', async () => {
+        for (let index = 0; index < items.length && !disposed && !stopped; index++) {
+          if (!items[index].uncertain) continue;
+          try { await read(index); } catch { /* Retain uncertainty; focus or a later event can recover. */ }
+        }
+      });
+    },
     getSnapshot: () => snapshot,
     subscribe(listener: () => void) { listeners.add(listener); return () => { listeners.delete(listener); }; },
     activate() { disposed = false; },
-    dispose() { disposed = true; stopped = true; },
-    stop() { stopped = true; paused = true; emit(); },
+    dispose() { disposed = true; stopped = true; wake?.(); cancelRead?.(); },
+    stop() { stopped = true; paused = true; wake?.(); cancelRead?.(); emit(); },
     async review(competenceDate?: string) { await run('REVIEW', async () => {
       for (let index = 0; index < items.length && !disposed && !stopped; index++) {
         const item = items[index];
         try {
           if (item.previewId) {
             await read(index);
+            if (items[index].uncertain) await follow(index);
             if (disposed || stopped) break;
             const current = items[index];
             if (current.result?.state !== 'PREVIEWED' || current.uncertain || !current.preview ||
@@ -78,7 +120,7 @@ export function createNfseBatchController(scope: NfseScope, input: readonly Nfse
       }
     }); },
     async consult(index: number) { await run('CONSULT', async () => {
-      try { await read(index); }
+      try { await read(index); if (items[index].uncertain) await follow(index); }
       catch (error) { patch(index, { error: error instanceof Error ? error.message : 'Consulta não confirmada.' }); }
     }); },
     async issue() { await run('ISSUE', async () => {
@@ -93,13 +135,19 @@ export function createNfseBatchController(scope: NfseScope, input: readonly Nfse
         }
         try {
           // Persist the same operation before dispatch; uncertain responses are GET-only.
-          patch(index, { dispatched: true, error: undefined, preview: undefined });
-          const result = await service.issue(captured, item.requestId, item.previewId);
-          patch(index, { result, uncertain: result.state === 'AWAITING_CONFIRMATION' }); changed(); notice(individualIssueNotice(result));
-          if (result.state !== 'AUTHORIZED') { paused = true; break; }
+          phase = 'ISSUE';
+          patch(index, { dispatched: true, result: undefined, error: undefined, preview: undefined });
+          const result = await bounded(service.issue(captured, item.requestId, item.previewId));
+          patch(index, { result, uncertain: result.state === 'AWAITING_CONFIRMATION' }); changed();
+          if (items[index].uncertain) await follow(index);
+          const final = items[index].result!;
+          notice(individualIssueNotice(final));
+          if (final.state !== 'AUTHORIZED') { paused = true; break; }
         } catch (error) {
           const message = error instanceof Error ? error.message : 'Resultado não confirmado. Consulte a mesma operação.';
           patch(index, { uncertain: true, dispatched: true, error: message }); paused = true;
+          await follow(index);
+          if (!items[index].uncertain && items[index].result) { notice(individualIssueNotice(items[index].result!)); break; }
           notice({ type: 'error', title: 'Lote pausado: resultado não confirmado', message }); break;
         }
       }

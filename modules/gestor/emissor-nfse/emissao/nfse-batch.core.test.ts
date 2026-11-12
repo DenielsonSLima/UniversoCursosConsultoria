@@ -11,7 +11,7 @@ const payload: IndividualPayload = { issuerName: 'EMITENTE SINTÉTICO', issuerCn
   nationalServiceCode: '080201', nbsCode: '122020000', serviceDescription: 'SERVIÇO SINTÉTICO', opSimpNac: '3', regApTribSN: '1', municipalityCode: '2803401', municipalRegistration: null };
 const result = (previewId: string, state: IndividualIssueResult['state'] = 'AUTHORIZED'): IndividualIssueResult => ({ previewId, state, message: 'Retorno sintético', payload,
   number: state === 'AUTHORIZED' ? previewId.slice(-2).replace(/^0/, '') : null, accessKey: state === 'AUTHORIZED' ? '1'.repeat(50) : null });
-function fixture(overrides: Partial<NfseIndividualService> = {}, entries = inputs) {
+function fixture(overrides: Partial<NfseIndividualService> = {}, entries = inputs, confirmationDelays: readonly number[] = [], requestTimeoutMs?: number) {
   const calls: { action: string; args: unknown[] }[] = [], stored = new Map<string, string>(), notices: unknown[] = [];
   let serial = 100;
   const service = {
@@ -21,7 +21,7 @@ function fixture(overrides: Partial<NfseIndividualService> = {}, entries = input
     reconcile: async (...args: unknown[]) => { calls.push({ action: 'RECONCILE', args }); return result(String(args[2])); }, ...overrides,
   } as unknown as NfseIndividualService;
   const storage = { getItem: (key: string) => stored.get(key) || null, setItem: (key: string, value: string) => { stored.set(key, value); } };
-  const controller = createNfseBatchController(scope, entries, service, storage, { uuid: () => id(++serial), onNotice: notice => notices.push(notice) });
+  const controller = createNfseBatchController(scope, entries, service, storage, { confirmationDelays, requestTimeoutMs, uuid: () => id(++serial), onNotice: notice => notices.push(notice) });
   return { controller, calls, stored, storage, notices, service };
 }
 
@@ -109,4 +109,78 @@ test('blocked unsigned batch refreshes canonical data with the same identity and
   assert.deepEqual(repeated, original);
   assert(reopened.getSnapshot().items.every(item => batchCanIssue(item)));
   assert.equal(f.calls.filter(row => row.action === 'ISSUE').length, 0);
+});
+
+
+test('awaiting response is reconciled automatically with same DPS before advancing and never resubmitted', async () => {
+  const sent: string[] = [], reads: string[] = [];
+  const f = fixture({ issue: async (_scope, _request, previewId) => {
+    sent.push(previewId); return result(previewId, 'AWAITING_CONFIRMATION');
+  }, reconcile: async (_scope, _request, previewId) => { reads.push(previewId); return result(previewId); } }, inputs, [0]);
+  await f.controller.review(); await f.controller.issue();
+  assert.deepEqual(sent, [id(30), id(31)]); assert.deepEqual(reads, sent);
+  assert(f.controller.getSnapshot().items.every(item => item.result?.state === 'AUTHORIZED'));
+  await f.controller.issue(); assert.equal(sent.length, 2);
+});
+
+test('confirmation exhaustion stays uncertain and never claims success or sends another note', async () => {
+  let sent = 0, reads = 0;
+  const f = fixture({ issue: async (_s, _r, previewId) => { sent++; return result(previewId, 'AWAITING_CONFIRMATION'); },
+    reconcile: async (_s, _r, previewId) => { reads++; return result(previewId, 'AWAITING_CONFIRMATION'); } }, inputs, [0, 0]);
+  await f.controller.review(); await f.controller.issue();
+  assert.equal(sent, 1); assert.equal(reads, 2); assert.equal(f.controller.getSnapshot().paused, true);
+  assert.equal(f.controller.getSnapshot().items[0].uncertain, true);
+  assert(!JSON.stringify(f.notices).includes('success'));
+});
+
+test('transport exception reconciles without resending and requires explicit continuation of remaining notes', async () => {
+  let sent = 0;
+  const f = fixture({ issue: async () => { sent++; throw new Error('Network timeout'); } }, inputs, [0]);
+  await f.controller.review(); await f.controller.issue();
+  assert.equal(sent, 1); assert.equal(f.controller.getSnapshot().items[0].result?.state, 'AUTHORIZED');
+  assert.equal(f.controller.getSnapshot().paused, true);
+});
+
+test('realtime wakes pending confirmation; disposal cancels waiting without dispatching another note', async () => {
+  for (const dispose of [false, true]) {
+    let sent = 0, reads = 0;
+    const f = fixture({ issue: async (_s, _r, previewId) => { sent++; return result(previewId, 'AWAITING_CONFIRMATION'); },
+      reconcile: async (_s, _r, previewId) => { reads++; return result(previewId); } }, [inputs[0]], [60_000]);
+    await f.controller.review();
+    const pending = f.controller.issue();
+    await Promise.resolve(); await Promise.resolve();
+    if (dispose) f.controller.dispose(); else f.controller.signalChange();
+    await pending;
+    assert.equal(sent, 1); assert.equal(reads, dispose ? 0 : 1);
+  }
+});
+
+
+test('idle realtime recovers exhausted confirmation once, ignores feedback and never reissues', async () => {
+  let sent = 0, reads = 0;
+  const f = fixture({ issue: async (_s, _r, previewId) => { sent++; return result(previewId, 'AWAITING_CONFIRMATION'); },
+    reconcile: async (_s, _r, previewId) => { reads++; f.controller.signalChange(); return result(previewId); } }, [inputs[0]], []);
+  await f.controller.review(); await f.controller.issue();
+  f.controller.signalChange(); await new Promise(resolve => setTimeout(resolve, 5));
+  assert.equal(reads, 1); assert.equal(sent, 1);
+  assert.equal(f.controller.getSnapshot().items[0].result?.state, 'AUTHORIZED');
+  f.controller.signalChange(); assert.equal(reads, 1);
+});
+
+test('hanging ISSUE times out to uncertainty and bounded read-only recovery, no duplicate dispatch', async () => {
+  let sent = 0;
+  const f = fixture({ issue: async () => { sent++; return new Promise(() => {}); } }, inputs, [0], 5);
+  await f.controller.review(); await f.controller.issue();
+  assert.equal(sent, 1); assert.equal(f.controller.getSnapshot().busy, false);
+  assert.equal(f.controller.getSnapshot().items[0].result?.state, 'AUTHORIZED');
+});
+
+test('explicit pause releases hanging request and disables automatic event recovery', async () => {
+  let sent = 0, reads = 0;
+  const f = fixture({ issue: async () => { sent++; return new Promise(() => {}); },
+    reconcile: async (_s, _r, previewId) => { reads++; return result(previewId); } });
+  await f.controller.review(); const pending = f.controller.issue(); f.controller.stop(); await pending;
+  f.controller.signalChange(); await Promise.resolve();
+  assert.equal(f.controller.getSnapshot().busy, false); assert.equal(sent, 1); assert.equal(reads, 0);
+  assert.equal(f.controller.getSnapshot().items[0].uncertain, true);
 });
