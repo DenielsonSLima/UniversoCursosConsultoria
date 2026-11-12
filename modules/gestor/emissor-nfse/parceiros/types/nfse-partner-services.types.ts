@@ -53,6 +53,8 @@ export interface NfsePartnerServicesPage {
 
 export interface NfsePartnerServiceInput {
   requestId: string;
+  servicePeriodStart?: string;
+  servicePeriodEnd?: string;
   partnerId: string;
   modelId: string;
   modelVersion: number;

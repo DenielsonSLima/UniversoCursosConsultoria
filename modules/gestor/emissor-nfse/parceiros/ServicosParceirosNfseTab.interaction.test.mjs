@@ -51,11 +51,11 @@ test('services filter, paginate and confirm only eligible page selections, with 
     el.dispatchEvent(new dom.window.Event('input',{bubbles:true}));el.dispatchEvent(new dom.window.Event('change',{bubbles:true}));});await settle();
     if(blur){await act(async()=>el.dispatchEvent(new dom.window.FocusEvent('focusout',{bubbles:true})));await settle();}};
   try{
-    await render();await settle();assert(button('Emitir NFS-e'));assert(document.body.textContent.includes('Não enviada (preparada)'));assert.equal(requested.at(-1).partnerType,'');assert.equal(document.querySelectorAll('tbody tr').length,5);
+    await render();await settle();assert.equal(button('Atualizar'),undefined);assert(button('Emitir NFS-e'));assert(document.body.textContent.includes('Não enviada (preparada)'));assert.equal(requested.at(-1).partnerType,'');assert.equal(document.querySelectorAll('tbody tr').length,5);
     assert.equal(input('Selecionar serviço de Parceiro sintético 4').disabled,false);
     await click(input('Selecionar serviço de Parceiro sintético 4'));
-    assert.equal(button('Revisar lote (1)').disabled,false); assert.equal(button('Excluir selecionados (1)').disabled,true);
-    await click(input('Selecionar serviços desta página')); assert.equal(button('Revisar lote (5)').disabled,false);
+    assert.equal(button('Emitir notas (1)').disabled,false); assert.equal(button('Excluir selecionados (1)').disabled,true);
+    await click(input('Selecionar serviços desta página')); assert.equal(button('Emitir notas (5)').disabled,false);
     assert.equal(button('Excluir selecionados (5)').disabled,true);
     await click(button('Selecionar não emitidos'));assert(button('Excluir selecionados (2)'));
     await click(button('Excluir selecionados (2)'));assert(document.querySelector('[role="dialog"]').textContent.includes('contas a receber'));

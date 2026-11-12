@@ -33,7 +33,11 @@ export type NfseMoney = string | null;
 
 export type NfseIssTreatment = 'TRIBUTAVEL' | 'IMUNIDADE' | 'EXPORTACAO' | 'NAO_INCIDENCIA';
 
+export type NfseModelType = 'ALUNO' | 'SERVICO' | 'AMBOS';
+
 export interface NfseModelServiceFields {
+  /** Missing/null only for historical unclassified models; never infer from fiscal codes. */
+  modelType?: NfseModelType | null;
   serviceOptions?: NfseModelServiceOptions | null;
   peopleOptions?: NfseModelPeopleOptions | null;
   valuesOptions?: NfseModelValuesOptions | null;

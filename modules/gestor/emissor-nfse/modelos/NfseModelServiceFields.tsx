@@ -13,6 +13,7 @@ import type { NfseModelAdditionalDraft } from './services/nfse-model-additional.
 
 export interface NfseModelFormValues {
   name: string;
+  modelType?: NfseModelInput['modelType'] | '';
   nationalServiceCode: string;
   serviceDescription: string;
   nbsCode: string;
@@ -116,7 +117,7 @@ export default function NfseModelServiceFields({
         {serviceOptions.includeIbsCbs === true && <NfseFiscalCodeField id="nfse-model-operation-code" label="Código indicador da operação" required
           value={fields.operationIndicatorCode} onChange={(value) => setField('operationIndicatorCode', value)}
           options={catalogs?.operationIndicators} loading={catalogsLoading} error={catalogsError} />}
-        <NfseModelDescriptionEditor value={fields.serviceDescription} onChange={(value) => setField('serviceDescription', value)} preview={descriptionPreview} />
+        <NfseModelDescriptionEditor modelType={fields.modelType} value={fields.serviceDescription} onChange={(value) => setField('serviceDescription', value)} preview={descriptionPreview} />
       </div>
     </section>
   );

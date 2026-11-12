@@ -64,6 +64,7 @@ test('four pre-model steps preserve configured rules and save without issuing', 
   const calls = [], messages = [];
   let pending;
   globalThis.__modelSave = async (receivedScope, input) => {
+    assert.equal(input.modelType, 'ALUNO');
     calls.push({ scope: receivedScope, input });
     await new Promise((resolve, reject) => { pending = { resolve, reject }; });
     return { id: model.id, version: 3, message: 'Pré-modelo salvo.' };
@@ -98,6 +99,7 @@ test('four pre-model steps preserve configured rules and save without issuing', 
     assert.equal(button('Voltar').disabled, true);
     assert.equal(button('Salvar pré-modelo').disabled, true, 'Legacy locations and IBS/CBS choices must not be inferred');
     assert(document.body.textContent.includes('Estabelecimento e enquadramento'));
+    await choose('Tipo do modelo', 'Alunos');
     assert(document.body.textContent.includes('Na emissão de cursos, escolha o aluno.'));
     assert(document.body.textContent.includes('IM sintética'));
     assert.equal(document.querySelector('.nfse-model-issuer-details').open, false, 'Issuer reference data stays collapsed');

@@ -1,3 +1,4 @@
+import { nfseModelsForType } from '../modelos/nfse-model-type';
 import React, { useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Save, X } from 'lucide-react';
@@ -15,6 +16,8 @@ import { nfsePartnerAmountInput, nfsePartnerInputAmount, nfsePartnerToday } from
 import type { NfsePartnerServiceInput } from './types/nfse-partner-services.types';
 import { useNfseServicePartnerSearch } from './hooks/useNfseServicePartnerSearch';
 
+import { NFSE_SERVICE_PERIOD_TOKEN, nfseServicePeriodPreview } from './nfse-service-period';
+
 interface Props { scope: NfseScope; onClose: () => void; onSaved: (message: string) => void }
 
 export default function NfsePartnerServiceModal({ scope, onClose, onSaved }: Props) {
@@ -27,6 +30,8 @@ export default function NfsePartnerServiceModal({ scope, onClose, onSaved }: Pro
   const partners = useNfseServicePartnerSearch(scope, partnerId);
   const [modelId, setModelId] = useState('');
   const [serviceDescription, setServiceDescription] = useState('');
+  const [servicePeriodStart, setServicePeriodStart] = useState('');
+  const [servicePeriodEnd, setServicePeriodEnd] = useState('');
   const [serviceDate, setServiceDate] = useState(() => {
     const today = nfsePartnerToday();
     return today.startsWith(`${scope.month}-`) ? today : '';
@@ -39,7 +44,7 @@ export default function NfsePartnerServiceModal({ scope, onClose, onSaved }: Pro
   const [categoryId, setCategoryId] = useState('');
   const request = useRef<{ fingerprint: string; id: string } | null>(null);
   const options = optionsQuery.error ? undefined : optionsQuery.data;
-  const models = modelsQuery.error ? [] : modelsQuery.data?.rows || [];
+  const models = modelsQuery.error ? [] : nfseModelsForType(modelsQuery.data?.rows || [], 'SERVICO');
   const selectedModel = models.find((model) => model.active && model.id === modelId);
   const selectedPartner = partners.rows.find((partner) => partner.id === partnerId);
   const partnerLabel = (partner: NonNullable<typeof selectedPartner>) => `${partner.tradeName || partner.name} · ${partner.document || partner.type}`;
@@ -47,12 +52,14 @@ export default function NfsePartnerServiceModal({ scope, onClose, onSaved }: Pro
   const linked = generate && mode === 'LINK';
   const selectedReceivable = linked ? receivables.find((item) => item.id === existingId) : undefined;
   const amount = linked ? selectedReceivable?.amount || '' : nfsePartnerInputAmount(amountInput);
-  const hasVariable = /\{\{|\}\}/.test(serviceDescription);
-  const preview = useNfseModelDescriptionPreview(scope, hasVariable ? '' : serviceDescription);
+  const period = nfseServicePeriodPreview(serviceDescription, servicePeriodStart, servicePeriodEnd);
+  const requiresPeriod = period.requiresPeriod || Boolean(selectedModel?.serviceDescription.includes(NFSE_SERVICE_PERIOD_TOKEN));
+  const periodReady = !requiresPeriod || period.valid;
+  const preview = useNfseModelDescriptionPreview(scope, period.unknownVariables || !periodReady || period.tooLong ? '' : period.text);
   const currentMonthDate = Boolean(serviceDate && serviceDate.startsWith(`${scope.month}-`));
   const financeReady = !generate || Boolean(options?.capabilities.canGenerateReceivable
     && (mode === 'LINK' ? selectedReceivable : mode === 'CREATE' && dueDate && options.categories.some((item) => item.id === categoryId)));
-  const canSave = Boolean(selectedPartner && selectedModel && preview.ready && !hasVariable && currentMonthDate
+  const canSave = Boolean(selectedPartner && selectedModel && preview.ready && !period.unknownVariables && periodReady && !period.tooLong && currentMonthDate
     && /^(0|[1-9]\d*)\.\d{2}$/.test(amount) && amount !== '0.00' && financeReady
     && !optionsQuery.isFetching && !modelsQuery.isFetching && !partners.loading && !partners.error && !save.isPending);
 
@@ -61,6 +68,7 @@ export default function NfsePartnerServiceModal({ scope, onClose, onSaved }: Pro
     if (!canSave || !selectedModel) return;
     const fields: Omit<NfsePartnerServiceInput, 'requestId'> = {
       partnerId, modelId, modelVersion: selectedModel.version, serviceDate, serviceDescription: serviceDescription.trim(), amount,
+      ...(requiresPeriod ? { servicePeriodStart, servicePeriodEnd } : {}),
       generateReceivable: generate, existingReceivableId: linked ? existingId : null,
       dueDate: generate && mode === 'CREATE' ? dueDate : null,
       categoryId: generate && mode === 'CREATE' ? categoryId : null,
@@ -94,18 +102,26 @@ export default function NfsePartnerServiceModal({ scope, onClose, onSaved }: Pro
               {partners.error && <button type="button" className="nfse-button nfse-button-secondary" onClick={partners.retry}>Consultar parceiros novamente</button>}
             </div>
             <div className="nfse-field nfse-wide"><label htmlFor="nfse-service-model">Modelo de emissão</label>
-              <InstitutionalSelect id="nfse-service-model" ariaLabel="Modelo de emissão" required value={modelId}
+              <InstitutionalSelect id="nfse-service-model" ariaLabel="Modelo de emissão" placeholder="Selecionar modelo de serviços" required value={modelId}
                 options={models.filter((model) => model.active).map((model) => ({ value: model.id, label: model.name }))}
                 loading={modelsQuery.isPending} error={modelsQuery.error ? 'Não foi possível consultar os modelos.' : undefined}
-                onValueChange={(value) => { setModelId(value); setServiceDescription(models.find((model) => model.id === value)?.serviceDescription || ''); }} />
+                onValueChange={(value) => { setModelId(value); setServicePeriodStart(''); setServicePeriodEnd(''); setServiceDescription(models.find((model) => model.id === value)?.serviceDescription || ''); }} />
             </div>
+            {!modelsQuery.isPending && !modelsQuery.error && !models.length && <p className="nfse-inline-help nfse-wide">Nenhum modelo ativo do tipo Serviços. Defina o tipo em Modelos antes de emitir.</p>}
             {(optionsQuery.error || modelsQuery.error) && <div className="nfse-partner-error nfse-wide" role="alert"><span>Não foi possível carregar as opções.</span><button type="button" className="nfse-button nfse-button-secondary" onClick={() => { void optionsQuery.refetch(); void modelsQuery.refetch(); }}>Tentar novamente</button></div>}
             <label className="nfse-field"><span>Data da prestação</span><input type="date" required value={serviceDate} onChange={(event) => setServiceDate(event.target.value)} /></label>
             <label className="nfse-field"><span>Valor do serviço</span><input inputMode="decimal" required placeholder="0,00" value={linked ? selectedReceivable ? nfsePartnerAmountInput(selectedReceivable.amount) : '' : amountInput}
               readOnly={linked} onChange={(event) => setAmountInput(sanitizeCurrencyInput(event.target.value, amountInput))} /></label>
             {serviceDate && !currentMonthDate && <small className="nfse-partner-error nfse-wide" role="alert">Escolha uma data em {formatNfseMonth(scope.month)}.</small>}
             <label className="nfse-field nfse-wide"><span>Descrição do serviço</span><textarea required maxLength={2000} value={serviceDescription} onChange={(event) => setServiceDescription(event.target.value)} /></label>
-            {hasVariable ? <small className="nfse-partner-error nfse-wide" role="alert">Informe a descrição final deste serviço, sem variáveis de recebimentos.</small>
+            {requiresPeriod && <>
+              <label className="nfse-field"><span>Início do período do serviço</span><input type="date" required value={servicePeriodStart} onChange={event => setServicePeriodStart(event.target.value)} /></label>
+              <label className="nfse-field"><span>Fim do período do serviço</span><input type="date" required min={servicePeriodStart || undefined} value={servicePeriodEnd} onChange={event => setServicePeriodEnd(event.target.value)} /></label>
+              <small className="nfse-wide">Preenche a variável de período na descrição desta nota. Não altera a data da prestação nem a competência fiscal.</small>
+              {!period.valid && <small className="nfse-partner-error nfse-wide" role="alert">{period.error}</small>}
+            </>}
+            {period.tooLong && <small className="nfse-partner-error nfse-wide" role="alert">A descrição com o período excede 2.000 caracteres. Reduza o texto.</small>}
+            {period.unknownVariables ? <small className="nfse-partner-error nfse-wide" role="alert">Neste serviço, use somente a variável {'{{periodo}}'}. As variáveis acadêmicas são exclusivas de alunos.</small>
               : <div className="nfse-wide"><NfseDescriptionPreview preview={preview} /></div>}
           </section>
           <NfsePartnerFinancialFields generate={generate} onGenerate={(value) => { setGenerate(value); if (!value) { setMode(''); setExistingId(''); } }}

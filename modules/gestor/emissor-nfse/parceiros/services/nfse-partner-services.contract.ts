@@ -1,3 +1,4 @@
+import { nfseServicePeriodPreview } from '../nfse-service-period';
 import { operationReference } from '../../emissao/nfse-operation.contract';
 import { NfseContractError } from '../../services/nfse.errors';
 import { assertUniqueIds, boolean, integer, list, money, oneOf, record, string } from '../../services/nfse.validation';
@@ -76,7 +77,10 @@ export function parseNfsePartnerServicesPage(value: unknown, expectedPage: numbe
 
 export function nfsePartnerServiceDefinition(input: NfsePartnerServiceInput) {
   const serviceDescription = string(input.serviceDescription).trim();
-  if (serviceDescription.length > 2000 || /\{\{|\}\}/.test(serviceDescription) || amount(input.amount) === '0.00') throw new NfseContractError();
+  const period = nfseServicePeriodPreview(serviceDescription, input.servicePeriodStart || '', input.servicePeriodEnd || '');
+  const hasPeriod = input.servicePeriodStart !== undefined || input.servicePeriodEnd !== undefined;
+  if ([...serviceDescription].length > 2000 || period.unknownVariables || period.tooLong
+    || ((hasPeriod || period.requiresPeriod) && !period.valid) || amount(input.amount) === '0.00') throw new NfseContractError();
   const generateReceivable = boolean(input.generateReceivable);
   const existingReceivableId = nullableUuid(input.existingReceivableId);
   const dueDate = input.dueDate === null ? null : date(input.dueDate);
@@ -85,6 +89,7 @@ export function nfsePartnerServiceDefinition(input: NfsePartnerServiceInput) {
   if (generateReceivable && (existingReceivableId ? dueDate !== null || categoryId !== null : !dueDate || !categoryId)) throw new NfseContractError();
   return { partnerId: partnerServiceUuid(input.partnerId), modelId: partnerServiceUuid(input.modelId),
     modelVersion: integer(input.modelVersion, 1), serviceDate: date(input.serviceDate), serviceDescription,
+    ...(hasPeriod ? { servicePeriodStart: input.servicePeriodStart, servicePeriodEnd: input.servicePeriodEnd } : {}),
     amount: input.amount, generateReceivable, existingReceivableId, dueDate, categoryId };
 }
 
