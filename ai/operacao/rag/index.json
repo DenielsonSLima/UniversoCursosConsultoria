@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "retrieval": "lexical-bm25-with-source-citations",
-  "builtAt": "2026-11-12T14:11:02.064Z",
+  "builtAt": "2026-11-12T14:21:46.195Z",
   "manifestVersion": 2,
-  "sourceSignature": "7227009ea37f9a539f78a45644894239c4b74af837c407b45338f703872bfa87",
+  "sourceSignature": "18b63d8ef9177d8cd0eaf3b4b1e91ed8154e0e85f87f636737876bd773d25f59",
   "sources": [
     {
       "path": "AGENTS.md",
@@ -11,7 +11,7 @@
     },
     {
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "hash": "3f63e67b2b370413c8ea3f9f1a89ada2566889ab6a6c00b5d09bea9c6b58b810"
+      "hash": "1b7753b5941e8b57892a3d0d200038e48cab86e0553527248901e86e1fe8d5f4"
     },
     {
       "path": "ai/operacao/MEMORIA_CANONICA.md",
@@ -208,13 +208,13 @@
       "part": 1
     },
     {
-      "id": "30b3bb26aca92b122ab1",
-      "hash": "30b3bb26aca92b122ab113cbf3dbeb9dc7c928de375e485cc0c016d0894f9506",
+      "id": "7a810240ce2eca6f3ac7",
+      "hash": "7a810240ce2eca6f3ac712fd813320f247f836f9b39b754ac49f3772a6dd86ba",
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Lote: 2026-11-12-emissor-lista-cache",
-      "text": "Objetivo: lista de notas compacta e indicadores estáveis. Status: migration 20261112140440 aplicada; testes locais aprovados; CI e publicação em fechamento. Autorização: usuário autorizou revisão e produção. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-12-emissor-lista-cache.md`. Limitação: smoke visual autenticado Safari pendente por Mac indisponível. Nenhuma operação fiscal realizada.",
-      "normalizedText": "objetivo lista de notas compacta e indicadores estaveis status migration 20261112140440 aplicada testes locais aprovados ci e publicacao em fechamento autorizacao usuario autorizou revisao e producao manifesto explicito ai operacao registros alteracoes 2026 11 12 emissor lista cache md limitacao smoke visual autenticado safari pendente por mac indisponivel nenhuma operacao fiscal realizada",
-      "tokenCount": 49,
+      "section": "Lote: 2026-11-12-ead-confianca",
+      "text": "Objetivo: estudo EAD por confiança por 24 horas sem baixa financeira. Autorização: usuário solicitou recurso e publicação; liberação individual separada após implantação. Status: testes locais e revisão de segurança; banco e CI em fechamento. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-12-ead-confianca.md`. Sem alteração de recebimentos ou emissão de certificados. Smoke Safari autenticado pendente.",
+      "normalizedText": "objetivo estudo ead por confianca por 24 horas sem baixa financeira autorizacao usuario solicitou recurso e publicacao liberacao individual separada apos implantacao status testes locais e revisao de seguranca banco e ci em fechamento manifesto explicito ai operacao registros alteracoes 2026 11 12 ead confianca md sem alteracao de recebimentos ou emissao de certificados smoke safari autenticado pendente",
+      "tokenCount": 55,
       "part": 1
     },
     {

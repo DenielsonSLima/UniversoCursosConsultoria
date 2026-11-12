@@ -24,6 +24,7 @@ export interface EadTurmaResumo {
 
 export interface EadAlunoTurma {
   matriculaId: string;
+  acessoTemporarioAte?: string | null;
   alunoId: string;
   nome: string;
   email?: string | null;

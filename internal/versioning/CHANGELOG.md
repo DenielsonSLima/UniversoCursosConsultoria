@@ -41,6 +41,14 @@ Histórico arquivado: [23/10/2026 — versão 4.8.233](./changelog/2026-10-23-ve
 
 Histórico arquivado: [24/10/2026 a 27/10/2026 — versões 4.8.234 a 4.8.235](./changelog/2026-10-24-a-27-versoes-4-8-234-a-235.md).
 
+Histórico arquivado: [27/10/2026 — versões 4.8.236 a 4.8.237](./changelog/2026-10-27-versoes-4-8-236-a-237.md).
+
+## [4.8.307] - 2026-11-12
+
+- Gestão EAD permite liberar estudo por confiança durante 24 horas com autorização por turma e registro auditável.
+- Prazo único não dá baixa financeira, não altera a situação da matrícula e não libera certificado ou prova antes da confirmação do pagamento.
+- Portal respeita vencimento, contexto do aluno e acesso após pagamento; regressões isoladas cobrem expiração, repetição e tentativas não autorizadas.
+
 ## [4.8.306] - 2026-11-12
 
 - Lista de notas emitidas compacta com CPF/CNPJ formatado, cidade e UF do tomador quando presentes no XML autorizado.
@@ -483,16 +491,4 @@ Histórico arquivado: [24/10/2026 a 27/10/2026 — versões 4.8.234 a 4.8.235](.
 - Adiciona preparação estrita de rematrícula rejeitada por vencimento anterior à emissão, condicionada à consulta oficial da mesma identidade bancária, com prazo, comparação de estado e arquivo imutável da tentativa anterior.
 - A correção preserva mensalidades, composição e histórico do ciclo. Nova tentativa exige consentimento do gestor autenticado e mantém retomada da mesma identidade sem duplicar título após resposta perdida.
 - Nenhuma taxa é modificada automaticamente pela implantação; ausência genérica, conflito, pagamento e falha de consulta impedem o preparo.
-
-## [4.8.237] - 2026-10-27
-
-- Alinha os nomes das três migrations financeiras aos identificadores efetivamente aplicados em produção, preservando integralmente o SQL revisado e sem reaplicação.
-- Atualiza caminhos dos testes e evidências de implantação; comportamento financeiro, interface funcional, valores, datas e permissões permanecem iguais à versão4.8.236.
-
-## [4.8.236] - 2026-10-27
-
-- Módulo financeiro central por matrícula distingue Proesc, Banese importado, emissão própria e registro local, sem confundir mensalidades lançadas com títulos efetivamente emitidos.
-- Gestor escolhe primeiro ciclo, segundo ciclo ou não emitir; consulta Proesc não impede a decisão. Histórico, continuidade de transferência e operações existentes permanecem protegidos.
-- Intenção auditada acompanha geração, autorização e primeiro claim após COMMIT; retomada por ciclo preserva request, valores, datas, pagamentos e identidade bancária. Compatibilidade legada exige prova histórica estrita, sem backfill.
-- Diagnóstico individual impede que uma matrícula inválida derrube a lista; regressões de UI e PostgreSQL isolado cobrem origens mistas, composição, concorrência simulada e recuperação ambígua.
 

@@ -140,16 +140,17 @@ export const useEadLearning = ({ alunoId, hasAlunoContext, selectedCourse, query
     },
     refetchInterval: selectedCourse?.id ? 30000 : false,
   });
+  const accessExpired = !hasEadAccess(selectedCourse);
   const hasProgressData = progressQuery.data !== undefined;
   const hasAuthoritativeProgress = isEadProgressStatePayload(progressQuery.data)
     && getEffectiveEadConfig(selectedCourse?.ead_config, progressQuery.data) !== null;
   const progressContractError = hasProgressData && !hasAuthoritativeProgress;
   const progressAvailability = getEadProgressAvailability(
-    hasAuthoritativeProgress,
+    hasAuthoritativeProgress && !accessExpired,
     progressQuery.isFetching,
-    progressQuery.isError || progressContractError,
+    progressQuery.isError || progressContractError || accessExpired,
   );
-  const progressQueryError = progressContractError
+  const progressQueryError = accessExpired ? 'Acesso temporário encerrado. Aguarde a confirmação do pagamento.' : progressContractError
     ? 'O servidor retornou um contrato de avaliação incompatível. Atualize novamente ou avise o suporte.'
     : progressQuery.isError
       ? (progressQuery.error as any)?.message || 'Não foi possível carregar seu progresso EAD.'
@@ -315,10 +316,10 @@ export const useEadLearning = ({ alunoId, hasAlunoContext, selectedCourse, query
   const retryReleaseRefreshing = quizRetryBlocked && retryReleaseToken !== null;
 
   useEffect(() => {
-    if (!selectedCourse?.id || !retryCountdownActive) return;
+    if (!selectedCourse?.id || (!retryCountdownActive && !selectedCourse?.alunoMatricula?.acessoTemporarioAte)) return;
     const timer = window.setInterval(() => setQuizNowMs(Date.now()), 1000);
     return () => window.clearInterval(timer);
-  }, [retryCountdownActive, selectedCourse?.id]);
+  }, [retryCountdownActive, selectedCourse?.id, selectedCourse?.alunoMatricula?.acessoTemporarioAte]);
 
   useEffect(() => {
     if (!quizRetryBlocked || !retryReleaseToken || retryRefreshRequestedRef.current === retryReleaseToken) return;

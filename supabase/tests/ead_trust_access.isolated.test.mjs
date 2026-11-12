@@ -1,0 +1,43 @@
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+import {database,applyRevisions,progress,submit,state,alumno,other,course,enrollment} from './ead_assessment_revision.harness.mjs';
+const db=await database();
+const scalar=async sql=>(await db.query(sql)).rows[0].value;
+try {
+ await applyRevisions(db);
+ await db.exec(`create function auth.uid() returns uuid language sql as $$select nullif(current_setting('test.actor',true),'')::uuid$$;
+ create function public.gestor_has_module(text) returns boolean language sql as $$select current_setting('test.gestor',true)='true'$$;
+ create function public.can_write_turma(uuid) returns boolean language sql as $$select current_setting('test.scope',true)='true'$$;`);
+ for(const f of ['20261112141935_ead_temporary_trust_access.sql','20261112141950_trust_ead_get_aluno_progress_core_20260822.sql','20261112141956_trust_ead_update_aluno_progress.sql'])
+  await db.exec(await readFile(new URL('../migrations/'+f,import.meta.url),'utf8'));
+ await db.exec(`update matriculas set status='PENDENTE'; select set_config('test.actor','${other}',false);`);
+ await db.exec(`alter table parceiros add email text, add telefone text; create table inscricoes_online(id uuid,matricula_id uuid,status text,asaas_payment_id text,asaas_payment_link_id text,valor numeric,created_at timestamptz,updated_at timestamptz);`);
+ await db.exec(await readFile(new URL('../migrations/20261112142059_trust_ead_get_turma_alunos.sql',import.meta.url),'utf8'));
+ const grant=()=>scalar(`select public.ead_liberar_por_confianca('${enrollment}') value`);
+ await assert.rejects(grant);
+ await db.exec("select set_config('test.gestor','true',false); select set_config('test.scope','false',false)");
+ await assert.rejects(grant);
+ await db.exec("select set_config('test.scope','true',false)");
+ const expires=await grant();assert.ok(expires);
+ assert.equal((await grant()).toISOString(),expires.toISOString(),'Retry does not extend');
+ assert.equal(await scalar(`select extract(epoch from expires_at-granted_at)::int value from internal_academic.ead_trust_access_audit`),86400);
+ assert.equal((await state(db)).enrollment.status,'PENDENTE');
+ const list=await scalar(`select ead_get_turma_alunos((select turma_id from matriculas limit 1)) value`);assert.equal(list.length,1);assert.ok(list[0].acessoTemporarioAte);
+ assert.equal((await progress(db)).summary.canTakeQuiz,false);
+ await db.query("select public.ead_update_aluno_progress($1,$2,'toggle_content','old-lesson','{}')",[alumno,course]);
+ await assert.rejects(()=>submit(db),/confirmação do pagamento/);
+ assert.equal((await state(db)).certificates.length,0);
+ await db.exec("grant select,update on matriculas to authenticated; set role authenticated");
+ await assert.rejects(()=>db.query("update matriculas set acesso_temporario_ate=now()+interval '7 days'"));
+ await db.exec('reset role');
+ await db.exec("update matriculas set acesso_temporario_ate=statement_timestamp()-interval '1 second'");
+ await assert.rejects(()=>progress(db));
+ await assert.rejects(()=>db.query("select public.ead_update_aluno_progress($1,$2,'toggle_content','old-lesson','{}')",[alumno,course]));
+ await db.exec("update matriculas set status='CANCELADO',acesso_temporario_ate=statement_timestamp()+interval '1 hour'");
+ await assert.rejects(()=>progress(db));
+ await assert.rejects(grant);
+ await db.exec("update matriculas set status='ATIVO'");
+ await assert.rejects(()=>progress(db,other));
+ await progress(db);
+ console.log('PASS trust: permission/scope, exact24h, idempotent, protected column, pending unchanged, study, no certificate, expiry, paid access');
+}finally{await db.close()}

@@ -1,0 +1,36 @@
+name: Acesso EAD por confiança
+on:
+  pull_request:
+    paths:
+      - 'modules/aluno/cursos/**'
+      - 'modules/gestor/gestao/ead/**'
+      - 'supabase/migrations/**'
+      - 'supabase/tests/ead_trust_access*'
+      - '.github/workflows/ead-trust-access.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'modules/aluno/cursos/**'
+      - 'modules/gestor/gestao/ead/**'
+      - 'supabase/migrations/**'
+      - 'supabase/tests/ead_trust_access*'
+      - '.github/workflows/ead-trust-access.yml'
+permissions:
+  contents: read
+jobs:
+  trust-access:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24.22.1'
+      - name: Preparar PostgreSQL isolado
+        run: npm install --prefix "$RUNNER_TEMP/ead-trust" --no-save --package-lock=false --ignore-scripts @electric-sql/pglite@0.3.14
+      - name: Validar autorização, prazo e preservação financeira
+        env:
+          PGLITE_MODULE_PATH: ${{ runner.temp }}/ead-trust/node_modules/@electric-sql/pglite/dist/index.js
+        run: node --test modules/aluno/cursos/eadTrustAccess.test.mjs supabase/tests/ead_trust_access.isolated.test.mjs
