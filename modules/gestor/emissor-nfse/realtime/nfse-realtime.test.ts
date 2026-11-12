@@ -8,6 +8,7 @@ import { nfseRealtimeTargets } from './nfse.realtime';
 import { nfseQueueRealtimeTargets } from '../fila/nfse-queue.realtime';
 import { nfseCacheTargets, nfseMetadataKeys } from '../queries/nfse-cache';
 import { nfseModelsKeys } from '../modelos/queries/nfse-models.keys';
+import { nfseStudentKeys } from '../preparar/queries/nfse-students.keys';
 import { subscribeNfseChanges } from './nfse-subscription';
 
 const scope: NfseScope = { contextKey: 'synthetic-context', poloId: '00000000-0000-0000-0000-000000000001', environment: 'PRODUCAO', month: '2026-11' };
@@ -29,7 +30,9 @@ test('global model/config/catalog events invalidate their actual query families 
 
 test('operation events refresh public projections and numbering, preserving unrelated months', () => {
   assert.deepEqual(nfseQueueRealtimeTargets(event('unused', { month: scope.month }), scope), nfseCacheTargets(scope, 'operations'));
-  assert.deepEqual(nfseQueueRealtimeTargets(event('unused', { month: '2026-10' }), scope), [nfseMetadataKeys.numbering(scope)]);
+  const receiptAuthority = nfseStudentKeys.authority({ contextId: scope.contextKey, poloId: scope.poloId, environment: scope.environment });
+  assert.deepEqual(nfseQueueRealtimeTargets(event('unused', { month: '2026-10' }), scope), [nfseMetadataKeys.numbering(scope), receiptAuthority]);
+  assert(nfseCacheTargets(scope, 'operations').some(key => JSON.stringify(key) === JSON.stringify(receiptAuthority)));
   assert.deepEqual(nfseQueueRealtimeTargets(event('unused', { month: 'invalid' }), scope), []);
   assert.deepEqual(nfseQueueRealtimeTargets(event('unused', { month: scope.month, environment: 'HOMOLOGACAO' }), scope), []);
 });

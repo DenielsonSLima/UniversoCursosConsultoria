@@ -3,10 +3,15 @@ import { formatNfseMoney } from '../components/nfse.presentation';
 const date = (value: string) => value.split('-').reverse().join('/');
 export default function NfseIndividualSnapshot({ payload }: { payload: IndividualPayload }) {
   const ibs = payload.ibsCbs, choice = (value: boolean | null) => value === null ? 'Não informado' : value ? 'Sim' : 'Não';
+  const location = payload.serviceLocation;
+  const locationSource = { ISSUER_ESTABLISHMENT: 'Cadastro do estabelecimento emitente', MODEL_FIXED: 'Local fixado no pré-modelo',
+    ISSUED_SNAPSHOT: 'Local registrado na operação · histórico preservado' };
   const rows = [['Emitente', `${payload.issuerName} · ${payload.issuerCnpj}`], ['Tomador', `${payload.recipientName} · ${payload.recipientDocument}`],
     ['Modelo', `${payload.modelName} · versão ${payload.modelVersion}`], ['Tributação nacional / NBS', `${payload.nationalServiceCode} / ${payload.nbsCode}`],
     ['Competência', date(payload.competenceDate)], ['Prestação', date(payload.serviceDate)], ['Valor do serviço', formatNfseMoney(payload.amount)],
     ['Município / inscrição municipal', `${payload.municipalityCode} / ${payload.municipalRegistration || 'Não informada'}`],
+    ...(location ? [['Local da prestação', `${location.countryCode === 'BRA' ? 'Brasil' : location.countryCode} · ${location.municipalityCode ? `Município IBGE ${location.municipalityCode}` : 'Município não informado'}`],
+      ['Origem do local da prestação', locationSource[location.source]]] : []),
     ['Simples Nacional', { '1': 'Não optante', '2': 'Optante · MEI', '3': 'Optante · ME/EPP' }[payload.opSimpNac]],
     ['Apuração do Simples', payload.regApTribSN ? { '1': 'Federais e ISSQN no Simples', '2': 'Federais no Simples; ISSQN fora', '3': 'Federais e ISSQN fora do Simples' }[payload.regApTribSN] : 'Não se aplica'],
     ['Série DPS', payload.series], ['Descrição do serviço', payload.serviceDescription],

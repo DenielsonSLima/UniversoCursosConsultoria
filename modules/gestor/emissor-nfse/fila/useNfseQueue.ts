@@ -2,7 +2,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { isNfseScopeValid } from '../types/nfse.scope';
 import type { NfseScope } from '../types/nfse.types';
 import { NfseAccessError } from '../services/nfse.errors';
-import { nfseStudentKeys } from '../preparar/queries/nfse-students.keys';
 import { nfseQueueKeys, type NfseQueueInput } from './nfse-queue.types';
 import { nfseQueueService } from './nfse-queue.service';
 import type { NfseQueueRemovalInput } from './nfse-queue-removal';
@@ -24,11 +23,7 @@ export function usePrepareNfseQueue(scope: NfseScope | null) {
   return useMutation({ retry: false, mutationFn: async (input: NfseQueueInput) => {
     const captured = { ...required(scope) };
     return { result: await nfseQueueService.prepare(captured, input), scope: captured, paymentMonth: input.paymentMonth };
-  }, onSuccess: ({ scope: captured, paymentMonth }) => Promise.all([
-    invalidateNfseCache(client, captured, 'operations'),
-    client.invalidateQueries({ queryKey: nfseStudentKeys.scope({ contextId: captured.contextKey,
-      poloId: captured.poloId, paymentMonth }) }),
-  ]) });
+  }, onSuccess: ({ scope: captured }) => invalidateNfseCache(client, captured, 'operations') });
 }
 
 export function useRemoveNfseQueue(scope: NfseScope | null) {
@@ -36,9 +31,6 @@ export function useRemoveNfseQueue(scope: NfseScope | null) {
   return useMutation({ retry: false, mutationFn: async (input: NfseQueueRemovalInput) => {
     const captured = { ...required(scope) };
     return { result: await nfseQueueService.remove(captured, input), scope: captured };
-  }, onSuccess: ({ result, scope: captured }) => Promise.all([
-    invalidateNfseCache(client, captured, 'operations'),
-    ...result.paymentMonths.map(paymentMonth => client.invalidateQueries({ queryKey: nfseStudentKeys.scope({
-      contextId: captured.contextKey, poloId: captured.poloId, paymentMonth }) })),
-  ]), onError: () => client.invalidateQueries({ queryKey: nfseQueueKeys.scope(scope) }) });
+  }, onSuccess: ({ scope: captured }) => invalidateNfseCache(client, captured, 'operations'),
+  onError: () => client.invalidateQueries({ queryKey: nfseQueueKeys.scope(scope) }) });
 }

@@ -15,9 +15,9 @@ const model = { id: id(3), version: 7, name: 'Modelo local sintético', active: 
   nationalServiceCode: '080201', nbsCode: '122020000', operationIndicatorCode: '',
   serviceDescription: 'Descrição sintética', issTreatment: 'TRIBUTAVEL', immunityType: null,
   technicalResponsibilityDocument: '', referenceDocument: '', complementaryInfo: '', orderReference: '',
-  sourcePoloId: scope.poloId, sourcePoloName: 'Filial sintética', inherited: false, canManage: true };
+  sourcePoloId: scope.poloId, sourcePoloName: 'Matriz sintética', inherited: false, canManage: true };
 
-test('model menu, retries, inherited ownership and navigation use only fixture services', async () => {
+test('matrix manages models while branches read/export the same identities without cloning', async () => {
   await mkdir(resolve(base, 'tmp'), { recursive: true });
   const temp = await mkdtemp(resolve(base, 'tmp/nfse-model-actions-'));
   const dom = new JSDOM('<!doctype html><div id="root"></div><button id="outside">Fora</button>',
@@ -45,8 +45,8 @@ test('model menu, retries, inherited ownership and navigation use only fixture s
   const inherited = { ...model, id: id(4), name: 'Modelo da matriz sintético', sourcePoloId: id(9),
     sourcePoloName: 'Matriz sintética', inherited: true, canManage: false };
   const inactive = { ...model, id: id(5), name: 'Modelo inativo sintético', active: false };
-  let rows = [model, inherited, inactive];
-  globalThis.__modelList = async () => ({ rows: structuredClone(rows), totalItems: rows.length, pageSize: 100, page: 1 });
+  let rows = [model, inherited, inactive]; let canManage = true;
+  globalThis.__modelList = async () => ({ rows: structuredClone(rows), totalItems: rows.length, pageSize: 100, page: 1, canManage });
   const calls = [];
   let finish;
   globalThis.__modelMutate = async (captured, input) => {
@@ -70,6 +70,8 @@ test('model menu, retries, inherited ownership and navigation use only fixture s
     assert.match(document.body.textContent, /Da matriz · Matriz sintética/);
     assert(label(`Editar modelo ${model.name}`));
     assert.equal(label(`Editar modelo ${inherited.name}`), undefined);
+    assert.equal(label(`Mais ações do modelo ${inherited.name}`), undefined);
+    assert(button('Novo modelo'));
     const localTrigger = label(`Mais ações do modelo ${model.name}`);
     await click(localTrigger);
     assert.equal(document.activeElement.textContent.trim(), 'Clonar');
@@ -113,21 +115,34 @@ test('model menu, retries, inherited ownership and navigation use only fixture s
     await click(label(`Mais ações do modelo ${inactive.name}`));
     assert.equal(button('Inativar').disabled, true);
     await key(button('Clonar'), 'Escape');
-    await click(label(`Mais ações do modelo ${inherited.name}`));
-    assert.equal(button('Inativar'), undefined);
+    await click(label(`Mais ações do modelo ${model.name}`));
     await click(button('Clonar')); await click(button('Clonar modelo'));
-    assert.equal(calls[2].input.id, inherited.id);
+    assert.equal(calls[2].input.id, model.id);
+    assert.equal(calls[2].input.expectedVersion, 8);
     assert.equal(calls[2].input.action, 'CLONE');
     assert.equal(calls[2].scope.poloId, scope.poloId);
-    const copied = { ...model, id: id(10), version: 1, name: `${inherited.name} (cópia)` };
+    const copied = { ...model, id: id(10), version: 1, name: `${model.name} (cópia)` };
     rows = [...rows, copied];
     await act(async () => finish.resolve({ id: copied.id, version: 1, message: 'Modelo clonado.' })); await settle();
     assert(label(`Editar modelo ${copied.name}`));
     assert.equal(rows.find(row => row.id === inherited.id).version, 7);
-    await click(label(`Mais ações do modelo ${inherited.name}`)); await click(button('Clonar'));
+    await click(label(`Mais ações do modelo ${copied.name}`)); await click(button('Clonar'));
+    canManage = false;
+    rows = [{ ...model, inherited: true, canManage: false }, { ...inactive, canManage: true }];
     await render({ ...scope, poloId: id(20) });
     assert.equal(document.querySelector('[role="alertdialog"]'), null);
+    assert.equal(button('Novo modelo'), undefined);
+    assert.equal(label(`Editar modelo ${inactive.name}`), undefined, 'Scope capability prevails over a stale row flag');
+    assert.equal(label(`Mais ações do modelo ${inactive.name}`), undefined);
+    assert(label(`Exportar modelo ${model.name}`));
+    assert.match(document.body.textContent, /gerenciados na matriz/);
     assert.equal(calls.length, 3);
+    rows = [];
+    await render({ ...scope, poloId: id(21) });
+    assert.equal(button('Novo modelo'), undefined, 'An empty branch cannot create its own model');
+    canManage = true;
+    await render({ ...scope, environment: 'PRODUCAO' });
+    assert(button('Novo modelo'), 'An empty matrix can create a model with explicit server permission');
   } finally {
     await act(async () => root.unmount()); client.clear(); dom.window.close();
     delete globalThis.__modelList; delete globalThis.__modelMutate;

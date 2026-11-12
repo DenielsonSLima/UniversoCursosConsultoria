@@ -69,9 +69,25 @@ test('receipt reader sends only identities, filters and month; client amounts an
   assert.deepEqual(sent, {
     p_context_id: scope.contextId, p_polo_id: scope.poloId, p_payment_month: '2026-11-01',
     p_course_type: 'TECNICO', p_class_id: null, p_search: 'Aluno', p_page: 1,
-    p_page_size: 10, p_selected_ids: [id], p_include_groups: true,
+    p_page_size: 10, p_selected_ids: [id], p_include_groups: true, p_environment: null,
   });
   assert.equal(result.selection.selectedAmount, '120.35');
+});
+
+test('availability transport and cache separate fiscal environments; mismatched availability is rejected', async () => {
+  const production = { ...scope, environment: 'PRODUCAO' as const };
+  const homologation = { ...scope, environment: 'HOMOLOGACAO' as const };
+  const reader = createNfseReceiptReader(async (_name, args) => {
+    assert.equal(args.p_environment, 'PRODUCAO');
+    return { ...response(), scope: { ...production, basis: 'PAYMENT_DATE' } };
+  });
+  assert.equal((await reader(production, defaultNfseReceiptFilters(), [id])).selection.valid, true);
+  assert.notDeepEqual(nfseStudentKeys.groups(production, defaultNfseReceiptFilters()),
+    nfseStudentKeys.groups(homologation, defaultNfseReceiptFilters()));
+  assert.notDeepEqual(nfseStudentKeys.selection(production, [id]), nfseStudentKeys.selection(homologation, [id]));
+  assert.throws(() => mapNfseReceiptResponse(response(), production, [id], 1), NfseContractError);
+  assert.throws(() => mapNfseReceiptResponse({ ...response(), scope: { ...homologation, basis: 'PAYMENT_DATE' } },
+    production, [id], 1), NfseContractError);
 });
 
 test('selection transport sorts a copy of IDs and keeps listing filters separate from selected identities', async () => {

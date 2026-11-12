@@ -36,6 +36,7 @@ const registrationText = (value: unknown): string | null => value == null ? null
 
 export function isNfseReceiptScopeValid(scope: NfseReceiptScope | null): scope is NfseReceiptScope {
   return Boolean(scope && UUID.test(scope.contextId) && UUID.test(scope.poloId)
+    && (scope.environment === undefined || ['HOMOLOGACAO', 'PRODUCAO'].includes(scope.environment))
     && /^(19|20|21)\d{2}-(0[1-9]|1[0-2])$/.test(scope.paymentMonth));
 }
 
@@ -64,6 +65,7 @@ export function mapNfseReceiptResponse(
   const row = record(value);
   const scope = record(row.scope);
   if (row.version !== 1 || scope.contextId !== expected.contextId || scope.poloId !== expected.poloId
+    || (expected.environment !== undefined && scope.environment !== expected.environment)
     || scope.paymentMonth !== expected.paymentMonth || scope.basis !== 'PAYMENT_DATE') throw new NfseContractError();
   const courseTypes = array(row.courseTypes, option);
   const classes = array(row.classes, option);
@@ -109,6 +111,7 @@ export function createNfseReceiptReader(transport: NfseRpcTransport) {
       p_course_type: filters.courseType || null, p_class_id: filters.classId || null,
       p_search: filters.search.trim() || null, p_page: page, p_page_size: NFSE_STUDENT_PAGE_SIZE,
       p_selected_ids: [...selectedIds].sort(), p_include_groups: includeGroups,
+      p_environment: scope.environment ?? null,
     }, signal);
     return mapNfseReceiptResponse(data, scope, selectedIds, page);
   };

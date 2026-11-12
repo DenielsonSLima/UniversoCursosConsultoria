@@ -1,5 +1,6 @@
 import type { NfseScope } from '../types/nfse.types';
 import { nfseCacheTargets, nfseMetadataKeys } from '../queries/nfse-cache';
+import { nfseStudentKeys } from '../preparar/queries/nfse-students.keys';
 
 export function nfseQueueRealtimeTargets(payload: unknown, scope: NfseScope): readonly (readonly unknown[])[] {
   if (!payload || typeof payload !== 'object' || !('new' in payload)) return [];
@@ -8,7 +9,8 @@ export function nfseQueueRealtimeTargets(payload: unknown, scope: NfseScope): re
   const event = row as Record<string, unknown>;
   if (event.version !== 1 || event.polo_id !== scope.poloId || event.environment !== scope.environment
     || typeof event.month !== 'string' || !/^\d{4}-(0[1-9]|1[0-2])$/.test(event.month)) return [];
-  return event.month === scope.month ? nfseCacheTargets(scope, 'operations') : [nfseMetadataKeys.numbering(scope)];
+  return event.month === scope.month ? nfseCacheTargets(scope, 'operations') : [nfseMetadataKeys.numbering(scope),
+    nfseStudentKeys.authority({ contextId: scope.contextKey, poloId: scope.poloId, environment: scope.environment })];
 }
 
 export function isNfseQueueEvent(payload: unknown, scope: NfseScope): boolean {

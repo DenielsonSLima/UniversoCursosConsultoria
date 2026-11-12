@@ -166,6 +166,20 @@ test('model list accepts own plus inherited models beyond the old single-unit li
   await assert.rejects(truncated.list(scope), NfseContractError);
 });
 
+test('model management requires an explicit boolean capability from the authorized list', async () => {
+  const rows = [{ ...nfseModelDefinition(input), id: id(5), version: 1 }];
+  for (const canManage of [true, false]) {
+    const service = createNfseModelsService(async () => envelope({ rows, page: 1, pageSize: 100, totalItems: 1, canManage }));
+    assert.equal((await service.list(scope)).canManage, canManage);
+  }
+  const legacy = createNfseModelsService(async () => envelope({ rows, page: 1, pageSize: 100, totalItems: 1 }));
+  assert.equal((await legacy.list(scope)).canManage, false);
+  for (const canManage of ['true', 1, null]) {
+    const invalid = createNfseModelsService(async () => envelope({ rows, page: 1, pageSize: 100, totalItems: 1, canManage }));
+    await assert.rejects(invalid.list(scope), NfseContractError);
+  }
+});
+
 test('clone and deactivate send only explicit intent, scope, request id and expected version', async () => {
   const actionInput = { requestId: id(3), action: 'CLONE' as const, id: id(5), expectedVersion: 7 };
   const service = createNfseModelsService(async (name, args) => {
