@@ -43,6 +43,11 @@ Histórico arquivado: [24/10/2026 a 27/10/2026 — versões 4.8.234 a 4.8.235](.
 
 Histórico arquivado: [27/10/2026 — versões 4.8.236 a 4.8.237](./changelog/2026-10-27-versoes-4-8-236-a-237.md).
 
+## [4.8.308] - 2026-11-12
+
+- Indicadores e fila do Emissor usam a política de leitura comum do sistema, sem duração isolada por módulo.
+- Eventos realtime revalidam as projeções de cada usuário imediatamente; reconexão recupera eventos perdidos sem polling adicional.
+
 ## [4.8.307] - 2026-11-12
 
 - Gestão EAD permite liberar estudo por confiança durante 24 horas com autorização por turma e registro auditável.

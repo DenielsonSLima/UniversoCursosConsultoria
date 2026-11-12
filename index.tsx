@@ -4,6 +4,7 @@ import ReactDOM from 'react-dom/client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Capacitor } from '@capacitor/core';
 import App from './App';
+import { applicationReadCachePolicy } from './lib/query-cache-policy';
 import './styles.css';
 
 // A rota do aluno pertence ao React Router, não é um arquivo físico do pacote.
@@ -18,8 +19,7 @@ const queryClient = new QueryClient({
     queries: {
       refetchOnWindowFocus: false,
       retry: 1,
-      staleTime: 1000 * 60 * 5, // Mantém os dados "frescos" por 5 minutos (evita spinners ao navegar de volta)
-      gcTime: 1000 * 60 * 30,    // Guarda em cache por 30 minutos
+      ...applicationReadCachePolicy,
     },
   },
 });

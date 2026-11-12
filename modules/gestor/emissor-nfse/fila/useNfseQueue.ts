@@ -15,7 +15,7 @@ const required = (scope: NfseScope | null) => {
 
 export function useNfseQueue(scope: NfseScope | null, page = 1) {
   return useQuery({ queryKey: nfseQueueKeys.list(scope, page), enabled: isNfseScopeValid(scope), retry: false,
-    ...nfseSummaryCacheOptions, staleTime: 15_000, refetchOnWindowFocus: true, refetchOnReconnect: true,
+    ...nfseSummaryCacheOptions, refetchOnWindowFocus: true, refetchOnReconnect: true,
     queryFn: ({ signal }) => nfseQueueService.list(required(scope), page, signal) });
 }
 
