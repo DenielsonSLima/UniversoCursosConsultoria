@@ -61,6 +61,14 @@ Histórico arquivado: [4.8.247 a 4.8.248](./changelog/2026-11-05-versao-4-8-247.
 
 Histórico arquivado: [06/11/2026 — versões 4.8.249 a 4.8.250](./changelog/2026-11-06-versoes-4-8-249-a-250.md).
 
+Histórico arquivado: [07/11/2026 — versão 4.8.251](./changelog/2026-11-07-versao-4-8-251.md).
+
+## [4.8.321] - 2026-11-12
+
+### Alterado
+- Início: remove cabeçalho e data repetidos para elevar atalhos e cartões.
+- A Receber: KPIs, abas e filtros seguem a ordem de Contas a Pagar; datas inicial e final ficam após a busca, sem períodos predefinidos nem resumo repetido.
+
 ## [4.8.319] - 2026-11-12
 
 ### Corrigido
@@ -488,8 +496,3 @@ Histórico arquivado: [06/11/2026 — versões 4.8.249 a 4.8.250](./changelog/20
 - Cadastros Aluno, Professor, Pessoa Física e Pessoa Jurídica com campos, etapas e seções compactos; seletores próprios pesquisáveis preservam valores e validações.
 - Cartões e Responsáveis seguem o padrão compacto, mantendo informações, permissões e quatro colunas no desktop amplo; análise de carregamento separada de alterações de dados.
 
-## [4.8.251] - 2026-11-07
-
-### Alterado
-- Tabelas e modais das dez abas financeiras seguem um padrão compacto de fonte, contraste, espaçamento e alinhamento; documentos, dados e regras preservados.
-- Abas com linha inferior, buscas brancas e seletores próprios pesquisáveis; cabeçalhos repetidos removidos e ações alinhadas às abas/filtros, preservando permissões e operações.

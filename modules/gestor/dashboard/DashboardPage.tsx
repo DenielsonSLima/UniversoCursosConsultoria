@@ -182,16 +182,6 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
 
   return (
     <div className="dashboard-readable gestor-home">
-      <div className="home-heading">
-        <div>
-          <p className="home-eyebrow">Seu espaço de gestão</p>
-          <h1>Visão geral<span aria-hidden="true">.</span></h1>
-        </div>
-        <time dateTime={todayKey} className="home-today">
-          <span>{today.toLocaleDateString('pt-BR', { weekday: 'long' })}</span>
-          {today.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
-        </time>
-      </div>
       {hasQuickActionsContent ? (
         <DashboardQuickActionsHeader
           canCreatePartner={canCreatePartner}
