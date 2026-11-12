@@ -1,9 +1,9 @@
 # Lote ativo
 
-## Lote: 2026-11-12-nfse-effective-access
+## Lote: 2026-11-12-emissor-lista-cache
 
-Objetivo: respeitar permissão efetiva do módulo Emissor NFS-e.
-Status: migration 20261112134516 aplicada; testes focados e revisão independente aprovados.
-Autorização: usuário autorizou correção geral e publicação.
-Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-12-nfse-effective-access.md`.
-Limitação: smoke visual autenticado pendente. Nenhuma operação fiscal realizada.
+Objetivo: lista de notas compacta e indicadores estáveis.
+Status: migration 20261112140440 aplicada; testes locais aprovados; CI e publicação em fechamento.
+Autorização: usuário autorizou revisão e produção.
+Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-12-emissor-lista-cache.md`.
+Limitação: smoke visual autenticado Safari pendente por Mac indisponível. Nenhuma operação fiscal realizada.

@@ -1,3 +1,4 @@
+import { nfseSummaryCacheOptions } from '../queries/nfse-summary-cache';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { isNfseScopeValid } from '../types/nfse.scope';
 import type { NfseScope } from '../types/nfse.types';
@@ -14,7 +15,7 @@ const required = (scope: NfseScope | null) => {
 
 export function useNfseQueue(scope: NfseScope | null, page = 1) {
   return useQuery({ queryKey: nfseQueueKeys.list(scope, page), enabled: isNfseScopeValid(scope), retry: false,
-    staleTime: 15_000, gcTime: 0, refetchOnWindowFocus: true, refetchOnReconnect: true,
+    ...nfseSummaryCacheOptions, staleTime: 15_000, refetchOnWindowFocus: true, refetchOnReconnect: true,
     queryFn: ({ signal }) => nfseQueueService.list(required(scope), page, signal) });
 }
 

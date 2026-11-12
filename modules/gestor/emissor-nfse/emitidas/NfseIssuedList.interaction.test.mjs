@@ -20,7 +20,7 @@ test('issued list keeps three horizontal rows per note, visible actions and serv
   const { createRoot } = await import('react-dom/client'); const { QueryClient, QueryClientProvider } = await import('@tanstack/react-query');
   const output = resolve(temp, 'test.mjs'), requested = [], actions = [];
   const rows = [2, 3].map(number => ({ id: `synthetic-note-${number}`, studentName: 'PARCEIRO SINTÉTICO', classLabel: 'Turma sintética', modelLabel: 'MODELO SINTÉTICO', amount: '260.00',
-    status: 'EMITIDA', state: number === 2 ? 'CANCELLED' : 'AUTHORIZED', number: String(number), accessKey: String(number).repeat(50),
+    recipientDocument: '00100203000100', recipientCity: 'Canhoba', recipientState: 'SE', status: 'EMITIDA', state: number === 2 ? 'CANCELLED' : 'AUTHORIZED', number: String(number), accessKey: String(number).repeat(50),
     emittedAt: '2026-11-11T01:00:00Z', dateSource: 'NFSE_DH_PROC', origin: 'SERVICO', courseTypeLabel: null }));
   globalThis.__issuedQuery = (_scope, filters) => { requested.push(filters); if (globalThis.__issuedFail) return { data: undefined, error: new Error('Synthetic query failure'), isPending: false, isFetching: false, refetch: async () => {} }; const serverRows = filters.issuedState === 'CANCELLED' ? rows.filter(row => row.state === 'CANCELLED') : filters.issuedState === 'ACTIVE' ? rows.filter(row => row.state !== 'CANCELLED') : rows; return { data: { rows: serverRows, page: filters.page, pageSize: 25, totalItems: 26,
     supportsFilters: true, courseTypes: [{ value: 'TECNICO', label: 'Técnico' }, { value: 'EAD', label: 'EAD' }] }, error: null, isPending: false, isFetching: false, refetch: async () => {} }; };
@@ -56,7 +56,9 @@ test('issued list keeps three horizontal rows per note, visible actions and serv
     assert.equal(document.querySelector('.nfse-issued-panel h2'), null);
     assert.equal(document.querySelectorAll('.nfse-issued-filterline > .nfse-field').length, 5);
     assert(document.querySelector('.nfse-issued-utility input[type="checkbox"]'));
-    assert.equal(document.querySelectorAll('.nfse-issued-note').length, 2); assert.equal(document.querySelectorAll('.nfse-issued-line').length, 6);
+    assert.equal(document.querySelectorAll('.nfse-issued-note').length, 2);
+    assert(document.body.textContent.includes('CNPJ 00.100.203/0001-00'));
+    assert(document.body.textContent.includes('Canhoba / SE')); assert.equal(document.querySelectorAll('.nfse-issued-line').length, 6);
     assert(document.querySelector('[aria-label="NFS-e 2"]').textContent.includes('Cancelada'));
     assert.equal(document.querySelector('[aria-haspopup="menu"]'), null);
     await click(button('Visualizar')); await click(button('PDF')); await click(button('XML'));
@@ -80,6 +82,8 @@ test('issued list keeps three horizontal rows per note, visible actions and serv
     await setValue(document.querySelector('input[aria-label="Data final de emissão"]'), '2026-11-09');
     assert(document.body.textContent.includes('Exibindo a última lista carregada'));
     assert.equal(document.querySelectorAll('.nfse-issued-note').length, 2);
+    assert(document.body.textContent.includes('CNPJ 00.100.203/0001-00'));
+    assert(document.body.textContent.includes('Canhoba / SE'));
     for (const label of ['Data inicial de emissão', 'Data final de emissão', 'Tipo de curso das notas', 'Origem das notas', 'Buscar registros']) assert.equal(document.querySelector(`input[aria-label="${label}"]`).disabled, false);
     globalThis.__issuedFail = false;
     await setValue(document.querySelector('input[aria-label="Data final de emissão"]'), '2026-11-10');

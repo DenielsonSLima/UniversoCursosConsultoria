@@ -1,8 +1,8 @@
 {
-  "version": "4.8.305",
+  "version": "4.8.306",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 314,
+  "revision": 315,
   "releasedAt": "2026-11-12",
-  "summary": "Emissor NFS-e respeita a permissão institucional efetiva"
+  "summary": "Emissor NFS-e compacto, identificação do cliente e indicadores estáveis"
 }

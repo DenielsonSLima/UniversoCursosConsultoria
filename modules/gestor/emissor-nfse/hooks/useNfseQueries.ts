@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { nfseSummaryCacheOptions } from '../queries/nfse-summary-cache';
 import { nfseQueryKeys } from '../queries/nfse.queryKeys';
 import { nfseService } from '../services/nfse.service';
 export { useNfseModels } from '../modelos/hooks/useNfseModels';
@@ -14,7 +15,7 @@ const options = { retry: false, staleTime: 30_000, gcTime: 0, refetchOnWindowFoc
 
 export function useNfseWorkspace(scope: NfseScope | null) {
   return useQuery({
-    ...options, queryKey: nfseQueryKeys.workspace(scope), enabled: isNfseScopeValid(scope),
+    ...options, ...nfseSummaryCacheOptions, queryKey: nfseQueryKeys.workspace(scope), enabled: isNfseScopeValid(scope),
     queryFn: ({ signal }) => nfseService.workspace(required(scope), signal),
   });
 }
@@ -28,7 +29,7 @@ export function useNfseCandidates(scope: NfseScope | null, filters: NfseCandidat
 
 export function useNfseDocuments(scope: NfseScope | null, filters: NfseDocumentFilters, enabled = true) {
   return useQuery({
-    ...options, queryKey: nfseQueryKeys.documents(scope, filters), enabled: enabled && isNfseScopeValid(scope),
+    ...options, ...nfseSummaryCacheOptions, queryKey: nfseQueryKeys.documents(scope, filters), enabled: enabled && isNfseScopeValid(scope),
     queryFn: ({ signal }) => nfseService.documents(required(scope), filters, signal),
   });
 }
