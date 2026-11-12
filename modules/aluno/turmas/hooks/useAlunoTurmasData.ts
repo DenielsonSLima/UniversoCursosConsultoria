@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../../../lib/supabase';
 import { alunoCourseAccessKeys } from '../../shared/aluno-course-access.queries';
@@ -60,6 +60,7 @@ export const useAlunoTurmasData = (alunoId: string, selectedMatricula: Matricula
 
   const matriculasQuery = useQuery<MatriculaAluno[]>({
     queryKey: alunoCourseAccessKeys.enrollments(alunoId),
+    refetchInterval: 30_000,
     enabled: Boolean(alunoId),
     queryFn: async () => {
       const [enrollmentsResult, pendingTechnicalResult] = await Promise.all([
@@ -92,10 +93,17 @@ export const useAlunoTurmasData = (alunoId: string, selectedMatricula: Matricula
   });
 
   const matriculas = matriculasQuery.data || [];
-  const matriculasLiberadas = useMemo(
-    () => matriculas.filter(isPortalEnrollmentVisible),
-    [matriculas],
-  );
+  const [accessClock, setAccessClock] = useState(Date.now);
+  useEffect(() => {
+    const now = Date.now();
+    const deadlines = matriculas.map(item => Date.parse(item.acesso_temporario_ate || ''))
+      .filter(deadline => Number.isFinite(deadline) && deadline > now);
+    if (!deadlines.length) return;
+    const timer = window.setTimeout(() => setAccessClock(Date.now()),
+      Math.min(Math.max(Math.min(...deadlines) - now + 1, 1), 2_147_483_647));
+    return () => window.clearTimeout(timer);
+  }, [matriculas, accessClock]);
+  const matriculasLiberadas = matriculas.filter(isPortalEnrollmentVisible);
   const eadMatriculas = useMemo(
     () => matriculasLiberadas.filter((item) => isEadMatricula(item) && item.turmas?.cursos?.id),
     [matriculasLiberadas],

@@ -1,3 +1,4 @@
+import { hasTemporaryEadAccess } from '../shared/ead-temporary-access';
 import type {
   DisciplinaResumoAluno,
   MatriculaAluno,
@@ -69,7 +70,7 @@ export const isEadMatricula = (matricula?: MatriculaAluno | null) =>
   String(matricula?.turmas?.cursos?.modalidade || '').toUpperCase() === 'EAD';
 
 export const hasEadAccess = (matricula?: MatriculaAluno | null) =>
-  ACCESS_STATUS.has(String(matricula?.status || '').toUpperCase());
+  ACCESS_STATUS.has(String(matricula?.status || '').toUpperCase()) || hasTemporaryEadAccess(matricula);
 
 export const normalizeText = (value?: string | null) =>
   String(value || '')
@@ -95,7 +96,7 @@ export const getMatriculaModalidade = (matricula?: MatriculaAluno | null) => {
 export const isPortalEnrollmentVisible = (matricula?: MatriculaAluno | null) => {
   const status = String(matricula?.status || '').toUpperCase();
   const modalidade = getMatriculaModalidade(matricula);
-  return ACCESS_STATUS.has(status)
+  return ACCESS_STATUS.has(status) || hasTemporaryEadAccess(matricula)
     || (
       modalidade === 'TECNICO'
       && (status === 'PENDENTE' || status === 'REPROVADO' || status === 'EM_DEPENDENCIA')

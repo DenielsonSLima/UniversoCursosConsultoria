@@ -23,8 +23,11 @@ try {
  assert.equal(await scalar(`select extract(epoch from expires_at-granted_at)::int value from internal_academic.ead_trust_access_audit`),86400);
  assert.equal((await state(db)).enrollment.status,'PENDENTE');
  const list=await scalar(`select ead_get_turma_alunos((select turma_id from matriculas limit 1)) value`);assert.equal(list.length,1);assert.ok(list[0].acessoTemporarioAte);
+ await db.exec('delete from ead_aluno_progresso');
  assert.equal((await progress(db)).summary.canTakeQuiz,false);
+ assert.equal((await progress(db)).progress.completedContentIds.length,0);
  await db.query("select public.ead_update_aluno_progress($1,$2,'toggle_content','old-lesson','{}')",[alumno,course]);
+ assert.ok((await progress(db)).progress.completedContentIds.includes('old-lesson'),'Study progress persists on first access');
  await assert.rejects(()=>submit(db),/confirmação do pagamento/);
  assert.equal((await state(db)).certificates.length,0);
  await db.exec("grant select,update on matriculas to authenticated; set role authenticated");

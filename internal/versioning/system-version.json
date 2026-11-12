@@ -1,8 +1,8 @@
 {
-  "version": "4.8.312",
+  "version": "4.8.313",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 321,
+  "revision": 322,
   "releasedAt": "2026-11-12",
-  "summary": "Acompanhamento automático da emissão em lote e mensagens fiscais claras"
+  "summary": "Cursos EAD visíveis durante liberação temporária autorizada"
 }

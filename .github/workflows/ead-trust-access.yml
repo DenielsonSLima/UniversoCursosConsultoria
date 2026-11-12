@@ -3,6 +3,10 @@ on:
   pull_request:
     paths:
       - 'modules/aluno/cursos/**'
+      - 'modules/aluno/shared/ead-temporary-access*'
+      - 'modules/aluno/shared/ead-portal-trust*'
+      - 'modules/aluno/turmas/**'
+      - 'modules/aluno/inicio/**'
       - 'modules/gestor/gestao/ead/**'
       - 'supabase/migrations/**'
       - 'supabase/tests/ead_trust_access*'
@@ -11,6 +15,10 @@ on:
     branches: [main]
     paths:
       - 'modules/aluno/cursos/**'
+      - 'modules/aluno/shared/ead-temporary-access*'
+      - 'modules/aluno/shared/ead-portal-trust*'
+      - 'modules/aluno/turmas/**'
+      - 'modules/aluno/inicio/**'
       - 'modules/gestor/gestao/ead/**'
       - 'supabase/migrations/**'
       - 'supabase/tests/ead_trust_access*'
@@ -28,9 +36,13 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: '24.22.1'
+      - run: npm ci
       - name: Preparar PostgreSQL isolado
         run: npm install --prefix "$RUNNER_TEMP/ead-trust" --no-save --package-lock=false --ignore-scripts @electric-sql/pglite@0.3.14
       - name: Validar autorização, prazo e preservação financeira
         env:
           PGLITE_MODULE_PATH: ${{ runner.temp }}/ead-trust/node_modules/@electric-sql/pglite/dist/index.js
         run: node --test modules/aluno/cursos/eadTrustAccess.test.mjs supabase/tests/ead_trust_access.isolated.test.mjs
+
+      - name: Validar visibilidade temporária EAD
+        run: node --test modules/aluno/shared/ead-temporary-access.test.ts modules/aluno/shared/ead-portal-trust.contract.test.mjs modules/aluno/turmas/ead-trust-visibility.test.mjs
