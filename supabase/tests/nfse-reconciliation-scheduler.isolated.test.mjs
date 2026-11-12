@@ -18,7 +18,19 @@ const resetKick=()=>db.exec(`UPDATE private.nfse_reconciliation_control SET last
 assert.equal((await db.query('SELECT enabled FROM private.nfse_reconciliation_control')).rows[0].enabled,false);
 await assert.rejects(db.query('SELECT public.get_nfse_reconciliation_worker_secret_internal()'),/disabled/);
 const a=await issue(db,1); assert.equal(await count(),0,'disabled does not send net');
+const jwt=claims=>`eyJhbGciOiJIUzI1NiJ9.${Buffer.from(JSON.stringify(claims)).toString('base64url')}.synthetic_signature`;
+const anonJwt=jwt({role:'anon',ref:'kfekgwyqozhicpfuunpo',exp:4102444800});
 await db.exec(`UPDATE private.nfse_reconciliation_control SET enabled=true`);
+// Absent, wrong role/project, expired, malformed JWT must never enqueue an HTTP request.
+await db.query(`UPDATE private.nfse_reconciliation_jobs SET state='READY',lease_token=NULL,lease_until=NULL,next_check_at=now() WHERE id=$1`,[a.jobId]);
+assert.equal(await count(),0);
+for(const invalid of [jwt({role:'service_role',ref:'kfekgwyqozhicpfuunpo',exp:4102444800}),jwt({role:'anon',ref:'other',exp:4102444800}),jwt({role:'anon',ref:'kfekgwyqozhicpfuunpo',exp:1}),'malformed']){
+ await db.query(`DELETE FROM vault.secrets WHERE name='nfse_reconciliation_gateway_jwt'`);
+ await db.query(`INSERT INTO vault.secrets(name,decrypted_secret) VALUES('nfse_reconciliation_gateway_jwt',$1)`,[invalid]);
+ await resetKick();await db.exec(`SELECT private.kick_nfse_reconciliation_worker()`);assert.equal(await count(),0);
+}
+await db.query(`UPDATE vault.secrets SET decrypted_secret=$1 WHERE name='nfse_reconciliation_gateway_jwt'`,[anonJwt]);
+
 await db.query(`UPDATE private.nfse_reconciliation_jobs SET state='READY',lease_token=NULL,lease_until=NULL,next_check_at=now() WHERE id=$1`,[a.jobId]);
 assert.equal(await count(),1,'ready wake enqueues one request');
 await db.exec(`SELECT private.kick_nfse_reconciliation_worker()`); assert.equal(await count(),1,'kick debounce');
@@ -26,6 +38,7 @@ const call=(await db.query('SELECT * FROM net.calls LIMIT 1')).rows[0];
 assert.equal(call.url,'https://kfekgwyqozhicpfuunpo.supabase.co/functions/v1/nfse-reconciliation-worker');
 assert.deepEqual(Object.keys(call.body),['delaySeconds']); assert(call.body.delaySeconds>=0 && call.body.delaySeconds<=10);
 assert.equal(call.headers['X-Nfse-Worker-Token'],'ab'.repeat(32));
+assert.equal(call.headers.Authorization,`Bearer ${anonJwt}`);
 const cron=(await db.query('SELECT * FROM cron.jobs')).rows[0];
 assert.equal(cron.schedule,'* * * * *'); assert.equal(cron.command,'SELECT private.kick_nfse_reconciliation_worker()');
 assert(!cron.command.includes('ab'.repeat(32)),'no secret embedded in cron');

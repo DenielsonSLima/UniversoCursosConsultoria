@@ -31,3 +31,6 @@ Testes SQL de permissão, lease/token expirado, cross-target, XML divergente, te
 - Deno test: 6/6 passaram (autenticação, GET-only, escopo, lease, prova e estados).
 - Fila PGlite isolada: passou (claim, CAS, terminal, throttle, elegibilidade e grants).
 - PostgreSQL real, getter/prova e revisão independente: pendentes; não substituir por simulação.
+
+## Implantação coordenada
+Implantar Edge preservando verify_jwt=true. Cron envia Authorization com JWT anon legado do próprio projeto, previamente configurado somente em Vault (nfse_reconciliation_gateway_jwt), além do token próprio. Não usar service_role no header do cron. Scheduler rejeita JWT ausente, inválido, expirado, de outro projeto ou role diferente de anon; gateway verifica a assinatura. Manter control.enabled=false durante publicação. JWT anon sozinho não autoriza claim; handler exige segredo específico. Só habilitar após gates e verificação de endpoint/scheduler. Não registrar ou devolver tokens.
