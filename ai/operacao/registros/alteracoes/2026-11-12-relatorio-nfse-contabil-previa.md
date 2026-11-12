@@ -18,6 +18,7 @@ Smoke autenticado Safari pendente: MacBook offline. Publicação não concluída
 
 ## Manifesto explícito
 
+- `.github/workflows/nfse-regressions.yml`
 - `modules/gestor/components/GestorModuleContent.tsx`
 - `modules/gestor/relatorios/RelatoriosPage.tsx`
 - `modules/gestor/relatorios/components/RelatoriosCatalog.tsx`
@@ -37,7 +38,7 @@ Smoke autenticado Safari pendente: MacBook offline. Publicação não concluída
 - `internal/versioning/system-version.json`
 - `internal/versioning/CHANGELOG.md`
 
-Total: 18 arquivos
+Total: 19 arquivos
 
 ## Validação
 
@@ -69,3 +70,5 @@ Total: 18 arquivos
 - Advisors antes/depois: nenhum novo alerta de search_path ou anon; um alerta esperado de authenticated SECURITY DEFINER documentado, necessário à leitura autorizada de tabelas privadas.
 - Nenhuma emissão/cancelamento nem atualização de registros fiscais.
 - MacBook offline impede smoke autenticado Safari; não substituir por outro navegador nem publicar sem a verificação.
+
+- CI cobre novo PDF e SQL. O relatório usa PGlite 0.5.16 isolado para XML real, sem alterar a versão 0.3.14 dos contratos anteriores.

@@ -3,7 +3,8 @@ import test from 'node:test';
 import { readFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 import { resolve } from 'node:path';
-const { PGlite } = await import(process.env.NFSE_TEST_PGLITE_MODULE ? pathToFileURL(resolve(process.env.NFSE_TEST_PGLITE_MODULE)).href : '@electric-sql/pglite');
+const pgliteModule=process.env.NFSE_ACCOUNTING_PGLITE_MODULE||process.env.NFSE_TEST_PGLITE_MODULE;
+const { PGlite } = await import(pgliteModule ? pathToFileURL(resolve(pgliteModule)).href : '@electric-sql/pglite');
 const id=n=>`00000000-0000-0000-0000-${String(n).padStart(12,'0')}`;
 const xml=({amount='10.01',code='080201',date='2026-11-15T12:00:00Z',name='Empresa &amp; Teste'}={})=>`<NFSe xmlns="http://www.sped.fazenda.gov.br/nfse"><infNFSe><dhProc>${date}</dhProc><DPS><infDPS><dCompet>2026-10-31</dCompet><toma><xNome>${name}</xNome><CPF>00000000000</CPF></toma><serv><cServ><cTribNac>${code}</cTribNac><cNBS>122020000</cNBS></cServ></serv><valores><vServPrest>${amount===null?'':`<vServ>${amount}</vServ>`}</vServPrest><trib><tribMun><tpRetISSQN>1</tpRetISSQN></tribMun></trib></valores></infDPS></DPS><valores><vISSQN>0.00</vISSQN></valores></infNFSe></NFSe>`;
 
