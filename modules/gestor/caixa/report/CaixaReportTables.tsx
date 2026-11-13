@@ -1,4 +1,5 @@
 import React from 'react';
+import { formatCaixaReportModality } from './caixa-report.presentation';
 import {
   formatCaixaCurrency,
   formatCaixaDate,
@@ -124,7 +125,7 @@ export const CaixaReceiptsTable: React.FC<{
             </td>
             <td className="break-words px-2 py-2 text-[9px] leading-[13px]">
               <p className="font-bold text-slate-800">{row.curso}</p>
-              <p className="text-slate-500">{row.modalidade} · {row.turma}</p>
+              <p className="text-slate-500">{formatCaixaReportModality(row.modalidade)} · {row.turma}</p>
             </td>
             <td className="break-words px-2 py-2 text-[9px] leading-[13px]">
               <p className="font-semibold text-slate-700">{row.conta}</p>

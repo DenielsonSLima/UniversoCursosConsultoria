@@ -33,9 +33,9 @@ export const CaixaReportLauncher: React.FC<CaixaReportLauncherProps> = ({
           role="tooltip"
           className="pointer-events-none absolute right-0 top-full z-30 mt-2 hidden w-72 rounded-xl bg-slate-950 px-3.5 py-3 text-left shadow-xl group-hover:block group-focus-within:block"
         >
-          <p className="text-xs font-bold text-white">Pré-visualizar prestação detalhada</p>
+          <p className="text-xs font-bold text-white">Abrir relatório do Caixa</p>
           <p className="mt-1 text-[10px] leading-4 text-slate-300">
-            Cabeçalho, marca d’água, resumo e movimentos de{' '}
+            Escolha Completo ou Resumido para{' '}
             {formatCaixaCompetencia(competencia)}.
           </p>
           <p className="mt-1 text-[9px] font-semibold text-blue-300">

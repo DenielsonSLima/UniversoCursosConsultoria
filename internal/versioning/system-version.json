@@ -1,8 +1,8 @@
 {
-  "version": "4.8.327",
+  "version": "4.8.328",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 336,
+  "revision": 337,
   "releasedAt": "2026-11-12",
-  "summary": "Serviços NFS-e com recebíveis obrigatórios, BolePix e cancelamento automático"
+  "summary": "Caixa com Serviços NFS-e e PDF resumido em duas páginas"
 }

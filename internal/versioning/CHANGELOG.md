@@ -68,7 +68,13 @@ Histórico arquivado: [07/11/2026 — versão 4.8.254](./changelog/2026-11-07-ve
 
 Histórico arquivado: [07/11/2026 — versão 4.8.255](./changelog/2026-11-07-versao-4-8-255.md).
 
-Histórico arquivado: [07/11/2026 — versão 4.8.256](./changelog/2026-11-07-versao-4-8-256.md).
+Histórico arquivado: 07/11/2026 — versões [4.8.256](./changelog/2026-11-07-versao-4-8-256.md) e [4.8.257](./changelog/2026-11-07-versao-4-8-257.md).
+
+## [4.8.328] - 2026-11-12
+
+### Adicionado
+- Caixa identifica Serviços NFS-e realizados, incluindo pagamentos parciais, sem duplicar receitas de Outros Créditos.
+- PDF em tela cheia oferece Completo e Resumido; o resumo usa os agregados canônicos em duas páginas com os mesmos recursos institucionais.
 
 ## [4.8.327] - 2026-11-12
 
@@ -490,10 +496,3 @@ Histórico arquivado: [07/11/2026 — versão 4.8.256](./changelog/2026-11-07-ve
 - Fotos privadas do cadastro individual usam o mesmo resolvedor da lista em respostas de objeto do PostgREST.
 - Avatares locais usam iniciais até a foto completa; uma recuperação privada e a revalidação da lista ao voltar/focar tratam URLs expiradas sem polling.
 - Assinatura temporária, permissões, origem e caminhos autorizados permanecem preservados; fotos negadas continuam ocultas.
-
-## [4.8.257] - 2026-11-07
-
-### Corrigido
-- Submódulos internos da Secretaria seguem a interface compacta, com cabeçalhos leves, campos brancos e abas com linha inferior.
-- Seletores de turmas, modalidades, documentos, filtros e recebimentos usam listas pesquisáveis do sistema, preservando IDs e bloqueios.
-- Apresentação responsiva e estilos de tela isolados dos documentos e da impressão.

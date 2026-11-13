@@ -15,8 +15,9 @@ import {
   getCaixaReportPdfErrorMessage,
 } from './caixa-report.pdf';
 import { downloadPdfBlob } from '../../../shared/pdf/download-pdf-blob';
-import { caixaReportQueryOptions } from './caixa-report.service';
+import { caixaReportQueryKey, caixaReportQueryOptions } from './caixa-report.service';
 import type { CaixaDetailedReport } from './caixa-report.types';
+import type { CaixaReportKind } from './caixa-report.presentation';
 
 interface CaixaReportPreviewModalProps {
   open: boolean;
@@ -28,6 +29,8 @@ interface CaixaReportPreviewModalProps {
 interface PreparedCaixaReportPdf {
   blob: Blob;
   fileName: string;
+  kind: CaixaReportKind;
+  scope: string;
 }
 
 export const CaixaReportPreviewModal: React.FC<CaixaReportPreviewModalProps> = ({
@@ -44,9 +47,14 @@ export const CaixaReportPreviewModal: React.FC<CaixaReportPreviewModalProps> = (
   const [generating, setGenerating] = useState(false);
   const [progress, setProgress] = useState('');
   const [generationError, setGenerationError] = useState('');
-  const [reportSnapshot, setReportSnapshot] = useState<CaixaDetailedReport | null>(null);
+  const [kind, setKind] = useState<CaixaReportKind>('COMPLETO');
+  const scope = JSON.stringify([poloId || null, competencia]);
+  const [snapshot, setSnapshot] = useState<{ scope: string; report: CaixaDetailedReport } | null>(null);
+  const reportSnapshot = snapshot?.scope === scope ? snapshot.report : null;
   const [preparedPdf, setPreparedPdf] = useState<PreparedCaixaReportPdf | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const currentPdf = preparedPdf?.scope === scope && preparedPdf.kind === kind ? preparedPdf : null;
+  const [preview, setPreview] = useState<{ blob: Blob; url: string } | null>(null);
+  const previewUrl = currentPdf && preview && currentPdf.blob === preview.blob ? preview.url : null;
 
   const reportQuery = useQuery(caixaReportQueryOptions(
     poloId,
@@ -56,14 +64,14 @@ export const CaixaReportPreviewModal: React.FC<CaixaReportPreviewModalProps> = (
 
   useEffect(() => {
     if (!open) {
-      setReportSnapshot(null);
+      setSnapshot(null);
       queryClient.removeQueries({
-        queryKey: ['caixa-report', 'monthly'],
+        queryKey: caixaReportQueryKey(poloId, competencia), exact: true,
       });
       return;
     }
     if (reportQuery.data && !reportQuery.isFetching && !reportQuery.error) {
-      setReportSnapshot((current) => current ?? reportQuery.data);
+      setSnapshot((current) => current?.scope === scope ? current : { scope, report: reportQuery.data });
     }
   }, [
     open,
@@ -71,11 +79,8 @@ export const CaixaReportPreviewModal: React.FC<CaixaReportPreviewModalProps> = (
     reportQuery.data,
     reportQuery.error,
     reportQuery.isFetching,
+    scope, poloId, competencia,
   ]);
-
-  useEffect(() => {
-    setReportSnapshot(null);
-  }, [competencia, poloId]);
 
   useEffect(() => {
     let active = true;
@@ -88,13 +93,14 @@ export const CaixaReportPreviewModal: React.FC<CaixaReportPreviewModalProps> = (
     setPreparedPdf(null);
     setGenerationError('');
     setGenerating(true);
-    setProgress('Preparando o PDF oficial...');
+    setProgress(kind === 'RESUMIDO' ? 'Preparando o resumo em até duas páginas...' : 'Preparando o PDF completo...');
 
     void buildCaixaReportPdf(
       reportSnapshot,
       (current, total) => {
         if (active) setProgress(`Gerando página ${current} de ${total}...`);
       },
+      kind,
     )
       .then((blob) => {
         if (!active) return;
@@ -103,7 +109,9 @@ export const CaixaReportPreviewModal: React.FC<CaixaReportPreviewModalProps> = (
           fileName: buildCaixaReportFileName(
             reportSnapshot.resumo.meta.competencia,
             reportSnapshot.resumo.meta.escopoRotulo,
+            kind,
           ),
+          kind, scope,
         });
         setProgress('PDF pronto.');
       })
@@ -118,15 +126,15 @@ export const CaixaReportPreviewModal: React.FC<CaixaReportPreviewModalProps> = (
       });
 
     return () => { active = false; };
-  }, [open, reportSnapshot]);
+  }, [kind, open, reportSnapshot, scope]);
 
   useEffect(() => {
     if (!preparedPdf) {
-      setPreviewUrl(null);
+      setPreview(null);
       return undefined;
     }
     const objectUrl = URL.createObjectURL(preparedPdf.blob);
-    setPreviewUrl(objectUrl);
+    setPreview({ blob: preparedPdf.blob, url: objectUrl });
     return () => URL.revokeObjectURL(objectUrl);
   }, [preparedPdf]);
 
@@ -173,6 +181,7 @@ export const CaixaReportPreviewModal: React.FC<CaixaReportPreviewModalProps> = (
 
   useEffect(() => {
     if (open) return;
+    setKind('COMPLETO');
     setGenerating(false);
     setProgress('');
     setGenerationError('');
@@ -184,11 +193,20 @@ export const CaixaReportPreviewModal: React.FC<CaixaReportPreviewModalProps> = (
   const loading = !reportSnapshot && (reportQuery.isLoading || reportQuery.isFetching);
   const error = reportSnapshot ? null : reportQuery.error;
 
+  const handleKindKeyDown = (event: React.KeyboardEvent<React.ElementRef<'button'>>) => {
+    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+    event.preventDefault();
+    const nextKind = event.key === 'Home' ? 'COMPLETO' : event.key === 'End' ? 'RESUMIDO'
+      : kind === 'COMPLETO' ? 'RESUMIDO' : 'COMPLETO';
+    setKind(nextKind);
+    event.currentTarget.parentElement?.querySelector<React.ElementRef<'button'>>(`[data-kind="${nextKind}"]`)?.focus();
+  };
+
   const handleDownload = () => {
-    if (!preparedPdf || loading || error || generating) return;
+    if (!currentPdf || loading || error || generating) return;
     setGenerationError('');
     try {
-      downloadPdfBlob(preparedPdf.blob, preparedPdf.fileName);
+      downloadPdfBlob(currentPdf.blob, currentPdf.fileName);
       setProgress('PDF baixado.');
     } catch (downloadError) {
       console.error('Não foi possível baixar o PDF do Caixa:', downloadError);
@@ -199,7 +217,7 @@ export const CaixaReportPreviewModal: React.FC<CaixaReportPreviewModalProps> = (
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[140] flex items-center justify-center bg-slate-950/70 p-3 backdrop-blur-sm"
+      className="fixed inset-0 z-[140] flex h-[100dvh] w-full bg-white"
       role="dialog"
       aria-modal="true"
       aria-labelledby="caixa-report-modal-title"
@@ -207,7 +225,7 @@ export const CaixaReportPreviewModal: React.FC<CaixaReportPreviewModalProps> = (
     >
       <div
         ref={dialogRef}
-        className="flex h-[96vh] w-full max-w-[1500px] flex-col overflow-hidden rounded-[1.75rem] bg-white shadow-2xl"
+        className="flex h-full w-full flex-col overflow-hidden bg-white"
       >
         <header className="flex flex-col gap-3 border-b border-slate-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex min-w-0 items-center gap-3">
@@ -219,12 +237,20 @@ export const CaixaReportPreviewModal: React.FC<CaixaReportPreviewModalProps> = (
                 id="caixa-report-modal-title"
                 className="truncate text-base font-black uppercase tracking-tight text-[#001a33]"
               >
-                Pré-visualização da prestação de contas
+                Prestação de contas
               </h2>
               <p className="mt-0.5 text-xs font-semibold text-slate-400">
                 {formatCaixaCompetencia(competencia)}
                 {report ? ` · ${report.resumo.meta.escopoRotulo}` : ''}
               </p>
+              <div role="tablist" aria-label="Tipo do relatório PDF" className="mt-2 flex gap-2">
+                {(['COMPLETO', 'RESUMIDO'] as const).map(option => <button key={option} type="button" role="tab"
+                  data-kind={option} tabIndex={kind === option ? 0 : -1} onKeyDown={handleKindKeyDown}
+                  aria-selected={kind === option} aria-controls="caixa-report-preview" onClick={() => setKind(option)}
+                  className={`min-h-10 rounded-lg border px-4 text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${kind === option ? 'border-[#001a33] bg-[#001a33] text-white' : 'border-slate-200 bg-white text-slate-600'}`}>
+                  {option === 'COMPLETO' ? 'Completo' : 'Resumido'}
+                </button>)}
+              </div>
             </div>
           </div>
 
@@ -235,7 +261,7 @@ export const CaixaReportPreviewModal: React.FC<CaixaReportPreviewModalProps> = (
             <button
               type="button"
               onClick={handleDownload}
-              disabled={!preparedPdf || loading || Boolean(error) || generating}
+              disabled={!currentPdf || loading || Boolean(error) || generating}
               className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#001a33] px-4 py-2.5 text-xs font-black uppercase tracking-wider text-white transition hover:bg-blue-950 disabled:cursor-not-allowed disabled:bg-slate-300"
             >
               {generating ? <Loader2 className="animate-spin" size={16} /> : <Download size={16} />}
@@ -254,7 +280,7 @@ export const CaixaReportPreviewModal: React.FC<CaixaReportPreviewModalProps> = (
           </div>
         </header>
 
-        <div className="min-h-0 flex-1 overflow-hidden bg-slate-200/70 p-3 sm:p-4">
+        <div id="caixa-report-preview" role="tabpanel" className="min-h-0 flex-1 overflow-hidden bg-slate-200/70 p-3 sm:p-4">
           {loading && (
             <div className="flex h-full min-h-80 flex-col items-center justify-center text-slate-500" role="status">
               <Loader2 className="animate-spin text-blue-600" size={32} />
@@ -274,7 +300,7 @@ export const CaixaReportPreviewModal: React.FC<CaixaReportPreviewModalProps> = (
               <button
                 type="button"
                 onClick={() => {
-                  setReportSnapshot(null);
+                  setSnapshot(null);
                   void reportQuery.refetch();
                 }}
                 className="mt-4 rounded-xl border border-rose-300 bg-white px-4 py-2 text-xs font-black uppercase tracking-wide text-rose-800"
@@ -295,8 +321,8 @@ export const CaixaReportPreviewModal: React.FC<CaixaReportPreviewModalProps> = (
           {!loading && !error && report && !generationError && previewUrl && (
             <iframe
               src={previewUrl}
-              title="Prestação de contas mensal em PDF"
-              className="h-full min-h-[560px] w-full border-0 bg-white shadow-xl"
+              title={kind === 'RESUMIDO' ? 'Prestação de contas resumida em PDF' : 'Prestação de contas completa em PDF'}
+              className="h-full w-full border-0 bg-white shadow-xl"
             />
           )}
 
@@ -309,6 +335,7 @@ export const CaixaReportPreviewModal: React.FC<CaixaReportPreviewModalProps> = (
         </div>
 
         <footer className="shrink-0 border-t border-slate-100 bg-white px-4 py-2 text-center text-[11px] font-medium text-slate-500">
+          {kind === 'RESUMIDO' ? 'Resumo agregado em até duas páginas. ' : 'Relatório completo com os movimentos detalhados. '}
           Prévia e download usam exatamente o mesmo PDF vetorial.
         </footer>
       </div>

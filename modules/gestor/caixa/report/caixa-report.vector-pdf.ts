@@ -1,19 +1,12 @@
 import type { jsPDF } from 'jspdf';
 import {
-  formatCaixaCompetencia,
-} from '../caixa.formatters';
-import {
   drawCanonicalInstitutionalHeader,
-  normalizeCanonicalInstitutionalHeader,
 } from '../../secretaria/shared/canonical-institutional-header-pdf';
-import { getCanonicalPdfInlineImage } from '../../secretaria/shared/canonical-document-vector-pdf';
 import { buildCaixaReportPages } from './caixa-report.pagination';
+import { prepareCaixaPdfContext, type CaixaPdfResources } from './caixa-report.vector-pdf.context';
 import {
   drawFooter,
   drawPageBackground,
-  fetchAsDataUrl,
-  fetchLogoDataUrl,
-  registerInterFont,
   type PdfWithInternals,
 } from './caixa-report.vector-pdf.shared';
 import { drawSummaryPage, drawFechamentoImplantacao } from './caixa-report.vector-pdf.summary';
@@ -58,44 +51,9 @@ export {
 export const createCaixaReportPdfDocument = async (
   report: CaixaDetailedReport,
   onProgress?: (current: number, total: number) => void,
-  testResources?: {
-    regularFontBuffer?: ArrayBuffer;
-    mediumFontBuffer?: ArrayBuffer;
-    semiBoldFontBuffer?: ArrayBuffer;
-    boldFontBuffer?: ArrayBuffer;
-    extraBoldFontBuffer?: ArrayBuffer;
-    blackFontBuffer?: ArrayBuffer;
-    logoDataUrl?: string | null;
-    backgroundDataUrl?: string | null;
-  },
+  testResources?: CaixaPdfResources,
 ) => {
-  const { jsPDF: JsPdf } = await import('jspdf');
-  const pdf = new JsPdf({ orientation: 'landscape', unit: 'mm', format: 'a4', compress: false });
-  pdf.setProperties({
-    title: `Prestação de contas - ${formatCaixaCompetencia(report.resumo.meta.competencia)}`,
-    subject: `Relatório do Caixa - ${report.resumo.meta.escopoRotulo}`,
-    author: report.institucional.nome,
-    creator: 'Universo Cursos e Consultoria',
-    keywords: 'caixa, prestação de contas, relatório financeiro',
-  });
-  await registerInterFont(pdf, {
-    regular: testResources?.regularFontBuffer,
-    medium: testResources?.mediumFontBuffer,
-    semiBold: testResources?.semiBoldFontBuffer,
-    bold: testResources?.boldFontBuffer,
-    extraBold: testResources?.extraBoldFontBuffer,
-    black: testResources?.blackFontBuffer,
-  });
-  const backgroundUsesFallback = !report.institucional.landscape_watermark_url;
-  const fallbackArtworkUrl = typeof window === 'undefined' ? null : '/LogoUniverso.png';
-  const [logo, background] = await Promise.all([
-    testResources?.logoDataUrl !== undefined
-      ? Promise.resolve(testResources.logoDataUrl)
-      : fetchLogoDataUrl(report.institucional.logo_url),
-    testResources?.backgroundDataUrl !== undefined
-      ? Promise.resolve(testResources.backgroundDataUrl)
-      : fetchAsDataUrl(report.institucional.landscape_watermark_url || fallbackArtworkUrl),
-  ]);
+  const { pdf, background, backgroundUsesFallback, institution, canonicalLogo, meta } = await prepareCaixaPdfContext(report, testResources);
   const convenioItems = report.convenios.disponivel ? report.convenios.dados.itens : [];
   const pages = buildCaixaReportPages(
     report.recebimentos,
@@ -104,17 +62,6 @@ export const createCaixaReportPdfDocument = async (
     convenioItems,
     report.posicaoTotal.disponivel && Boolean(report.posicaoTotal.dados.fechamentoImplantacao),
   );
-  const institution = normalizeCanonicalInstitutionalHeader({
-    ...report.institucional,
-    uf: report.institucional.estado,
-  });
-  const canonicalLogo = getCanonicalPdfInlineImage(logo);
-  const meta = {
-    eyebrow: 'Caixa · uso interno',
-    title: report.resumo.meta.escopoRotulo,
-    label: 'Competência',
-    value: formatCaixaCompetencia(report.resumo.meta.competencia),
-  };
 
   for (let pageIndex = 0; pageIndex < pages.length; pageIndex += 1) {
     const page = pages[pageIndex];

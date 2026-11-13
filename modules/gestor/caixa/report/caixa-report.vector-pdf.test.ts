@@ -212,6 +212,8 @@ test('reutiliza exclusivamente o compositor institucional canônico', async () =
     documentSource,
     positionsPreviewSource,
     modalSource,
+    contextSource,
+    conciseSource,
   ] = await Promise.all([
     readFile(resolve('modules/gestor/caixa/report/caixa-report.vector-pdf.ts'), 'utf8'),
     readFile(resolve('modules/gestor/caixa/report/caixa-report.vector-pdf.summary.ts'), 'utf8'),
@@ -220,12 +222,22 @@ test('reutiliza exclusivamente o compositor institucional canônico', async () =
     readFile(resolve('modules/gestor/caixa/report/CaixaReportDocument.tsx'), 'utf8'),
     readFile(resolve('modules/gestor/caixa/report/CaixaReportNonOperationalPositions.tsx'), 'utf8'),
     readFile(resolve('modules/gestor/caixa/report/CaixaReportPreviewModal.tsx'), 'utf8'),
+    readFile(resolve('modules/gestor/caixa/report/caixa-report.vector-pdf.context.ts'), 'utf8'),
+    readFile(resolve('modules/gestor/caixa/report/caixa-report.concise-pdf.ts'), 'utf8'),
   ]);
-  const source = `${sourceMain}\n${summarySource}\n${nonOperationalSource}\n${sharedSource}`;
+  const source = `${sourceMain}\n${summarySource}\n${nonOperationalSource}\n${sharedSource}\n${contextSource}\n${conciseSource}`;
 
   assert.match(source, /drawCanonicalInstitutionalHeader/);
   assert.match(source, /normalizeCanonicalInstitutionalHeader/);
   assert.match(source, /getCanonicalPdfInlineImage/);
+  for (const entry of [sourceMain, conciseSource]) {
+    assert.match(entry, /prepareCaixaPdfContext\(report,/);
+    assert.match(entry, /drawPageBackground\(pdf, report, background, backgroundUsesFallback\)/);
+    assert.match(entry, /drawCanonicalInstitutionalHeader/);
+  }
+  for (const field of ['url', 'opacity', 'scale', 'rotate']) {
+    assert.match(`${contextSource}\n${sharedSource}`, new RegExp(`report\\.institucional\\.landscape_watermark_${field}`));
+  }
   assert.doesNotMatch(source, /\bconst\s+drawHeader\s*=/);
   assert.doesNotMatch(source, /\bHEADER_BOTTOM\b/);
   assert.match(source, /eyebrow:\s*['"]Caixa · uso interno['"]/);
@@ -255,7 +267,7 @@ test('reutiliza exclusivamente o compositor institucional canônico', async () =
   assert.match(modalSource, /URL\.createObjectURL\(preparedPdf\.blob\)/);
   assert.match(modalSource, /URL\.revokeObjectURL\(objectUrl\)/);
   assert.match(modalSource, /<iframe/);
-  assert.match(modalSource, /downloadPdfBlob\(preparedPdf\.blob, preparedPdf\.fileName\)/);
+  assert.match(modalSource, /downloadPdfBlob\(currentPdf\.blob, currentPdf\.fileName\)/);
   assert.doesNotMatch(modalSource, /CaixaReportDocument/);
 });
 
