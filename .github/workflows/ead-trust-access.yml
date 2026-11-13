@@ -71,7 +71,7 @@ jobs:
           EAD_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres
           EAD_TEST_POSTGRES_DISPOSABLE: 'true'
           EAD_TEST_PG_MODULE: ${{ runner.temp }}/ead-trust/node_modules/pg/lib/index.js
-        run: node --test supabase/tests/ead_trust_certificate.concurrent.test.mjs
+        run: node --test --test-concurrency=1 supabase/tests/ead_trust_certificate.concurrent.test.mjs supabase/tests/ead_trust_manual.concurrent.test.mjs
 
       - name: Validar integração TypeScript do candidato
         run: node node_modules/typescript/bin/tsc --noEmit
