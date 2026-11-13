@@ -1,8 +1,8 @@
 {
-  "version": "4.8.328",
+  "version": "4.8.329",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 337,
+  "revision": 338,
   "releasedAt": "2026-11-12",
-  "summary": "Caixa com Serviços NFS-e e PDF resumido em duas páginas"
+  "summary": "Notas emitidas com colunas e ações alinhadas"
 }

@@ -29,7 +29,9 @@ export default function NfseIssuedRows({ rows, available, disabled, selected, on
     <div className="nfse-issued-controls">
       <div className="nfse-issued-note-summary"><span className="nfse-status" data-tone={item.state === 'AUTHORIZED' ? 'success' : item.state === 'CANCELLATION_REJECTED' ? 'error' : 'warning'}>{item.state ? operationLabel(item.state) : 'Emitida'}</span>
         <strong className="nfse-amount">{formatNfseMoney(item.amount)}</strong></div>
-      <div className="nfse-issued-note-actions">{actions?.(item, available)}<NfseDocumentOperationAction document={item} disabled={!available || disabled} /></div>
+      <div className="nfse-issued-note-actions">{actions?.(item, available)}
+        <div className="nfse-issued-operation-slot"><NfseDocumentOperationAction document={item} disabled={!available || disabled} /></div>
+      </div>
     </div>
   </article>)}</div>;
 }

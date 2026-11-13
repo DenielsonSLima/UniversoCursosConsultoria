@@ -70,6 +70,13 @@ Histórico arquivado: [07/11/2026 — versão 4.8.255](./changelog/2026-11-07-ve
 
 Histórico arquivado: 07/11/2026 — versões [4.8.256](./changelog/2026-11-07-versao-4-8-256.md) e [4.8.257](./changelog/2026-11-07-versao-4-8-257.md).
 
+Histórico arquivado: [07/11/2026 — versão 4.8.258](./changelog/2026-11-07-versao-4-8-258.md).
+
+## [4.8.329] - 2026-11-12
+
+### Corrigido
+- Notas emitidas compartilham as mesmas colunas e o espaço das ações, inclusive quando a última nota não possui menu de operação, mantendo a interface compacta e responsiva.
+
 ## [4.8.328] - 2026-11-12
 
 ### Adicionado
@@ -489,10 +496,3 @@ Histórico arquivado: 07/11/2026 — versões [4.8.256](./changelog/2026-11-07-v
 ### Corrigido
 - Histórico de Emissões aplica a busca ao digitar e permite combinar modalidade, curso, turma e tipo de documento.
 - Filtros são aplicados no servidor antes da contagem e paginação, com pesquisa de nome/CPF do snapshot ou cadastro e preservação da segunda via.
-
-## [4.8.258] - 2026-11-07
-
-### Corrigido
-- Fotos privadas do cadastro individual usam o mesmo resolvedor da lista em respostas de objeto do PostgREST.
-- Avatares locais usam iniciais até a foto completa; uma recuperação privada e a revalidação da lista ao voltar/focar tratam URLs expiradas sem polling.
-- Assinatura temporária, permissões, origem e caminhos autorizados permanecem preservados; fotos negadas continuam ocultas.
