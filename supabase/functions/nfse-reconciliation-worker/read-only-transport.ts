@@ -2,6 +2,7 @@ import type { NationalHttpResponse } from '../_shared/nfse-national/mtls.ts';
 import { parseFiscalJson } from '../_shared/nfse-national/pilot-codec.ts';
 import { assertNationalEnvelope, readAccessKey } from '../_shared/nfse-national/pilot-response.ts';
 import { NfseContractError } from '../_shared/nfse-national/xml.ts';
+import { productionDpsJsonIdentityMatches } from '../_shared/nfse-national/production-json-identity.ts';
 interface Transport { request(method: 'GET' | 'POST', path: string, body?: string): Promise<NationalHttpResponse> }
 /** Independent hard gate: the background worker cannot mutate fiscal state remotely. */
 export function fiscalReadOnlyTransport(transport: Transport, dpsId: string, accessKey?: string) {
@@ -19,7 +20,7 @@ export function fiscalReadOnlyTransport(transport: Transport, dpsId: string, acc
       if (ownDps && response.status === 200) {
         const envelope = parseFiscalJson(response.body);
         assertNationalEnvelope(envelope, 'PRODUCAO');
-        if (['idDps', 'idDPS'].some(name => Object.hasOwn(envelope,name) && envelope[name] !== dpsId)) throw new NfseContractError('WORKER_DPS_MISMATCH');
+        if (!productionDpsJsonIdentityMatches(envelope,dpsId)) throw new NfseContractError('WORKER_DPS_MISMATCH');
         const key = readAccessKey(envelope);
         if (resolvedKey !== undefined && resolvedKey !== key) throw new NfseContractError('WORKER_KEY_MISMATCH');
         resolvedKey = key;

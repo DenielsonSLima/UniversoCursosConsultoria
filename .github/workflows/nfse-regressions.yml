@@ -205,6 +205,7 @@ jobs:
           supabase/functions/_shared/nfse-national/production-live-contract.test.ts
           supabase/functions/_shared/nfse-national/production-diagnostics.test.ts
           supabase/functions/_shared/nfse-national/production-post-identity.test.ts
+          supabase/functions/_shared/nfse-national/production-nfs-json-id.test.ts
           supabase/functions/_shared/nfse-national/production-event-detail.test.ts
           supabase/functions/_shared/nfse-national/production-event-archive.test.ts
           supabase/functions/_shared/nfse-national/production-event-representation.test.ts

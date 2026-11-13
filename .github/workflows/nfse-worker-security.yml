@@ -16,7 +16,7 @@ jobs:
   postgres:
     strategy:
       matrix:
-        suite: [concurrency, material-proof, scheduler, proof-concurrency, continuation, continuation-concurrency, observation-reference]
+        suite: [concurrency, material-proof, relay-token, scheduler, proof-concurrency, continuation, continuation-concurrency, observation-reference]
     runs-on: ubuntu-latest
     timeout-minutes: 8
     services:

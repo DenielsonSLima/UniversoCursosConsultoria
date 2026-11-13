@@ -12,7 +12,7 @@ Deno.test('POST identity conflicts preserve non-identifying evidence without acc
   await withProductionTestCertificate(async credential => {
     const input = productionFixture(), expected = buildNationalDps(input).referenceId;
     const variants = [
-      { idDps: `NFS${pilotAccessKey}` },
+      { idDps: `NFS${'7'.repeat(50)}` },
       { idDPS: expected.slice(3) },
       { idDps: null },
       { idDps: 18 },

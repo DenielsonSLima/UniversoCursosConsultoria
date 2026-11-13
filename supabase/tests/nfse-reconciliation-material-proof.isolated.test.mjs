@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import {fixture,migration,issue,cancel,authProof,cancelProof,uid,relayUrl} from './nfse-reconciliation-fixture.mjs';
 const db=await fixture(process.argv[2]);
 await migration(db,'20261112220100_nfse_reconciliation_material.sql');
+await migration(db,'20261112224000_nfse_reconciliation_relay_token_validation.sql');
 await migration(db,'20261112220200_nfse_reconciliation_proof.sql');
 const get=j=>db.query(`SELECT public.get_nfse_reconciliation_material_internal($1,$2) value`,[j.jobId,j.leaseToken]);
 const finish=(j,p)=>db.query(`SELECT public.complete_nfse_reconciliation_proof_internal($1,$2,$3) value`,[j.jobId,j.leaseToken,p]);
@@ -11,7 +12,8 @@ await db.query(`INSERT INTO private.nfse_certificates VALUES($1,$2,$3)`,[uid(501
 const material={privateKeyPem:'-----BEGIN RSA PRIVATE KEY-----synthetic',certificatePem:'-----BEGIN CERTIFICATE-----synthetic',chainPem:''};
 await db.query(`INSERT INTO vault.secrets VALUES($1,'synthetic-test-cert',$2)`,[uid(601),JSON.stringify(material)]);
 await assert.rejects(get(j),/transport/);
-await db.query(`INSERT INTO vault.secrets(name,decrypted_secret) VALUES('nfse_production_relay_config',$1)`,[JSON.stringify({url:relayUrl,key:'a'.repeat(64)})]);
+const protectedRelay={url:relayUrl,key:'a'.repeat(64),protectionBypass:'synthetic-valid-bypass._-0123'};
+await db.query(`INSERT INTO vault.secrets(name,decrypted_secret) VALUES('nfse_production_relay_config',$1)`,[JSON.stringify(protectedRelay)]);
 assert.equal((await get(j)).rows[0].value.targetKind,'ISSUE');
 await assert.rejects(get({...j,leaseToken:uid(999)}),/lease/);
 await db.exec(`SELECT set_config('request.jwt.claim.role','authenticated',false)`);
@@ -19,7 +21,7 @@ await assert.rejects(get(j),/Internal worker/); await assert.rejects(finish(j,au
 await db.exec(`SELECT set_config('request.jwt.claim.role','service_role',false)`);
 await db.query(`UPDATE vault.secrets SET decrypted_secret=$1 WHERE name='nfse_production_relay_config'`,[JSON.stringify({url:'https://example.invalid/evil',key:'a'.repeat(64)})]);
 await assert.rejects(get(j),/transport/);
-await db.query(`UPDATE vault.secrets SET decrypted_secret=$1 WHERE name='nfse_production_relay_config'`,[JSON.stringify({url:relayUrl,key:'a'.repeat(64)})]);
+await db.query(`UPDATE vault.secrets SET decrypted_secret=$1 WHERE name='nfse_production_relay_config'`,[JSON.stringify(protectedRelay)]);
 for(const p of [
  {...authProof(1),state:'REJECTED'}, {...authProof(1),dpsId:'DPSwrong'},
  {...authProof(1),accessKey:'0'.repeat(50)}, {...authProof(1),number:'2'},

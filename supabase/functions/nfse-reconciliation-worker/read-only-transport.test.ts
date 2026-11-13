@@ -19,3 +19,23 @@ Deno.test('worker transport binds only matching DPS response and honors throttli
  const throttled=fiscalReadOnlyTransport({request:async()=>({status:429,body:new Uint8Array()})},dps);
  await assert.rejects(throttled.request('GET',`/dps/${dps}`),error=>(error as {code:string}).code==='WORKER_RATE_LIMITED');
 });
+Deno.test('worker resolves the exact NFS alias but refuses conflicting aliases before granting any note route',async()=>{
+ const dps=`DPS${'1'.repeat(42)}`,key='2'.repeat(50),other='3'.repeat(50);
+ for(const ids of [{idDps:`NFS${other}`},{idDPS:null},{idDps:`NFS${key}`,idDPS:`NFS${other}`}]){
+  const calls:string[]=[];
+  const transport=fiscalReadOnlyTransport({request:async(method,path)=>{
+   calls.push(`${method} ${path}`);return {status:200,body:new TextEncoder().encode(JSON.stringify({tipoAmbiente:1,chaveAcesso:key,...ids}))};
+  }},dps);
+  await assert.rejects(transport.request('GET',`/dps/${dps}`),error=>(error as {code:string}).code==='WORKER_DPS_MISMATCH');
+  await assert.rejects(transport.request('GET',`/nfse/${key}`));
+  assert.deepEqual(calls,[`GET /dps/${dps}`]);
+ }
+ const calls:string[]=[];
+ const transport=fiscalReadOnlyTransport({request:async(method,path)=>{
+  calls.push(`${method} ${path}`);return {status:200,body:new TextEncoder().encode(JSON.stringify({tipoAmbiente:1,idDps:`NFS${key}`,chaveAcesso:key}))};
+ }},dps);
+ await transport.request('GET',`/dps/${dps}`);await transport.request('GET',`/nfse/${key}`);
+ await assert.rejects(transport.request('GET',`/nfse/${other}`));
+ await assert.rejects(transport.request('POST',`/nfse/${key}/eventos`,'{}'));
+ assert.deepEqual(calls,[`GET /dps/${dps}`,`GET /nfse/${key}`]);
+});

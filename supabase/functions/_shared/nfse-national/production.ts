@@ -6,6 +6,7 @@ import { assertNationalEnvelope, readAccessKey, readAuthorizedXml, parseNational
   nationalFiscalChild, nationalFiscalSemantic } from './pilot-response.ts';
 import { NfseContractError, requireContract } from './xml.ts';
 import type { PreparedProductionDps, ProductionDependencies, ProductionIssueResult, ProductionDpsIdentityDiagnostics } from './production.types.ts';
+import { productionDpsJsonIdentityMatches } from './production-json-identity.ts';
 
 export const productionErrorCode = (error: unknown) =>
   error instanceof NfseContractError ? error.code : 'PRODUCTION_UNAVAILABLE';
@@ -36,13 +37,10 @@ export function productionDpsIdentityDiagnostics(envelope: Record<string, unknow
   return result;
 }
 
-function productionDpsIdentifiers(envelope: Record<string, unknown>): unknown[] {
-  return ['idDps', 'idDPS'].filter(name => Object.hasOwn(envelope, name)).map(name => envelope[name]);
-}
-/** Production JSON IDs are optional; any supplied ID remains exact. XML proof is always required separately. */
+/** Optional JSON IDs must identify this DPS or the exact returned note key; XML proof is mandatory. */
 function assertProductionDpsEnvelope(envelope: Record<string, unknown>, expectedDpsId: string): void {
   assertNationalEnvelope(envelope, 'PRODUCAO');
-  requireContract(productionDpsIdentifiers(envelope).every(value => value === expectedDpsId), 'RESPONSE_DPS_MISMATCH');
+  requireContract(productionDpsJsonIdentityMatches(envelope, expectedDpsId), 'RESPONSE_DPS_MISMATCH');
 }
 
 function documentFor(input: NationalDpsInput) {
@@ -81,8 +79,7 @@ export function createNationalProductionIssuer(deps: ProductionDependencies) {
     requireContract(response.status === 200, 'DPS_CONSULTATION_UNCONFIRMED');
     const envelope = parseFiscalJson(response.body);
     assertNationalEnvelope(envelope, 'PRODUCAO');
-    const identifiers = productionDpsIdentifiers(envelope);
-    if (!identifiers.every(value => value === prepared.dpsId)) {
+    if (!productionDpsJsonIdentityMatches(envelope, prepared.dpsId)) {
       return { state: 'AWAITING_CONFIRMATION', dpsId: prepared.dpsId, signedDpsXml: prepared.signedDpsXml,
         code: 'RESPONSE_DPS_MISMATCH', diagnostics: productionDpsIdentityDiagnostics(envelope, prepared.dpsId) };
     }
