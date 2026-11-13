@@ -16,6 +16,7 @@ interface Props {
   scope: ReceivablesScope;
   disabled: boolean;
   onScopeChange: (scope: ReceivablesScope) => void;
+  filterDescription?: string;
 }
 
 const cards = [
@@ -24,7 +25,7 @@ const cards = [
   { scope: 'overdue' as const, label: 'Em atraso', detail: 'Parcelas vencidas no período', tone: 'text-rose-600', selected: 'border-rose-500 bg-rose-50' },
 ];
 
-export function ReceivablesSummaryCards({ summary, upcoming, scope, disabled, onScopeChange }: Props) {
+export function ReceivablesSummaryCards({ summary, upcoming, scope, disabled, onScopeChange, filterDescription = 'aluno, turma e vencimento' }: Props) {
   return (
     <div className="space-y-2">
       <div className="grid gap-2 sm:grid-cols-3">
@@ -55,7 +56,7 @@ export function ReceivablesSummaryCards({ summary, upcoming, scope, disabled, on
         })}
       </div>
       <p className="text-[11px] text-slate-500">
-        Valores conforme aluno, turma e vencimento. Clique para filtrar a lista. Recebido considera o vencimento da parcela, não a data do pagamento.
+        Valores conforme {filterDescription}. Clique para filtrar a lista. Recebido considera o vencimento da parcela, não a data do pagamento.
       </p>
     </div>
   );

@@ -4,9 +4,7 @@ Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente
 
 Histórico anterior: [10/10/2026 — versões 4.8.206 a 4.8.207](./changelog/2026-10-10-versoes-4-8-206-a-207.md), [27/09/2026 — versões 4.8.117 a 4.8.127](./changelog/2026-09-27-versoes-4-8-117-a-4-8-127.md), [16/09/2026 a 25/09/2026 — versões 4.8.65 a 4.8.90](./changelog/2026-09-16-a-2026-09-25-versoes-4-8-65-a-4-8-90.md), [13/09/2026 — versões 4.8.53 a 4.8.64](./changelog/2026-09-13-versoes-4-8-53-a-4-8-64.md), [08/09/2026 a 12/09/2026 — versões 4.8.37 a 4.8.52](./changelog/2026-09-08-a-2026-09-12-versoes-4-8-37-a-4-8-52.md), [03/09/2026 a 08/09/2026 — versões 4.8.30 a 4.8.36](./changelog/2026-09-03-a-2026-09-08-versoes-4-8-30-a-4-8-36.md), [02/09/2026 — versões 4.8.27 a 4.8.29](./changelog/2026-09-02-versoes-4-8-27-a-4-8-29.md), [01/09/2026 — versões 4.8.23 a 4.8.26](./changelog/2026-09-01-versoes-4-8-23-a-4-8-26.md), [01/09/2026 — versões 4.8.20 a 4.8.22](./changelog/2026-09-01-versoes-4-8-20-a-4-8-22.md), [27/08/2026 a 31/08/2026 — versões 4.8.8 a 4.8.19](./changelog/2026-08-27-a-2026-08-31.md), [26/08/2026 — versões 4.8.6 a 4.8.7](./changelog/2026-08-26.md), [25/08/2026 — versões 4.8.2 a 4.8.5](./changelog/2026-08-25-parte-1.md), [24/08/2026 — versões 4.8.0 a 4.8.1](./changelog/2026-08-24-parte-2.md), [24/08/2026 — versões 4.7.5 a 4.7.7](./changelog/2026-08-24-parte-1.md), [22/08/2026 a 23/08/2026](./changelog/2026-08-22-a-2026-08-23.md), [21/08/2026 a 22/08/2026 — parte 2](./changelog/2026-08-21-a-2026-08-22-parte-2.md), [21/08/2026 — parte 1](./changelog/2026-08-21-parte-1.md), [11/08/2026 a 20/08/2026](./changelog/2026-08-11-a-2026-08-20.md), [09/08/2026 a 10/08/2026](./changelog/2026-08-09-a-2026-08-10.md), [05/08/2026 — parte 1](./changelog/2026-08-05-parte-1.md), [04/08/2026](./changelog/2026-08-04.md), [03/08/2026](./changelog/2026-08-03.md), [02/08/2026 — continuação](./changelog/2026-08-02-parte-2.md), [02/08/2026 a 31/07/2026](./changelog/2026-07-31-a-2026-08-02.md), [31/07/2026 a 26/07/2026](./changelog/2026-07-26-a-2026-07-31.md) e [26/07/2026 a 14/07/2026](./changelog/2026-07-14-a-2026-07-26.md).
 Histórico arquivado: [10/10/2026 — versões 4.8.199 a 4.8.202](./changelog/2026-10-10-versoes-4-8-199-a-202.md), [28/09/2026 a 30/09/2026 — versões 4.8.128 a 4.8.137](./changelog/2026-09-28-a-2026-09-30-versoes-4-8-128-a-4-8-137.md), [27/09/2026 — versões 4.8.115 a 4.8.116](./changelog/2026-09-27-versoes-4-8-115-a-4-8-116.md), [27/09/2026 — versão 4.8.114](./changelog/2026-09-27-versao-4-8-114.md), [27/09/2026 — versão 4.8.113](./changelog/2026-09-27-versao-4-8-113.md), [27/09/2026 — versão 4.8.112](./changelog/2026-09-27-versao-4-8-112.md), [27/09/2026 — versão 4.8.111](./changelog/2026-09-27-versao-4-8-111.md), [25/09/2026 a 26/09/2026 — versões 4.8.91 a 4.8.110](./changelog/2026-09-25-a-2026-09-26-versoes-4-8-91-a-4-8-110.md).
-
 Histórico arquivado: [30/09/2026 — versões 4.8.138 a 4.8.144](./changelog/2026-09-30-versoes-4-8-138-a-4-8-144.md).
-
 Histórico arquivado: [01/10/2026 a 04/10/2026 — versões 4.8.145 a 4.8.168](./changelog/2026-10-01-a-04-versoes-4-8-145-a-168.md).
 
 Histórico arquivado: [05/10/2026 — versões 4.8.169 a 4.8.170](./changelog/2026-10-05-versoes-4-8-169-a-170.md).
@@ -71,6 +69,15 @@ Histórico arquivado: [07/11/2026 — versão 4.8.255](./changelog/2026-11-07-ve
 Histórico arquivado: 07/11/2026 — versões [4.8.256](./changelog/2026-11-07-versao-4-8-256.md) e [4.8.257](./changelog/2026-11-07-versao-4-8-257.md).
 
 Histórico arquivado: [07/11/2026 — versão 4.8.258](./changelog/2026-11-07-versao-4-8-258.md).
+
+Histórico arquivado: [07/11/2026 — versões 4.8.259 a 4.8.260](./changelog/2026-11-07-versoes-4-8-259-a-260.md).
+
+## [4.8.330] - 2026-11-12
+
+### Corrigido
+- Extrato PDF de Serviços autorizado, completo nos filtros e com resumo canônico por polo.
+- Serviços em Contas a Receber segue o padrão de Técnico/EAD, com resumo, filtros, grupos, parcelas e recebimento canônico.
+- Notas canceladas mostram o motivo do bloqueio e preservam o histórico; o servidor impede novas baixas nesse estado.
 
 ## [4.8.329] - 2026-11-12
 
@@ -488,11 +495,3 @@ Histórico arquivado: [07/11/2026 — versão 4.8.258](./changelog/2026-11-07-ve
 - Campos monetários formatam os dígitos automaticamente em centavos: 123456 vira 1.234,56, seguindo Contas a Receber.
 - Despesas, pagamentos, empréstimos, transferências, renegociação, patrimônio, turmas e cadastros compartilham a máscara; vírgula, exclusão e colagem preservam os valores.
 - Percentuais, quantidades, saldo inicial negativo e contratos financeiros permanecem preservados.
-
-## [4.8.260] - 2026-11-07
-
-### [4.8.259] - 2026-11-07
-
-### Corrigido
-- Histórico de Emissões aplica a busca ao digitar e permite combinar modalidade, curso, turma e tipo de documento.
-- Filtros são aplicados no servidor antes da contagem e paginação, com pesquisa de nome/CPF do snapshot ou cadastro e preservação da segunda via.

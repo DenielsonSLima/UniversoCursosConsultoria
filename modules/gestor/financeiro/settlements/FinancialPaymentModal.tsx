@@ -18,6 +18,7 @@ export interface FinancialPaymentModalProps {
   accounts: ContaBancaria[];
   initialAccountId?: string;
   readOnly?: boolean;
+  historyOnly?: boolean;
   onClose: () => void;
   onReversed?: () => Promise<void>;
   onConfirm: (payload: FinancialPaymentConfirmation) => Promise<FinancialPaymentResult>;
@@ -27,13 +28,14 @@ export const FinancialPaymentModal: React.FC<FinancialPaymentModalProps> = (prop
   const accounts = props.accounts.filter(account => account.ativo !== false && isContaDisponivelNoPolo(account, props.poloId));
   const initialAccountId = accounts.some(account => account.id === props.initialAccountId) ? props.initialAccountId : accounts[0]?.id || '';
   const initialMethod = defaultPaymentMethodForAccount(accounts.find(account => account.id === initialAccountId));
-  const form = useFinancialPaymentForm(props.sourceKind, props.sourceId, initialAccountId, props.onConfirm, initialMethod);
+  const form = useFinancialPaymentForm(props.sourceKind, props.sourceId, initialAccountId, props.onConfirm, initialMethod,
+    Boolean(props.readOnly), Boolean(props.historyOnly));
   const [reversing, setReversing] = useState(false);
   const busy = form.pending || reversing;
   const ref = useRef<HTMLDivElement>(null);
   const expense = props.sourceKind !== 'RECEIVABLE';
   const summary = form.preview || form.history?.summary;
-  const readOnly = Boolean(!form.submitted && (props.readOnly || form.history?.summary.status === 'PAGO'));
+  const readOnly = Boolean(props.historyOnly || !form.submitted && (props.readOnly || form.history?.summary.status === 'PAGO'));
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null;
     const overflow = document.body.style.overflow;
@@ -88,7 +90,7 @@ export const FinancialPaymentModal: React.FC<FinancialPaymentModalProps> = (prop
             <FinancialPaymentSummary summary={summary} preview={form.preview} expense={expense} readOnly={readOnly} />
           </div>
           {form.previewLoading && !readOnly ? <p role="status" className="text-xs text-slate-500">Conferindo valores e saldo...</p> : null}
-          {form.submitted ? <p className="rounded-2xl border border-amber-100 bg-amber-50 px-4 py-3 text-xs font-semibold leading-relaxed text-amber-800">Este pagamento já foi enviado. Use “Conferir pagamento” para consultar a mesma operação.</p> : null}
+          {form.submitted && !readOnly ? <p className="rounded-2xl border border-amber-100 bg-amber-50 px-4 py-3 text-xs font-semibold leading-relaxed text-amber-800">Este pagamento já foi enviado. Use “Conferir pagamento” para consultar a mesma operação.</p> : null}
           {form.storageWarning ? <p role="alert" className="text-sm text-amber-800">Mantenha esta janela aberta: o navegador não conseguiu salvar a retomada.</p> : null}
           {form.error ? <p role="alert" className="flex items-center gap-2 rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-xs font-bold text-rose-700"><AlertCircle size={16} className="shrink-0" />{form.error}</p> : null}
           {form.history ? <FinancialPaymentHistory history={form.history} sourceKind={props.sourceKind} sourceId={props.sourceId} onReversed={props.onReversed} onBusyChange={setReversing} disabled={busy || Boolean(form.submitted)} /> : null}

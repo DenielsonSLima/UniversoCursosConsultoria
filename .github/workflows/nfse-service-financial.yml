@@ -5,7 +5,11 @@ on:
     paths:
       - 'modules/gestor/emissor-nfse/parceiros/**'
       - 'modules/gestor/financeiro/receber/servicos/**'
+      - 'modules/gestor/financeiro/settlements/FinancialPaymentModal.tsx'
+      - 'modules/gestor/financeiro/settlements/useFinancialPaymentForm.ts'
+      - 'modules/gestor/financeiro/settlements/financial-payment.service.ts'
       - 'supabase/migrations/*nfse_service_*'
+      - 'supabase/operations/nfse-service-*'
       - 'supabase/functions/nfse-service-bolepix-worker/**'
       - 'supabase/functions/banese/**'
       - 'supabase/functions/banese-boleto-document/**'
@@ -47,7 +51,7 @@ jobs:
           npm ci --ignore-scripts
           npm install --prefix "$RUNNER_TEMP/nfse-service-runtime" --no-save --package-lock=false --ignore-scripts jsdom@26.1.0 @electric-sql/pglite@0.3.14 pg@8.16.3
       - name: Verify canonical plans, authorization, isolation and durable bank queue
-        run: node --test supabase/tests/nfse_service_receivables.isolated.test.mjs supabase/tests/nfse_service_receivables.integration.test.mjs supabase/tests/nfse_service_financial_plan.isolated.test.mjs supabase/tests/nfse_service_bolepix.isolated.test.mjs supabase/tests/nfse_service_cancellation.isolated.test.mjs
+        run: node --test supabase/tests/nfse_service_*.isolated.test.mjs supabase/tests/nfse_service_receivables.integration.test.mjs supabase/tests/nfse_service_authorized_local_operations.test.mjs
         env:
           NFSE_TEST_PGLITE_MODULE: ${{ runner.temp }}/nfse-service-runtime/node_modules/@electric-sql/pglite/dist/index.js
       - name: Verify PostgreSQL concurrent authorization and payment locks
@@ -62,7 +66,9 @@ jobs:
             name=$(basename "$source" .ts)
             node_modules/.bin/esbuild "$source" --bundle --packages=external --platform=node --format=esm --outfile="tmp/nfse-service-contracts/$name.mjs"
           done
-          node --test tmp/nfse-service-contracts/*.mjs modules/gestor/emissor-nfse/parceiros/NfsePartnerServiceModal.interaction.test.mjs modules/gestor/financeiro/receber/servicos/ServicosReceberTab.interaction.test.mjs
+          node --test tmp/nfse-service-contracts/*.mjs modules/gestor/emissor-nfse/parceiros/NfsePartnerServiceModal.interaction.test.mjs modules/gestor/financeiro/receber/servicos/*.interaction.test.mjs
+          node_modules/.bin/esbuild modules/gestor/financeiro/receber/servicos/service-receivables-report.test.tsx --bundle --packages=external --platform=node --format=esm --define:import.meta.env='{"VITE_SUPABASE_URL":"http://localhost","VITE_SUPABASE_ANON_KEY":"test"}' --outfile=tmp/nfse-service-contracts/service-report.mjs
+          node --import 'data:text/javascript,globalThis.WebSocket=class%7B%7D' --test tmp/nfse-service-contracts/service-report.mjs
         env:
           NFSE_TEST_JSDOM_MODULE: ${{ runner.temp }}/nfse-service-runtime/node_modules/jsdom/lib/api.js
       - name: Verify bank evidence, GET-only recovery and existing Banese contracts
