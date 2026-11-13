@@ -72,6 +72,14 @@ Histórico arquivado: [07/11/2026 — versão 4.8.258](./changelog/2026-11-07-ve
 
 Histórico arquivado: [07/11/2026 — versões 4.8.259 a 4.8.260](./changelog/2026-11-07-versoes-4-8-259-a-260.md).
 
+Histórico arquivado: [07/11/2026 — versões 4.8.261 a 4.8.262](./changelog/2026-11-07-versoes-4-8-261-a-262.md).
+
+## [4.8.331] - 2026-11-12
+
+### Corrigido
+- Modelos de emissão em lista, com resumo pesquisável de NBS e indicador da operação.
+- Novos serviços usam categoria financeira fixa e valores formatados automaticamente com duas casas decimais.
+
 ## [4.8.330] - 2026-11-12
 
 ### Corrigido
@@ -482,16 +490,3 @@ Histórico arquivado: [07/11/2026 — versões 4.8.259 a 4.8.260](./changelog/20
 ### Adicionado
 - Emissor NFS-e: botão Adicionar alunos abre modal com mês atual, curso Técnico, busca e filtro de turma.
 - Turmas expansíveis e seleção múltipla com recebimentos efetivos do mês, incluindo atrasados e pagamentos parciais; totais calculados na RPC e acesso restrito por usuário/polo.
-
-## [4.8.262] - 2026-11-07
-
-### Corrigido
-- Emissor NFS-e: remoção dos avisos duplicados e do texto sobre CNPJ; filtro de mês integrado ao cabeçalho.
-- Novo modelo e edição abrem em modal, preservando a lista, foco, navegação por teclado e fechamento.
-
-## [4.8.261] - 2026-11-07
-
-### Corrigido
-- Campos monetários formatam os dígitos automaticamente em centavos: 123456 vira 1.234,56, seguindo Contas a Receber.
-- Despesas, pagamentos, empréstimos, transferências, renegociação, patrimônio, turmas e cadastros compartilham a máscara; vírgula, exclusão e colagem preservam os valores.
-- Percentuais, quantidades, saldo inicial negativo e contratos financeiros permanecem preservados.

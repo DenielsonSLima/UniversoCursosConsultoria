@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "retrieval": "lexical-bm25-with-source-citations",
-  "builtAt": "2026-11-13T00:26:47.999Z",
+  "builtAt": "2026-11-13T02:01:42.901Z",
   "manifestVersion": 2,
-  "sourceSignature": "1ada5750b852a3671d9f546b9e8172866699adea67370e751ca6a46eb37f3717",
+  "sourceSignature": "e5e2ef545127855fe18d7e545b26e891b20bf2e2dcbd39bd6ae4ed4cdfd54dc1",
   "sources": [
     {
       "path": "AGENTS.md",
@@ -11,7 +11,7 @@
     },
     {
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "hash": "3eb7efff81d897cd7b066e4801843c37838b47459454721d04b6ce43e3dde960"
+      "hash": "c811209ca7a50923a45a9bb2426ec79a84763c192eafcad75aa063a6a7f36edc"
     },
     {
       "path": "ai/operacao/MEMORIA_CANONICA.md",
@@ -208,13 +208,13 @@
       "part": 1
     },
     {
-      "id": "86341ff9e68001efdbef",
-      "hash": "86341ff9e68001efdbefa878d979f16e0e0d21bd7e991748eb4ea88d591cd378",
+      "id": "b13845efa1c463eee83f",
+      "hash": "b13845efa1c463eee83f652ec420b7393ca160f4b344e4fa476e2ec6ef243401",
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Lote: 2026-11-12-pix-duas-vias-copia-parceiro",
-      "text": "Objetivo: destacar Pix Copia e Cola nas duas vias e permitir cópia no financeiro EAD do aluno com código oficial disponível e cobrança aberta. Status: candidato 4.8.325 validado; backend aplicado; integração e publicação do site controladas por CI/PR. Autorização: usuário aprovou a imagem do PDF e solicitou explicitamente atualizar em produção. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-12-pix-duas-vias-copia-parceiro.md`. Base: main 4.8.323, a53f9990aaee88de07274a8d78a6fa54746ed093; snapshot isolado sem o candidato NFS-e paralelo. Aceite: código integral e destacado nas duas vias; botão apenas em cobrança EAD aberta e não paga; autorização e histórico preservados. Validação: dez testes PDF com typecheck, sete React, SQL isolado e contrato remoto, TypeScript, build e QR renderizados. Limitações: sem navegador ou operação bancária real; conferência visual da tela e PDF autenticado permanece com o usuário.",
-      "normalizedText": "objetivo destacar pix copia e cola nas duas vias e permitir copia no financeiro ead do aluno com codigo oficial disponivel e cobranca aberta status candidato 4 8 325 validado backend aplicado integracao e publicacao do site controladas por ci pr autorizacao usuario aprovou a imagem do pdf e solicitou explicitamente atualizar em producao manifesto explicito ai operacao registros alteracoes 2026 11 12 pix duas vias copia parceiro md base main 4 8 323 a53f9990aaee88de07274a8d78a6fa54746ed093 snapshot isolado sem o candidato nfs e paralelo aceite codigo integral e destacado nas duas vias botao apenas em cobranca ead aberta e nao paga autorizacao e historico preservados validacao dez testes pdf com typecheck sete react sql isolado e contrato remoto typescript build e qr renderizados limitacoes sem navegador ou operacao bancaria real conferencia visual da tela e pdf autenticado permanece com o usuario",
-      "tokenCount": 121,
+      "section": "Lote: 2026-11-12-nfse-servicos-formulario-padrao",
+      "text": "Objetivo: modelos de emissão em lista com resumo fiscal, categoria fixa de serviços e digitação decimal automática. Status: implementação e validação do candidato 4.8.331, revisão 340; publicação já autorizada pelo usuário. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-12-nfse-servicos-formulario-padrao.md`. Base: 4.8.330, preservando o padrão de recebimento, o extrato de Serviços e a retomada acadêmica. Aceite: um modelo por linha sem cartões; NBS e indicador reais; categoria Serviços NFS-e sem escolha; valores/percentuais com duas casas; plano e parcelas canônicos no servidor. Limitação: nenhum navegador controlado; conferência visual autenticada permanece com o usuário no acesso local. Fechamento: registros de implantação dos lotes anteriores consolidados em `2026-11-12-fechamento-publicacoes-emissor-financeiro.md`; índice local RAG gerado uma vez após as fontes finais.",
+      "normalizedText": "objetivo modelos de emissao em lista com resumo fiscal categoria fixa de servicos e digitacao decimal automatica status implementacao e validacao do candidato 4 8 331 revisao 340 publicacao ja autorizada pelo usuario manifesto explicito ai operacao registros alteracoes 2026 11 12 nfse servicos formulario padrao md base 4 8 330 preservando o padrao de recebimento o extrato de servicos e a retomada academica aceite um modelo por linha sem cartoes nbs e indicador reais categoria servicos nfs e sem escolha valores percentuais com duas casas plano e parcelas canonicos no servidor limitacao nenhum navegador controlado conferencia visual autenticada permanece com o usuario no acesso local fechamento registros de implantacao dos lotes anteriores consolidados em 2026 11 12 fechamento publicacoes emissor financeiro md indice local rag gerado uma vez apos as fontes finais",
+      "tokenCount": 119,
       "part": 1
     },
     {

@@ -9,7 +9,7 @@ Busca responde à digitação com debounce; datas são aplicadas pelo filtro. Ev
 - Revisão independente dos quatro arquivos sem achado bloqueante. Query key inclui pageSize e invalidações alcançam a lista EAD.
 - Smoke DOM regenerável `tmp/ead-compact-flow.smoke.mjs`: criação, abas, doze itens por página, quatro colunas e eventos/reconexão. Sem banco ou navegador.
 - Conferência visual permanece com o usuário em 127.0.0.1. Smoke interno não equivale à inspeção visual autenticada.
-- Manifesto dentro do teto de 500 linhas. CI será acompanhado na PR antes de integração.
+- Manifesto dentro do teto de 500 linhas. CI aprovado na PR antes da integração.
 
 ## Manifesto explícito
 Total: 10 arquivos. Somente EAD e sua documentação de versão. Auth é herdado como base; Serviços/BolePix fica fora do diff.
@@ -26,4 +26,8 @@ Total: 10 arquivos. Somente EAD e sua documentação de versão. Auth é herdado
 - `internal/versioning/changelog/2026-11-07-versao-4-8-253.md`
 
 ## Entrega
-Candidato 4.8.323 sobre `8fe410ca7fc7d8f48a02b958746bb262454e41c4` (PR #413 / 4.8.322), mantendo main/produção 4.8.321. Sem merge, migration, deploy ou operação real. A entrada 4.8.253 foi arquivada integralmente, junto ao índice histórico, para manter o changelog ativo no teto.
+Publicado na versão 4.8.323 sobre a correção de Parceiros da PR #413 / 4.8.322. Sem operação acadêmica ou financeira real de teste. A entrada 4.8.253 foi arquivada integralmente, junto ao índice histórico, para manter o changelog ativo no teto.
+
+## Publicação confirmada
+
+PR #415 integrada por merge em a53f9990aaee88de07274a8d78a6fa54746ed093, versão 4.8.323, após 6/6 workflows e preview READY no commit f119f82b84bcc95cc395500681a13295c19a7264. Produção Vercel dpl_DVYVzZpkX5V3VXiamt6wTq1NP8fX READY com aliases públicos e o mesmo commit. HTTP 200 e asset principal com versão 4.8.323 conferidos. Nenhum navegador operado pelo agente.

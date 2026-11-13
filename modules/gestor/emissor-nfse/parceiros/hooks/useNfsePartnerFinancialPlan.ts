@@ -4,21 +4,27 @@ import type { NfseScope } from '../../types/nfse.types';
 import type { NfseServiceFinancialPreview, NfseServiceFinancialPlan } from '../types/nfse-partner-services.types';
 import { nfsePartnerServices } from '../services/nfse-partner-services.service';
 import { initialOtherCreditPlanTerms, type OtherCreditPlanTermsForm } from '../../../financeiro/outros-creditos/other-credit-plan.model';
-import { parseCurrencyInput } from '../../../financeiro/outros-creditos/outros-creditos.presentation';
+import { currencyInputToCents } from '../../../../shared/utils/currency-input';
 
 export type NfseServicePlanForm = OtherCreditPlanTermsForm & {
-  quantity: string; firstDueDate: string; categoryId: string;
+  quantity: string; firstDueDate: string;
   periodicity: NfseServiceFinancialPlan['periodicity']; issueBolePix: boolean;
 };
-export function useNfsePartnerFinancialPlan(scope: NfseScope, partnerId: string, amount: string, description: string) {
+const decimalValue = (value: string) => {
+  const cents = currencyInputToCents(value);
+  return cents === null ? Number.NaN : cents / 100;
+};
+
+export function useNfsePartnerFinancialPlan(scope: NfseScope, partnerId: string, amount: string, description: string, categoryId: string) {
   const [form, setForm] = useState<NfseServicePlanForm>(() => ({ ...initialOtherCreditPlanTerms(), quantity: '1',
-    firstDueDate: '', categoryId: '', periodicity: 'MENSAL_CALENDARIO', issueBolePix: false }));
+    interest: '0,00', penalty: '0,00', discount: '0,00',
+    firstDueDate: '', periodicity: 'MENSAL_CALENDARIO', issueBolePix: false }));
   const [confirmed, setConfirmed] = useState<{ signature: string; data: NfseServiceFinancialPreview } | null>(null);
   const input = useMemo((): NfseServiceFinancialPlan => ({ installments: Number(form.quantity), firstDueDate: form.firstDueDate,
-    categoryId: form.categoryId, monthlyInterestPercent: Number(form.interest.replace(',', '.') || 0),
-    penaltyPercent: Number(form.penalty.replace(',', '.') || 0), discountType: form.discountType,
-    discountValue: form.discountType === 'FIXO' ? parseCurrencyInput(form.discount) : Number(form.discount.replace(',', '.') || 0),
-    discountDaysBeforeDue: Number(form.discountDays), periodicity: form.periodicity, issueBolePix: form.issueBolePix }), [form]);
+    categoryId, monthlyInterestPercent: decimalValue(form.interest),
+    penaltyPercent: decimalValue(form.penalty), discountType: form.discountType,
+    discountValue: decimalValue(form.discount),
+    discountDaysBeforeDue: Number(form.discountDays), periodicity: form.periodicity, issueBolePix: form.issueBolePix }), [form, categoryId]);
   const signature = JSON.stringify({ scope, partnerId, amount, description, input });
   const preview = useMutation({ mutationFn: () => nfsePartnerServices.previewFinancialPlan(scope, partnerId, amount, description, input), retry: false });
   const ready = Boolean(partnerId && amount && Number.isInteger(input.installments) && input.installments >= 1 && input.installments <= 60

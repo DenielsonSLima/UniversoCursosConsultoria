@@ -10,9 +10,9 @@ export default function NfseServicePlanPreview({ preview }: { preview: OtherCred
       <tbody>{preview.parcelas.map(item => <tr key={item.numero}><td>{item.numero}/{preview.quantidadeParcelas}</td><td>{formatDate(item.dataVencimento)}</td>
         <td>{formatCurrency(item.valor)}</td><td>{formatCurrency(item.valorComDesconto)}</td><td>{item.financialTerms.discount ? formatDate(item.financialTerms.discount.validUntil) : 'Sem desconto'}</td>
         <td>{item.financialTerms.interest ? item.financialTerms.interest.type === 'monthly-percentage'
-          ? `${item.financialTerms.interest.value.toLocaleString('pt-BR')}% ao mês` : `${formatCurrency(item.financialTerms.interest.value)} ao dia` : 'Sem juros'}</td>
+          ? `${item.financialTerms.interest.value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}% ao mês` : `${formatCurrency(item.financialTerms.interest.value)} ao dia` : 'Sem juros'}</td>
         <td>{item.financialTerms.penalty ? item.financialTerms.penalty.type === 'percentage'
-          ? `${item.financialTerms.penalty.value.toLocaleString('pt-BR')}%` : formatCurrency(item.financialTerms.penalty.value) : 'Sem multa'}</td></tr>)}</tbody></table></div>
+          ? `${item.financialTerms.penalty.value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%` : formatCurrency(item.financialTerms.penalty.value) : 'Sem multa'}</td></tr>)}</tbody></table></div>
     <p className="nfse-inline-help mt-3">Juros e multa são condições de atraso. O desconto depende do prazo de pontualidade de cada parcela.</p>
   </section>;
 }

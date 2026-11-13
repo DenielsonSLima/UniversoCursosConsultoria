@@ -5,6 +5,8 @@ on:
     paths:
       - 'modules/gestor/emissor-nfse/parceiros/**'
       - 'modules/gestor/financeiro/receber/servicos/**'
+      - 'modules/gestor/financeiro/outros-creditos/OtherCreditPlanTermsFields.tsx'
+      - 'modules/gestor/financeiro/outros-creditos/OtherCreditPlanTermsFields.interaction.test.mjs'
       - 'modules/gestor/financeiro/settlements/FinancialPaymentModal.tsx'
       - 'modules/gestor/financeiro/settlements/useFinancialPaymentForm.ts'
       - 'modules/gestor/financeiro/settlements/financial-payment.service.ts'
@@ -66,7 +68,7 @@ jobs:
             name=$(basename "$source" .ts)
             node_modules/.bin/esbuild "$source" --bundle --packages=external --platform=node --format=esm --outfile="tmp/nfse-service-contracts/$name.mjs"
           done
-          node --test tmp/nfse-service-contracts/*.mjs modules/gestor/emissor-nfse/parceiros/NfsePartnerServiceModal.interaction.test.mjs modules/gestor/financeiro/receber/servicos/*.interaction.test.mjs
+          node --test tmp/nfse-service-contracts/*.mjs modules/gestor/emissor-nfse/parceiros/NfsePartnerServiceModal.interaction.test.mjs modules/gestor/financeiro/receber/servicos/*.interaction.test.mjs modules/gestor/financeiro/outros-creditos/OtherCreditPlanTermsFields.interaction.test.mjs
           node_modules/.bin/esbuild modules/gestor/financeiro/receber/servicos/service-receivables-report.test.tsx --bundle --packages=external --platform=node --format=esm --define:import.meta.env='{"VITE_SUPABASE_URL":"http://localhost","VITE_SUPABASE_ANON_KEY":"test"}' --outfile=tmp/nfse-service-contracts/service-report.mjs
           node --import 'data:text/javascript,globalThis.WebSocket=class%7B%7D' --test tmp/nfse-service-contracts/service-report.mjs
         env:

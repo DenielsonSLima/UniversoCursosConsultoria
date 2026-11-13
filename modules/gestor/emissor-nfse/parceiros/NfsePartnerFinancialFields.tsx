@@ -38,14 +38,10 @@ export default function NfsePartnerFinancialFields(props: Props) {
         {!props.options?.capabilities.canIssueBolePix && <p className="nfse-inline-help nfse-wide">A emissão BolePix precisa estar habilitada para seu acesso e para esta unidade.</p>}
         <label className="nfse-field"><span>Quantidade de parcelas</span><input aria-label="Quantidade de parcelas" type="number" min="1" max="60" step="1" required value={props.form.quantity} onChange={e => props.onChange({ quantity: e.target.value })} /></label>
         <label className="nfse-field"><span>Primeiro vencimento</span><input aria-label="Primeiro vencimento" type="date" required value={props.form.firstDueDate} onChange={e => props.onChange({ firstDueDate: e.target.value })} /></label>
-        <div className="nfse-field"><label htmlFor="nfse-partner-category">Categoria financeira</label>
-          <InstitutionalSelect id="nfse-partner-category" ariaLabel="Categoria financeira" required value={props.form.categoryId}
-            options={(props.options?.categories || []).map((category) => ({ value: category.id, label: category.name }))} onValueChange={categoryId => props.onChange({ categoryId })} />
-        </div>
         <div className="nfse-field"><label htmlFor="nfse-service-periodicity">Periodicidade</label><InstitutionalSelect id="nfse-service-periodicity" ariaLabel="Periodicidade" value={props.form.periodicity}
           options={[{ value: 'MENSAL_CALENDARIO', label: 'Mensal · mesmo dia' }, { value: 'DIAS_CORRIDOS_30', label: 'A cada 30 dias' }]}
           onValueChange={value => { if (value === 'MENSAL_CALENDARIO' || value === 'DIAS_CORRIDOS_30') props.onChange({ periodicity: value }); }} /></div>
-        <div className="nfse-wide"><OtherCreditPlanTermsFields label="parcelas" terms={props.form} onChange={props.onChange} /></div>
+        <div className="nfse-wide"><OtherCreditPlanTermsFields label="parcelas" terms={props.form} onChange={props.onChange} twoDecimalInputs /></div>
         <p className="nfse-inline-help nfse-wide">O valor total do serviço será dividido pelo sistema. As parcelas e os centavos serão conferidos na próxima etapa.</p>
       </>}
       {props.mode === 'LINK' && <div className="nfse-field nfse-wide"><label htmlFor="nfse-partner-existing">Conta existente</label>

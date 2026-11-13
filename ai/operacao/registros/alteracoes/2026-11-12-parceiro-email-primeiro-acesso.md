@@ -54,13 +54,19 @@ Ajustes de EAD e Serviços/BolePix pertencem a lotes separados e não integram e
 - `internal/versioning/changelog/2026-11-07-versao-4-8-252.md`
 
 ## Limitações e implantação
-Implementação local 4.8.322 concluída. O banco mantém correção e invalidação na mesma transação e entrega por claim/nonce com recuperação após 120 segundos. O mesmo pedido concluído não reenvia nem invalida o link novo. Contas usadas, compartilhadas, com senha ou provedor externo são recusadas antes da alteração de identidade. O novo e-mail não é confirmado pelo gestor por este fluxo.
+Correção publicada na versão 4.8.322. O banco mantém correção e invalidação na mesma transação e entrega por claim/nonce com recuperação após 120 segundos. O mesmo pedido concluído não reenvia nem invalida o link novo. Contas usadas, compartilhadas, com senha ou provedor externo são recusadas antes da alteração de identidade. O novo e-mail não é confirmado pelo gestor por este fluxo.
 
-Validação: 12 testes do coordenador e 2 de interação/transporte aprovados, mapeamento/contratos de Parceiros preservados; 8 ensaios SQL isolados com triggers reais e 6 do handler aprovados. TypeScript completo passou. Workflow PostgreSQL17 preparado para locks, replay e fences reais; execução de CI pendente na abertura do candidato.
+Validação: 12 testes do coordenador e 2 de interação/transporte aprovados, mapeamento/contratos de Parceiros preservados; 8 ensaios SQL isolados com triggers reais e 6 do handler aprovados. TypeScript completo passou. Workflow PostgreSQL17 aprovado com locks, replay e fences reais.
 
-Implantação proposta: aplicar as três migrations inéditas e implantar portal-user-management com JWT verificado antes do frontend. Nenhuma migration aplicada nem Edge publicada nesta etapa. Não enviar e-mail real nem alterar conta de produção para obter evidência de teste. Conferência visual permanece com o usuário.
+As três migrations e a Edge portal-user-management foram implantadas por MCP antes do frontend, com JWT verificado. Nenhum e-mail real foi enviado nem conta de produção alterada para obter evidência de teste. Conferência visual permanece com o usuário.
 
 ## Rebase seletivo do candidato
 - Base atual: main `c02ea08ed6dd7897419abb5720d00479fbefe20d`, versão publicada 4.8.321. Os dez arquivos da PR #414 e seu registro publicado são herdados, sem revertê-los.
 - O arquivo de histórico 4.8.251 já é idêntico na base e não integra o diff; a entrada 4.8.252 foi arquivada integralmente para manter o changelog ativo com até 500 linhas.
-- Candidato Auth passou de 4.8.320 para 4.8.322; a entrada 4.8.321 publicada foi preservada. CI real do novo head será conferido antes da entrega; ausência de run no head anterior não foi tratada como aprovação.
+- Candidato Auth passou de 4.8.320 para 4.8.322; a entrada 4.8.321 publicada foi preservada. CI real do novo head foi aprovado antes da entrega; ausência de run no head anterior não foi tratada como aprovação.
+
+## Publicação confirmada
+
+PR #413 integrada por merge em 58df31f4106211a829a69f67d7b0fdfa3b942ac2, versão 4.8.322, com 17/17 workflows e preview READY no commit 8fe410ca7fc7d8f48a02b958746bb262454e41c4. As três migrations foram aplicadas exclusivamente por MCP Supabase. Portal-user-management v41 está ACTIVE, com JWT habilitado, e seus 44 arquivos de runtime correspondem ao pacote revisado; types.ts é somente de compilação e não integra o retorno do bundle remoto. RPCs novas são service-role only, com search_path vazio. Smoke de correção e entrega sem autorização foi rejeitado antes de mutação; nenhum e-mail real enviado como teste.
+
+A produção Vercel 4.8.323 (a53f9990aaee88de07274a8d78a6fa54746ed093) já contém esta correção. HTTP 200 no domínio público e asset principal com versão 4.8.323 confirmados, sem abertura de navegador.

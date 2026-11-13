@@ -83,3 +83,7 @@ Total: 25 arquivos. São 19 arquivos de implementação, testes e workflow, alé
 - `internal/versioning/system-version.json`
 - `internal/versioning/CHANGELOG.md`
 - `internal/versioning/changelog/2026-11-07-versao-4-8-257.md`
+
+## Publicação confirmada
+
+PR #417 integrada em `3c3d5d9fa6c8bf38687b8dd29d70007f7d27e982`, versão 4.8.328, após 16/16 workflows aprovados e Preview READY na SHA `ad2240ac6628433cfc4743014196861d891badf1`. Produção Vercel `dpl_DwjjQJfAuBh4QDhvajschKguhUyS` READY no mesmo commit. A produção posterior 4.8.329 preserva este lote.

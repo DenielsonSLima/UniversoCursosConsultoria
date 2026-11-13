@@ -1,8 +1,8 @@
 {
-  "version": "4.8.330",
+  "version": "4.8.331",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 339,
+  "revision": 340,
   "releasedAt": "2026-11-12",
-  "summary": "Serviços no padrão financeiro, recebimento canônico e extrato PDF"
+  "summary": "Serviços com modelos em lista, categoria fixa e valores formatados"
 }

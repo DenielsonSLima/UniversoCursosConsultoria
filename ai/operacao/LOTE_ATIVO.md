@@ -1,10 +1,10 @@
 # Lote ativo
 
-## Lote: 2026-11-12-servicos-receber-padrao-financeiro
-Objetivo: alinhar Serviços ao padrão Técnico/EAD e ao mesmo recebimento canônico, com correção local nº 6/nº 7 expressamente autorizada.
-Status: implementação e testes concluídos; candidato 4.8.330, revisão 339, em validação de publicação.
-Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-12-servicos-receber-padrao-financeiro.md`.
-Base: versão 4.8.329 integrada em a43ee0f4d538bda5b0e459bd54c6f763f05a13ca, preservando Serviços, Caixa, Pix e retorno fiscal automático.
-Aceite: padrão visual existente, botão Receber nos títulos elegíveis, histórico acessível sem permitir baixa de nota cancelada, grupos e totais canônicos por polo.
-Validação: reproduzido o motivo real do bloqueio na nº 6; usuário confirmou criação local para a nº 7 com vencimento em 30/11/2026 e sem BolePix.
-Limitação: nenhuma interface ou navegador aberto; teste DOM não substitui a conferência geométrica autenticada pelo usuário.
+## Lote: 2026-11-12-nfse-servicos-formulario-padrao
+Objetivo: modelos de emissão em lista com resumo fiscal, categoria fixa de serviços e digitação decimal automática.
+Status: implementação e validação do candidato 4.8.331, revisão 340; publicação já autorizada pelo usuário.
+Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-12-nfse-servicos-formulario-padrao.md`.
+Base: 4.8.330, preservando o padrão de recebimento, o extrato de Serviços e a retomada acadêmica.
+Aceite: um modelo por linha sem cartões; NBS e indicador reais; categoria Serviços NFS-e sem escolha; valores/percentuais com duas casas; plano e parcelas canônicos no servidor.
+Limitação: nenhum navegador controlado; conferência visual autenticada permanece com o usuário no acesso local.
+Fechamento: registros de implantação dos lotes anteriores consolidados em `2026-11-12-fechamento-publicacoes-emissor-financeiro.md`; índice local RAG gerado uma vez após as fontes finais.
