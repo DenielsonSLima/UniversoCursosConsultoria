@@ -1,11 +1,10 @@
 # Lote ativo
 
-## Lote: 2026-11-12-caixa-servicos-nfse-pdf-resumido
-Objetivo: classificar Serviços NFS-e realizados no Caixa e oferecer PDF Completo ou Resumido em modal de tela cheia.
-Status: implementação e validação local concluídas; candidato 4.8.328 em CI para PR empilhada sobre Serviços 4.8.327.
-Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-12-caixa-servicos-nfse-pdf-resumido.md`.
-Base: Serviços 4.8.327, commit 0f9bf4b8f458067467ff79ee3e9f6a74cde0180b (PR #416), herdando PIX 4.8.325, retorno fiscal 4.8.326 e Auth/EAD publicados.
-Aceite: recebimentos e pagamentos parciais canônicos sem dupla soma, isolamento por polo, Completo preservado, Resumido integral em até duas páginas e mesmo snapshot/Blob.
-Validação: SQL isolado, regressões Caixa, smoke DOM dedicado, extração nativa, recursos e render de PDFs sintéticos; TypeScript e teto de linhas aprovados.
-Estado remoto: três migrations Caixa aplicadas via MCP; Serviços dependente publicado com dezesseis migrations, quatro Edges e worker ativo. Nenhuma emissão, cobrança ou baixa real usada como teste.
-Limitações: sem navegador; inspeção interativa autenticada mantida com o usuário no acesso local.
+## Lote: 2026-11-12-nfse-emitidas-colunas-alinhadas
+Objetivo: padronizar as colunas e ações de todas as notas emitidas, incluindo a última linha sem menu de operação.
+Status: implementação e validação DOM/CSS concluídas; candidato 4.8.329, revisão 338, para PR em rascunho sobre Caixa 4.8.328.
+Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-12-nfse-emitidas-colunas-alinhadas.md`.
+Base: Caixa 4.8.328, commit ad2240ac6628433cfc4743014196861d891badf1 (PR #417), herdando Serviços 4.8.327, PIX 4.8.325 e retorno fiscal 4.8.326.
+Aceite: grade comum entre notas, espaço consistente para ações com ou sem menu, padrão compacto e quebra responsiva preservando informações e handlers.
+Validação: teste DOM da lista e smoke DOM/CSS temporário com nome extenso, última linha sem menu, ações e contratos de 1440/768/390 px aprovados.
+Limitação: nenhuma interface ou navegador aberto; JSDOM não mede a geometria renderizada. Smoke visual autenticado permanece pendente no acesso local.

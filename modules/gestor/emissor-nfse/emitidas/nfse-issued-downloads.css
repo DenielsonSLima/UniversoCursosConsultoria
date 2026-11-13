@@ -14,7 +14,7 @@
 .nfse-issued-utility-actions { margin-left: auto; }
 .nfse-issued-page-selection { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: #526579; white-space: nowrap; }
 .nfse-issued-page-selection input, .nfse-issued-note input[type="checkbox"] { width: 16px; height: 16px; accent-color: #4169e1; margin: 0; }
-.nfse-issued-list { display: grid; border-top: 1px solid #e2e8f0; }
+.nfse-issued-list { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) max-content; column-gap: 16px; border-top: 1px solid #e2e8f0; }
 .nfse-issued-note { display: grid; gap: 6px; padding: 10px 12px; border-bottom: 1px solid #e2e8f0; }
 .nfse-issued-note:nth-child(even) { background: #f3f7fb; }
 .nfse-issued-note:nth-child(odd) { background: #fff; }
@@ -48,32 +48,38 @@
 .nfse-issued-note-result > .nfse-amount { flex: 0 0 auto; }
 .nfse-issued-message { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #64748b; font-size: 12px; }
 
-/* Three compact columns: recipient, service, status and actions. */
-.nfse-issued-note { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) auto; gap: 16px; padding: 10px 12px; align-items: start; }
+/* Shared columns keep every note aligned, including notes without an operation menu. */
+.nfse-issued-note { grid-column: 1 / -1; grid-template-columns: subgrid; gap: 16px; padding: 10px 12px; align-items: start; }
 .nfse-issued-identity, .nfse-issued-note-context, .nfse-issued-controls { display: grid; gap: 4px; min-width: 0; }
 .nfse-issued-note-title { flex-wrap: nowrap; min-height: 20px; }
-.nfse-issued-note-title > strong { flex-shrink: 0; }
+.nfse-issued-note-title > strong { flex-shrink: 0; font-weight: 500; }
 .nfse-issued-note-title > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.nfse-issued-recipient-name { font-size: 13px; line-height: 20px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nfse-issued-recipient-name { font-size: 13px; font-weight: 500; line-height: 20px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .nfse-issued-recipient-meta { display: flex; flex-wrap: wrap; gap: 2px 12px; font-size: 12px; color: #526579; line-height: 20px; }
 .nfse-issued-note-context { font-size: 12px; color: #526579; line-height: 20px; }
 .nfse-issued-note-context > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .nfse-issued-model { color: #64748b; }
 .nfse-issued-note-summary { display: flex; align-items: center; justify-content: flex-end; gap: 10px; min-height: 20px; }
-.nfse-issued-note-summary .nfse-amount { text-align: right; font-size: 14px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.nfse-issued-note-summary .nfse-amount { text-align: right; font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .nfse-issued-note-actions { justify-content: flex-end; flex-wrap: nowrap; }
+.nfse-issued-operation-slot { flex: 0 0 38px; width: 38px; min-height: 38px; }
 .nfse-issued-note-detail summary { cursor: pointer; width: fit-content; }
 .nfse-issued-note-detail summary:focus-visible { outline: 2px solid #4169e1; outline-offset: 2px; }
 .nfse-issued-note-detail p { margin: 4px 0 0; max-width: 75ch; overflow-wrap: anywhere; }
 @media (max-width: 820px) {
-  .nfse-issued-note { grid-template-columns: minmax(0, 1fr) auto; gap: 10px 16px; }
+  .nfse-issued-list { grid-template-columns: minmax(0, 1fr) max-content; }
+  .nfse-issued-note { gap: 10px 16px; }
   .nfse-issued-note-context { grid-row: 2; grid-column: 1 / -1; }
   .nfse-issued-controls { grid-row: 1; grid-column: 2; }
 }
 @media (max-width: 600px) {
-  .nfse-issued-note { grid-template-columns: minmax(0, 1fr); }
+  .nfse-issued-list { grid-template-columns: minmax(0, 1fr); }
   .nfse-issued-note-context, .nfse-issued-controls { grid-column: auto; grid-row: auto; }
   .nfse-issued-recipient-name, .nfse-issued-note-context > span { white-space: normal; overflow-wrap: anywhere; }
   .nfse-issued-note-summary { justify-content: space-between; }
   .nfse-issued-note-actions { justify-content: flex-start; flex-wrap: wrap; }
+  .nfse-issued-controls > .nfse-issued-note-actions { display: grid; grid-template-columns: minmax(0, 1fr) 44px; align-items: start; }
+}
+@media (max-width: 760px) {
+  .nfse-issued-operation-slot { flex-basis: 44px; width: 44px; min-height: 44px; }
 }
