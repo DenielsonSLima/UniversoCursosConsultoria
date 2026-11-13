@@ -9,6 +9,7 @@ import {
 import { normalizeBanesePixPayload } from "../internal/pix-validation.ts";
 import { createBaneseBoletoCharge } from "./adapter.ts";
 import { normalizeBanesePixFromResponse } from "./adapter/boleto-pix-response.ts";
+import { readBaneseCreationEvidence } from "./adapter/creation-evidence.ts";
 import {
   creationFetch,
   makeBaneseTitleResponse,
@@ -204,6 +205,7 @@ Deno.test("producao preserva BolePix do POST quando confirmacao financeira nao r
   const common = makeBaneseTitleResponse(amount);
   const creationResponse = {
     ...common,
+    Id: "synthetic-original-post",
     BolePix: {
       brCodeEMV: buildBanesePixPayloadFixture("TXID-POST", amount),
       qrCode: `data:image/png;base64,${buildBanesePixImageFixture(1)}`,
@@ -227,6 +229,8 @@ Deno.test("producao preserva BolePix do POST quando confirmacao financeira nao r
     const diagnostic = (result.raw as any)?.pixDiagnostic;
     assert.equal(diagnostic?.source, "creation");
     assert.equal(diagnostic?.complete, true);
+    assert.equal((result.raw as any)?.creationResponse?.Id, "synthetic-original-post");
+    assert.equal((result.raw as any)?.response?.Id, undefined, "Confirmed GET stays distinct from the original POST.");
   } finally {
     globalThis.fetch = originalFetch;
   }
@@ -268,6 +272,42 @@ Deno.test("producao aceita GUI Banese minusculo e renderiza QR a partir do EMV o
   } finally {
     globalThis.fetch = originalFetch;
   }
+});
+
+Deno.test("POST aceito seguido de GET falho retém prova privada sem repetir POST ou expor dados no erro", async () => {
+  const originalFetch = globalThis.fetch;
+  const amount = 8.5;
+  const payload = buildBanesePixPayloadFixture("POST-ACK-ONLY", amount);
+  const original = makeBaneseTitleResponse(amount, BANESE_DOCUMENT_FIXTURE.dueDate, {
+    Id: "synthetic-original-post", QrCode: payload, Pagador: { NumeroCPFCNPJ: "synthetic-private-document" },
+  });
+  const { calls, fetcher } = creationFetch(original);
+  let durableAcknowledgements = 0;
+  globalThis.fetch = (input, init) => {
+    const url = input instanceof Request ? input.url : String(input);
+    const method = String(init?.method || "GET").toUpperCase();
+    if (url.includes("/boletos/") && method === "GET" && calls.some(call => call.method === "POST" && call.url.includes("/boletos"))) {
+      assert.equal(durableAcknowledgements, 1, "Accepted POST is persisted before starting its confirmation GET.");
+      return Promise.reject(new TypeError("fetch failed"));
+    }
+    return fetcher(input, init);
+  };
+  try {
+    await assert.rejects(createBaneseBoletoCharge({ ...reservedBoletoInput(false), environment: "production", amount,
+      financialTerms: { nominalAmount: amount, dueDate: BANESE_DOCUMENT_FIXTURE.dueDate },
+      onCreationEvidence: async evidence => { assert.equal(evidence.pixPayload, payload); durableAcknowledgements++; },
+    }), error => {
+      const evidence = readBaneseCreationEvidence(error);
+      assert.equal(evidence?.creationResponse.Id, "synthetic-original-post");
+      assert.equal(evidence?.pixPayload, payload);
+      assert.equal(evidence?.creationResponse.Pagador, undefined);
+      assert.equal(evidence?.request.NossoNumero, BANESE_DOCUMENT_FIXTURE.ourNumber);
+      assert(!JSON.stringify(error).includes("synthetic-original-post"));
+      assert(!JSON.stringify({ ...(error as object) }).includes(payload));
+      return true;
+    });
+    assert.equal(calls.filter(call => call.method === "POST" && call.url.includes("/boletos")).length, 1);
+  } finally { globalThis.fetch = originalFetch; }
 });
 
 Deno.test("producao aceita o campo QrCode textual com GUI Banese minuscula", async () => {

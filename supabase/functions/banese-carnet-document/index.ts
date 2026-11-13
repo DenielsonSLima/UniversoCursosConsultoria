@@ -29,6 +29,12 @@ import {
 import { buildBaneseCarnetDocumentInputs } from "./document-input.ts";
 import { loadBaneseAcademicBillingContext } from "../banese/internal/technical-billing-context.ts";
 import { readBaneseStudentIdentity } from "../_shared/banese-student-identity.ts";
+import {
+  hasScopedServiceDocumentReadAccess,
+  readServiceDocumentContext,
+  withServiceDocumentContext,
+} from "../banese/internal/service-document-context.ts";
+import { readServiceCarnetRows } from "./service-carnet.ts";
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -141,6 +147,7 @@ const authorize = async (
   payer: Record<string, unknown>,
   authenticatedUserId: string,
   poloId: string | null,
+  serviceReadAllowed: boolean | null = null,
 ) => {
   const studentOwner = await readBaneseStudentIdentity(admin, authenticatedUserId);
   if (
@@ -153,7 +160,8 @@ const authorize = async (
 
   try {
     const gestor = await requireGestorAtivo(req, admin);
-    requireFinanceDocumentReadAccess(gestor);
+    if (serviceReadAllowed === false) throw new Error("Acesso negado aos boletos de serviços.");
+    if (serviceReadAllowed === null) requireFinanceDocumentReadAccess(gestor);
     requireGestorForPolo(gestor, poloId);
   } catch {
     throw new HttpError(403, "Sem permissão para visualizar este carnê.");
@@ -264,6 +272,15 @@ Deno.serve(async (req: Request) => {
       throw new HttpError(404, "Parcela Banese não encontrada.");
     }
     const selected = selectedData as BaneseCarnetReceivableRow;
+    const serviceContext = await readServiceDocumentContext(admin, receivableId);
+    let serviceReadAllowed = false;
+    if (serviceContext) {
+      const caller = createClient(supabaseUrl, serviceRoleKey, {
+        global: { headers: { Authorization: `Bearer ${token}` } },
+        auth: { persistSession: false, autoRefreshToken: false },
+      });
+      serviceReadAllowed = await hasScopedServiceDocumentReadAccess(caller, receivableId);
+    }
 
     const { data: payerData, error: payerError } = await admin
       .from("parceiros")
@@ -277,12 +294,18 @@ Deno.serve(async (req: Request) => {
       throw new HttpError(404, "Parcela Banese não encontrada.");
     }
     const payer = payerData as Record<string, unknown>;
-    await authorize(req, admin, payer, authenticatedUserId, text(selected.polo_id) || null);
-    const scope = readBaneseCarnetScope(selected);
+    await authorize(req, admin, payer, authenticatedUserId, text(selected.polo_id) || null,
+      serviceContext ? serviceReadAllowed : null);
+    // A service remains isolated from academic enrollment groups.
+    const scope = serviceContext ? {
+      issuerId: text(selected.gateway_issuer_polo_id),
+      environment: selected.gateway_environment === "production" ? "production" : "sandbox",
+    } : readBaneseCarnetScope(selected);
 
     const [candidatesResult, issuerResult, credentialResult] = await Promise
       .all([
-        readRegisteredCarnetCandidates(admin, selected),
+        serviceContext ? readServiceCarnetRows(admin, selected, serviceContext, RECEIVABLE_SELECT)
+          : readRegisteredCarnetCandidates(admin, selected),
         admin.from("polos").select(
           "id,nome,cnpj,endereco,numero,complemento,bairro,cidade,estado,cep,logo_url",
         ).eq("id", scope.issuerId).maybeSingle(),
@@ -300,22 +323,23 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const rows = selectBaneseCarnetDocumentRows(
+    const rows = serviceContext ? candidatesResult : selectBaneseCarnetDocumentRows(
       selected,
       candidatesResult,
     );
-    const academicContext = await loadBaneseAcademicBillingContext(
+    const academicContext = serviceContext ? null : await loadBaneseAcademicBillingContext(
       admin,
       selected.matricula_id,
       selected.turma_id,
     );
-    const inputs = buildBaneseCarnetDocumentInputs(
+    const baseInputs = buildBaneseCarnetDocumentInputs(
       rows,
       payer,
       issuerResult.data as Record<string, unknown>,
       credentialResult.data.metadata,
       academicContext,
     );
+    const inputs = serviceContext ? baseInputs.map(input => withServiceDocumentContext(input, serviceContext)) : baseInputs;
 
     const projectHost = new URL(supabaseUrl).hostname;
     const isLegacyMatrizLogo = !issuerResult.data.logo_url ||
@@ -331,7 +355,8 @@ Deno.serve(async (req: Request) => {
       ),
     ]);
     const pdf = await buildBaneseCarnetPdf(inputs, {
-      maxItems: BANESE_CARNET_MAX_ITEMS,
+      ...(serviceContext ? { minItems: 1 as const } : {}),
+      maxItems: serviceContext ? 60 : BANESE_CARNET_MAX_ITEMS,
       branding: {
         companyLogoBase64: issuerLogo,
         bankLogoBase64: bankLogo,

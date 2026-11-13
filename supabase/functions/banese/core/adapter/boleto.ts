@@ -32,6 +32,7 @@ import {
   metadataFrom,
   onlyDigits,
   readResponseBody,
+  sanitizedBoletoSnapshot,
 } from "./utils.ts";
 import {
   normalizeBanesePixFromResponses,
@@ -39,6 +40,7 @@ import {
 } from "./boleto-pix-response.ts";
 import { recoverBaneseIncidentReservation } from "./boleto-incident-recovery.ts";
 import { classifyBaneseBoletoCollision } from "./boleto-collision.ts";
+import { type BaneseCreationEvidence, retainBaneseCreationEvidence } from "./creation-evidence.ts";
 
 export { queryBaneseBoleto } from "./boleto-query.ts";
 
@@ -301,6 +303,7 @@ export const createBaneseBoletoCharge = async (
       throw markRemotePaymentMayExist(error);
     }
 
+    let creationEvidence: BaneseCreationEvidence | null = null;
     try {
       const response = await fetch(endpoint, {
         method: "POST",
@@ -340,12 +343,18 @@ export const createBaneseBoletoCharge = async (
         throw error;
       }
 
+      creationEvidence = { request: sanitizedBoletoSnapshot(payload), creationResponse: sanitizedBoletoSnapshot(raw) };
+
       const creationPix = isProduction(input.environment)
         ? await normalizeBanesePixFromResponses(
           [{ source: "creation", raw }],
           input.amount,
         )
         : null;
+      if (creationPix?.pixPayload && creationPix.pixEncodedImage) creationEvidence = {
+        ...creationEvidence, pixPayload: creationPix.pixPayload, pixEncodedImage: creationPix.pixEncodedImage,
+      };
+      await input.onCreationEvidence?.(globalThis.structuredClone(creationEvidence));
       let postLookupRaw: unknown | undefined;
       if (
         creationPix && (!creationPix.pixPayload || !creationPix.pixEncodedImage)
@@ -386,6 +395,12 @@ export const createBaneseBoletoCharge = async (
         confirmedRaw,
         false,
       );
+      result.raw = {
+        ...(result.raw && typeof result.raw === "object" ? result.raw : {}),
+        // Confirmation GET may omit fields from the accepted POST. Keep its
+        // sanitized bank proof separate from the current response and Pix pair.
+        creationResponse: sanitizedBoletoSnapshot(raw),
+      };
       if (!isProduction(input.environment)) return result;
       const pix = creationPix?.pixPayload && creationPix.pixEncodedImage
         ? creationPix
@@ -407,7 +422,9 @@ export const createBaneseBoletoCharge = async (
         allowPendingBolePix: input.allowPendingBolePix === true,
       });
     } catch (error) {
-      throw markRemotePaymentMayExist(error);
+      const failure = markRemotePaymentMayExist(error);
+      if (creationEvidence) retainBaneseCreationEvidence(failure, creationEvidence);
+      throw failure;
     }
   }
   throw new BaneseAdapterError(

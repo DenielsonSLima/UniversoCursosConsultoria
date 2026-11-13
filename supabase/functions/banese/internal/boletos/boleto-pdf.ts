@@ -12,6 +12,7 @@ import {
   drawBaneseText,
 } from "../pdf/primitives.ts";
 import { drawBaneseBoletoSlip } from "./boleto-layout.ts";
+import { renderServiceInvoiceAppendices } from "../pdf/service-invoice-details.ts";
 
 export type BaneseBoletoPdfOptions = {
   branding?: BaneseDocumentBranding;
@@ -128,5 +129,6 @@ export const buildBaneseBoletoPdf = async (
     size: 6,
     color: BANESE_PDF_COLORS.gray,
   });
+  renderServiceInvoiceAppendices(pdf, fonts, [input]);
   return pdf.save();
 };

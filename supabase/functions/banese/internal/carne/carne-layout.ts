@@ -23,6 +23,10 @@ import {
   drawBaneseText as drawText,
 } from "../pdf/primitives.ts";
 import { presentBaneseFinancialTerms } from "../pdf/financial-terms.ts";
+import {
+  drawCarnetServiceInstructions,
+  drawCarnetServiceReceiptReference,
+} from "../pdf/service-invoice-details.ts";
 
 export const BANESE_CARNET_FIXED_LAYOUT_V1 = Object.freeze({
   itemsPerPage: 3 as const,
@@ -235,9 +239,17 @@ export const drawBaneseCarnetSlip = async (
       width: innerWidth,
       height: receiptHeight,
     },
-    "Recebido em caixa",
+    input.serviceInvoice ? "" : "Recebido em caixa",
     "",
   );
+  if (input.serviceInvoice) {
+    drawCarnetServiceReceiptReference(page, fonts, input, {
+      x: innerX + 3,
+      y: receiptBottom + 18,
+      width: innerWidth - 6,
+      height: receiptHeight - 21,
+    });
+  }
   page.drawLine({
     start: { x: innerX + 10, y: receiptBottom + 13 },
     end: { x: innerX + innerWidth - 10, y: receiptBottom + 13 },
@@ -431,22 +443,29 @@ export const drawBaneseCarnetSlip = async (
   const instructions = input.instructions?.length
     ? input.instructions
     : ["Nao receber apos a data limite indicada pelo banco."];
-  instructions.slice(0, 4).forEach((instruction, index) => {
-    const isCashierWarning = /CAIXA/i.test(instruction);
-    drawText(
-      page,
-      fonts,
-      instruction,
-      bodyX + 7,
-      termsY - 17 - index * 7,
-      {
-        size: isCashierWarning ? 5.6 : 5.2,
-        bold: isCashierWarning,
-        color: isCashierWarning ? COLORS.sandbox : COLORS.black,
-        maxWidth: bodyWidth - pixWidth - 14,
-      },
-    );
-  });
+  if (input.serviceInvoice) {
+    drawCarnetServiceInstructions(page, fonts, input, {
+      x: bodyX + 7,
+      y: middleY + 3,
+      width: termsWidth - 14,
+      height: termsY - 15 - middleY,
+    });
+  } else {instructions.slice(0, 4).forEach((instruction, index) => {
+      const isCashierWarning = /CAIXA/i.test(instruction);
+      drawText(
+        page,
+        fonts,
+        instruction,
+        bodyX + 7,
+        termsY - 17 - index * 7,
+        {
+          size: isCashierWarning ? 5.6 : 5.2,
+          bold: isCashierWarning,
+          color: isCashierWarning ? COLORS.sandbox : COLORS.black,
+          maxWidth: bodyWidth - pixWidth - 14,
+        },
+      );
+    });}
   drawPixPanel(page, fonts, input, pixQr, {
     x: bodyX + bodyWidth - pixWidth,
     y: middleY,

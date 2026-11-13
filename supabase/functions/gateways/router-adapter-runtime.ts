@@ -1,4 +1,5 @@
 import type { BaneseFinancialTermsInput } from "../banese/internal/financial-terms.ts";
+import type { BaneseCreationEvidence } from "../banese/core/adapter/creation-evidence.ts";
 
 export type GatewayEnvironment = "sandbox" | "production";
 export type GatewayPaymentMethod = "PIX" | "BOLETO" | "CREDIT_CARD";
@@ -32,6 +33,7 @@ export type GatewayChargeInput = {
   issuer?: GatewayIssuer | null;
   financialTerms?: BaneseFinancialTermsInput | null;
   allowPendingBolePix?: boolean;
+  onCreationEvidence?: (evidence: BaneseCreationEvidence) => Promise<void>;
 };
 
 export type GatewayChargeResult = {

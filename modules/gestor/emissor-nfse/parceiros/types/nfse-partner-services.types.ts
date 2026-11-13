@@ -1,4 +1,11 @@
 import type { NfseOperationReference } from '../../emissao/nfse-operation.contract';
+import type { OtherCreditPlanPreview } from '../../../financeiro/outros-creditos/other-credit-plan.types';
+export interface NfseServiceFinancialPlan {
+  installments: number; firstDueDate: string; categoryId: string; monthlyInterestPercent: number; penaltyPercent: number;
+  discountType: 'FIXO' | 'PERCENTUAL'; discountValue: number; discountDaysBeforeDue: number;
+  periodicity: 'MENSAL_CALENDARIO' | 'DIAS_CORRIDOS_30'; issueBolePix: boolean; previewToken?: string;
+}
+export interface NfseServiceFinancialPreview { financialPlan: NfseServiceFinancialPlan; preview: OtherCreditPlanPreview; token: string }
 export interface NfseServicePartner {
   id: string;
   name: string;
@@ -21,10 +28,10 @@ export interface NfsePartnerServiceOptions {
   partners: NfseServicePartner[];
   categories: { id: string; name: string }[];
   existingReceivables: NfseExistingReceivable[];
-  capabilities: { canGenerateReceivable: boolean };
+  capabilities: { canGenerateReceivable: boolean; canLinkExistingReceivable: boolean; canIssueBolePix: boolean };
 }
 
-export type NfseReceivableAction = 'NONE' | 'CREATED' | 'LINKED';
+export type NfseReceivableAction = 'NONE' | 'PENDING' | 'CREATED' | 'LINKED';
 
 export interface NfsePartnerServiceRow extends NfseOperationReference {
   id: string;
@@ -65,6 +72,7 @@ export interface NfsePartnerServiceInput {
   existingReceivableId: string | null;
   dueDate: string | null;
   categoryId: string | null;
+  financialPlan?: NfseServiceFinancialPlan;
 }
 
 export interface NfsePartnerServiceSaved {

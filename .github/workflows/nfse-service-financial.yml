@@ -1,0 +1,146 @@
+name: NFS-e service receivables and BolePix
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - 'modules/gestor/emissor-nfse/parceiros/**'
+      - 'modules/gestor/financeiro/receber/servicos/**'
+      - 'supabase/migrations/*nfse_service_*'
+      - 'supabase/functions/nfse-service-bolepix-worker/**'
+      - 'supabase/functions/banese/**'
+      - 'supabase/functions/banese-boleto-document/**'
+      - 'supabase/functions/banese-carnet-document/**'
+      - 'supabase/functions/gestor-other-credit-payment/**'
+      - 'supabase/functions/gateways/router-adapter-runtime.ts'
+      - 'supabase/functions/gateways/boleto/banese.ts'
+      - 'supabase/tests/nfse_service_*'
+      - 'supabase/tests/nfse-service-bolepix*'
+      - '.github/workflows/nfse-service-financial.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  service-financial:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: synthetic-test-only
+          POSTGRES_DB: nfse_service_receivables_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '>=24.22.1 <25'
+          cache: npm
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Install application and isolated synthetic test dependencies
+        run: |
+          npm ci --ignore-scripts
+          npm install --prefix "$RUNNER_TEMP/nfse-service-runtime" --no-save --package-lock=false --ignore-scripts jsdom@26.1.0 @electric-sql/pglite@0.3.14 pg@8.16.3
+      - name: Verify canonical plans, authorization, isolation and durable bank queue
+        run: node --test supabase/tests/nfse_service_receivables.isolated.test.mjs supabase/tests/nfse_service_receivables.integration.test.mjs supabase/tests/nfse_service_financial_plan.isolated.test.mjs supabase/tests/nfse_service_bolepix.isolated.test.mjs supabase/tests/nfse_service_cancellation.isolated.test.mjs
+        env:
+          NFSE_TEST_PGLITE_MODULE: ${{ runner.temp }}/nfse-service-runtime/node_modules/@electric-sql/pglite/dist/index.js
+      - name: Verify PostgreSQL concurrent authorization and payment locks
+        run: node --test supabase/tests/nfse_service_receivables.concurrent.test.mjs
+        env:
+          NFSE_PG_MODULE: ${{ runner.temp }}/nfse-service-runtime/node_modules/pg/lib/index.js
+          NFSE_TEST_DATABASE_URL: postgresql://postgres:synthetic-test-only@localhost:5432/nfse_service_receivables_test
+      - name: Verify service wizard, canonical totals, automatic updates and partial receipt
+        run: |
+          mkdir -p tmp/nfse-service-contracts
+          for source in modules/gestor/emissor-nfse/parceiros/services/nfse-partner-services.contract.test.ts modules/gestor/emissor-nfse/parceiros/services/nfse-service-financial-plan.contract.test.ts modules/gestor/financeiro/receber/servicos/servicos-receber.contract.test.ts; do
+            name=$(basename "$source" .ts)
+            node_modules/.bin/esbuild "$source" --bundle --packages=external --platform=node --format=esm --outfile="tmp/nfse-service-contracts/$name.mjs"
+          done
+          node --test tmp/nfse-service-contracts/*.mjs modules/gestor/emissor-nfse/parceiros/NfsePartnerServiceModal.interaction.test.mjs modules/gestor/financeiro/receber/servicos/ServicosReceberTab.interaction.test.mjs
+        env:
+          NFSE_TEST_JSDOM_MODULE: ${{ runner.temp }}/nfse-service-runtime/node_modules/jsdom/lib/api.js
+      - name: Verify bank evidence, GET-only recovery and existing Banese contracts
+        run: >-
+          deno test --no-config --node-modules-dir=none --deny-net --allow-env --allow-read
+          supabase/functions/nfse-service-bolepix-worker/worker.test.ts
+          supabase/functions/nfse-service-bolepix-worker/cancellation.test.ts
+          supabase/functions/nfse-service-bolepix-worker/creation-evidence.test.ts
+          supabase/functions/banese/core/adapter-create-pix.test.ts
+          supabase/functions/banese/core/adapter-post-fence.test.ts
+          supabase/functions/banese/core/adapter-pending-bolepix.test.ts
+          supabase/functions/banese/core/adapter-financial-terms.test.ts
+          supabase/functions/gestor-other-credit-payment/payment-reader.test.ts
+          supabase/functions/gestor-other-credit-payment/payment-check.test.ts
+      - name: Verify authenticated service documents and native PDFs
+        run: >-
+          deno test --no-config --node-modules-dir=none --deny-net --allow-env --allow-read
+          supabase/functions/banese/internal/service-document-context.test.ts
+          supabase/functions/banese-carnet-document/service-carnet.test.ts
+          supabase/functions/banese-carnet-document/document-policy.test.ts
+          supabase/functions/banese/internal/types.test.ts
+          supabase/functions/banese/internal/service-invoice.test.ts
+          supabase/functions/banese/internal/pdf/service-invoice-details.test.ts
+          supabase/functions/banese/internal/boletos/boleto-pdf.test.ts
+          supabase/functions/banese/internal/carne/carne-pdf.test.ts
+      - name: Type check published function entrypoints
+        run: >-
+          deno check --no-config --node-modules-dir=none supabase/functions/nfse-service-bolepix-worker/index.ts
+          supabase/functions/banese-boleto-document/index.ts
+          supabase/functions/banese-carnet-document/index.ts
+          supabase/functions/gestor-other-credit-payment/index.ts
+  durable-bank-concurrency:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: synthetic-test-only
+          POSTGRES_DB: nfse_service_bolepix_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '>=24.22.1 <25'
+      - name: Install isolated PostgreSQL driver
+        run: npm install --prefix "$RUNNER_TEMP/nfse-service-pg" --no-save --package-lock=false --ignore-scripts pg@8.16.3
+      - name: Verify concurrent leases and the persistent bank intent
+        run: node supabase/tests/nfse-service-bolepix-postgres-concurrency.mjs
+        env:
+          NFSE_SERVICE_PG_MODULE: ${{ runner.temp }}/nfse-service-pg/node_modules/pg/lib/index.js
+          NFSE_SERVICE_TEST_DATABASE_URL: postgresql://postgres:synthetic-test-only@localhost:5432/nfse_service_bolepix_test
+  cancellation-concurrency:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: synthetic-test-only
+          POSTGRES_DB: nfse_service_cancellation_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '>=24.22.1 <25'
+      - name: Install isolated PostgreSQL driver
+        run: npm install --prefix "$RUNNER_TEMP/nfse-service-pg" --no-save --package-lock=false --ignore-scripts pg@8.16.3
+      - name: Verify cancellation races against bank return and actual payment
+        run: node --test supabase/tests/nfse_service_cancellation.concurrent.test.mjs
+        env:
+          NFSE_PG_MODULE: ${{ runner.temp }}/nfse-service-pg/node_modules/pg/lib/index.js
+          NFSE_TEST_DATABASE_URL: postgresql://postgres:synthetic-test-only@localhost:5432/nfse_service_cancellation_test

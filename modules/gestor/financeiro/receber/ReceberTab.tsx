@@ -1,7 +1,8 @@
 // File: modules/gestor/financeiro/receber/ReceberTab.tsx
 
 import React, { useEffect, useState } from 'react';
-import { Award, GraduationCap, Laptop, Landmark } from 'lucide-react';
+import { Award, GraduationCap, Laptop, Landmark, Briefcase } from 'lucide-react';
+import ServicosReceberTab from './servicos/ServicosReceberTab';
 import LivresReceberTab from './livres/LivresReceberTab';
 import EspecializacaoReceberTab from './especializacao/EspecializacaoReceberTab';
 import EadReceberTab from './ead/EadReceberTab';
@@ -9,7 +10,7 @@ import TecnicoReceberTab from './tecnico/TecnicoReceberTab';
 import FinancialUnderlineTabs from '../components/FinancialUnderlineTabs';
 import { ReceberActionsContext } from './components/ReceberActions';
 
-type CourseType = 'livres' | 'especializacao' | 'ead' | 'tecnico';
+type CourseType = 'livres' | 'especializacao' | 'ead' | 'tecnico' | 'servicos';
 
 interface ReceberTabProps {
   poloId?: string | null;
@@ -31,6 +32,7 @@ const ReceberTab: React.FC<ReceberTabProps> = ({ poloId, isMatriz }) => {
     { id: 'livres' as const, label: 'Cursos Livres', icon: <Award size={14} /> },
     { id: 'especializacao' as const, label: 'Especialização', icon: <GraduationCap size={14} /> },
     ...(isMatriz ? [{ id: 'ead' as const, label: 'EAD', icon: <Laptop size={14} /> }] : []),
+    { id: 'servicos', label: 'Serviços', icon: <Briefcase size={14} /> },
   ];
 
   const renderSubTab = () => {
@@ -43,6 +45,8 @@ const ReceberTab: React.FC<ReceberTabProps> = ({ poloId, isMatriz }) => {
         return isMatriz ? <EadReceberTab poloId={poloId} /> : null;
       case 'tecnico':
         return <TecnicoReceberTab poloId={poloId} />;
+      case 'servicos':
+        return <ServicosReceberTab poloId={poloId} />;
       default:
         return null;
     }

@@ -1,4 +1,5 @@
 import { nfseServicePeriodPreview } from '../nfse-service-period';
+import { parseNfseServiceFinancialPlan } from './nfse-service-financial-plan.contract';
 import { operationReference } from '../../emissao/nfse-operation.contract';
 import { NfseContractError } from '../../services/nfse.errors';
 import { assertUniqueIds, boolean, integer, list, money, oneOf, record, string } from '../../services/nfse.validation';
@@ -28,8 +29,8 @@ const amount = (value: unknown) => {
 };
 const financialResult = (row: Record<string, unknown>) => {
   const receivableId = nullableUuid(row.receivableId);
-  const receivableAction = oneOf(row.receivableAction, ['NONE', 'CREATED', 'LINKED']);
-  if ((receivableAction === 'NONE') !== (receivableId === null)) throw new NfseContractError();
+  const receivableAction = oneOf(row.receivableAction, ['NONE', 'PENDING', 'CREATED', 'LINKED']);
+  if (['NONE', 'PENDING'].includes(receivableAction) !== (receivableId === null)) throw new NfseContractError();
   return { receivableId, receivableAction };
 };
 
@@ -48,7 +49,9 @@ export function parseNfsePartnerServiceOptions(value: unknown): NfsePartnerServi
   });
   assertUniqueIds(partners); assertUniqueIds(categories); assertUniqueIds(existingReceivables);
   return { partners, categories, existingReceivables,
-    capabilities: { canGenerateReceivable: boolean(record(row.capabilities).canGenerateReceivable) } };
+    capabilities: { canGenerateReceivable: boolean(record(row.capabilities).canGenerateReceivable),
+      canLinkExistingReceivable: boolean(record(row.capabilities).canLinkExistingReceivable),
+      canIssueBolePix: boolean(record(row.capabilities).canIssueBolePix) } };
 }
 export function parseNfseServicePartnerSearch(value: unknown) {
   const payload = record(value), rows = list(payload.rows, parseNfseServicePartner);
@@ -85,12 +88,16 @@ export function nfsePartnerServiceDefinition(input: NfsePartnerServiceInput) {
   const existingReceivableId = nullableUuid(input.existingReceivableId);
   const dueDate = input.dueDate === null ? null : date(input.dueDate);
   const categoryId = nullableUuid(input.categoryId);
-  if (!generateReceivable && (existingReceivableId || dueDate || categoryId)) throw new NfseContractError();
+  const financialPlan = input.financialPlan ? parseNfseServiceFinancialPlan(input.financialPlan) : undefined;
+  if (!generateReceivable) throw new NfseContractError();
   if (generateReceivable && (existingReceivableId ? dueDate !== null || categoryId !== null : !dueDate || !categoryId)) throw new NfseContractError();
+  if (financialPlan && (existingReceivableId || !financialPlan.previewToken || financialPlan.firstDueDate !== dueDate
+    || financialPlan.categoryId !== categoryId)) throw new NfseContractError();
   return { partnerId: partnerServiceUuid(input.partnerId), modelId: partnerServiceUuid(input.modelId),
     modelVersion: integer(input.modelVersion, 1), serviceDate: date(input.serviceDate), serviceDescription,
     ...(hasPeriod ? { servicePeriodStart: input.servicePeriodStart, servicePeriodEnd: input.servicePeriodEnd } : {}),
-    amount: input.amount, generateReceivable, existingReceivableId, dueDate, categoryId };
+    amount: input.amount, generateReceivable, existingReceivableId, dueDate, categoryId,
+    ...(financialPlan ? { financialPlan } : {}) };
 }
 
 export function parseNfsePartnerServiceSaved(value: unknown): NfsePartnerServiceSaved {

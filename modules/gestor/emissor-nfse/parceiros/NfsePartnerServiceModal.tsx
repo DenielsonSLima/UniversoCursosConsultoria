@@ -1,7 +1,7 @@
 import { nfseModelsForType } from '../modelos/nfse-model-type';
 import React, { useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Save, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Save, X } from 'lucide-react';
 import InstitutionalSelect from '../../../shared/components/InstitutionalSelect';
 import { sanitizeCurrencyInput } from '../../../shared/utils/currency-input';
 import type { NfseScope } from '../types/nfse.types';
@@ -17,6 +17,9 @@ import type { NfsePartnerServiceInput } from './types/nfse-partner-services.type
 import { useNfseServicePartnerSearch } from './hooks/useNfseServicePartnerSearch';
 
 import { NFSE_SERVICE_PERIOD_TOKEN, nfseServicePeriodPreview } from './nfse-service-period';
+import { useNfsePartnerFinancialPlan } from './hooks/useNfsePartnerFinancialPlan';
+import NfseServicePlanPreview from './NfseServicePlanPreview';
+import { formatNfseMoney } from '../components/nfse.presentation';
 
 interface Props { scope: NfseScope; onClose: () => void; onSaved: (message: string) => void }
 
@@ -25,7 +28,6 @@ export default function NfsePartnerServiceModal({ scope, onClose, onSaved }: Pro
   const optionsQuery = useNfsePartnerServiceOptions(scope);
   const modelsQuery = useNfseModels(scope);
   const save = useSaveNfsePartnerService(scope);
-  const { overlayRef, dialogRef } = useNfsePartnerServiceDialog(onClose, save.isPending);
   const [partnerId, setPartnerId] = useState('');
   const partners = useNfseServicePartnerSearch(scope, partnerId);
   const [modelId, setModelId] = useState('');
@@ -37,11 +39,9 @@ export default function NfsePartnerServiceModal({ scope, onClose, onSaved }: Pro
     return today.startsWith(`${scope.month}-`) ? today : '';
   });
   const [amountInput, setAmountInput] = useState('');
-  const [generate, setGenerate] = useState(false);
-  const [mode, setMode] = useState<NfsePartnerFinancialMode>('');
+  const [mode, setMode] = useState<NfsePartnerFinancialMode>('CREATE');
   const [existingId, setExistingId] = useState('');
-  const [dueDate, setDueDate] = useState('');
-  const [categoryId, setCategoryId] = useState('');
+  const [step, setStep] = useState(0);
   const request = useRef<{ fingerprint: string; id: string } | null>(null);
   const options = optionsQuery.error ? undefined : optionsQuery.data;
   const models = modelsQuery.error ? [] : nfseModelsForType(modelsQuery.data?.rows || [], 'SERVICO');
@@ -49,49 +49,68 @@ export default function NfsePartnerServiceModal({ scope, onClose, onSaved }: Pro
   const selectedPartner = partners.rows.find((partner) => partner.id === partnerId);
   const partnerLabel = (partner: NonNullable<typeof selectedPartner>) => `${partner.tradeName || partner.name} · ${partner.document || partner.type}`;
   const receivables = options?.existingReceivables.filter((item) => item.partnerId === partnerId) || [];
-  const linked = generate && mode === 'LINK';
+  const linked = mode === 'LINK';
   const selectedReceivable = linked ? receivables.find((item) => item.id === existingId) : undefined;
   const amount = linked ? selectedReceivable?.amount || '' : nfsePartnerInputAmount(amountInput);
   const period = nfseServicePeriodPreview(serviceDescription, servicePeriodStart, servicePeriodEnd);
+  const finance = useNfsePartnerFinancialPlan(scope, partnerId, amount, period.text);
+  const busy = save.isPending || finance.preview.isPending;
+  const { overlayRef, dialogRef } = useNfsePartnerServiceDialog(onClose, busy);
+  const advancing = useRef(false);
   const requiresPeriod = period.requiresPeriod || Boolean(selectedModel?.serviceDescription.includes(NFSE_SERVICE_PERIOD_TOKEN));
   const periodReady = !requiresPeriod || period.valid;
   const preview = useNfseModelDescriptionPreview(scope, period.unknownVariables || !periodReady || period.tooLong ? '' : period.text);
   const currentMonthDate = Boolean(serviceDate && serviceDate.startsWith(`${scope.month}-`));
-  const financeReady = !generate || Boolean(options?.capabilities.canGenerateReceivable
-    && (mode === 'LINK' ? selectedReceivable : mode === 'CREATE' && dueDate && options.categories.some((item) => item.id === categoryId)));
-  const canSave = Boolean(selectedPartner && selectedModel && preview.ready && !period.unknownVariables && periodReady && !period.tooLong && currentMonthDate
-    && /^(0|[1-9]\d*)\.\d{2}$/.test(amount) && amount !== '0.00' && financeReady
-    && !optionsQuery.isFetching && !modelsQuery.isFetching && !partners.loading && !partners.error && !save.isPending);
+  const financeReady = Boolean(options?.capabilities.canGenerateReceivable
+    && (linked ? options.capabilities.canLinkExistingReceivable && selectedReceivable
+      : finance.ready && options.categories.some((item) => item.id === finance.input.categoryId)
+        && (!finance.input.issueBolePix || options.capabilities.canIssueBolePix)));
+  const detailsReady = Boolean(selectedPartner && selectedModel && preview.ready && !period.unknownVariables && periodReady && !period.tooLong && currentMonthDate
+    && /^(0|[1-9]\d*)\.\d{2}$/.test(amount) && amount !== '0.00'
+    && !optionsQuery.isFetching && !modelsQuery.isFetching && !partners.loading && !partners.error);
+  const canSave = detailsReady && financeReady && (linked || Boolean(finance.current)) && !busy && step === 2;
+  const next = async () => {
+    if (busy || advancing.current || !detailsReady) return;
+    if (step === 0) { setStep(1); return; }
+    if (step === 1 && financeReady) {
+      advancing.current = true;
+      try { if (!linked) await finance.prepare(); setStep(2); } catch { /* Keep the form and display the canonical error. */ }
+      finally { advancing.current = false; }
+    }
+  };
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
+    if (step !== 2) { await next(); return; }
     if (!canSave || !selectedModel) return;
     const fields: Omit<NfsePartnerServiceInput, 'requestId'> = {
       partnerId, modelId, modelVersion: selectedModel.version, serviceDate, serviceDescription: serviceDescription.trim(), amount,
       ...(requiresPeriod ? { servicePeriodStart, servicePeriodEnd } : {}),
-      generateReceivable: generate, existingReceivableId: linked ? existingId : null,
-      dueDate: generate && mode === 'CREATE' ? dueDate : null,
-      categoryId: generate && mode === 'CREATE' ? categoryId : null,
+      generateReceivable: true, existingReceivableId: linked ? existingId : null,
+      dueDate: !linked ? finance.current!.financialPlan.firstDueDate : null,
+      categoryId: !linked ? finance.current!.financialPlan.categoryId : null,
+      ...(!linked ? { financialPlan: finance.current!.financialPlan } : {}),
     };
     const fingerprint = JSON.stringify({ scope, fields });
     if (request.current?.fingerprint !== fingerprint) request.current = { fingerprint, id: crypto.randomUUID() };
     try {
       const { result } = await save.mutateAsync({ ...fields, requestId: request.current.id });
-      onSaved(result.receivableAction === 'CREATED' ? 'Serviço salvo e conta a receber criada.'
-        : result.receivableAction === 'LINKED' ? 'Serviço salvo e conta a receber vinculada.' : 'Serviço adicionado à preparação.');
+      onSaved(result.receivableAction === 'LINKED' ? 'Serviço salvo com a conta existente selecionada. O vínculo fiscal será confirmado após a autorização.'
+        : `Serviço salvo. Os recebíveis serão gerados após a NFS-e ser autorizada, em Financeiro > A Receber > Serviços.${finance.current?.financialPlan.issueBolePix ? ' O BolePix será processado automaticamente depois da autorização.' : ''}`);
     } catch { /* Keep the request ID for a safe retry. */ }
   };
-  const submitLabel = generate ? (mode === 'LINK' ? 'Salvar e vincular conta' : 'Salvar e gerar conta') : 'Adicionar serviço';
+  const submitLabel = 'Confirmar serviço';
 
   if (typeof document === 'undefined') return null;
   return createPortal(<div ref={overlayRef} className="nfse-portal nfse-partner-modal-overlay" role="presentation"
-    onMouseDown={(event) => { if (event.target === event.currentTarget && !save.isPending) onClose(); }}>
-    <form ref={dialogRef} className="nfse-partner-modal" role="dialog" aria-modal="true" aria-labelledby={titleId} aria-busy={save.isPending} tabIndex={-1} onSubmit={(event) => void submit(event)}>
+    onMouseDown={(event) => { if (event.target === event.currentTarget && !busy) onClose(); }}>
+    <form ref={dialogRef} className="nfse-partner-modal" role="dialog" aria-modal="true" aria-labelledby={titleId} aria-busy={busy} tabIndex={-1} onSubmit={(event) => void submit(event)}>
       <header className="nfse-section-heading"><div><h2 id={titleId}>Adicionar serviço</h2><p>{formatNfseMonth(scope.month)}</p></div>
-        <button type="button" className="nfse-button nfse-button-secondary" disabled={save.isPending} aria-label="Fechar serviço" onClick={onClose}><X size={16} /></button>
+        <button type="button" className="nfse-button nfse-button-secondary" disabled={busy} aria-label="Fechar serviço" onClick={onClose}><X size={16} /></button>
       </header>
       <div className="nfse-partner-modal-body">
-        <fieldset disabled={save.isPending} className="nfse-partner-fieldset">
+        <ol aria-label="Etapas do serviço" className="mb-4 flex flex-wrap gap-3 text-xs text-slate-500">{['Dados do serviço', 'Financeiro', 'Revisão'].map((label, index) => <li key={label} aria-current={step === index ? 'step' : undefined} className={step === index ? 'font-medium text-[#001a33]' : ''}>{index + 1}. {label}</li>)}</ol>
+        <fieldset hidden={step !== 0} disabled={busy || step !== 0} className="nfse-partner-fieldset">
           <section className="nfse-partner-form-section nfse-partner-form-grid">
             <div className="nfse-field nfse-wide"><label htmlFor="nfse-service-partner">Aluno ou parceiro</label>
               <InstitutionalSelect id="nfse-service-partner" ariaLabel="Aluno ou parceiro" required value={partnerId}
@@ -124,17 +143,27 @@ export default function NfsePartnerServiceModal({ scope, onClose, onSaved }: Pro
             {period.unknownVariables ? <small className="nfse-partner-error nfse-wide" role="alert">Neste serviço, use somente a variável {'{{periodo}}'}. As variáveis acadêmicas são exclusivas de alunos.</small>
               : <div className="nfse-wide"><NfseDescriptionPreview preview={preview} /></div>}
           </section>
-          <NfsePartnerFinancialFields generate={generate} onGenerate={(value) => { setGenerate(value); if (!value) { setMode(''); setExistingId(''); } }}
-            mode={mode} onMode={(value) => { setMode(value); setExistingId(''); }} existingId={existingId} onExistingId={setExistingId}
-            dueDate={dueDate} onDueDate={setDueDate} categoryId={categoryId} onCategoryId={setCategoryId} options={options} receivables={receivables} />
         </fieldset>
+        <fieldset hidden={step !== 1} disabled={busy || step !== 1} className="nfse-partner-fieldset">
+          <NfsePartnerFinancialFields mode={mode} onMode={(value) => { setMode(value); setExistingId(''); }} existingId={existingId} onExistingId={setExistingId}
+            form={finance.form} onChange={finance.change} options={options} receivables={receivables} />
+        </fieldset>
+        {step === 2 && <>
+          <section className="nfse-partner-form-section text-sm"><p><strong>{selectedPartner ? partnerLabel(selectedPartner) : ''}</strong></p><p>{selectedModel?.name} · {formatNfseMoney(amount)}</p><p>{period.text}</p>
+            <p className="nfse-inline-help mt-3">{linked ? 'Conta existente selecionada para vínculo fiscal após a autorização.' : finance.current?.financialPlan.issueBolePix ? 'Recebíveis e BolePix após a NFS-e ser autorizada.' : 'Somente contas a receber, após a NFS-e ser autorizada.'}</p></section>
+          {!linked && finance.current && <NfseServicePlanPreview preview={finance.current.preview} />}
+          {linked && selectedReceivable && <p className="nfse-partner-form-section text-sm">{selectedReceivable.description} · {formatNfseMoney(selectedReceivable.amount)}</p>}
+        </>}
+        {finance.preview.error && <p role="alert" className="nfse-partner-error nfse-partner-form-section">{finance.preview.error.message}</p>}
         {save.error && <div className="nfse-partner-error nfse-partner-form-section" role="alert"><span>{save.error.message}</span>
           <button type="button" className="nfse-button nfse-button-secondary" disabled={optionsQuery.isFetching || modelsQuery.isFetching}
             onClick={() => { void optionsQuery.refetch(); void modelsQuery.refetch(); }}>Atualizar opções</button>
         </div>}
       </div>
-      <footer className="nfse-footer"><button type="button" className="nfse-button nfse-button-secondary" disabled={save.isPending} onClick={onClose}>Cancelar</button>
-        <button type="submit" className="nfse-button nfse-button-primary" disabled={!canSave}><Save size={15} />{save.isPending ? 'Salvando…' : submitLabel}</button>
+      <footer className="nfse-footer"><button type="button" className="nfse-button nfse-button-secondary" disabled={busy} onClick={onClose}>Cancelar</button>
+        <div className="flex gap-2">{step > 0 && <button type="button" className="nfse-button nfse-button-secondary" disabled={busy} onClick={() => setStep(value => value - 1)}><ArrowLeft size={15} />Voltar</button>}
+          {step < 2 ? <button type="button" className="nfse-button nfse-button-primary" disabled={busy || !detailsReady || (step === 1 && !financeReady)} onClick={() => void next()}><ArrowRight size={15} />{finance.preview.isPending ? 'Conferindo parcelas…' : step === 0 ? 'Financeiro' : 'Revisar'}</button>
+            : <button type="submit" className="nfse-button nfse-button-primary" disabled={!canSave}><Save size={15} />{save.isPending ? 'Salvando…' : submitLabel}</button>}</div>
       </footer>
     </form>
   </div>, document.body);

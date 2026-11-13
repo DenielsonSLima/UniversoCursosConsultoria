@@ -54,6 +54,16 @@ for (const endpoint of endpoints) {
 }
 
 for (const endpoint of endpoints.slice(1)) {
+  test(`${endpoint}: indisponibilidade da referência fiscal falha fechada antes do PDF`, async () => {
+    const fixture = await identityHandlerFixture(endpoint, { serviceRpcError: true });
+    const response = await fixture.request();
+    assert.equal(response.status, 422);
+    assert.equal(fixture.trace.pdf, 0);
+    assert.equal(fixture.trace.recovery, 0);
+    assert.equal(fixture.trace.rpcs.length, 1);
+    assert(!JSON.stringify(await response.json()).includes('synthetic service projection unavailable'));
+  });
+
   test(`${endpoint}: gestor preserva acesso autorizado e conferência de polo`, async () => {
     const fixture = await identityHandlerFixture(endpoint, { authUserId: OTHER_UID, gestor: true });
     const response = await fixture.request();

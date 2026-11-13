@@ -12,28 +12,28 @@ const id = (value: number) => `00000000-0000-0000-0000-${String(value).padStart(
 const scope: NfseScope = { contextKey: id(1), poloId: id(2), month: '2026-11', environment: 'HOMOLOGACAO' };
 const input: NfsePartnerServiceInput = { requestId: id(3), partnerId: id(4), modelId: id(5), modelVersion: 2,
   serviceDate: '2026-11-08', serviceDescription: 'Serviço prestado ao parceiro.', amount: '1234.56',
-  generateReceivable: false, existingReceivableId: null, dueDate: null, categoryId: null };
+  generateReceivable: true, existingReceivableId: null, dueDate: '2026-11-30', categoryId: id(7) };
 const envelope = (data: unknown, echo = scope) => ({ version: 1, scope: echo, data });
 
-test('partner preparation transports an explicit no-finance definition without incidental fields', async () => {
+test('partner preparation transports its mandatory receivable plan without creating a title before authorization', async () => {
   const service = createNfsePartnerServices(async (name, args) => {
     assert.equal(name, 'save_nfse_partner_service_secure');
     assert.deepEqual(args, { p_context_key: scope.contextKey, p_polo_id: scope.poloId, p_environment: scope.environment,
       p_month: scope.month, p_request_id: input.requestId, p_definition: nfsePartnerServiceDefinition(input) });
-    return envelope({ id: id(6), receivableId: null, receivableAction: 'NONE', message: 'Salvo.' });
+    return envelope({ id: id(6), receivableId: null, receivableAction: 'PENDING', message: 'Salvo.' });
   });
   const result = await service.save(scope, { ...input, taxTotal: '999.99', issue: true } as NfsePartnerServiceInput);
-  assert.equal(result.receivableAction, 'NONE');
+  assert.equal(result.receivableAction, 'PENDING');
 });
 
 test('new and existing receivables use distinct explicit financial fields and confirmed results', async () => {
   const create = { ...input, generateReceivable: true, dueDate: '2026-11-30', categoryId: id(7) };
-  const link = { ...input, generateReceivable: true, existingReceivableId: id(8) };
+  const link = { ...input, generateReceivable: true, existingReceivableId: id(8), dueDate: null, categoryId: null };
   assert.equal(nfsePartnerServiceDefinition(create).categoryId, id(7));
   assert.equal(nfsePartnerServiceDefinition(link).amount, '1234.56');
   const linked = createNfsePartnerServices(async () => envelope({ id: id(6), receivableId: id(8), receivableAction: 'LINKED', message: 'Vinculado.' }));
   assert.equal((await linked.save(scope, link)).receivableId, id(8));
-  const incorrect = createNfsePartnerServices(async () => envelope({ id: id(6), receivableId: null, receivableAction: 'NONE', message: 'Salvo.' }));
+  const incorrect = createNfsePartnerServices(async () => envelope({ id: id(6), receivableId: id(8), receivableAction: 'CREATED', message: 'Salvo.' }));
   await assert.rejects(incorrect.save(scope, create), NfseContractError);
   const wrongTitle = createNfsePartnerServices(async () => envelope({ id: id(6), receivableId: id(9), receivableAction: 'LINKED', message: 'Vinculado.' }));
   await assert.rejects(wrongTitle.save(scope, link), NfseContractError);
@@ -44,7 +44,7 @@ test('ambiguous money, variables, financial contradictions and foreign months ne
   for (const changed of [{ amount: '0.00' }, { amount: '1234,56' }, { amount: '1.234' }, { amount: '-1.00' },
     { serviceDescription: 'Valores em {{mes_referencia}}.' }, { serviceDescription: 'Texto }}' },
     { serviceDescription: 'x'.repeat(2001) }, { serviceDate: '2026-10-08' }, { modelVersion: 0 },
-    { dueDate: '2026-11-30' }, { existingReceivableId: id(8) }, { generateReceivable: true },
+    { generateReceivable: false }, { existingReceivableId: id(8) }, { dueDate: null }, { categoryId: null },
     { generateReceivable: true, existingReceivableId: id(8), categoryId: id(7) }]) {
     await assert.rejects(service.save(scope, { ...input, ...changed }), NfseContractError);
   }
@@ -54,16 +54,16 @@ test('partner preparation preserves a complete 2000-character model description'
   const description = 'DESCRIÇÃO SINTÉTICA '.padEnd(2000, 'x');
   const service = createNfsePartnerServices(async (_name, args) => {
     assert.equal((args.p_definition as Record<string, unknown>).serviceDescription, description);
-    return envelope({ id: id(6), receivableId: null, receivableAction: 'NONE', message: 'Salvo.' });
+    return envelope({ id: id(6), receivableId: null, receivableAction: 'PENDING', message: 'Salvo.' });
   });
   assert.equal(nfsePartnerServiceDefinition({ ...input, serviceDescription: description }).serviceDescription.length, 2000);
-  assert.equal((await service.save(scope, { ...input, serviceDescription: description })).receivableAction, 'NONE');
+  assert.equal((await service.save(scope, { ...input, serviceDescription: description })).receivableAction, 'PENDING');
 });
 
 test('partner options preserve PF/PJ/student identities and reject duplicated choices', () => {
   const options = { partners: [{ id: id(4), name: 'Parceiro sintético', tradeName: null, document: null, type: 'PJ' }],
     categories: [{ id: id(7), name: 'Serviços' }], existingReceivables: [{ id: id(8), partnerId: id(4), description: 'Conta sintética',
-      amount: '1234.56', dueDate: '2026-11-30', categoryId: id(7), status: 'PENDENTE' }], capabilities: { canGenerateReceivable: true } };
+      amount: '1234.56', dueDate: '2026-11-30', categoryId: id(7), status: 'PENDENTE' }], capabilities: { canGenerateReceivable: true, canLinkExistingReceivable: true, canIssueBolePix: false } };
   assert.deepEqual(parseNfsePartnerServiceOptions(options), options);
   assert.deepEqual(parseNfsePartnerServiceOptions({ ...options, partners: [{ ...options.partners[0], tradeName: ' ', document: '' }] }).partners, options.partners);
   assert.throws(() => parseNfsePartnerServiceOptions({ ...options, partners: [...options.partners, ...options.partners] }), NfseContractError);
