@@ -52,6 +52,12 @@ Edges implantadas pelo responsável: `nfse-reconciliation-worker` v2 e `nfse-nat
 - CI: o novo parser foi incluído na lista explícita de testes fiscais; o teste SQL é coberto pelo glob PGlite existente e por nova entrada `relay-token` na matriz PostgreSQL 17 do worker.
 - A verificação real confirmou recuperação fiscal e emissão do evento. A apresentação autenticada na aplicação local permanece sob conferência do usuário; não houve smoke visual por navegador do agente.
 
+## Confirmação adicional pelo usuário
+
+Às 21:57 de 12/11, o usuário executou uma nova emissão em Porto da Folha e anexou cinco capturas mostrando preparação, envio, consulta e NFS-e nº 2 autorizada. Esta é outra operação, no estabelecimento correspondente; não se confunde com a recuperação de Aquidabã.
+
+A leitura do ledger confirmou operação `c15733de-99b1-499c-9ded-32b37c7ca0d8`, `AUTHORIZED`, XML presente, preparação às 21:57:48.199312 e autorização às 21:57:56.728568: 8,529 segundos desde a preparação, incluindo interação do usuário. O job terminou sem tentativa de reconciliação (`attempt_count=0`), demonstrando o retorno de autorização no fluxo de envio. O usuário confirmou que tudo funcionou. O agente não realizou nova transmissão fiscal.
+
 ## Manifesto explícito
 
 Total: 17 arquivos

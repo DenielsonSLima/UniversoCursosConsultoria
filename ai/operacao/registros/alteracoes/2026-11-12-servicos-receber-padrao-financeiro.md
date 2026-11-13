@@ -32,7 +32,7 @@ O extrato usa o compositor institucional existente. Uma única RPC captura linha
 
 ## Validação e publicação
 
-Quatro migrations de capacidades, grupos, guarda fiscal do preview e snapshot de exportação foram aplicadas por MCP após os testes focados. Os nove testes de grupos, oito de guarda e cinco de exportação foram aprovados. As RPCs novas sem identidade recusaram a leitura antes de obter dados. Interface concluída; candidato 4.8.330 em validação final de publicação. Os testes do novo fluxo e o manifesto final serão registrados antes da publicação. O agente não usa Safari ou outro navegador, nem realiza pagamento real como teste.
+Quatro migrations de capacidades, grupos, guarda fiscal do preview e snapshot de exportação foram aplicadas por MCP após os testes focados. Os nove testes de grupos, oito de guarda e cinco de exportação foram aprovados. As RPCs novas sem identidade recusaram a leitura antes de obter dados. Interface 4.8.330 publicada pelo PR #421 após 16/16 workflows aprovados e Preview READY. Merge 570ad99aabec15b61e2624752ad22d575b06b2ab; produção Vercel dpl_BXvnHfS6DC5bJrArSgFGp7BD9Edy READY. HTTP 200 e asset principal main-knYxoPpt.js com versão 4.8.330 conferidos. O agente não usa Safari ou outro navegador, nem realiza pagamento real como teste.
 
 ## Verificações de fechamento
 

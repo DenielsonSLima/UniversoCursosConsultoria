@@ -3,9 +3,11 @@ import React, { useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ArrowLeft, ArrowRight, Save, X } from 'lucide-react';
 import InstitutionalSelect from '../../../shared/components/InstitutionalSelect';
-import { sanitizeCurrencyInput } from '../../../shared/utils/currency-input';
+import { currencyInputToCents, formatCentsAsCurrencyInput, formatCurrencyInput, sanitizeCurrencyInput } from '../../../shared/utils/currency-input';
 import type { NfseScope } from '../types/nfse.types';
 import { useNfseModels } from '../modelos/hooks/useNfseModels';
+import { useNfseFiscalCatalogs } from '../modelos/hooks/useNfseFiscalCatalogs';
+import type { NfseFiscalCatalogOption } from '../modelos/catalogos/nfse-fiscal-catalogs.types';
 import { useNfseModelDescriptionPreview } from '../modelos/hooks/useNfseModelDescriptionPreview';
 import NfseDescriptionPreview from '../modelos/NfseDescriptionPreview';
 import { formatNfseMonth } from '../preparar/nfse-month.presentation';
@@ -23,10 +25,22 @@ import { formatNfseMoney } from '../components/nfse.presentation';
 
 interface Props { scope: NfseScope; onClose: () => void; onSaved: (message: string) => void }
 
+function describeFiscalCode(code: string, options: readonly NfseFiscalCatalogOption[] | undefined, loading: boolean) {
+  if (!code) return 'Não informado no modelo';
+  const description = options?.find((option) => option.code === code)?.description;
+  return `${code} · ${description || (loading ? 'Carregando descrição…' : 'Descrição indisponível no catálogo')}`;
+}
+
+function withFinalPeriod(text: string) {
+  const summary = text.trimEnd();
+  return summary.endsWith('.') ? summary : `${summary}.`;
+}
+
 export default function NfsePartnerServiceModal({ scope, onClose, onSaved }: Props) {
   const titleId = useId();
   const optionsQuery = useNfsePartnerServiceOptions(scope);
   const modelsQuery = useNfseModels(scope);
+  const catalogs = useNfseFiscalCatalogs();
   const save = useSaveNfsePartnerService(scope);
   const [partnerId, setPartnerId] = useState('');
   const partners = useNfseServicePartnerSearch(scope, partnerId);
@@ -53,7 +67,9 @@ export default function NfsePartnerServiceModal({ scope, onClose, onSaved }: Pro
   const selectedReceivable = linked ? receivables.find((item) => item.id === existingId) : undefined;
   const amount = linked ? selectedReceivable?.amount || '' : nfsePartnerInputAmount(amountInput);
   const period = nfseServicePeriodPreview(serviceDescription, servicePeriodStart, servicePeriodEnd);
-  const finance = useNfsePartnerFinancialPlan(scope, partnerId, amount, period.text);
+  const serviceCategories = options?.categories.filter((item) => item.name.trim().toLocaleUpperCase('pt-BR') === 'SERVIÇOS NFS-E') || [];
+  const category = serviceCategories.length === 1 ? serviceCategories[0] : undefined;
+  const finance = useNfsePartnerFinancialPlan(scope, partnerId, amount, period.text, category?.id || '');
   const busy = save.isPending || finance.preview.isPending;
   const { overlayRef, dialogRef } = useNfsePartnerServiceDialog(onClose, busy);
   const advancing = useRef(false);
@@ -121,8 +137,10 @@ export default function NfsePartnerServiceModal({ scope, onClose, onSaved }: Pro
               {partners.error && <button type="button" className="nfse-button nfse-button-secondary" onClick={partners.retry}>Consultar parceiros novamente</button>}
             </div>
             <div className="nfse-field nfse-wide"><label htmlFor="nfse-service-model">Modelo de emissão</label>
-              <InstitutionalSelect id="nfse-service-model" ariaLabel="Modelo de emissão" placeholder="Selecionar modelo de serviços" required value={modelId}
-                options={models.filter((model) => model.active).map((model) => ({ value: model.id, label: model.name }))}
+              <InstitutionalSelect id="nfse-service-model" ariaLabel="Modelo de emissão" placeholder="Selecionar modelo de serviços" required value={modelId} showOptionDescriptions
+                options={models.filter((model) => model.active).map((model) => ({ value: model.id, label: model.name,
+                  description: withFinalPeriod(`NBS ${describeFiscalCode(model.nbsCode, catalogs.data?.nbs, catalogs.isPending)} | Operação ${describeFiscalCode(model.operationIndicatorCode, catalogs.data?.operationIndicators, catalogs.isPending)}`),
+                }))}
                 loading={modelsQuery.isPending} error={modelsQuery.error ? 'Não foi possível consultar os modelos.' : undefined}
                 onValueChange={(value) => { setModelId(value); setServicePeriodStart(''); setServicePeriodEnd(''); setServiceDescription(models.find((model) => model.id === value)?.serviceDescription || ''); }} />
             </div>
@@ -130,7 +148,15 @@ export default function NfsePartnerServiceModal({ scope, onClose, onSaved }: Pro
             {(optionsQuery.error || modelsQuery.error) && <div className="nfse-partner-error nfse-wide" role="alert"><span>Não foi possível carregar as opções.</span><button type="button" className="nfse-button nfse-button-secondary" onClick={() => { void optionsQuery.refetch(); void modelsQuery.refetch(); }}>Tentar novamente</button></div>}
             <label className="nfse-field"><span>Data da prestação</span><input type="date" required value={serviceDate} onChange={(event) => setServiceDate(event.target.value)} /></label>
             <label className="nfse-field"><span>Valor do serviço</span><input inputMode="decimal" required placeholder="0,00" value={linked ? selectedReceivable ? nfsePartnerAmountInput(selectedReceivable.amount) : '' : amountInput}
-              readOnly={linked} onChange={(event) => setAmountInput(sanitizeCurrencyInput(event.target.value, amountInput))} /></label>
+              readOnly={linked} onChange={(event) => setAmountInput(sanitizeCurrencyInput(event.target.value, amountInput))}
+              onBlur={() => { if (!linked) setAmountInput(formatCurrencyInput(amountInput)); }}
+              onPaste={(event) => {
+                if (linked) return;
+                event.preventDefault();
+                const text = event.clipboardData.getData('text').trim().replace(/^(?:R\$|\$)\s*/, '');
+                const cents = currencyInputToCents(text);
+                if (cents !== null) setAmountInput(/[.,]/.test(text) ? formatCentsAsCurrencyInput(cents) : sanitizeCurrencyInput(text, amountInput));
+              }} /></label>
             {serviceDate && !currentMonthDate && <small className="nfse-partner-error nfse-wide" role="alert">Escolha uma data em {formatNfseMonth(scope.month)}.</small>}
             <label className="nfse-field nfse-wide"><span>Descrição do serviço</span><textarea required maxLength={2000} value={serviceDescription} onChange={(event) => setServiceDescription(event.target.value)} /></label>
             {requiresPeriod && <>
@@ -147,6 +173,7 @@ export default function NfsePartnerServiceModal({ scope, onClose, onSaved }: Pro
         <fieldset hidden={step !== 1} disabled={busy || step !== 1} className="nfse-partner-fieldset">
           <NfsePartnerFinancialFields mode={mode} onMode={(value) => { setMode(value); setExistingId(''); }} existingId={existingId} onExistingId={setExistingId}
             form={finance.form} onChange={finance.change} options={options} receivables={receivables} />
+          {!linked && options && !category && <p role="alert" className="nfse-partner-error nfse-partner-form-section">A categoria SERVIÇOS NFS-E está indisponível. Atualize as opções antes de continuar.</p>}
         </fieldset>
         {step === 2 && <>
           <section className="nfse-partner-form-section text-sm"><p><strong>{selectedPartner ? partnerLabel(selectedPartner) : ''}</strong></p><p>{selectedModel?.name} · {formatNfseMoney(amount)}</p><p>{period.text}</p>

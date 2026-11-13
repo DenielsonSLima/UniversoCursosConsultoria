@@ -7,6 +7,7 @@ import './institutional-select.css';
 export interface InstitutionalSelectOption {
   value: string;
   label: string;
+  description?: string;
   keywords?: string;
   disabled?: boolean;
 }
@@ -25,6 +26,7 @@ interface InstitutionalSelectProps {
   required?: boolean;
   id?: string;
   ariaDescribedBy?: string;
+  showOptionDescriptions?: boolean;
   remoteSearch?: {
     onSearchChange: (query: string) => void;
     selectedLabel?: string;
@@ -36,6 +38,7 @@ interface InstitutionalSelectProps {
 const InstitutionalSelect: React.FC<InstitutionalSelectProps> = ({
   value, onValueChange, options, ariaLabel, placeholder = 'Selecionar…', className = '',
   disabled = false, loading = false, error, allowClear = false, required = false, id, ariaDescribedBy, remoteSearch,
+  showOptionDescriptions = false,
 }) => {
   const generatedId = useId();
   const listId = `${generatedId}-options`;
@@ -50,7 +53,8 @@ const InstitutionalSelect: React.FC<InstitutionalSelectProps> = ({
   const [position, setPosition] = useState({ left: 8, top: 0, width: 240, maxHeight: 240 });
   const selected = options.find((option) => option.value === value);
   const serverFiltered = Boolean(remoteSearch);
-  const filtered = useMemo(() => serverFiltered ? options : options.filter((option) => textMatchesSearch(query, [option.label, option.keywords])), [options, query, serverFiltered]);
+  const filtered = useMemo(() => serverFiltered ? options : options.filter((option) => textMatchesSearch(query,
+    [option.label, showOptionDescriptions ? option.description : undefined, option.keywords])), [options, query, serverFiltered, showOptionDescriptions]);
   const effectiveDisabled = disabled || ancestorDisabled;
   const showPanel = open && !effectiveDisabled;
   const stateMessage = loading ? 'Carregando opções…' : error || (remoteSearch?.minLength && query.trim().length < remoteSearch.minLength
@@ -219,11 +223,12 @@ const InstitutionalSelect: React.FC<InstitutionalSelectProps> = ({
                 aria-selected={option.value === value}
                 aria-disabled={option.disabled || undefined}
                 data-option-index={index}
-                className={`institutional-select-option ${activeIndex === index ? 'is-active' : ''}`}
+                className={`institutional-select-option ${showOptionDescriptions ? index % 2 === 0 ? 'bg-white' : 'bg-slate-100' : ''} ${activeIndex === index ? 'is-active' : ''}`}
                 onMouseEnter={() => setActiveIndex(index)}
                 onClick={() => choose(option)}
               >
-                <span>{option.label}</span>
+                <span>{showOptionDescriptions && option.description ? <><span className="block font-medium">{option.label}</span>
+                  <small className="mt-1 block text-xs font-normal leading-relaxed text-slate-600">{option.description}</small></> : option.label}</span>
                 {option.value === value ? <Check size={15} aria-hidden="true" /> : null}
               </div>
             ))}

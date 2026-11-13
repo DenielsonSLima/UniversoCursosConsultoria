@@ -162,3 +162,7 @@ Total: 95 arquivos. Auth e EAD já estão em produção; Caixa/PDF resumido é u
 ## Candidato
 
 Versão 4.8.327, revisão 336, sobre a correção 4.8.326 `8067dc6370385a14e6e19d5c10b85461d988d592`. A PR 416 conserva as 89 fontes canônicas de `f3c3e789cb5d8604ce7fe8d339715ed44a58089f` e aguarda novo CI da integração. Auth, EAD, PIX e o retorno fiscal corrigido são herdados da base; Caixa/PDF resumido será um lote separado. A entrada 4.8.256 foi arquivada integralmente para preservar o teto do changelog ativo.
+
+## Publicação confirmada
+
+PR #416 integrada em `cf39ec7f883930b9ed2ff73a2fd642058a938695`, versão 4.8.327, após 18/18 workflows aprovados e Preview READY na SHA `0f9bf4b8f458067467ff79ee3e9f6a74cde0180b`. Produção Vercel `dpl_5gwnffgaJt1yo9DAY267rYDUfAJb` READY; domínio e asset principal com a versão 4.8.327 responderam HTTP 200.

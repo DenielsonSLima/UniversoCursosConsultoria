@@ -44,3 +44,7 @@ Nenhuma interface ou navegador foi aberto nesta revisão, conforme a orientaçã
 - `internal/versioning/changelog/2026-11-07-versao-4-8-258.md`
 
 Total: 8 arquivos.
+
+## Publicação confirmada
+
+PR #420 integrada em `a43ee0f4d538bda5b0e459bd54c6f763f05a13ca`, versão 4.8.329, após 5/5 workflows aprovados e Preview READY na SHA `6e77226c15c9958b19ebd9d3aff21b0010d3c81c`. Produção Vercel `dpl_5mVF9VWvQT98sz6weLNxssC7jXyr` READY; domínio e asset principal responderam HTTP 200 e contêm a versão 4.8.329. A conferência geométrica autenticada permanece com o usuário.
