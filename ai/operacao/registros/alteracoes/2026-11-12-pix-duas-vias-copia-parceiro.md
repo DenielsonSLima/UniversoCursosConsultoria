@@ -71,3 +71,13 @@ Total: 17 arquivos.
 
 O manifesto descreve o snapshot de publicação, não autoriza incluir diferenças
 paralelas do checkout compartilhado nos arquivos de mesmo nome.
+
+## Verificação final de produção
+
+- PR [#418](https://github.com/DenielsonSLima/UniversoCursosConsultoria/pull/418)
+  integrada com 19 checks aprovados; commit `907321708c3af33769d92eb208365650a92da42b`.
+- Vercel `dpl_ECPqs8KagV8eUyr5hgdDJwiC1Hgr` READY com aliases de produção.
+- `https://www.universocc.com.br` respondeu HTTP200 e o bundle público confirmou 4.8.325.
+- Leitura da prévia protegida bloqueada pela revisão automática porque criaria
+  link temporário. Nenhum compartilhamento foi criado; domínio público conferido
+  por HTTP, sem navegador. O smoke visual/interativo continua com o usuário.

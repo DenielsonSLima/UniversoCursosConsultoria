@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "retrieval": "lexical-bm25-with-source-citations",
-  "builtAt": "2026-11-13T04:01:26.701Z",
+  "builtAt": "2026-11-13T09:13:23.098Z",
   "manifestVersion": 2,
-  "sourceSignature": "5fa2bbd0b2116f556dba79e896c3b16a5551ba8dc8abd3505ed462be4f207294",
+  "sourceSignature": "31ba13cc6a29d4b8edb7a3a1fae37e2b393b42a96bfd7013cf9e7f4d7849eabf",
   "sources": [
     {
       "path": "AGENTS.md",
@@ -11,7 +11,7 @@
     },
     {
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "hash": "61c37fa59e60c4b63b7baecadada5f03ace4167fd4cecd807e540ec440d58edc"
+      "hash": "ffee5dc0888ad7a1acf5ae542a2d912ef75e74cca62ae4d0e20f61b0e6da4a21"
     },
     {
       "path": "ai/operacao/MEMORIA_CANONICA.md",
@@ -208,23 +208,23 @@
       "part": 1
     },
     {
-      "id": "7e03b2a9ae43c0d29cdd",
-      "hash": "7e03b2a9ae43c0d29cdd23c991b1c8e220fd411adb15dcbd1035fb163cfc4600",
+      "id": "609f33565945b3945756",
+      "hash": "609f33565945b3945756f9d909ae19152d93ac7044b7bcaed151491f36d6bf31",
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Lote: 2026-11-13-ead-confianca-confirmacao-manual",
-      "text": "Objetivo: concluir a confiança EAD de24 horas com prova e certificado, corrigindo a projeção acadêmica da confirmação manual canônica da própria matrícula. Status: implementação e revisão cruzada concluídas;49 testes SQL funcionais aprovados. Publicação autorizada, validação concorrente PostgreSQL17 e produção em fechamento; ativação final permanece fechada até os aceites. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-13-ead-confianca-confirmacao-manual.md`. Base publicada:4.8.333, merge3882478317aaed8c4a277ab17ff41631bf3d50ae; interface compacta e entrega EAD4.8.332 preservadas. Aceite do usuário: todos os internos com Gestão EAD nos polos autorizados, sem exigir Financeiro, podem conceder confiança uma única vez. Cobrança obrigatória preservada; pagamento confirmado torna o acesso definitivo. Sem confirmação em24 horas, curso bloqueado e certificado revogado; pagamento posterior gera novo código sem revalidar o revogado. Guarda: nenhum pagamento, liberação, cancelamento bancário ou certificado real como teste; nenhuma sessão de navegador controlada. Fontes de migrations já aplicadas são imutáveis. Publicação: migration nova225925, finalizadores com retry",
-      "normalizedText": "objetivo concluir a confianca ead de24 horas com prova e certificado corrigindo a projecao academica da confirmacao manual canonica da propria matricula status implementacao e revisao cruzada concluidas 49 testes sql funcionais aprovados publicacao autorizada validacao concorrente postgresql17 e producao em fechamento ativacao final permanece fechada ate os aceites manifesto explicito ai operacao registros alteracoes 2026 11 13 ead confianca confirmacao manual md base publicada 4 8 333 merge3882478317aaed8c4a277ab17ff41631bf3d50ae interface compacta e entrega ead4 8 332 preservadas aceite do usuario todos os internos com gestao ead nos polos autorizados sem exigir financeiro podem conceder confianca uma unica vez cobranca obrigatoria preservada pagamento confirmado torna o acesso definitivo sem confirmacao em24 horas curso bloqueado e certificado revogado pagamento posterior gera novo codigo sem revalidar o revogado guarda nenhum pagamento liberacao cancelamento bancario ou certificado real como teste nenhuma sessao de navegador controlada fontes de migrations ja aplicadas sao imutaveis publicacao migration nova225925 finalizadores com retry",
-      "tokenCount": 142,
+      "section": "Lote: 2026-11-13-sincronizacao-fontes-publicadas",
+      "text": "Objetivo: completar o GitHub com fontes fiscais já aplicadas e atualizar os comprovantes de publicação recentes. Status: revisão das diferenças e correspondência com produção concluídas; entrega operacional 4.8.335, revisão 344, sujeita aos gates da PR e à conferência do deploy associado. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-13-sincronizacao-fontes-publicadas.md`. Base confirmada: 4.8.334, main b82b04a412050e2d3defe0ec450e7e83094e0e44, produção READY e HTTP 200. Confiança EAD ativada em 13/11 às 01:08:48 de Maceió. Aceite do usuário: revisar e conferir antes de atualizar o projeto, corrigindo as pendências identificadas na conferência com três agentes. Entrega: três migrations administrativas imutáveis, dois testes e registro da importação externa; comprovantes finais de Pix, portal compacto e confiança EAD; versão e manifestos correspondentes. Guarda: não reaplicar migrations, modificar dados, emitir/cancelar documentos ou cobranças, nem reimplantar funções Edge. Sem sessão de navegador controlada. Nenhuma sincronização ampla do checkout ou integração de PRs históricos. Validação: hashes locais e SQL do ledger coincidentes; testes fiscais sintéticos em",
+      "normalizedText": "objetivo completar o github com fontes fiscais ja aplicadas e atualizar os comprovantes de publicacao recentes status revisao das diferencas e correspondencia com producao concluidas entrega operacional 4 8 335 revisao 344 sujeita aos gates da pr e a conferencia do deploy associado manifesto explicito ai operacao registros alteracoes 2026 11 13 sincronizacao fontes publicadas md base confirmada 4 8 334 main b82b04a412050e2d3defe0ec450e7e83094e0e44 producao ready e http 200 confianca ead ativada em 13 11 as 01 08 48 de maceio aceite do usuario revisar e conferir antes de atualizar o projeto corrigindo as pendencias identificadas na conferencia com tres agentes entrega tres migrations administrativas imutaveis dois testes e registro da importacao externa comprovantes finais de pix portal compacto e confianca ead versao e manifestos correspondentes guarda nao reaplicar migrations modificar dados emitir cancelar documentos ou cobrancas nem reimplantar funcoes edge sem sessao de navegador controlada nenhuma sincronizacao ampla do checkout ou integracao de prs historicos validacao hashes locais e sql do ledger coincidentes testes fiscais sinteticos em",
+      "tokenCount": 151,
       "part": 1
     },
     {
-      "id": "f1458ecaf9aa6d351428",
-      "hash": "f1458ecaf9aa6d351428dc22feb9e72418fc91afdd6d82b0cd0dcc2bbfa6b091",
+      "id": "033d7180a99f5b4c95a2",
+      "hash": "033d7180a99f5b4c95a273b397cd0a7467b19c3703f806e8407d6d3287b7feb7",
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Lote: 2026-11-13-ead-confianca-confirmacao-manual",
-      "text": "somente40P01 e ativação225950 após CI/prod. Funções Edge preservam JWTtrue e todas as dependências remotas atuais; overlay apenas dos finalizadores e helper deste lote. Validação: testes funcionais, clientes reais em DOM e tipagem; concorrência PostgreSQL17 obrigatória no CI. Manifesto limitado ao lote, sem sincronização ampla do checkout ou das funções remotas.",
-      "normalizedText": "somente40p01 e ativacao225950 apos ci prod funcoes edge preservam jwttrue e todas as dependencias remotas atuais overlay apenas dos finalizadores e helper deste lote validacao testes funcionais clientes reais em dom e tipagem concorrencia postgresql17 obrigatoria no ci manifesto limitado ao lote sem sincronizacao ampla do checkout ou das funcoes remotas",
-      "tokenCount": 47,
+      "section": "Lote: 2026-11-13-sincronizacao-fontes-publicadas",
+      "text": "PGlite; versão/histórico, teto de 500 linhas, revisão independente, CI e Preview. Migrations de 11–13/11: 138/138 presentes por nome em produção. Limite: smoke autenticado dos fluxos existentes permanece pendente; disponibilidade HTTP e assets não o substituem. Evidências finais de GitHub e Vercel ficam associadas à PR desta entrega.",
+      "normalizedText": "pglite versao historico teto de 500 linhas revisao independente ci e preview migrations de 11 13 11 138 138 presentes por nome em producao limite smoke autenticado dos fluxos existentes permanece pendente disponibilidade http e assets nao o substituem evidencias finais de github e vercel ficam associadas a pr desta entrega",
+      "tokenCount": 46,
       "part": 2
     },
     {
