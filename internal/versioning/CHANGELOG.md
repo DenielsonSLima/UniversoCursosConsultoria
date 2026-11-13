@@ -82,6 +82,14 @@ Histórico arquivado: [08/11/2026 — versão 4.8.266](./changelog/2026-11-08-ve
 
 Histórico arquivado: [08/11/2026 — versão 4.8.267](./changelog/2026-11-08-versao-4-8-267.md).
 
+Histórico arquivado: [08/11/2026 — versões 4.8.268 a 4.8.269](./changelog/2026-11-08-versoes-4-8-268-a-269.md).
+
+## [4.8.337] - 2026-11-13
+
+- Caixa limita os recebíveis ao mês, polo e status antes das consultas individuais de elegibilidade.
+- Cálculos, evidências Proesc/EAD, pagamentos parciais, estornos, histórico e permissões são preservados.
+- Regressão SQL compara payload completo e mede a redução de consultas de elegibilidade.
+
 ## [4.8.335] - 2026-11-13
 
 - Fontes das migrations e testes de importação externa de NFS-e preservados no GitHub, correspondentes ao banco já implantado.
@@ -483,16 +491,3 @@ Histórico arquivado: [08/11/2026 — versão 4.8.267](./changelog/2026-11-08-ve
 - Visualizador XML com DANFSe vetorial A4, prévia, download e impressão; projeção de tributos pelo servidor.
 - Revalidação da permissão mantém o Emissor e seus rascunhos durante consultas em segundo plano; recusa e erro continuam bloqueando.
 - Validação: 83 testes frontend, 55 SQL isolados, teste estrutural PDF e smoke Safari desktop/390px; sem transmissão fiscal.
-
-## [4.8.269] - 2026-11-08
-
-- Ao selecionar o credor em despesas fixas ou variáveis, sugere categoria ativa, descrição e valor-base do último cadastro do mesmo polo e tipo.
-- Mantém edições manuais, ignora respostas atrasadas de outros credores e informa quando não há histórico ou a consulta falha.
-- O novo lançamento continua pendente e mantém suas datas; pagamentos, encargos, parcelas e anexos não são copiados.
-
-## [4.8.268] - 2026-11-08
-
-- Modelos NFS-e aceitam a variável `{{mes_referencia}}`, preenchida por RPC como mês por extenso e ano.
-- Editor e preparação exibem prévia da descrição; variáveis desconhecidas são rejeitadas.
-- Recebimento permanece distinto da competência fiscal. Acesso por polo e piloto preservados.
-- Validação: 67 testes frontend, 10 SQL isolados e smoke Safari local.

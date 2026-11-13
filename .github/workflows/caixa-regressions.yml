@@ -9,6 +9,8 @@ on:
       - 'modules/gestor/caixa/**'
       - 'supabase/migrations/*caixa_nfse_service*'
       - 'supabase/tests/caixa_nfse_services*'
+      - 'supabase/migrations/*bound_caixa_monthly_eligibility*'
+      - 'supabase/tests/caixa_monthly_bounded_eligibility*'
       - 'modules/gestor/components/GestorModuleContent.tsx'
       - 'modules/gestor/secretaria/shared/**'
       - 'modules/shared/**'
@@ -23,6 +25,8 @@ on:
       - 'modules/gestor/caixa/**'
       - 'supabase/migrations/*caixa_nfse_service*'
       - 'supabase/tests/caixa_nfse_services*'
+      - 'supabase/migrations/*bound_caixa_monthly_eligibility*'
+      - 'supabase/tests/caixa_monthly_bounded_eligibility*'
       - 'modules/gestor/components/GestorModuleContent.tsx'
       - 'modules/gestor/secretaria/shared/**'
       - 'modules/shared/**'
@@ -67,6 +71,11 @@ jobs:
         env:
           CAIXA_TEST_PGLITE_MODULE: ${{ runner.temp }}/universo-caixa-tests/node_modules/@electric-sql/pglite/dist/index.js
         run: node --test supabase/tests/caixa_nfse_services.isolated.test.mjs
+
+      - name: Conferir filtro mensal e equivalência financeira
+        env:
+          PGLITE_MODULE_PATH: ${{ runner.temp }}/universo-caixa-tests/node_modules/@electric-sql/pglite/dist/index.js
+        run: node supabase/tests/caixa_monthly_bounded_eligibility.isolated.test.mjs
 
       - name: Conferir relatórios completo e resumido
         env:
