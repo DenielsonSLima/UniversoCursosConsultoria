@@ -1,8 +1,8 @@
 {
-  "version": "4.8.325",
+  "version": "4.8.326",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 334,
+  "revision": 335,
   "releasedAt": "2026-11-12",
-  "summary": "Pix destacado nas duas vias e cópia no financeiro EAD do aluno"
+  "summary": "Consulta automática da NFS-e recuperada e retorno fiscal validado"
 }
