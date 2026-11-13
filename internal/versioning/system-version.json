@@ -1,8 +1,8 @@
 {
-  "version": "4.8.337",
+  "version": "4.8.338",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 346,
+  "revision": 347,
   "releasedAt": "2026-11-13",
-  "summary": "Caixa limita a elegibilidade ao mês e polo antes das consultas de evidência, preservando cálculos e histórico"
+  "summary": "Atividade recente distingue a data civil do pagamento dos horários reais de matrícula e documento"
 }
