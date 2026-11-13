@@ -1,4 +1,6 @@
 import React from 'react';
+import InstitutionalSelect from '../../../shared/components/InstitutionalSelect';
+import './aluno-courses-compact.css';
 import { createPortal } from 'react-dom';
 import {
   Award,
@@ -75,14 +77,14 @@ const CourseCatalogView: React.FC<CourseCatalogViewProps> = ({ view }) => {
   } = view;
 
   return (
-    <div className="space-y-4 animate-fadeIn md:space-y-6">
+    <div className="aluno-course-catalog space-y-4 animate-fadeIn">
       <div>
         <div>
-          <h2 className="flex items-center gap-2 text-xl font-black uppercase tracking-tight text-[#001a33] md:text-2xl">
+          <h2 className="flex items-center gap-2 text-xl font-medium text-[#001a33] md:text-2xl">
             <BookOpen className="text-blue-600" />
-            Cursos Disponíveis
+            Cursos disponíveis
           </h2>
-          <p className="text-xs text-slate-450 font-medium">Acesse cursos com etapas, atividades, vídeo e prova controlada</p>
+          <p className="mt-1 text-sm text-slate-600">Encontre seu curso, faça a inscrição e acompanhe seu aprendizado.</p>
         </div>
       </div>
 
@@ -94,40 +96,31 @@ const CourseCatalogView: React.FC<CourseCatalogViewProps> = ({ view }) => {
             aria-label="Pesquisar cursos disponíveis"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="h-12 w-full rounded-xl border border-slate-200 bg-white py-2 pl-10 pr-3 text-base font-bold text-slate-700 shadow-sm outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-100 md:h-auto md:pl-9 md:text-xs"
+            className="h-11 w-full rounded-lg border border-slate-200 bg-white py-2 pl-10 pr-3 text-base text-slate-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 md:h-[38px] md:text-[13px]"
           />
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
         </div>
 
-        <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-[1fr_220px_220px]">
+        <div className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-[1fr_220px_220px]">
           <label className="flex flex-col gap-1 text-[10px] font-black uppercase tracking-widest text-slate-400">
             Categoria
-            <select
-              value={categoryFilter}
-              onChange={(event) => setCategoryFilter(event.target.value)}
-              className="min-h-12 rounded-xl border border-slate-100 bg-slate-50 px-3 text-base font-bold normal-case tracking-normal text-slate-700 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-100 md:min-h-11 md:text-xs"
-            >
-              <option value="todas">Todas as categorias</option>
-              {availableCategories.map(category => (
-                <option key={category} value={category}>{category}</option>
-              ))}
-            </select>
+            <InstitutionalSelect value={categoryFilter} onValueChange={setCategoryFilter}
+              ariaLabel="Categoria dos cursos" options={[
+                { value: 'todas', label: 'Todas as categorias' },
+                ...availableCategories.map(category => ({ value: category, label: category })),
+              ]} />
           </label>
 
           <label className="flex flex-col gap-1 text-[10px] font-black uppercase tracking-widest text-slate-400">
             Ordem alfabética
-            <select
-              value={sortDirection}
-              onChange={(event) => setSortDirection(event.target.value as 'asc' | 'desc')}
-              className="min-h-12 rounded-xl border border-slate-100 bg-slate-50 px-3 text-base font-bold normal-case tracking-normal text-slate-700 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-100 md:min-h-11 md:text-xs"
-            >
-              <option value="asc">A-Z crescente</option>
-              <option value="desc">Z-A decrescente</option>
-            </select>
+            <InstitutionalSelect value={sortDirection} onValueChange={value => setSortDirection(value as 'asc' | 'desc')}
+              ariaLabel="Ordem alfabética dos cursos" options={[
+                { value: 'asc', label: 'A–Z crescente' }, { value: 'desc', label: 'Z–A decrescente' },
+              ]} />
           </label>
 
-          <div className="flex items-end">
-            <div className="flex h-11 w-full items-center justify-center rounded-xl bg-slate-50 px-3 text-[10px] font-black uppercase tracking-widest text-slate-500">
+          <div className="col-span-2 flex items-end md:col-span-1">
+            <div className="flex min-h-6 w-full items-center justify-center rounded-lg bg-slate-50 px-3 text-xs text-slate-600 md:h-[38px]">
               {currentTabCourses.length} cursos encontrados
             </div>
           </div>
@@ -135,7 +128,7 @@ const CourseCatalogView: React.FC<CourseCatalogViewProps> = ({ view }) => {
       </div>
 
       <div
-        className="-mx-1 flex snap-x gap-1 overflow-x-auto rounded-2xl bg-slate-100 p-1.5 [scrollbar-width:none] md:mx-0 md:w-max md:overflow-visible"
+        className="aluno-course-tabs flex max-w-full gap-1 overflow-x-auto border-b border-slate-200"
         role="tablist"
         aria-label="Modalidades de cursos disponíveis"
       >
@@ -151,8 +144,8 @@ const CourseCatalogView: React.FC<CourseCatalogViewProps> = ({ view }) => {
             role="tab"
             aria-selected={activeTab === id}
             onClick={() => setActiveTab(id as any)}
-            className={`flex min-h-11 shrink-0 snap-start items-center justify-center gap-2 whitespace-nowrap rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-wider outline-none transition-all focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 md:px-5 md:text-xs ${
-              activeTab === id ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-blue-600'
+            className={`flex min-h-11 shrink-0 items-center justify-center gap-2 whitespace-nowrap border-b-2 px-3 py-2 text-[13px] font-medium outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-inset ${
+              activeTab === id ? 'border-blue-600 text-blue-700' : 'border-transparent text-slate-600 hover:text-blue-700'
             }`}
           >
             {icon as React.ReactNode}
@@ -168,7 +161,7 @@ const CourseCatalogView: React.FC<CourseCatalogViewProps> = ({ view }) => {
       )}
 
       {technicalProfileGate && (
-        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/55 px-4 py-6">
+        <div className="aluno-course-dialog fixed inset-0 z-[80] flex items-center justify-center overflow-y-auto bg-slate-950/55 px-4 py-6">
           <div className="w-full max-w-xl rounded-[2rem] bg-white shadow-2xl">
             <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-6 py-5">
               <div>
@@ -202,7 +195,7 @@ const CourseCatalogView: React.FC<CourseCatalogViewProps> = ({ view }) => {
               </div>
             </div>
 
-            <div className="flex flex-col gap-2 border-t border-slate-100 px-6 py-5 sm:flex-row sm:justify-end">
+            <div className="sticky bottom-0 flex flex-col gap-2 border-t border-slate-100 bg-white px-4 py-3 sm:static sm:flex-row sm:justify-end sm:px-6 sm:py-4">
               <button
                 type="button"
                 onClick={() => setTechnicalProfileGate(null)}
@@ -227,7 +220,7 @@ const CourseCatalogView: React.FC<CourseCatalogViewProps> = ({ view }) => {
       )}
 
       {checkoutReview && (
-        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/55 px-4 py-6">
+        <div className="aluno-course-dialog fixed inset-0 z-[80] flex items-center justify-center overflow-y-auto bg-slate-950/55 px-4 py-6">
           <div className="w-full max-w-2xl rounded-[2rem] bg-white shadow-2xl">
             <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-6 py-5">
               <div>
@@ -282,7 +275,7 @@ const CourseCatalogView: React.FC<CourseCatalogViewProps> = ({ view }) => {
               </label>
             </div>
 
-            <div className="flex flex-col gap-2 border-t border-slate-100 px-6 py-5 sm:flex-row sm:justify-end">
+            <div className="sticky bottom-0 flex flex-col gap-2 border-t border-slate-100 bg-white px-4 py-3 sm:static sm:flex-row sm:justify-end sm:px-6 sm:py-4">
               <button
                 type="button"
                 onClick={() => setCheckoutReview(null)}
@@ -343,7 +336,7 @@ const CourseCatalogView: React.FC<CourseCatalogViewProps> = ({ view }) => {
         if (typeof document === 'undefined') return null;
 
         return createPortal((
-          <div className="fixed inset-0 z-[99999] flex h-screen min-h-screen w-screen items-center justify-center overflow-y-auto overscroll-contain bg-slate-950/75 px-4 py-6 backdrop-blur-sm pointer-events-auto">
+          <div className="aluno-course-dialog fixed inset-0 z-[99999] flex min-h-dvh w-full items-center justify-center overflow-y-auto overscroll-contain bg-slate-950/75 px-4 py-6 backdrop-blur-sm pointer-events-auto">
             <div className="relative z-[100000] w-full max-w-xl rounded-[2rem] bg-white shadow-2xl">
               <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-6 py-5">
                 <div>
@@ -396,17 +389,11 @@ const CourseCatalogView: React.FC<CourseCatalogViewProps> = ({ view }) => {
                     <label className="block text-[10px] font-black uppercase tracking-widest text-blue-700">
                       Parcelas no cartão
                     </label>
-                    <select
-                      value={selectedInstallments}
-                      onChange={(event) => setEadInstallments(Number(event.target.value) || 1)}
-                      className="mt-2 min-h-12 w-full rounded-xl border border-blue-100 bg-white px-4 py-3 text-base font-black text-[#001a33] outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 md:min-h-0 md:text-sm"
-                    >
-                      {Array.from({ length: options.maxParcelas }, (_, index) => index + 1).map(installments => (
-                        <option key={installments} value={installments}>
-                          {installments}x de {formatEadCheckoutMoney(options.amount / installments)}
-                        </option>
-                      ))}
-                    </select>
+                    <InstitutionalSelect className="mt-2" value={String(selectedInstallments)}
+                      onValueChange={value => setEadInstallments(Number(value) || 1)} ariaLabel="Parcelas no cartão"
+                      options={Array.from({ length: options.maxParcelas }, (_, index) => index + 1).map(installments => ({
+                        value: String(installments), label: `${installments}x de ${formatEadCheckoutMoney(options.amount / installments)}`,
+                      }))} />
                   </div>
                 )}
 
@@ -425,7 +412,7 @@ const CourseCatalogView: React.FC<CourseCatalogViewProps> = ({ view }) => {
                 )}
               </div>
 
-              <div className="flex flex-col gap-2 border-t border-slate-100 px-6 py-5 sm:flex-row sm:justify-end">
+              <div className="sticky bottom-0 flex flex-col gap-2 border-t border-slate-100 bg-white px-4 py-3 sm:static sm:flex-row sm:justify-end sm:px-6 sm:py-4">
                 <button
                   type="button"
                   onClick={() => setEadCheckoutReview(null)}

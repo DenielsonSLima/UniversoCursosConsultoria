@@ -1,4 +1,5 @@
 import React from 'react';
+import './aluno-courses-compact.css';
 import {
   ArrowLeft,
   AlertCircle,
@@ -65,7 +66,7 @@ const EadCourseRoom: React.FC<EadCourseRoomProps> = ({ view }) => {
       : 'Hoje';
     if (quizPassed && !showCompletedLessons) {
       return (
-        <div className="space-y-6 animate-fadeIn">
+        <div className="aluno-ead-room space-y-4 animate-fadeIn">
           {renderCertificatePdfSource()}
           <style>{`
             @media print {
@@ -82,13 +83,14 @@ const EadCourseRoom: React.FC<EadCourseRoomProps> = ({ view }) => {
                 onClick={closeSelectedCourse}
                 disabled={isUpdatingProgress}
                 title={isUpdatingProgress ? 'Aguarde o salvamento do progresso.' : 'Voltar aos cursos'}
-                className="p-2 rounded-xl border border-slate-200 bg-white text-slate-500 hover:text-blue-600 shrink-0 disabled:cursor-wait disabled:bg-slate-50 disabled:text-slate-300"
+                aria-label="Voltar aos cursos"
+                className="flex h-11 w-11 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 shrink-0 disabled:cursor-wait disabled:bg-slate-50 disabled:text-slate-300"
               >
                 <ArrowLeft size={18} />
               </button>
               <div className="min-w-0">
                 <p className="text-[10px] font-black uppercase tracking-widest text-emerald-600">Curso concluído</p>
-                <h2 className="text-xl sm:text-2xl font-black text-[#001a33] uppercase tracking-tight truncate">{selectedCourse.nome}</h2>
+                <h2 className="text-xl font-medium leading-snug text-[#001a33] sm:text-2xl">{selectedCourse.nome}</h2>
               </div>
             </div>
           </div>
@@ -136,7 +138,7 @@ const EadCourseRoom: React.FC<EadCourseRoomProps> = ({ view }) => {
                   </button>
                 </div>
 
-                <div className="grid min-w-[260px] grid-cols-1 gap-3">
+                <div className="grid min-w-0 grid-cols-1 gap-3 sm:min-w-[260px]">
                   <div className="rounded-2xl border border-emerald-100 bg-white p-4">
                     <p className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-slate-400">
                       <CalendarDays size={13} />
@@ -201,19 +203,20 @@ const EadCourseRoom: React.FC<EadCourseRoomProps> = ({ view }) => {
 
     if (!isProgressReady) {
       return (
-        <div className="space-y-6 animate-fadeIn">
+        <div className="aluno-ead-room space-y-4 animate-fadeIn">
           <div className="flex items-center gap-3 min-w-0">
             <button
               onClick={closeSelectedCourse}
               disabled={isUpdatingProgress}
               title={isUpdatingProgress ? 'Aguarde o salvamento do progresso.' : 'Voltar aos cursos'}
-              className="p-2 rounded-xl border border-slate-200 bg-white text-slate-500 hover:text-blue-600 shrink-0 disabled:cursor-wait disabled:bg-slate-50 disabled:text-slate-300"
+              aria-label="Voltar aos cursos"
+              className="flex h-11 w-11 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 shrink-0 disabled:cursor-wait disabled:bg-slate-50 disabled:text-slate-300"
             >
               <ArrowLeft size={18} />
             </button>
             <div className="min-w-0">
               <p className="text-[10px] font-black uppercase tracking-widest text-blue-600">Sala de aprendizagem</p>
-              <h2 className="text-xl sm:text-2xl font-black text-[#001a33] uppercase tracking-tight truncate">{selectedCourse.nome}</h2>
+              <h2 className="text-xl font-medium leading-snug text-[#001a33] sm:text-2xl">{selectedCourse.nome}</h2>
             </div>
           </div>
 
@@ -252,7 +255,7 @@ const EadCourseRoom: React.FC<EadCourseRoomProps> = ({ view }) => {
     }
 
     return (
-      <div className="space-y-6 animate-fadeIn">
+      <div className="aluno-ead-room space-y-4 animate-fadeIn">
         {renderCertificatePdfSource()}
         <style>{`
           @media print {
@@ -270,17 +273,18 @@ const EadCourseRoom: React.FC<EadCourseRoomProps> = ({ view }) => {
               onClick={closeSelectedCourse}
               disabled={isUpdatingProgress}
               title={isUpdatingProgress ? 'Aguarde o salvamento do progresso.' : 'Voltar aos cursos'}
-              className="p-2 rounded-xl border border-slate-200 bg-white text-slate-500 hover:text-blue-600 shrink-0 disabled:cursor-wait disabled:bg-slate-50 disabled:text-slate-300"
+              aria-label="Voltar aos cursos"
+              className="flex h-11 w-11 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 shrink-0 disabled:cursor-wait disabled:bg-slate-50 disabled:text-slate-300"
             >
               <ArrowLeft size={18} />
             </button>
             <div className="min-w-0">
               <p className="text-[10px] font-black uppercase tracking-widest text-blue-600">Sala de aprendizagem</p>
-              <h2 className="text-xl sm:text-2xl font-black text-[#001a33] uppercase tracking-tight truncate">{selectedCourse.nome}</h2>
+              <h2 className="text-xl font-medium leading-snug text-[#001a33] sm:text-2xl">{selectedCourse.nome}</h2>
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-2 min-w-[280px]">
+          <div className="grid min-w-0 grid-cols-3 gap-2">
             <div className="bg-white border border-slate-100 rounded-2xl p-3">
               <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Progresso</p>
               <p className="text-lg font-black text-blue-600">{progressPercent}%</p>
@@ -333,7 +337,7 @@ const EadCourseRoom: React.FC<EadCourseRoomProps> = ({ view }) => {
           <div className="h-full bg-blue-600 rounded-full transition-all" style={{ width: `${progressPercent}%` }} />
         </div>
 
-        <div className="flex flex-wrap gap-2 rounded-[1.5rem] border border-slate-100 bg-white p-2 shadow-sm w-full sm:w-max">
+        <div role="tablist" aria-label="Áreas do curso" className="aluno-course-tabs flex max-w-full gap-1 overflow-x-auto border-b border-slate-200">
           {[
             ...(!selectedCourse.ead_config?.assessmentRevision || learningView.mainVideoUrl
               ? [['video', 'Vídeo', <MonitorPlay size={15} />]] : []),
@@ -343,9 +347,10 @@ const EadCourseRoom: React.FC<EadCourseRoomProps> = ({ view }) => {
           ].map(([id, label, icon]) => (
             <button
               key={id as string}
+              type="button" role="tab" aria-selected={activeLearningTab === id}
               onClick={() => setActiveLearningTab(id as LearningTab)}
-              className={`flex items-center justify-center gap-2 rounded-2xl px-5 py-3 text-[10px] font-black uppercase tracking-widest transition-all ${
-                activeLearningTab === id ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-500 hover:bg-slate-50 hover:text-blue-600'
+              className={`flex min-h-11 shrink-0 items-center justify-center gap-2 whitespace-nowrap border-b-2 px-3 py-2 text-[13px] font-medium outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-inset ${
+                activeLearningTab === id ? 'border-blue-600 text-blue-700' : 'border-transparent text-slate-600 hover:text-blue-700'
               }`}
             >
               {icon as React.ReactNode}
@@ -360,4 +365,3 @@ const EadCourseRoom: React.FC<EadCourseRoomProps> = ({ view }) => {
 };
 
 export default EadCourseRoom;
-

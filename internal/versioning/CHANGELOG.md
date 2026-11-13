@@ -76,6 +76,16 @@ Histórico arquivado: [07/11/2026 — versões 4.8.261 a 4.8.262](./changelog/20
 
 Histórico arquivado: [07/11/2026 — versão 4.8.264](./changelog/2026-11-07-versao-4-8-264.md).
 
+Histórico arquivado: [08/11/2026 — versão 4.8.265](./changelog/2026-11-08-versao-4-8-265.md).
+
+## [4.8.333] - 2026-11-13
+
+### Melhorias
+- Portal do aluno no padrão compacto, com Início e navegação simplificados no celular.
+- Documentos abaixo de Financeiro e carteirinha entre os primeiros documentos rápidos.
+- Meus cursos, catálogo, inscrição, sala EAD, prova e certificado com interface mais leve.
+- Cobranças com ação em destaque, Pix e boleto priorizados e detalhes recolhíveis.
+
 ## [4.8.332] - 2026-11-13
 
 ### Ajustado
@@ -488,9 +498,3 @@ Histórico arquivado: [07/11/2026 — versão 4.8.264](./changelog/2026-11-07-ve
 - Modelos de serviço por polo com tributação nacional, NBS, ISSQN, indicador da operação e informações complementares, cadastrados por RPC com auditoria e controle de versão.
 - Consulta histórica usa projeção do valor recebido e conserva pagamentos parciais e estornos; outubro validado em 171 ms, sem divergência de valores.
 - Acesso piloto preservado; emissão fiscal permanece desabilitada nesta etapa.
-
-## [4.8.265] - 2026-11-08
-
-### Corrigido
-- Mês de referência de Adicionar alunos exibe o nome em português e o ano, com seletor próprio de meses.
-- Escolher o mesmo mês preserva os alunos selecionados; teclado, foco e formato da consulta permanecem consistentes.

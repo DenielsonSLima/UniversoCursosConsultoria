@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 
 import FinancialUnderlineTabs from '../../gestor/financeiro/components/FinancialUnderlineTabs';
+import InstitutionalSelect from '../../shared/components/InstitutionalSelect';
 import type {
   AlunoFinancialListPayload,
   AlunoFinancialModality,
@@ -70,74 +71,77 @@ const AlunoFinanceiroFilters: React.FC<AlunoFinanceiroFiltersProps> = ({
     <>
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-12 lg:gap-4">
         <div className="lg:col-span-4">
-          <label className="mb-2 block text-[10px] font-black uppercase tracking-wider text-slate-500">
+          <label htmlFor="aluno-finance-search" className="mb-1.5 block text-xs font-medium text-slate-600">
             <span className="inline-flex items-center gap-1"><Search size={12} /> Buscar</span>
           </label>
           <input
+            id="aluno-finance-search"
             type="search"
             value={search}
             onChange={(event) => onSearchChange(event.target.value)}
             placeholder="Buscar por descrição, curso ou status"
-            className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-base font-bold text-slate-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 md:text-sm"
+            className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-base text-slate-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 md:h-[38px] md:text-[13px]"
           />
         </div>
         <button
           type="button"
           onClick={onToggleMobileFilters}
-          className="flex h-12 items-center justify-between rounded-xl border border-slate-200 bg-white px-4 text-xs font-black uppercase tracking-wider text-slate-600 lg:hidden"
+          className="flex min-h-11 items-center justify-between rounded-lg border border-slate-200 bg-white px-3 text-[13px] font-medium text-slate-600 lg:hidden"
           aria-expanded={showMobileFilters}
+          aria-controls="aluno-finance-advanced-filters"
         >
           <span className="inline-flex items-center gap-2"><Filter size={15} /> Mais filtros</span>
-          <span className="rounded-full bg-blue-50 px-2 py-1 text-[9px] text-blue-700">
+          <span className="rounded-full bg-blue-50 px-2 py-1 text-xs text-blue-700">
             {hasAdvancedFilters ? 'Ativos' : showMobileFilters ? 'Fechar' : 'Abrir'}
           </span>
         </button>
-        <div className={`${showMobileFilters ? 'grid' : 'hidden'} grid-cols-1 gap-3 rounded-2xl bg-slate-50 p-3 lg:contents`}>
+        <div id="aluno-finance-advanced-filters" className={`${showMobileFilters ? 'grid' : 'hidden'} grid-cols-1 gap-3 rounded-lg bg-slate-50 p-3 lg:contents`}>
           <div className="lg:col-span-2">
-            <label className="mb-2 block text-[10px] font-black uppercase tracking-wider text-slate-500">
+            <label htmlFor="aluno-finance-start" className="mb-1.5 block text-xs font-medium text-slate-600">
               <span className="inline-flex items-center gap-1"><CalendarDays size={12} /> Data inicial</span>
             </label>
             <input
+              id="aluno-finance-start"
               type="date"
               value={startDate}
               max={endDate || undefined}
               onChange={(event) => onStartDateChange(event.target.value)}
-              className="h-12 w-full rounded-xl border border-slate-200 bg-white px-3 text-base font-bold text-slate-700 outline-none md:text-xs lg:bg-slate-50"
+              className="h-11 w-full min-w-0 rounded-lg border border-slate-200 bg-white px-3 text-base text-slate-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 md:h-[38px] md:text-[13px]"
             />
           </div>
           <div className="lg:col-span-2">
-            <label className="mb-2 block text-[10px] font-black uppercase tracking-wider text-slate-500">
+            <label htmlFor="aluno-finance-end" className="mb-1.5 block text-xs font-medium text-slate-600">
               <span className="inline-flex items-center gap-1"><CalendarDays size={12} /> Data final</span>
             </label>
             <input
+              id="aluno-finance-end"
               type="date"
               value={endDate}
               min={startDate || undefined}
               onChange={(event) => onEndDateChange(event.target.value)}
-              className="h-12 w-full rounded-xl border border-slate-200 bg-white px-3 text-base font-bold text-slate-700 outline-none md:text-xs lg:bg-slate-50"
+              className="h-11 w-full min-w-0 rounded-lg border border-slate-200 bg-white px-3 text-base text-slate-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 md:h-[38px] md:text-[13px]"
             />
           </div>
           <div className="lg:col-span-2">
-            <label className="mb-2 block text-[10px] font-black uppercase tracking-wider text-slate-500">
+            <label htmlFor="aluno-finance-modality" className="mb-1.5 block text-xs font-medium text-slate-600">
               <span className="inline-flex items-center gap-1"><Filter size={12} /> Tipo</span>
             </label>
-            <select
+            <InstitutionalSelect
+              id="aluno-finance-modality"
               value={modality}
-              onChange={(event) => onModalityChange(event.target.value as AlunoFinancialModality)}
-              className="h-12 w-full rounded-xl border border-slate-200 bg-white px-3 text-base font-bold text-slate-700 outline-none md:text-xs lg:bg-slate-50"
-            >
-              {modalityOptions.map((option) => (
-                <option key={option.value} value={option.value}>{option.label}</option>
-              ))}
-            </select>
+              onValueChange={(value) => onModalityChange(value as AlunoFinancialModality)}
+              options={modalityOptions}
+              ariaLabel="Filtrar cobranças por tipo"
+            />
           </div>
           <div className="hidden md:block lg:col-span-2">
-            <div className="grid h-12 grid-cols-2 gap-2">
+            <div className="grid min-h-11 grid-cols-2 gap-2 md:min-h-[38px]">
               {(['table', 'cards'] as const).map((mode) => (
                 <button
                   key={mode}
                   type="button"
                   aria-label={mode === 'table' ? 'Exibir cobranças em tabela' : 'Exibir cobranças em cartões'}
+                  aria-pressed={viewMode === mode}
                   onClick={() => onViewModeChange(mode)}
                   className={`inline-flex items-center justify-center rounded-lg ${viewMode === mode ? 'bg-blue-600 text-white' : 'border border-slate-200 bg-slate-50 text-slate-600'}`}
                 >
@@ -147,7 +151,7 @@ const AlunoFinanceiroFilters: React.FC<AlunoFinanceiroFiltersProps> = ({
             </div>
           </div>
           {hasAdvancedFilters ? (
-            <button type="button" onClick={onClearAdvancedFilters} className="flex h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white text-[10px] font-black uppercase tracking-wider text-slate-600 lg:hidden">
+            <button type="button" onClick={onClearAdvancedFilters} className="flex h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white text-xs font-medium text-slate-600 lg:hidden">
               <RotateCcw size={13} /> Limpar filtros
             </button>
           ) : null}

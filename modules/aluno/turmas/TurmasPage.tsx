@@ -110,10 +110,10 @@ const TurmasPage: React.FC<TurmasPageProps> = ({
 
   if (data.matriculasState.isError) {
     return (
-      <div role="alert" className="flex flex-col gap-4 rounded-3xl border border-red-150 bg-red-50 p-5 text-red-700 sm:flex-row sm:items-center sm:p-8">
+      <div role="alert" className="flex flex-col gap-4 rounded-xl border border-red-150 bg-red-50 p-5 text-red-700 sm:flex-row sm:items-center sm:p-5">
         <ShieldAlert size={24} />
-        <div className="flex-1"><p className="font-bold">Não consegui carregar seus cursos</p><p className="text-xs">Ocorreu uma falha de consulta. Tente novamente em instantes.</p></div>
-        <button type="button" onClick={() => void data.matriculasState.refetch()} className="min-h-11 w-full rounded-xl border border-red-200 bg-white px-4 py-2 text-[10px] font-black uppercase tracking-widest sm:w-auto">Recarregar</button>
+        <div className="flex-1"><p className="font-medium">Não consegui carregar seus cursos</p><p className="text-xs">Ocorreu uma falha de consulta. Tente novamente em instantes.</p></div>
+        <button type="button" onClick={() => void data.matriculasState.refetch()} className="min-h-11 w-full rounded-xl border border-red-200 bg-white px-4 py-2 text-xs font-semibold sm:w-auto">Recarregar</button>
       </div>
     );
   }
@@ -127,11 +127,11 @@ const TurmasPage: React.FC<TurmasPageProps> = ({
   }
 
   return (
-    <div className="min-w-0 space-y-5 animate-fadeIn sm:space-y-6">
-      <div className="mb-5 sm:mb-6">
-        <h2 className="flex items-center gap-2 text-xl font-black uppercase tracking-tight text-[#001a33] sm:text-2xl"><GraduationCap className="shrink-0 text-blue-600" size={22} /> Meus Cursos</h2>
+    <div className="min-w-0 space-y-5 animate-fadeIn sm:space-y-4">
+      {!selectedMatricula ? <div className="mb-4">
+        <h2 className="flex items-center gap-2 text-[22px] font-medium text-[#001a33] sm:text-2xl"><GraduationCap className="shrink-0 text-blue-600" size={22} /> Meus cursos</h2>
         <p className="mt-1 text-xs font-medium leading-relaxed text-slate-500">Acesse suas turmas, acompanhe o progresso e consulte certificados.</p>
-      </div>
+      </div> : null}
 
       {selectedMatricula ? (
         <TurmaDetail
