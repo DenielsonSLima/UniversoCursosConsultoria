@@ -65,6 +65,14 @@ Histórico arquivado: [07/11/2026 — versão 4.8.251](./changelog/2026-11-07-ve
 
 Histórico arquivado: 07/11/2026 — versões [4.8.252](./changelog/2026-11-07-versao-4-8-252.md) e [4.8.253](./changelog/2026-11-07-versao-4-8-253.md).
 
+Histórico arquivado: [07/11/2026 — versão 4.8.254](./changelog/2026-11-07-versao-4-8-254.md).
+
+## [4.8.325] - 2026-11-12
+
+### Corrigido
+- Pix Copia e Cola destacado e selecionável nas duas vias do boleto Banese.
+- Financeiro EAD do aluno oferece Copiar Pix apenas para cobranças abertas com código oficial disponível e sem pagamento.
+
 ## [4.8.323] - 2026-11-12
 
 - Turmas EAD: quatro cartões por linha em telas largas e doze turmas por página, com barra compacta para situação e abertura de turma.
@@ -489,11 +497,3 @@ Histórico arquivado: 07/11/2026 — versões [4.8.252](./changelog/2026-11-07-v
 ### Corrigido
 - Carteirinhas em ordem alfabética pelo nome do aluno em lotes completos, por turma e personalizados, nos dois layouts A4.
 - Ordenação canônica na RPC preserva elegibilidade, matrícula primária, modelos e códigos de validação.
-
-## [4.8.254] - 2026-11-07
-
-### Alterado
-- Configurações: cadastros compactos, campos brancos e navegação com linha inferior.
-- Seletores pesquisáveis preservam IDs, escolhas múltiplas, herança de acesso e bloqueios existentes.
-- Mensageria e integração bancária divididas por responsabilidade, mantendo operações, documentos e modelos.
-- CI focado cobre IDs dos seletores, limites de acesso e impressoras, sem serviços remotos.

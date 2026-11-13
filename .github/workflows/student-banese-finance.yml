@@ -18,6 +18,7 @@ on:
       - 'modules/gestor/parceiros/components/viewparceiros/aluno/**'
       - 'supabase/tests/partner_ead_boleto_read.pglite.mjs'
       - 'supabase/tests/partner_finance_course_groups.pglite.mjs'
+      - 'supabase/tests/partner_ead_pix_copy.pglite.mjs'
       - 'package-lock.json'
   push:
     branches: [main]
@@ -37,6 +38,7 @@ on:
       - 'modules/gestor/parceiros/components/viewparceiros/aluno/**'
       - 'supabase/tests/partner_ead_boleto_read.pglite.mjs'
       - 'supabase/tests/partner_finance_course_groups.pglite.mjs'
+      - 'supabase/tests/partner_ead_pix_copy.pglite.mjs'
       - 'package-lock.json'
 
 permissions:
@@ -80,3 +82,5 @@ jobs:
           PGLITE_MODULE_URL="$RUNNER_TEMP/student-banese-sql/node_modules/@electric-sql/pglite/dist/index.js" node supabase/tests/partner_ead_boleto_read.pglite.mjs
       - name: Validar agrupamento do financeiro por modalidade e curso
         run: PGLITE_MODULE_URL="$RUNNER_TEMP/student-banese-sql/node_modules/@electric-sql/pglite/dist/index.js" node supabase/tests/partner_finance_course_groups.pglite.mjs
+      - name: Validar Pix oficial apenas em cobranças EAD abertas
+        run: PGLITE_MODULE_URL="$RUNNER_TEMP/student-banese-sql/node_modules/@electric-sql/pglite/dist/index.js" node supabase/tests/partner_ead_pix_copy.pglite.mjs

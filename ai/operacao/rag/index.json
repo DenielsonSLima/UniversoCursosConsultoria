@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "retrieval": "lexical-bm25-with-source-citations",
-  "builtAt": "2026-11-12T15:42:45.693Z",
+  "builtAt": "2026-11-13T00:26:47.999Z",
   "manifestVersion": 2,
-  "sourceSignature": "7d3a44eee816a870de5747462e771cf4d329ba932eef0af306ad0e551c2e7eff",
+  "sourceSignature": "1ada5750b852a3671d9f546b9e8172866699adea67370e751ca6a46eb37f3717",
   "sources": [
     {
       "path": "AGENTS.md",
@@ -11,7 +11,7 @@
     },
     {
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "hash": "8e763183cf7578fff54e78de18c20ddb8d7cb355b91dc07eb53135380343a49b"
+      "hash": "3eb7efff81d897cd7b066e4801843c37838b47459454721d04b6ce43e3dde960"
     },
     {
       "path": "ai/operacao/MEMORIA_CANONICA.md",
@@ -208,13 +208,13 @@
       "part": 1
     },
     {
-      "id": "e4addfa078b19fb191fd",
-      "hash": "e4addfa078b19fb191fd438f78f0b3bfdc7a87435366463980a0c5333bd94af5",
+      "id": "86341ff9e68001efdbef",
+      "hash": "86341ff9e68001efdbefa878d979f16e0e0d21bd7e991748eb4ea88d591cd378",
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Lote: 2026-11-12-numero-sn-automatico",
-      "text": "Objetivo: seguir orientação posterior do proprietário: ausência de número vira S/N, não 00; preservar números reais e documentos fiscais emitidos. Status: integração4.8.311; migration e substituição auditada439 aplicadas; testes/CI/deploy em fechamento. Autorização: usuário determinou S/N automático e correção dos00 provisórios. Sem emissão/cancelamento de nota real. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-12-numero-sn-automatico.md`. Limitações: S/N é marcador autorizado de ausência; demais campos ausentes continuam bloqueando. Smoke Safari autenticado pendente.",
-      "normalizedText": "objetivo seguir orientacao posterior do proprietario ausencia de numero vira s n nao 00 preservar numeros reais e documentos fiscais emitidos status integracao4 8 311 migration e substituicao auditada439 aplicadas testes ci deploy em fechamento autorizacao usuario determinou s n automatico e correcao dos00 provisorios sem emissao cancelamento de nota real manifesto explicito ai operacao registros alteracoes 2026 11 12 numero sn automatico md limitacoes s n e marcador autorizado de ausencia demais campos ausentes continuam bloqueando smoke safari autenticado pendente",
-      "tokenCount": 70,
+      "section": "Lote: 2026-11-12-pix-duas-vias-copia-parceiro",
+      "text": "Objetivo: destacar Pix Copia e Cola nas duas vias e permitir cópia no financeiro EAD do aluno com código oficial disponível e cobrança aberta. Status: candidato 4.8.325 validado; backend aplicado; integração e publicação do site controladas por CI/PR. Autorização: usuário aprovou a imagem do PDF e solicitou explicitamente atualizar em produção. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-12-pix-duas-vias-copia-parceiro.md`. Base: main 4.8.323, a53f9990aaee88de07274a8d78a6fa54746ed093; snapshot isolado sem o candidato NFS-e paralelo. Aceite: código integral e destacado nas duas vias; botão apenas em cobrança EAD aberta e não paga; autorização e histórico preservados. Validação: dez testes PDF com typecheck, sete React, SQL isolado e contrato remoto, TypeScript, build e QR renderizados. Limitações: sem navegador ou operação bancária real; conferência visual da tela e PDF autenticado permanece com o usuário.",
+      "normalizedText": "objetivo destacar pix copia e cola nas duas vias e permitir copia no financeiro ead do aluno com codigo oficial disponivel e cobranca aberta status candidato 4 8 325 validado backend aplicado integracao e publicacao do site controladas por ci pr autorizacao usuario aprovou a imagem do pdf e solicitou explicitamente atualizar em producao manifesto explicito ai operacao registros alteracoes 2026 11 12 pix duas vias copia parceiro md base main 4 8 323 a53f9990aaee88de07274a8d78a6fa54746ed093 snapshot isolado sem o candidato nfs e paralelo aceite codigo integral e destacado nas duas vias botao apenas em cobranca ead aberta e nao paga autorizacao e historico preservados validacao dez testes pdf com typecheck sete react sql isolado e contrato remoto typescript build e qr renderizados limitacoes sem navegador ou operacao bancaria real conferencia visual da tela e pdf autenticado permanece com o usuario",
+      "tokenCount": 121,
       "part": 1
     },
     {

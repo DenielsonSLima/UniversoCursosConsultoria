@@ -3,6 +3,7 @@ import { ChevronRight, CheckCircle2, Clock3, DollarSign, Loader2, PauseCircle, R
 import { useQuery } from '@tanstack/react-query';
 import { loadStudentFinanceView, type StudentFinanceView, type StudentReceivable } from './parceiro-aluno-financeiro.service';
 import EadBoletoButton from './EadBoletoButton';
+import EadPixCopyButton from './EadPixCopyButton';
 import { groupStudentFinance } from './parceiro-aluno-financeiro.groups';
 
 interface Props {
@@ -117,7 +118,7 @@ const ParceiroAlunoFinanceiro: React.FC<Props> = ({ alunoId, cacheScope }) => {
                                 <th className="px-5 py-3">Valor</th>
                                 <th className="px-5 py-3">Pagamento</th>
                                 <th className="px-5 py-3">Status</th>
-                                <th className="px-5 py-3">Boleto EAD</th>
+                                <th className="px-5 py-3">Boleto / Pix</th>
                               </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100">
@@ -135,7 +136,10 @@ const ParceiroAlunoFinanceiro: React.FC<Props> = ({ alunoId, cacheScope }) => {
                                   <td className="px-5 py-4"><span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${statusStyle[item.status] || 'bg-slate-100 text-slate-500'}`}>{item.status}</span></td>
                                   <td className="px-5 py-4">
                                     {item.can_open_boleto === true
-                                      ? <EadBoletoButton receivableId={item.id} />
+                                      ? <div className="flex flex-wrap items-center gap-2">
+                                          <EadBoletoButton receivableId={item.id} />
+                                          <EadPixCopyButton item={item} />
+                                        </div>
                                       : <span className="text-sm text-slate-400">—</span>}
                                   </td>
                                 </tr>

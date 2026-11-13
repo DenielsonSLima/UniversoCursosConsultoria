@@ -250,19 +250,18 @@ export const drawBaneseBoletoSlip = async (
   const instructions = input.instructions?.length
     ? input.instructions
     : ["Nao receber apos a data limite indicada pelo banco."];
-  const hasPixCopyAndPaste = showBarcode &&
-    input.environment === "production" &&
-    Boolean(input.pix?.copyAndPaste);
+  const hasPixCopyAndPaste = input.environment === "production" &&
+    Boolean(input.pix?.copyAndPaste && pixQr);
   const pixCopyLines = hasPixCopyAndPaste
     ? wrapText(
       input.pix!.copyAndPaste,
       fonts.regular,
-      4.4,
-      instructionsWidth - 16,
+      6.4,
+      instructionsWidth - 32,
     )
     : [];
   const pixCopyHeight = hasPixCopyAndPaste
-    ? 3 + 7 + pixCopyLines.length * 5.5
+    ? 30 + pixCopyLines.length * 7.6
     : 0;
   const instructionTop = y + detailsHeight - 22;
   const instructionBottom = y + 7 + pixCopyHeight;
@@ -311,22 +310,32 @@ export const drawBaneseBoletoSlip = async (
     }
   });
   if (hasPixCopyAndPaste) {
-    instructionCursorY -= 3;
+    const copyBox = {
+      x: box.x + 6,
+      y: y + 6,
+      width: instructionsWidth - 12,
+      height: pixCopyHeight - 6,
+    };
+    page.drawRectangle({
+      ...copyBox,
+      color: COLORS.lightGreen,
+      borderColor: COLORS.green,
+      borderWidth: 0.9,
+    });
+    const titleY = copyBox.y + copyBox.height - 12;
     drawText(
       page,
       fonts,
-      "Pix Copia e Cola oficial Banese:",
-      box.x + 8,
-      instructionCursorY,
-      { size: 5, bold: true, color: COLORS.darkGreen },
+      "PIX COPIA E COLA",
+      copyBox.x + 8,
+      titleY,
+      { size: 7.5, bold: true, color: COLORS.darkGreen },
     );
-    instructionCursorY -= 7;
-    pixCopyLines.forEach((line) => {
-      drawText(page, fonts, line, box.x + 8, instructionCursorY, {
-        size: 4.4,
-        color: COLORS.gray,
+    pixCopyLines.forEach((line, index) => {
+      drawText(page, fonts, line, copyBox.x + 8, titleY - 12 - index * 7.6, {
+        size: 6.4,
+        color: COLORS.black,
       });
-      instructionCursorY -= 5.5;
     });
   }
   drawPixPanel(page, fonts, input, pixQr, {

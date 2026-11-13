@@ -8,7 +8,7 @@ import { build } from 'esbuild';
 
 const component = resolve('modules/gestor/parceiros/components/viewparceiros/aluno/ParceiroAlunoFinanceiro.tsx');
 const compiled = await build({
-  stdin: { contents: `export {default as Finance} from ${JSON.stringify(component)}; export {loadStudentFinanceView,loadExistingBoletoPdf} from './modules/gestor/parceiros/components/viewparceiros/aluno/parceiro-aluno-financeiro.service';`, resolveDir: process.cwd(), loader: 'tsx' },
+  stdin: { contents: `export {default as Finance} from ${JSON.stringify(component)}; export {loadStudentFinanceView,loadExistingBoletoPdf} from './modules/gestor/parceiros/components/viewparceiros/aluno/parceiro-aluno-financeiro.service'; export {buildBanesePixPayloadFixture} from './supabase/functions/banese/internal/testing/pix-fixture';`, resolveDir: process.cwd(), loader: 'tsx' },
   bundle: true, write: false, platform: 'node', format: 'cjs', jsx: 'automatic', packages: 'external',
   plugins: [{ name: 'synthetic-finance', setup(plugin) {
     plugin.onResolve({filter:/lib\/supabase$/}, () => ({path:'supabase',namespace:'fake'}));
@@ -20,7 +20,7 @@ const compiled = await build({
 });
 const module = {exports:{}};
 new Function('require','module','exports',compiled.outputFiles[0].text)(createRequire(import.meta.url),module,module.exports);
-const {Finance,loadStudentFinanceView,loadExistingBoletoPdf}=module.exports;
+const {Finance,loadStudentFinanceView,loadExistingBoletoPdf,buildBanesePixPayloadFixture}=module.exports;
 const item = {id:'r1',matricula_id:'m1',descricao:'Matrícula EAD',valor:119.90,status:'PENDENTE',tipo_lancamento:'MATRICULA',can_open_boleto:true,matriculas:{id:'m1',status:'PENDENTE'},turmas:{nome:'Turma EAD',codigo:'EAD-1',cursos:{nome:'Curso sintético'},polos:{nome:'Polo'}}};
 function fixture(data={items:[item],summary:{paid:10,open:119.90,suspended:0}}) {
   globalThis.fixture={ query:{data,isLoading:false,isError:false,refetch(){}},rpc:async()=>({data,error:null}),invoke:async()=>({data:new Blob(['pdf'],{type:'application/pdf'}),error:null}) };
@@ -30,6 +30,21 @@ test('exibe Abrir somente por capacidade do backend e totais canônicos',()=>{
   fixture();const html=render();assert.match(html,/Abrir boleto em nova aba/);assert.match(html,/119,90/);assert.match(html,/10,00/);
   fixture({items:[{...item,can_open_boleto:false}],summary:{paid:0,open:0,suspended:0}});
   assert.doesNotMatch(render(),/Abrir boleto em nova aba/);
+});
+test('Copiar Pix exige projeção oficial válida e cobrança aberta sem pagamento',()=>{
+  const payable={...item,pix_copy_payload:buildBanesePixPayloadFixture('SYNTHETICPARTNER')};
+  for(const status of ['PENDENTE','VENCIDO']) {
+    fixture({items:[{...payable,status}],summary:{paid:0,open:119.90,suspended:0}});
+    assert.match(render(),/Copiar Pix/);
+  }
+  for(const patch of [
+    {pix_copy_payload:null},{pix_copy_payload:''},{pix_copy_payload:'invalido'},
+    {can_open_boleto:false},{data_pagamento:'2026-11-12'},
+    ...['PAGO','CANCELADO','SUSPENSO','ESTORNADO','DEVOLVIDO'].map(status=>({status})),
+  ]) {
+    fixture({items:[{...payable,...patch}],summary:{paid:0,open:0,suspended:0}});
+    assert.doesNotMatch(render(),/Copiar Pix/);
+  }
 });
 test('query isolada por aluno/usuário/polo e sem cache reutilizável',()=>{
   fixture();render();assert.deepEqual(globalThis.fixture.options.queryKey,['financeiro-aluno-receivables','a1','user:context:polo']);
