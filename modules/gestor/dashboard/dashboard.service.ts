@@ -103,7 +103,7 @@ export const dashboardService = {
   },
 
   async getRecentActivity(poloId?: string | null, limit = 5): Promise<RecentActivityItem[]> {
-    const { data, error } = await supabase.rpc('get_dashboard_recent_activity', {
+    const { data, error } = await supabase.rpc('get_dashboard_recent_activity_v2', {
       p_polo_id: poloId || null,
       p_limit: limit,
     });

@@ -62,17 +62,39 @@ export const getEventTone = (typeId: string) => {
 export const getEventType = (eventTypes: EventType[], typeId: string) =>
   eventTypes.find((type) => type.id === typeId)?.label || 'Compromisso';
 
-export const formatTimeAgo = (dateStr: string, now: Date) => {
-  if (!dateStr) return '';
-  const date = new Date(dateStr);
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / (1000 * 60));
-  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-  const diffDays = Math.floor(diffMs / DAY_IN_MS);
+const isCivilDate = (value: string) => {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const parsed = new Date(`${value}T00:00:00Z`);
+  return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
+};
 
-  if (diffMins < 1) return 'Agora';
-  if (diffMins < 60) return `${diffMins}m`;
-  if (diffHours < 24) return `${diffHours}h`;
-  if (diffDays === 1) return 'Ontem';
-  return `${diffDays}d`;
+export const formatTimeAgo = (dateStr: string, now: Date) => {
+  const unavailable = 'Data não informada';
+  if (typeof dateStr !== 'string') return unavailable;
+  const dateKey = dateStr.slice(0, 10);
+  if (!isCivilDate(dateKey)) return unavailable;
+
+  // Uma data financeira não representa um instante nem muda com o fuso do navegador.
+  if (dateStr === dateKey) {
+    const [year, month, day] = dateKey.split('-');
+    return `${day}/${month}/${year}`;
+  }
+
+  // Somente timestamps com offset explícito podem produzir uma duração.
+  const timestamp = /^\d{4}-\d{2}-\d{2}T(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d{1,6})?(?:Z|[+-](?:[01]\d|2[0-3]):[0-5]\d)$/;
+  if (!timestamp.test(dateStr)) return unavailable;
+  const diffMs = now.getTime() - new Date(dateStr).getTime();
+  if (!Number.isFinite(diffMs)) return unavailable;
+
+  const elapsed = Math.abs(diffMs);
+  const minutes = Math.floor(elapsed / 60_000);
+  const hours = Math.floor(elapsed / 3_600_000);
+  const days = Math.floor(elapsed / DAY_IN_MS);
+  if (minutes < 1) return diffMs < 0 ? 'em instantes' : 'Agora';
+  const [amount, unit] = minutes < 60
+    ? [minutes, minutes === 1 ? 'minuto' : 'minutos']
+    : hours < 24
+      ? [hours, hours === 1 ? 'hora' : 'horas']
+      : [days, days === 1 ? 'dia' : 'dias'];
+  return `${diffMs < 0 ? 'em' : 'há'} ${amount} ${unit}`;
 };

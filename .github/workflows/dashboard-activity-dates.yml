@@ -1,0 +1,47 @@
+name: Datas da atividade recente
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/dashboard-activity-dates.yml'
+      - 'modules/gestor/dashboard/**'
+      - 'supabase/migrations/20261113184005_dashboard_activity_civil_dates.sql'
+      - 'supabase/tests/dashboard_recent_activity.isolated.test.mjs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dashboard-dates-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  dashboard-dates:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '>=24.22.1 <25'
+      - name: Validar versão segura do Node
+        run: node scripts/check-node-security.mjs
+      - name: Preparar PostgreSQL isolado
+        run: npm install --prefix "$RUNNER_TEMP/dashboard-dates" --no-save --package-lock=false --ignore-scripts @electric-sql/pglite@0.3.7
+      - name: Validar apresentação, serviço, RPC e permissões com dados sintéticos
+        env:
+          DASHBOARD_TEST_PGLITE_MODULE: ${{ runner.temp }}/dashboard-dates/node_modules/@electric-sql/pglite/dist/index.js
+        run: >-
+          node --test
+          modules/gestor/dashboard/dashboard-activity.presentation.test.ts
+          modules/gestor/dashboard/dashboard-activity.service.test.mjs
+          modules/gestor/dashboard/dashboard-financial.test.ts
+          supabase/tests/dashboard_recent_activity.isolated.test.mjs
+      - name: Conferir apresentação nos fusos UTC, Brasil, UTC+14 e horário de verão
+        run: |
+          for zone in UTC America/Sao_Paulo Pacific/Kiritimati America/New_York; do
+            TZ="$zone" node --test modules/gestor/dashboard/dashboard-activity.presentation.test.ts
+          done
