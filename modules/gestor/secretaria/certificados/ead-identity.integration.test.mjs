@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { Buffer } from 'node:buffer';
 import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -64,8 +65,10 @@ const emission = certificate => ({
 });
 const installDatabase = certificate => {
   const selects=[];
+  const queries=[];
   globalThis.__identityDatabase = table => {
     const filters=[];
+    queries.push({table,filters});
     let selected='';
     return {
       select(value){selected=value;return this;},eq(key,value){filters.push([key,value]);return this;},
@@ -82,14 +85,18 @@ const installDatabase = certificate => {
       },
     };
   };
-  return selects;
+  return {selects,queries};
 };
 
 for (const documentType of ['CIN','CNI','RG (ANTIGO)','CARTEIRA NACIONAL DE IDENTIFICAÇÃO']) {
   test(`real student/history selects deliver identity fields before rendering ${documentType}`, async()=>{
     const certificate=row({...liveStudent,tipo_documento:documentType});
-    const selects=installDatabase(certificate);
-    const student=await getAlunoEadCertificate(certificate.aluno_id,certificate.curso_id);
+    const {selects,queries}=installDatabase(certificate);
+    const student=await getAlunoEadCertificate(certificate.aluno_id,certificate.curso_id,certificate.id);
+    assert.deepEqual(queries[0],{table:'certificados_academicos',filters:[
+      ['aluno_id',certificate.aluno_id],['curso_id',certificate.curso_id],['id',certificate.id],
+      ['modalidade','EAD'],['status','FINALIZADO'],
+    ]});
     const history=await historicoEmissoesService.loadPreview(emission(certificate),'POLO-SYNTHETIC');
     assert.equal(selects.length,2);
     for(const actual of [student,history.certificate]){
@@ -102,6 +109,16 @@ for (const documentType of ['CIN','CNI','RG (ANTIGO)','CARTEIRA NACIONAL DE IDEN
     }
   });
 }
+
+test('student certificate reading without an exact certificate ID denies access without querying',async()=>{
+  const certificate=row(liveStudent);
+  const {selects,queries}=installDatabase(certificate);
+  for(const missingId of [undefined,null,'']){
+    assert.equal(await getAlunoEadCertificate(certificate.aluno_id,certificate.curso_id,missingId),null);
+  }
+  assert.equal(queries.length,0);
+  assert.equal(selects.length,0);
+});
 
 test('actual historical identity adapter preserves explicit snapshot values, including null, against live CIN', async()=>{
   const certificate=row(liveStudent);

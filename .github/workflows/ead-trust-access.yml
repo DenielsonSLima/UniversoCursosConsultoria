@@ -9,7 +9,8 @@ on:
       - 'modules/aluno/inicio/**'
       - 'modules/gestor/gestao/ead/**'
       - 'supabase/migrations/**'
-      - 'supabase/tests/ead_trust_access*'
+      - 'supabase/tests/ead_trust_*'
+      - 'supabase/tests/fixtures/ead-trust-*'
       - '.github/workflows/ead-trust-access.yml'
   push:
     branches: [main]
@@ -21,7 +22,8 @@ on:
       - 'modules/aluno/inicio/**'
       - 'modules/gestor/gestao/ead/**'
       - 'supabase/migrations/**'
-      - 'supabase/tests/ead_trust_access*'
+      - 'supabase/tests/ead_trust_*'
+      - 'supabase/tests/fixtures/ead-trust-*'
       - '.github/workflows/ead-trust-access.yml'
 permissions:
   contents: read
@@ -29,6 +31,18 @@ jobs:
   trust-access:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
@@ -37,12 +51,27 @@ jobs:
         with:
           node-version: '24.22.1'
       - run: npm ci
-      - name: Preparar PostgreSQL isolado
-        run: npm install --prefix "$RUNNER_TEMP/ead-trust" --no-save --package-lock=false --ignore-scripts @electric-sql/pglite@0.3.14
+      - name: Preparar PostgreSQL e DOM isolados
+        run: npm install --prefix "$RUNNER_TEMP/ead-trust" --no-save --package-lock=false --ignore-scripts @electric-sql/pglite@0.5.8 jsdom@26.1.0 pg@8.16.3
       - name: Validar autorização, prazo e preservação financeira
         env:
           PGLITE_MODULE_PATH: ${{ runner.temp }}/ead-trust/node_modules/@electric-sql/pglite/dist/index.js
-        run: node --test modules/aluno/cursos/eadTrustAccess.test.mjs supabase/tests/ead_trust_access.isolated.test.mjs
+        run: node --test modules/aluno/cursos/eadTrustAccess.test.mjs supabase/tests/ead_trust_*.isolated.test.mjs
 
       - name: Validar visibilidade temporária EAD
         run: node --test modules/aluno/shared/ead-temporary-access.test.ts modules/aluno/shared/ead-portal-trust.contract.test.mjs modules/aluno/turmas/ead-trust-visibility.test.mjs
+
+      - name: Validar liberação pela Gestão sem Financeiro
+        env:
+          EAD_TEST_JSDOM_MODULE: ${{ runner.temp }}/ead-trust/node_modules/jsdom/lib/api.js
+        run: node --test modules/gestor/gestao/ead/detalhes/ead-trust-access.interaction.test.mjs modules/aluno/cursos/eadTrustLearning.interaction.test.mjs modules/aluno/cursos/eadCertificateDelivery.interaction.test.mjs
+
+      - name: Validar concorrência de conclusão, pagamento e expiração
+        env:
+          EAD_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres
+          EAD_TEST_POSTGRES_DISPOSABLE: 'true'
+          EAD_TEST_PG_MODULE: ${{ runner.temp }}/ead-trust/node_modules/pg/lib/index.js
+        run: node --test supabase/tests/ead_trust_certificate.concurrent.test.mjs
+
+      - name: Validar integração TypeScript do candidato
+        run: node node_modules/typescript/bin/tsc --noEmit

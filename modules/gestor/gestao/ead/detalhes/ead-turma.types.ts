@@ -52,6 +52,14 @@ export interface AlunoDisponivel {
   telefone?: string | null;
 }
 
+export interface EadTrustAccessStudent {
+  matriculaId: string;
+  nome: string;
+  status: string;
+  acessoTemporarioAte: string | null;
+  acessoTemporarioAtivo: boolean;
+}
+
 export interface EadPagamentoTurma {
   id: string;
   matricula_id?: string | null;

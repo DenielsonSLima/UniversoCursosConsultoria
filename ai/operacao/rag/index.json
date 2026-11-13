@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "retrieval": "lexical-bm25-with-source-citations",
-  "builtAt": "2026-11-13T02:01:42.901Z",
+  "builtAt": "2026-11-13T03:26:43.331Z",
   "manifestVersion": 2,
-  "sourceSignature": "e5e2ef545127855fe18d7e545b26e891b20bf2e2dcbd39bd6ae4ed4cdfd54dc1",
+  "sourceSignature": "188803a8b746e1278a7df8794d332bb3348866146f48dd3ddf5ded108aefd1d9",
   "sources": [
     {
       "path": "AGENTS.md",
@@ -11,7 +11,7 @@
     },
     {
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "hash": "c811209ca7a50923a45a9bb2426ec79a84763c192eafcad75aa063a6a7f36edc"
+      "hash": "ee12c7a1d3b92f07952fc9903746151e0599e237305400110a5433fe615c6f24"
     },
     {
       "path": "ai/operacao/MEMORIA_CANONICA.md",
@@ -208,14 +208,24 @@
       "part": 1
     },
     {
-      "id": "b13845efa1c463eee83f",
-      "hash": "b13845efa1c463eee83f652ec420b7393ca160f4b344e4fa476e2ec6ef243401",
+      "id": "f90a8265d6405bb8a725",
+      "hash": "f90a8265d6405bb8a725840f3a55bc13f309e1bc9ee09619c773dbff514fc362",
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Lote: 2026-11-12-nfse-servicos-formulario-padrao",
-      "text": "Objetivo: modelos de emissão em lista com resumo fiscal, categoria fixa de serviços e digitação decimal automática. Status: implementação e validação do candidato 4.8.331, revisão 340; publicação já autorizada pelo usuário. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-12-nfse-servicos-formulario-padrao.md`. Base: 4.8.330, preservando o padrão de recebimento, o extrato de Serviços e a retomada acadêmica. Aceite: um modelo por linha sem cartões; NBS e indicador reais; categoria Serviços NFS-e sem escolha; valores/percentuais com duas casas; plano e parcelas canônicos no servidor. Limitação: nenhum navegador controlado; conferência visual autenticada permanece com o usuário no acesso local. Fechamento: registros de implantação dos lotes anteriores consolidados em `2026-11-12-fechamento-publicacoes-emissor-financeiro.md`; índice local RAG gerado uma vez após as fontes finais.",
-      "normalizedText": "objetivo modelos de emissao em lista com resumo fiscal categoria fixa de servicos e digitacao decimal automatica status implementacao e validacao do candidato 4 8 331 revisao 340 publicacao ja autorizada pelo usuario manifesto explicito ai operacao registros alteracoes 2026 11 12 nfse servicos formulario padrao md base 4 8 330 preservando o padrao de recebimento o extrato de servicos e a retomada academica aceite um modelo por linha sem cartoes nbs e indicador reais categoria servicos nfs e sem escolha valores percentuais com duas casas plano e parcelas canonicos no servidor limitacao nenhum navegador controlado conferencia visual autenticada permanece com o usuario no acesso local fechamento registros de implantacao dos lotes anteriores consolidados em 2026 11 12 fechamento publicacoes emissor financeiro md indice local rag gerado uma vez apos as fontes finais",
-      "tokenCount": 119,
+      "section": "Lote: 2026-11-12-ead-confianca-lifecycle",
+      "text": "Objetivo: alinhar a liberação EAD por confiança para usuários internos com Gestão, sem exigir Financeiro; 24 horas incluem aulas, prova e certificado temporariamente válido. Status: implementação e revisão cruzada concluídas; regras preparatórias instaladas com ativação fechada; candidato 4.8.332 em validação final e publicação autorizada. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-12-ead-confianca-lifecycle.md` (em definição final). Base publicada: 4.8.331, PR #422, merge d88cc7b04b0af17459e3f13b9be39f5bde953c5a; preservar os lotes anteriores. Aceite confirmado pelo usuário: todos os internos com Gestão EAD nos polos autorizados podem liberar; sem Financeiro, matrícula continua gerando cobrança obrigatória. Pagamento confirmado mantém acesso definitivo; ausência de confirmação em 24h bloqueia e revoga o certificado da mesma matrícula; expiração da cobrança respeita o fluxo financeiro canônico. Guarda: somente EAD, sem baixa financeira pela confiança, sem renovação automática do prazo, sem tocar certificados pagos ou de outras matrículas. Revogação preserva documento e trilha de auditoria. Limitações: comprovante é conferido manualmente; nenhuma nova operação",
+      "normalizedText": "objetivo alinhar a liberacao ead por confianca para usuarios internos com gestao sem exigir financeiro 24 horas incluem aulas prova e certificado temporariamente valido status implementacao e revisao cruzada concluidas regras preparatorias instaladas com ativacao fechada candidato 4 8 332 em validacao final e publicacao autorizada manifesto explicito ai operacao registros alteracoes 2026 11 12 ead confianca lifecycle md em definicao final base publicada 4 8 331 pr 422 merge d88cc7b04b0af17459e3f13b9be39f5bde953c5a preservar os lotes anteriores aceite confirmado pelo usuario todos os internos com gestao ead nos polos autorizados podem liberar sem financeiro matricula continua gerando cobranca obrigatoria pagamento confirmado mantem acesso definitivo ausencia de confirmacao em 24h bloqueia e revoga o certificado da mesma matricula expiracao da cobranca respeita o fluxo financeiro canonico guarda somente ead sem baixa financeira pela confianca sem renovacao automatica do prazo sem tocar certificados pagos ou de outras matriculas revogacao preserva documento e trilha de auditoria limitacoes comprovante e conferido manualmente nenhuma nova operacao",
+      "tokenCount": 146,
       "part": 1
+    },
+    {
+      "id": "e7e35b05db3bc9377d35",
+      "hash": "e7e35b05db3bc9377d35d507dcf73f72bcf1820c2be5588e0477fed5059d65fc",
+      "path": "ai/operacao/LOTE_ATIVO.md",
+      "section": "Lote: 2026-11-12-ead-confianca-lifecycle",
+      "text": "bancária, liberação de aluno ou revogação real será usada como teste; nenhum navegador controlado. Fechamento: manifesto de 50 arquivos; testes funcionais/DOM, TypeScript e build aprovados. Três cenários de concorrência com PostgreSQL 17 passaram; a adequação do teste de identidade ao ID exato integra a árvore final. CI da árvore final antecede a produção e a ativação final. Índice local RAG atualizado uma vez após estas fontes finais.",
+      "normalizedText": "bancaria liberacao de aluno ou revogacao real sera usada como teste nenhum navegador controlado fechamento manifesto de 50 arquivos testes funcionais dom typescript e build aprovados tres cenarios de concorrencia com postgresql 17 passaram a adequacao do teste de identidade ao id exato integra a arvore final ci da arvore final antecede a producao e a ativacao final indice local rag atualizado uma vez apos estas fontes finais",
+      "tokenCount": 62,
+      "part": 2
     },
     {
       "id": "cbd4dd650a86dc9a8867",

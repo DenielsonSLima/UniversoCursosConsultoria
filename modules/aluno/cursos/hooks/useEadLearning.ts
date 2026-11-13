@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, type QueryClient } from '@tanstack/react-query';
 import { supabase } from '../../../../lib/supabase';
-import type { CertificadoAcademico } from '../../../gestor/secretaria/certificados/certificados.types';
-import { getAlunoEadCertificate } from '../ead-certificate.service';
+import { useAlunoEadCertificate } from './useAlunoEadCertificate';
 import { useAlunoEadCertificateModel } from './useAlunoEadCertificateModel';
 import { useEadAssessmentRevision } from './useEadAssessmentRevision';
 import { getEffectiveEadConfig } from '../eadAssessmentRevision';
@@ -32,6 +31,7 @@ import {
 } from '../eadAssessmentRuntime';
 import {
   MAIN_EAD_VIDEO_ID,
+  EAD_PENDING_STATUSES,
   formatCountdown,
   getActivityLessonIndex,
   getLegacyMainVideoLesson,
@@ -40,6 +40,7 @@ import {
   hasEadAccess,
   hashString,
   normalizeEadProgressState,
+  normalizeStatus,
   shuffleWithSeed,
 } from '../cursosPage.utils';
 
@@ -141,16 +142,19 @@ export const useEadLearning = ({ alunoId, hasAlunoContext, selectedCourse, query
     refetchInterval: selectedCourse?.id ? 30000 : false,
   });
   const accessExpired = !hasEadAccess(selectedCourse);
+  const temporaryReadUnavailable = progressQuery.isError
+    && EAD_PENDING_STATUSES.has(normalizeStatus(selectedCourse?.alunoMatricula?.status));
   const hasProgressData = progressQuery.data !== undefined;
   const hasAuthoritativeProgress = isEadProgressStatePayload(progressQuery.data)
     && getEffectiveEadConfig(selectedCourse?.ead_config, progressQuery.data) !== null;
   const progressContractError = hasProgressData && !hasAuthoritativeProgress;
   const progressAvailability = getEadProgressAvailability(
-    hasAuthoritativeProgress && !accessExpired,
+    hasAuthoritativeProgress && !accessExpired && !temporaryReadUnavailable,
     progressQuery.isFetching,
     progressQuery.isError || progressContractError || accessExpired,
   );
-  const progressQueryError = accessExpired ? 'Acesso temporário encerrado. Aguarde a confirmação do pagamento.' : progressContractError
+  const progressQueryError = accessExpired ? 'Acesso temporário encerrado. Aguarde a confirmação do pagamento.'
+    : temporaryReadUnavailable ? 'Não foi possível confirmar o acesso temporário. Aguarde a confirmação do pagamento ou tente atualizar novamente.' : progressContractError
     ? 'O servidor retornou um contrato de avaliação incompatível. Atualize novamente ou avise o suporte.'
     : progressQuery.isError
       ? (progressQuery.error as any)?.message || 'Não foi possível carregar seu progresso EAD.'
@@ -276,15 +280,8 @@ export const useEadLearning = ({ alunoId, hasAlunoContext, selectedCourse, query
   const startedAtDate = progress?.startedAt ? new Date(Number(progress.startedAt)) : null;
   const completedLessonCount = Array.isArray(progress?.completedContentIds) ? progress.completedContentIds.length : 0;
 
-  const { data: alunoCertificado, isLoading: certificateLoading, isError: certificateError } = useQuery<CertificadoAcademico | null>({
-    queryKey: ['aluno-certificado-ead', alunoId, selectedCourse?.id],
-    enabled: hasAlunoContext && !!selectedCourse?.id && quizPassed,
-    queryFn: async () => {
-      if (!alunoId) throw new Error('Aluno não identificado para este contexto.');
-      return getAlunoEadCertificate(alunoId, selectedCourse!.id);
-    },
-    refetchInterval: query => query.state.data ? false : 30_000,
-  });
+  const { data: alunoCertificado, isLoading: certificateLoading, isError: certificateError } =
+    useAlunoEadCertificate(alunoId, selectedCourse?.id, summary?.certificateId, hasAlunoContext && quizPassed);
   const certificateStatusTitle = certificateError
     ? 'Situação do certificado indisponível'
     : alunoCertificado ? 'Certificado EAD disponível' : 'Aguardando liberação automática';

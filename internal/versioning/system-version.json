@@ -1,8 +1,8 @@
 {
-  "version": "4.8.331",
+  "version": "4.8.332",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 340,
-  "releasedAt": "2026-11-12",
-  "summary": "Serviços com modelos em lista, categoria fixa e valores formatados"
+  "revision": 341,
+  "releasedAt": "2026-11-13",
+  "summary": "EAD com confiança de 24 horas para Gestão, prova e certificado temporário"
 }
