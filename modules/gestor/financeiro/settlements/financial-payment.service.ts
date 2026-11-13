@@ -23,6 +23,7 @@ const errorMessage = async (error: unknown, fallback: string) => {
     [/PAYMENT_UNAUTHORIZED/, 'Seu acesso a esta operação ou ao polo não está autorizado.'],
     [/PAYMENT_(INVALID_AMOUNT|INVALID_COMPONENT|INVALID_INPUT)/, 'Confira a data, as contas e os valores informados.'],
     [/PAYMENT_TITLE_NOT_OPEN/, 'Este lançamento não está mais em aberto. Confira o histórico.'],
+    [/PAYMENT_NFSE_FISCAL_CANCELLED/, 'A NFS-e deste serviço foi cancelada ou está com o cancelamento financeiro em análise. Consulte o histórico.'],
     [/PAYMENT_(REQUEST_REUSED|REQUEST_CONFLICT)/, 'Esta tentativa já existe com outros dados. Retome a solicitação original.'],
     [/PAYMENT_SPECIALIZED_FLOW_REQUIRED/, 'Este lançamento deve ser tratado no fluxo de convênio ou empréstimo.'],
     [/PAYMENT_EVENT_ALREADY_REVERSED/, 'Este pagamento já foi estornado. Confira o histórico.'],

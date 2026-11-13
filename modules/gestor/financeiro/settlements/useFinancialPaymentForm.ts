@@ -23,7 +23,8 @@ const loadAttempt = (key: string, sourceId: string): FinancialPaymentConfirmatio
 };
 
 export function useFinancialPaymentForm(sourceKind: FinancialPaymentSourceKind, sourceId: string, initialAccountId: string,
-  onConfirm: (payload: FinancialPaymentConfirmation) => Promise<FinancialPaymentResult>, initialMethod: FinancialPaymentMethod = 'DINHEIRO') {
+  onConfirm: (payload: FinancialPaymentConfirmation) => Promise<FinancialPaymentResult>, initialMethod: FinancialPaymentMethod = 'DINHEIRO',
+  readOnly = false, historyOnly = false) {
   const [draft, setDraft] = useState<FinancialPaymentInput>(() => ({ requestId: generateSafeUuid(), sourceId,
     paymentDate: todayInMaceio(), components: [{ accountId: initialAccountId, method: initialMethod, amount: '' }],
     interest: '', penalty: '', addition: '', discount: '', notes: '' }));
@@ -39,6 +40,9 @@ export function useFinancialPaymentForm(sourceKind: FinancialPaymentSourceKind, 
   const [storageWarning, setStorageWarning] = useState(false);
   const storageKey = useRef('');
   const inFlight = useRef(false);
+  const readOnlyRef = useRef(readOnly);
+  const historyOnlyRef = useRef(historyOnly);
+  useEffect(() => { readOnlyRef.current = readOnly; historyOnlyRef.current = historyOnly; }, [readOnly, historyOnly]);
   const input = useMemo(() => normalizePaymentDraft(draft), [draft]);
   const automatic = automaticAmount && draft.components.length === 1;
   const inputKey = input ? JSON.stringify({ input, automatic }) : '';
@@ -67,6 +71,7 @@ export function useFinancialPaymentForm(sourceKind: FinancialPaymentSourceKind, 
   }, [sourceKind, sourceId]);
 
   useEffect(() => {
+    if (readOnly || historyOnly) { setPreview(null); setPreviewKey(''); setPreviewLoading(false); return; }
     if (loading || submitted || !input || !draft.paymentDate) { setPreviewLoading(false); return; }
     if (preview && previewKey === inputKey) { setPreviewLoading(false); return; }
     let active = true;
@@ -86,17 +91,19 @@ export function useFinancialPaymentForm(sourceKind: FinancialPaymentSourceKind, 
         .finally(() => { if (active) setPreviewLoading(false); });
     }, 250);
     return () => { active = false; window.clearTimeout(timer); };
-  }, [inputKey, loading, sourceKind, submitted]);
+  }, [inputKey, loading, sourceKind, submitted, readOnly, historyOnly]);
 
-  const canConfirm = !loading && !pending && (Boolean(submitted) || Boolean(input && preview && previewKey === inputKey && !previewLoading));
+  const canConfirm = !historyOnly && !loading && !pending && (Boolean(submitted)
+    || !readOnly && Boolean(input && preview && previewKey === inputKey && !previewLoading));
   const confirm = async () => {
-    if (inFlight.current || !canConfirm || !storageKey.current) return;
+    if (historyOnlyRef.current || readOnlyRef.current && !submitted || inFlight.current || !canConfirm || !storageKey.current) return;
     const payload = submitted || { input: input!, fingerprint: preview!.fingerprint };
     inFlight.current = true; setPending(true); setError(null);
     try {
       const session = await supabase.auth.getSession();
       const userId = session.data.session?.user.id;
       if (!userId || attemptKey(userId, sourceKind, sourceId) !== storageKey.current) throw new Error('A sessão mudou. Feche esta janela e abra o lançamento novamente.');
+      if (historyOnlyRef.current || readOnlyRef.current && !submitted) return;
       setSubmitted(payload);
       setStorageWarning(!storeAttempt(storageKey.current, payload));
       await onConfirm(payload);
