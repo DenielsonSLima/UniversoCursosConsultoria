@@ -1,8 +1,8 @@
 {
-  "version": "4.8.335",
+  "version": "4.8.337",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 344,
+  "revision": 346,
   "releasedAt": "2026-11-13",
-  "summary": "Fontes fiscais e testes sincronizados com o banco publicado; registros de entrega atualizados"
+  "summary": "Caixa limita a elegibilidade ao mês e polo antes das consultas de evidência, preservando cálculos e histórico"
 }
