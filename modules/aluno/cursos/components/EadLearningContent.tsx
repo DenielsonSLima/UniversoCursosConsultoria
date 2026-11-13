@@ -58,10 +58,10 @@ const EadLearningContent: React.FC<EadLearningContentProps> = ({ view }) => {
     : false;
 
   return (
-        <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+        <div data-learning-tab={activeLearningTab} className="aluno-ead-learning grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-12">
           {activeLearningTab !== 'video' && (
-          <aside className={`${activeLearningTab === 'prova' || activeLearningTab === 'certificado' ? 'xl:col-span-3' : 'xl:col-span-4'} space-y-3`}>
-            <div className="bg-white border border-slate-100 rounded-[2rem] p-4 shadow-sm">
+          <aside className={`min-w-0 ${activeLearningTab === 'prova' || activeLearningTab === 'certificado' ? 'xl:col-span-3' : 'xl:col-span-4'} space-y-3`}>
+            <div className="aluno-ead-stages bg-white border border-slate-100 rounded-[2rem] p-4 shadow-sm">
               <h3 className="text-xs font-black text-[#001a33] uppercase tracking-widest mb-3">Etapas do curso</h3>
               <div className="space-y-2">
                 {conteudos.map((lesson: any, idx: number) => {
@@ -70,6 +70,7 @@ const EadLearningContent: React.FC<EadLearningContentProps> = ({ view }) => {
                   return (
                     <button
                       key={lesson.id}
+                      title={lesson.titulo}
                       onClick={() => !locked && setSelectedLessonIdx(idx)}
                       disabled={locked}
                       className={`w-full flex items-center gap-3 rounded-2xl border p-3 text-left transition-all ${
@@ -91,7 +92,7 @@ const EadLearningContent: React.FC<EadLearningContentProps> = ({ view }) => {
           </aside>
           )}
 
-          <main className={`${activeLearningTab === 'video' ? 'xl:col-span-12' : activeLearningTab === 'prova' || activeLearningTab === 'certificado' ? 'xl:col-span-9' : 'xl:col-span-8'} space-y-6`}>
+          <main className={`min-w-0 ${activeLearningTab === 'video' ? 'xl:col-span-12' : activeLearningTab === 'prova' || activeLearningTab === 'certificado' ? 'xl:col-span-9' : 'xl:col-span-8'} space-y-6`}>
             {activeLearningTab === 'video' ? (
               <section className="overflow-hidden rounded-[2rem] border border-slate-100 bg-white shadow-sm">
                 <div className="grid grid-cols-1 gap-0 xl:grid-cols-12">
@@ -211,17 +212,17 @@ const EadLearningContent: React.FC<EadLearningContentProps> = ({ view }) => {
             ) : activeLearningTab === 'aulas' ? (
             selectedLesson ? (
               <section className="bg-white border border-slate-100 rounded-[2rem] p-5 sm:p-7 shadow-sm space-y-6">
-                <div className="flex flex-wrap gap-2 rounded-2xl border border-slate-100 bg-slate-50 p-1.5 w-full sm:w-max">
+                <div role="tablist" aria-label="Conteúdo da etapa" className="aluno-course-tabs flex max-w-full gap-1 overflow-x-auto border-b border-slate-200">
                   {[
                     ['aulas', 'Aulas', <BookOpen size={14} />],
                     ['atividades', 'Atividades', <ListChecks size={14} />]
                   ].map(([id, label, icon]) => (
                     <button
                       key={id as string}
-                      type="button"
+                      type="button" role="tab" aria-selected={activeCourseContentTab === id}
                       onClick={() => setActiveCourseContentTab(id as 'aulas' | 'atividades')}
-                      className={`inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-[10px] font-black uppercase tracking-widest transition-all ${
-                        activeCourseContentTab === id ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-500 hover:text-blue-700'
+                      className={`inline-flex min-h-11 shrink-0 items-center justify-center gap-2 border-b-2 px-3 py-2 text-[13px] font-medium outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-inset ${
+                        activeCourseContentTab === id ? 'border-blue-600 text-blue-700' : 'border-transparent text-slate-600 hover:text-blue-700'
                       }`}
                     >
                       {icon as React.ReactNode}
@@ -278,4 +279,3 @@ const EadLearningContent: React.FC<EadLearningContentProps> = ({ view }) => {
 };
 
 export default EadLearningContent;
-

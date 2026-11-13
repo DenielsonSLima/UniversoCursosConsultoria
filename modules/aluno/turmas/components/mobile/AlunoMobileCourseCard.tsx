@@ -66,11 +66,11 @@ const AlunoMobileCourseCard = ({
   };
 
   return (
-    <article className={`relative overflow-hidden rounded-[1.5rem] border bg-white shadow-sm md:hidden ${
-      isPinned ? 'border-blue-300 ring-2 ring-blue-100' : 'border-slate-200/80'
+    <article className={`relative overflow-hidden rounded-xl border bg-white shadow-sm md:hidden ${
+      isPinned ? 'border-blue-300 ' : 'border-slate-200/80'
     }`}>
       <div className="flex gap-3 p-3">
-        <div className="h-24 w-24 shrink-0 overflow-hidden rounded-[1.2rem] bg-slate-100">
+        <div className="h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-slate-100">
           {curso?.imagem_url ? (
             <img
               src={curso.imagem_url}
@@ -89,10 +89,10 @@ const AlunoMobileCourseCard = ({
         <div className="min-w-0 flex-1 py-0.5">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
-              <span className="text-[10px] font-black uppercase tracking-[0.16em] text-blue-600">
+              <span className="text-xs font-semibold text-blue-600">
                 {modalityLabel(modality)}
               </span>
-              <h3 className="mt-1 line-clamp-2 text-sm font-black leading-snug text-[#001a33]">
+              <h3 className="mt-1 break-words text-sm font-semibold leading-snug text-[#001a33]">
                 {curso?.nome || turma?.nome || 'Curso'}
               </h3>
             </div>
@@ -102,15 +102,16 @@ const AlunoMobileCourseCard = ({
               className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border transition-colors ${
                 isPinned
                   ? 'border-blue-200 bg-blue-600 text-white'
-                  : 'border-slate-100 bg-slate-50 text-slate-400 active:border-blue-200 active:text-blue-700'
+                  : 'border-slate-100 bg-slate-50 text-slate-600 active:border-blue-200 active:text-blue-700'
               }`}
+              aria-pressed={isPinned}
               aria-label={isPinned ? 'Remover curso dos fixados' : 'Fixar curso no topo'}
             >
               <Pin size={14} fill={isPinned ? 'currentColor' : 'none'} />
             </button>
           </div>
 
-          <p className="mt-1 line-clamp-1 text-[10px] font-bold uppercase tracking-wide text-slate-400">
+          <p className="mt-1 break-words text-xs font-medium text-slate-600">
             {turma?.nome || 'Matrícula vinculada'}
           </p>
           <div className="mt-2 origin-left">
@@ -120,8 +121,8 @@ const AlunoMobileCourseCard = ({
       </div>
 
       <div className="border-t border-slate-100 px-3 pb-3 pt-2.5">
-        <div className="flex items-center justify-between gap-3 text-[10px] font-black uppercase tracking-wider">
-          <span className="text-slate-400">Progresso</span>
+        <div className="flex items-center justify-between gap-3 text-xs font-semibold ">
+          <span className="text-slate-600">Progresso</span>
           <span className={progressState?.isError ? 'text-rose-600' : 'text-blue-600'}>{progressLabel}</span>
         </div>
         <div
@@ -150,7 +151,7 @@ const AlunoMobileCourseCard = ({
         <button
           type="button"
           onClick={openCourse}
-          className="mt-3 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 text-[10px] font-black uppercase tracking-[0.14em] text-white shadow-sm active:bg-blue-700"
+          className="mt-3 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 text-xs font-semibold text-white shadow-sm active:bg-blue-700"
         >
           <span>{waitingForTechnicalStart ? 'Ver matrícula' : locked ? 'Ver status' : ead ? 'Acessar curso' : 'Abrir curso'}</span>
           {ead && !locked ? <MonitorPlay size={14} /> : <ChevronRight size={14} />}

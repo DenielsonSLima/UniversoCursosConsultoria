@@ -58,7 +58,7 @@ export const useAlunoHomeData = ({ alunoId, canViewCalendar, onNavigate, onOpenC
   const isMobileLayout = useAlunoMobileLayout();
   // Conta também a matrícula técnica pendente para o aluno enxergar que já
   // está registrado, sem liberar conteúdo acadêmico antes da ativação.
-  const { data: enrollmentSummary = { visible: 0, pendingTechnical: 0 }, isError: enrollmentSummaryError, refetch: refetchEnrollmentSummary } = useQuery({
+  const { data: enrollmentSummary = { visible: 0, pendingTechnical: 0 }, isLoading: loadingEnrollmentSummary, isError: enrollmentSummaryError, refetch: refetchEnrollmentSummary } = useQuery({
     queryKey: alunoCourseAccessKeys.homeEnrollmentCount(alunoId),
     refetchInterval: 30_000,
     queryFn: async () => {
@@ -387,5 +387,5 @@ export const useAlunoHomeData = ({ alunoId, canViewCalendar, onNavigate, onOpenC
     ]);
   };
 
-  return { bibliotecaCount, bibliotecaCountError, chatsCount, chatsCountError, enrollmentSummary, enrollmentSummaryError, financeiroError, financeiroResumo, formatCurrency, formatDate, getCourseModalityClasses, getCourseModalityLabel, handleOpenQuickAccessCourse, handleTogglePinnedCourse, hasHomeDataError, isMobileLayout, loadingFinanceiro, loadingProximosEventos, matriculasCount, matriculasError, proximosEventos, proximosEventosError, quickAccessCourses, retryHomeData, pinnedCourseKeys };
+  return { bibliotecaCount, bibliotecaCountError, chatsCount, chatsCountError, enrollmentSummary, enrollmentSummaryError, financeiroError, financeiroResumo, formatCurrency, formatDate, getCourseModalityClasses, getCourseModalityLabel, handleOpenQuickAccessCourse, handleTogglePinnedCourse, hasHomeDataError, isMobileLayout, loadingEnrollmentSummary, loadingMatriculas, loadingFinanceiro, loadingProximosEventos, matriculasCount, matriculasError, proximosEventos, proximosEventosError, quickAccessCourses, retryHomeData, pinnedCourseKeys };
 };

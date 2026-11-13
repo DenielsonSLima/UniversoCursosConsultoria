@@ -17,68 +17,66 @@ const BanesePixPanel = ({ pix, disabled = false }: BanesePixPanelProps) => {
   const available = pix.state === 'available' && !disabled;
 
   return (
-    <section className="overflow-hidden rounded-[1.6rem] border border-emerald-200 bg-white shadow-[0_18px_45px_rgba(15,118,82,0.08)]">
-      <div className="flex items-center justify-between gap-3 border-b border-emerald-100 bg-emerald-50/80 px-4 py-3">
-        <div className="flex items-center gap-2">
-          <div className="grid h-9 w-9 place-items-center rounded-xl bg-emerald-700 text-white shadow-sm">
+    <section className="overflow-hidden rounded-xl border border-emerald-200 bg-white ">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-emerald-100 bg-emerald-50/80 px-4 py-3">
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+          <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-emerald-700 text-white">
             <QrCode size={18} />
           </div>
           <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-800">Pix Banese</p>
-            <p className="text-xs font-bold text-emerald-950">{pix.title}</p>
+            <p className="text-xs font-medium text-emerald-800">Pix Banese</p>
+            <p className="text-[13px] font-medium text-emerald-950">{pix.title}</p>
           </div>
         </div>
-        <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-white px-2.5 py-1 text-[9px] font-black uppercase tracking-wider text-emerald-700">
+        <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-white px-2.5 py-1 text-xs font-medium text-emerald-700">
           <ShieldCheck size={11} /> {pix.state === 'available' ? 'Oficial' : pix.state === 'sandbox-unavailable' ? 'Homologação' : 'Indisponível'}
         </span>
       </div>
 
       {available ? (
         <div className="p-4">
-          <div className={`grid gap-4 ${pix.imageSource ? 'sm:grid-cols-[132px_1fr]' : ''}`}>
-            {pix.imageSource ? (
-              <div className="mx-auto grid h-[132px] w-[132px] place-items-center rounded-2xl border border-slate-200 bg-white p-2 shadow-sm sm:mx-0">
-                <img src={pix.imageSource} alt="QR Code Pix desta cobrança Banese" className="h-full w-full object-contain" />
-              </div>
-            ) : null}
+          <div className={`grid gap-4 ${pix.imageSource ? 'sm:grid-cols-[minmax(0,1fr)_132px]' : ''}`}>
             <div className="min-w-0">
               <p className="text-xs font-semibold leading-relaxed text-slate-600">{pix.message}</p>
               {pix.payload ? (
-                <div className="mt-3 rounded-2xl border border-slate-200 bg-slate-50 p-2">
-                  <p className="max-h-20 overflow-hidden break-all px-2 py-1 font-mono text-[11px] font-bold leading-relaxed text-slate-700">
-                    {pix.payload}
-                  </p>
+                <div className="mt-3">
                   <button
                     type="button"
                     onClick={() => void copy(pix.payload ?? '')}
-                    className="mt-2 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-emerald-700 px-4 text-[10px] font-black uppercase tracking-[0.16em] text-white transition hover:bg-emerald-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2"
+                    className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-lg bg-emerald-700 px-4 text-[14px] font-medium text-white transition hover:bg-emerald-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2"
                   >
                     {state === 'copied' ? <CheckCircle2 size={15} /> : <Clipboard size={15} />}
                     {state === 'copied' ? 'Pix copiado' : 'Copiar Pix'}
                   </button>
-                  <p className={`mt-2 text-center text-[10px] font-bold ${state === 'error' ? 'text-rose-600' : 'text-slate-400'}`} aria-live="polite">
+                  <p className={`mt-2 text-center text-xs font-medium ${state === 'error' ? 'text-rose-600' : 'text-slate-600'}`} aria-live="polite">
                     {state === 'error' ? 'Não foi possível copiar. Selecione o código manualmente.' : 'Use somente o código desta parcela.'}
                   </p>
+                  <label className="mt-3 block text-xs text-slate-600" htmlFor="banese-pix-payload">Código Pix copia e cola</label>
+                  <textarea id="banese-pix-payload" readOnly value={pix.payload} rows={2} className="mt-1 w-full resize-none rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 font-mono text-base leading-relaxed text-slate-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-emerald-600 md:text-xs" />
                 </div>
               ) : (
-                <div className="mt-3 flex items-start gap-2 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-xs font-semibold leading-relaxed text-amber-800">
+                <div className="mt-3 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs font-semibold leading-relaxed text-amber-800">
                   <Info size={16} className="mt-0.5 shrink-0" />
                   O QR está disponível, mas o código copia e cola ainda não foi retornado.
                 </div>
               )}
             </div>
+            {pix.imageSource ? (
+              <div className="mx-auto grid h-[132px] w-[132px] place-items-center rounded-lg border border-slate-200 bg-white p-2 sm:mx-0">
+                <img src={pix.imageSource} alt="QR Code Pix desta cobrança Banese" className="h-full w-full object-contain" />
+              </div>
+            ) : null}
           </div>
         </div>
       ) : (
         <div className="p-4">
-          <div className="relative overflow-hidden rounded-2xl border border-dashed border-emerald-300 bg-[linear-gradient(135deg,#f0fdf7_0%,#ffffff_55%,#ecfdf5_100%)] p-5">
-            <div className="absolute -right-5 -top-6 h-24 w-24 rounded-full border-[14px] border-emerald-100/70" />
-            <div className="relative flex items-start gap-3">
-              <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-white text-emerald-700 shadow-sm ring-1 ring-emerald-100">
+          <div className="rounded-lg border border-dashed border-emerald-200 bg-emerald-50/50 p-3">
+            <div className="flex items-start gap-3">
+              <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-white text-emerald-700">
                 {pix.state === 'sandbox-unavailable' ? <Sparkles size={21} /> : <QrCode size={21} />}
               </div>
               <div className="min-w-0">
-                <p className="text-sm font-black text-emerald-950">{disabled ? 'Cobrança já encerrada' : pix.title}</p>
+                <p className="text-sm font-medium text-emerald-950">{disabled ? 'Cobrança já encerrada' : pix.title}</p>
                 <p className="mt-1 text-xs font-semibold leading-relaxed text-emerald-800/80">
                   {disabled ? 'As opções de pagamento foram desativadas porque esta cobrança já foi confirmada ou cancelada.' : pix.message}
                 </p>

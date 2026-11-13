@@ -119,11 +119,11 @@ const AlunoTurmasList: React.FC<AlunoTurmasListProps> = ({
     }
 
     return (
-      <article key={matricula.id} className={`relative min-w-0 overflow-hidden rounded-[1.5rem] border bg-white shadow-sm transition-all duration-300 hover:border-blue-400 hover:shadow-md ${isPinned ? 'border-blue-300 ring-2 ring-blue-100' : 'border-slate-100'}`}>
+      <article key={matricula.id} className={`relative min-w-0 overflow-hidden rounded-xl border bg-white shadow-sm transition-all duration-300 hover:border-blue-400 hover:shadow-md ${isPinned ? 'border-blue-300 ring-2 ring-blue-100' : 'border-slate-100'}`}>
         <button
           type="button"
           onClick={() => onTogglePinned(matricula)}
-          className={`absolute right-3 top-3 z-10 flex h-11 w-11 items-center justify-center rounded-2xl border shadow-sm backdrop-blur outline-none transition focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 sm:right-4 sm:top-4 ${isPinned ? 'border-blue-200 bg-blue-600 text-white hover:bg-blue-700' : 'border-white/70 bg-white/90 text-slate-500 hover:border-blue-200 hover:text-blue-700'}`}
+          className={`absolute right-3 top-3 z-10 flex h-11 w-11 items-center justify-center rounded-xl border shadow-sm backdrop-blur outline-none transition focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 sm:right-4 sm:top-4 ${isPinned ? 'border-blue-200 bg-blue-600 text-white hover:bg-blue-700' : 'border-white/70 bg-white/90 text-slate-500 hover:border-blue-200 hover:text-blue-700'}`}
           title={isPinned ? 'Remover dos fixados' : 'Fixar no topo'}
           aria-label={isPinned ? 'Remover curso dos fixados' : 'Fixar curso no topo'}
         >
@@ -138,34 +138,34 @@ const AlunoTurmasList: React.FC<AlunoTurmasListProps> = ({
           )}
         </div>
 
-        <div className="space-y-4 p-4 sm:p-5">
+        <div className="space-y-3 p-4">
           <div className="flex items-start justify-between gap-2">
             <div className="flex flex-wrap items-center gap-2">
               <CourseStatusBadge status={matricula.status} />
-              {isPinned ? <span className="inline-flex items-center gap-1 rounded-full border border-blue-100 bg-blue-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-blue-700"><Pin size={10} fill="currentColor" /> Fixado</span> : null}
+              {isPinned ? <span className="inline-flex items-center gap-1 rounded-full border border-blue-100 bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700"><Pin size={10} fill="currentColor" /> Fixado</span> : null}
             </div>
-            <span className="rounded bg-slate-50 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-slate-400">{curso?.modalidade || 'Turma'}</span>
+            <span className="rounded bg-slate-50 px-2 py-0.5 text-xs font-semibold text-slate-600">{curso?.modalidade || 'Turma'}</span>
           </div>
 
           <div className="min-h-[68px] sm:min-h-[76px]">
-            <h3 className="line-clamp-2 text-base font-black leading-tight text-[#001a33]">{curso?.nome || turma?.nome || 'Curso'}</h3>
-            <p className="mt-1 line-clamp-2 text-[11px] font-bold uppercase tracking-wider text-slate-450">{turma?.nome || 'Matrícula vinculada'}</p>
+            <h3 className="line-clamp-2 text-base font-semibold leading-tight text-[#001a33]">{curso?.nome || turma?.nome || 'Curso'}</h3>
+            <p className="mt-1 line-clamp-2 text-xs font-medium text-slate-600">{turma?.nome || 'Matrícula vinculada'}</p>
           </div>
 
-          <div className="space-y-2 text-[11px] font-bold text-slate-500">
+          <div className="space-y-2 text-xs font-medium text-slate-500">
             <div className="flex items-center gap-2"><Calendar size={14} className="text-blue-500" /><span>Inscrição: {formatDate(matricula.data_matricula || matricula.created_at)}</span></div>
-            <div className="flex items-center gap-2"><Clock size={14} className="text-slate-400" /><span>{ead ? `${curso?.carga_horaria || 0}h` : `Turno: ${turma?.turno || 'Geral'}`}</span></div>
+            <div className="flex items-center gap-2"><Clock size={14} className="text-slate-600" /><span>{ead ? `${curso?.carga_horaria || 0}h` : `Turno: ${turma?.turno || 'Geral'}`}</span></div>
           </div>
 
           <div className="space-y-1.5">
-            <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-slate-400"><span>Conclusão</span><span className={progressState?.isError ? 'text-rose-600' : 'text-blue-600'}>{progressLabel}</span></div>
+            <div className="flex justify-between text-xs font-semibold text-slate-600"><span>Conclusão</span><span className={progressState?.isError ? 'text-rose-600' : 'text-blue-600'}>{progressLabel}</span></div>
             <div className="h-2 overflow-hidden rounded-full bg-slate-100"><div className={`h-full rounded-full ${progressState?.isLoading ? 'w-1/3 animate-pulse bg-blue-300' : progressState?.isError || locked || waitingForTechnicalStart ? 'bg-slate-300' : 'bg-blue-600'}`} style={progressState?.isLoading ? undefined : { width: progressState?.isError || locked || waitingForTechnicalStart ? '0%' : `${percent}%` }} /></div>
           </div>
 
           <button
             type="button"
             onClick={() => ead && !locked && curso?.id ? onOpenEad(matricula) : onOpen(matricula)}
-            className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-slate-50 px-3 py-3 text-[10px] font-black uppercase tracking-widest text-slate-600 outline-none transition-all hover:bg-blue-600 hover:text-white focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+            className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-slate-50 px-3 py-3 text-xs font-semibold text-slate-600 outline-none transition-all hover:bg-blue-600 hover:text-white focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
           >
             <span>{waitingForTechnicalStart ? 'Ver matrícula' : locked ? 'Ver status' : ead ? 'Acessar curso' : 'Abrir curso'}</span>
             {ead && !locked ? <MonitorPlay size={14} /> : <ChevronRight size={14} />}
@@ -177,33 +177,33 @@ const AlunoTurmasList: React.FC<AlunoTurmasListProps> = ({
 
   if (matriculas.length === 0) {
     return (
-      <div className="rounded-[2rem] border border-slate-100 bg-white p-7 text-center shadow-sm sm:p-12">
-        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-50 text-blue-600"><GraduationCap size={28} /></div>
-        <h3 className="text-base font-bold text-[#001a33]">Nenhum curso liberado</h3>
-        <p className="mx-auto mt-1 max-w-sm text-xs text-slate-550">Quando a compra for confirmada, o curso aparecerá aqui com acesso direto à sala de aprendizagem.</p>
+      <div className="rounded-xl border border-slate-100 bg-white p-7 text-center shadow-sm sm:p-6">
+        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-xl bg-blue-50 text-blue-600"><GraduationCap size={28} /></div>
+        <h3 className="text-base font-normal text-[#001a33]">Nenhum curso liberado</h3>
+        <p className="mx-auto mt-1 max-w-sm text-xs text-slate-600">Quando a compra for confirmada, o curso aparecerá aqui com acesso direto à sala de aprendizagem.</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="relative ml-auto w-full lg:w-80">
-        <input type="search" placeholder="Buscar em meus cursos..." value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)} className="h-12 w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-3 text-base font-bold text-slate-700 shadow-sm outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-100 md:text-sm" />
-        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+        <input type="search" placeholder="Buscar em meus cursos..." value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)} className="h-11 w-full rounded-lg border border-slate-200 bg-white py-3 pl-10 pr-3 text-base font-normal text-slate-700 shadow-sm outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-100 md:text-sm" />
+        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600" />
       </div>
 
-      <div className="overflow-x-auto rounded-2xl border border-slate-100 bg-white p-2 shadow-sm [scrollbar-width:none]">
+      <div className="overflow-x-auto border-b border-slate-200 [scrollbar-width:none]">
         <div className="flex min-w-max snap-x gap-2" role="tablist" aria-label="Filtrar meus cursos por modalidade">
-          {MODALITY_FILTERS.map((filter) => <button key={filter.id} type="button" role="tab" aria-selected={modalityFilter === filter.id} onClick={() => setModalityFilter(filter.id)} className={`min-h-11 shrink-0 snap-start rounded-xl px-4 py-2 text-[10px] font-black uppercase tracking-widest outline-none transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 md:min-h-10 ${modalityFilter === filter.id ? 'bg-blue-600 text-white' : 'bg-slate-50 text-slate-500 hover:bg-blue-50 hover:text-blue-600'}`}>{filter.label}</button>)}
+          {MODALITY_FILTERS.map((filter) => <button key={filter.id} type="button" role="tab" aria-selected={modalityFilter === filter.id} onClick={() => setModalityFilter(filter.id)} className={`min-h-11 shrink-0 snap-start border-b-2 px-3 py-2 text-[13px] font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 md:min-h-10 ${modalityFilter === filter.id ? 'border-blue-600 text-blue-700' : 'border-transparent text-slate-600 hover:text-blue-700'}`}>{filter.label}</button>)}
         </div>
       </div>
 
       {filtered.length === 0 ? (
-        <div className="rounded-[2rem] border border-slate-100 bg-white p-7 text-center shadow-sm sm:p-10"><p className="text-sm font-black text-[#001a33]">Nenhum curso encontrado</p><p className="mt-1 text-xs font-bold text-slate-400">Ajuste a busca ou selecione outro tipo de curso.</p></div>
+        <div className="rounded-xl border border-slate-100 bg-white p-7 text-center shadow-sm sm:p-6"><p className="text-sm font-semibold text-[#001a33]">Nenhum curso encontrado</p><p className="mt-1 text-xs font-medium text-slate-600">Ajuste a busca ou selecione outro tipo de curso.</p></div>
       ) : (
         <>
-          {pinned.length > 0 ? <section className="space-y-3"><div className="flex items-center gap-3"><h3 className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-widest text-blue-700"><Pin size={14} fill="currentColor" /> Cursos fixados</h3><span className="h-px flex-1 bg-blue-100" /><span className="text-[10px] font-black uppercase tracking-widest text-blue-500">{pinned.length}</span></div><div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">{pinned.map(renderCard)}</div></section> : null}
-          {grouped.map(([modality, items]) => <section key={modality} className="space-y-3"><div className="flex items-center gap-3"><h3 className="text-xs font-black uppercase tracking-widest text-[#001a33]">{MODALITY_LABELS[modality] || MODALITY_LABELS.OUTROS}</h3><span className="h-px flex-1 bg-slate-100" /><span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{items.length}</span></div><div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">{items.map(renderCard)}</div></section>)}
+          {pinned.length > 0 ? <section className="space-y-3"><div className="flex items-center gap-3"><h3 className="inline-flex items-center gap-2 text-xs font-semibold text-blue-700"><Pin size={14} fill="currentColor" /> Cursos fixados</h3><span className="h-px flex-1 bg-blue-100" /><span className="text-xs font-semibold text-blue-500">{pinned.length}</span></div><div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">{pinned.map(renderCard)}</div></section> : null}
+          {grouped.map(([modality, items]) => <section key={modality} className="space-y-3"><div className="flex items-center gap-3"><h3 className="text-xs font-semibold text-[#001a33]">{MODALITY_LABELS[modality] || MODALITY_LABELS.OUTROS}</h3><span className="h-px flex-1 bg-slate-100" /><span className="text-xs font-semibold text-slate-600">{items.length}</span></div><div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">{items.map(renderCard)}</div></section>)}
         </>
       )}
     </div>

@@ -1,4 +1,5 @@
 import React from 'react';
+import InstitutionalSelect from '../../../shared/components/InstitutionalSelect';
 import {
   ArrowUpRight,
   BookOpen,
@@ -61,7 +62,7 @@ const CourseCatalogGrid: React.FC<CourseCatalogGridProps> = ({
           <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{categoryCourses.length}</span>
         </div>
 
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {categoryCourses.map((course, index) => {
             const globalIndex = (coursePage - 1) * COURSE_PAGE_SIZE + index;
             const eadConfig = course.ead_config || {};
@@ -96,10 +97,10 @@ const CourseCatalogGrid: React.FC<CourseCatalogGridProps> = ({
             return (
               <div
                 key={course.id}
-                className="bg-white rounded-[2rem] border border-slate-100 hover:border-blue-500 shadow-sm hover:shadow-md transition-all duration-300 p-5 flex flex-col justify-between group"
+                className="aluno-course-card flex min-w-0 flex-col justify-between rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-colors hover:border-blue-300 group"
               >
                 <div className="space-y-4">
-                  <div className="h-36 rounded-2xl bg-slate-50 border border-slate-100 overflow-hidden flex items-center justify-center">
+                  <div className="aluno-course-cover flex h-32 items-center justify-center overflow-hidden rounded-lg border border-slate-100 bg-slate-50">
                     {course.imagem_url ? (
                       <img
                         src={getCourseImageSrc(course.imagem_url)}
@@ -180,17 +181,11 @@ const CourseCatalogGrid: React.FC<CourseCatalogGridProps> = ({
                       <p className="mt-1 text-xs font-black text-[#001a33]">{getPoloLabel(selectedTurma)}</p>
                       <p className="mt-0.5 text-[10px] font-bold text-slate-500">{selectedTurma.nome || 'Turma aberta'}</p>
                       {availableTurmas.length > 1 && (
-                        <select
-                          value={selectedTurmaId || ''}
-                          onChange={(event) => onSelectTurma(course.id, event.target.value)}
-                          className="mt-3 w-full rounded-xl border border-emerald-100 bg-white px-3 py-2 text-[11px] font-bold text-slate-700 outline-none focus:border-emerald-400"
-                        >
-                          {availableTurmas.map((turma: any) => (
-                            <option key={turma.id} value={turma.id}>
-                              {turma.nome || 'Turma aberta'} - {getPoloLabel(turma)}
-                            </option>
-                          ))}
-                        </select>
+                        <InstitutionalSelect className="mt-3" value={selectedTurmaId || ''}
+                          ariaLabel={`Turma de ${course.nome}`} onValueChange={value => onSelectTurma(course.id, value)}
+                          options={availableTurmas.map((turma: any) => ({ value: turma.id,
+                            label: `${turma.nome || 'Turma aberta'} - ${getPoloLabel(turma)}`,
+                          }))} />
                       )}
                     </div>
                   )}

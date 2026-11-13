@@ -248,10 +248,10 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
 
   if (financeQuery.isPending) {
     return (
-      <div className="flex min-h-[18rem] items-center justify-center rounded-3xl border border-slate-100 bg-white">
+      <div className="flex min-h-[18rem] items-center justify-center rounded-xl border border-slate-100 bg-white">
         <div className="text-center text-blue-700">
           <Loader2 className="mx-auto animate-spin" size={36} />
-          <p className="mt-3 text-xs font-black uppercase tracking-widest">Carregando financeiro</p>
+          <p className="mt-3 text-xs font-semibold ">Carregando financeiro</p>
         </div>
       </div>
     );
@@ -259,12 +259,12 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
 
   if (financeQuery.isError || !financeQuery.data) {
     return (
-      <div className="flex min-h-[18rem] items-center justify-center rounded-3xl border border-rose-100 bg-white p-6 text-center shadow-sm" role="alert">
+      <div className="flex min-h-[18rem] items-center justify-center rounded-xl border border-rose-100 bg-white p-6 text-center shadow-sm" role="alert">
         <div className="max-w-lg">
           <AlertTriangle className="mx-auto text-rose-600" size={38} />
-          <h2 className="mt-4 text-lg font-black uppercase tracking-tight text-[#001a33]">Financeiro indisponível</h2>
+          <h2 className="mt-4 text-lg font-semibold text-[#001a33]">Financeiro indisponível</h2>
           <p className="mt-2 text-sm font-semibold leading-relaxed text-slate-500">{alunoFinancialErrorMessage(financeQuery.error)}</p>
-          <button type="button" onClick={() => { void financeQuery.refetch(); }} className="mt-5 inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-xs font-black uppercase tracking-wider text-white">
+          <button type="button" onClick={() => { void financeQuery.refetch(); }} className="mt-5 inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-xs font-semibold text-white">
             <RefreshCw size={15} /> Tentar novamente
           </button>
         </div>
@@ -274,25 +274,25 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
 
   const payload = financeQuery.data;
   return (
-    <div className="min-w-0 space-y-4 animate-fadeIn sm:space-y-6">
+    <div className="min-w-0 space-y-4 animate-fadeIn sm:space-y-4">
       <header className="flex items-start justify-between sm:items-center">
         <div className="min-w-0">
-          <h2 className="flex items-center gap-2 text-lg font-black uppercase tracking-tight text-[#001a33] sm:text-2xl">
+          <h2 className="flex items-center gap-2 text-[22px] font-medium text-[#001a33] sm:text-2xl">
             <CreditCard className="shrink-0 text-blue-600" size={22} /> Financeiro
           </h2>
-          <p className="mt-1 max-w-xl text-[11px] font-medium leading-relaxed text-slate-500 sm:text-xs">Parcelas, vencimentos e comprovantes em um só lugar.</p>
+          <p className="mt-1 max-w-xl text-xs font-medium leading-relaxed text-slate-500 sm:text-xs">Parcelas, vencimentos e comprovantes em um só lugar.</p>
         </div>
       </header>
 
       {notice ? (
-        <div className="rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-xs font-bold text-blue-700" role="status">{notice}</div>
+        <div className="rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-xs font-medium text-blue-700" role="status">{notice}</div>
       ) : null}
 
       <AlunoFinanceiroSummary summary={payload.summary} />
-      <section id="aluno-finance-charges" className="scroll-mt-4 rounded-[1.5rem] border border-slate-100 bg-white p-4 shadow-sm sm:rounded-[2rem] sm:p-6">
+      <section id="aluno-finance-charges" className="scroll-mt-4 rounded-[1.5rem] border border-slate-100 bg-white p-4 shadow-sm sm:rounded-xl sm:p-6">
         <div className="mb-5">
-          <p className="text-[10px] font-black uppercase tracking-[0.24em] text-blue-600">Cobranças</p>
-          <h3 className="mt-1 text-lg font-black uppercase tracking-tight text-[#001a33]">Histórico financeiro</h3>
+          <p className="text-xs font-semibold text-blue-600">Cobranças</p>
+          <h3 className="mt-1 text-lg font-semibold text-[#001a33]">Histórico financeiro</h3>
         </div>
         <AlunoFinanceiroFilters
           search={search}
