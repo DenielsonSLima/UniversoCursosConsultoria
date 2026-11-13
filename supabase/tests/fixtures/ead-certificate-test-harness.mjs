@@ -4,7 +4,6 @@ import { pathToFileURL } from 'node:url';
 
 const moduleName = process.env.PGLITE_MODULE_PATH
   ? pathToFileURL(resolve(process.env.PGLITE_MODULE_PATH)).href : '@electric-sql/pglite';
-const { PGlite } = await import(moduleName);
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 const alumno = '11111111-1111-4111-8111-111111111111';
 const other = '22222222-2222-4222-8222-222222222222';
@@ -36,8 +35,9 @@ const config = {
 const newDatabase = async ({
   modality = 'EAD', status = 'ATIVO', lessons = true,
   courseConfig = config, totalHours = 120, curriculum = true, table = true, identity = true,
+  database,
 } = {}) => {
-  const db = new PGlite();
+  const db = database || new (await import(moduleName)).PGlite();
   await db.exec(await read('./fixtures/ead-auto-certificate-schema.sql'));
   for (const name of historical) await db.exec(await read(`../migrations/${name}`));
   await db.exec(await read('./fixtures/ead-certificate-original-issuers.sql'));

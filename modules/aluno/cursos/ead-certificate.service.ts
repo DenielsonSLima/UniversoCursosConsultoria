@@ -1,7 +1,8 @@
 import { supabase } from '../../../lib/supabase';
 import type { CertificadoAcademico } from '../../gestor/secretaria/certificados/certificados.types';
 
-export const getAlunoEadCertificate = async (alunoId: string, cursoId: string): Promise<CertificadoAcademico | null> => {
+export const getAlunoEadCertificate = async (alunoId: string, cursoId: string, certificateId: string): Promise<CertificadoAcademico | null> => {
+  if (!certificateId) return null;
   const { data, error } = await supabase
     .from('certificados_academicos')
     .select(`
@@ -13,6 +14,7 @@ export const getAlunoEadCertificate = async (alunoId: string, cursoId: string): 
     `)
     .eq('aluno_id', alunoId)
     .eq('curso_id', cursoId)
+    .eq('id', certificateId)
     .eq('modalidade', 'EAD')
     .eq('status', 'FINALIZADO')
     .not('codigo_validacao', 'is', null)

@@ -9,6 +9,7 @@ import { useEadLearning } from './hooks/useEadLearning';
 import type { CursosPageProps } from './cursosPage.types';
 import { hasEadAccess } from './cursosPage.utils';
 import { getAlunoCertificateActions } from './eadCertificateModel';
+import { useEadCertificateDelivery } from './hooks/useEadCertificateDelivery';
 import { AlunoCertificateModelStatus } from './components/AlunoCertificateModelStatus';
 
 const CursosPage: React.FC<CursosPageProps> = ({
@@ -92,15 +93,17 @@ const CursosPage: React.FC<CursosPageProps> = ({
     isUpdatingProgress,
   } = eadLearning;
   const certificateModelUnavailable = certificateModelLoading || Boolean(certificateModelError);
+  const delivery = useEadCertificateDelivery(alunoId, alunoCertificado?.id, alunoCertificado?.codigo_validacao || undefined,
+    Boolean(alunoCertificado && isProgressReady));
   const certificatePdf = useEadCertificatePdf(alunoCertificado || null, eadCertificateModel,
-    Boolean(alunoCertificado && !certificateModelUnavailable));
+    Boolean(alunoCertificado && !certificateModelUnavailable && delivery.allowed));
   const certificateActions = getAlunoCertificateActions({
-    hasCertificate: Boolean(alunoCertificado), modelLoading: certificateModelLoading,
-    modelError: certificateModelError, pdfReady: certificatePdf.ready,
+    hasCertificate: Boolean(alunoCertificado), modelLoading: certificateModelLoading || delivery.loading || delivery.checking,
+    modelError: certificateModelError || delivery.message, pdfReady: certificatePdf.ready,
     pdfLoading: certificatePdf.loading, pdfError: certificatePdf.error, printing: certificatePdf.printing,
   });
-  const downloadCertificatePdf = certificatePdf.download;
-  const printCertificate = certificatePdf.print;
+  const downloadCertificatePdf = async () => { if (await delivery.authorizeFresh()) certificatePdf.download(); };
+  const printCertificate = async () => { if (await delivery.authorizeFresh()) await certificatePdf.print(); };
 
 
   useEffect(() => {
@@ -147,6 +150,8 @@ const CursosPage: React.FC<CursosPageProps> = ({
   const renderCertificatePdfSource = () => certificatePdf.source;
   const renderCertificatePreview = () => {
     if (!alunoCertificado) return null;
+    if (delivery.message) return <p role="alert" className="mt-5 rounded-xl bg-amber-50 p-4 text-sm text-amber-800">{delivery.message}</p>;
+    if (delivery.loading) return <p role="status" className="mt-5 text-sm text-slate-500">Conferindo a liberação do certificado...</p>;
     if (certificateModelUnavailable) return (
       <AlunoCertificateModelStatus error={certificateModelError} loading={certificateModelLoading}
         retry={retryCertificateModel} />

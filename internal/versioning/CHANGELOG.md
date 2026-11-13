@@ -74,6 +74,16 @@ Histórico arquivado: [07/11/2026 — versões 4.8.259 a 4.8.260](./changelog/20
 
 Histórico arquivado: [07/11/2026 — versões 4.8.261 a 4.8.262](./changelog/2026-11-07-versoes-4-8-261-a-262.md).
 
+Histórico arquivado: [07/11/2026 — versão 4.8.264](./changelog/2026-11-07-versao-4-8-264.md).
+
+## [4.8.332] - 2026-11-13
+
+### Ajustado
+- Gestão EAD permite confiança de 24 horas nos polos autorizados, sem exigir acesso ao Financeiro e sem dispensar a cobrança.
+- Confiança inclui prova e certificado temporário; prazo ou encerramento financeiro bloqueia acesso e revoga o código automaticamente.
+- Pagamento confirmado mantém a emissão dentro do prazo ou gera novo código após revogação, preservando o histórico.
+- Sala do aluno e entrega do certificado revalidam acesso, prazo e retorno financeiro automaticamente.
+
 ## [4.8.331] - 2026-11-12
 
 ### Corrigido
@@ -484,9 +494,3 @@ Histórico arquivado: [07/11/2026 — versões 4.8.261 a 4.8.262](./changelog/20
 ### Corrigido
 - Mês de referência de Adicionar alunos exibe o nome em português e o ano, com seletor próprio de meses.
 - Escolher o mesmo mês preserva os alunos selecionados; teclado, foco e formato da consulta permanecem consistentes.
-
-## [4.8.264] - 2026-11-07
-
-### Adicionado
-- Emissor NFS-e: botão Adicionar alunos abre modal com mês atual, curso Técnico, busca e filtro de turma.
-- Turmas expansíveis e seleção múltipla com recebimentos efetivos do mês, incluindo atrasados e pagamentos parciais; totais calculados na RPC e acesso restrito por usuário/polo.

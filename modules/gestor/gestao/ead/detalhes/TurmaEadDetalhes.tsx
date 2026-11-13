@@ -1,4 +1,4 @@
-import { EadTrustAccessAction } from './components/EadTrustAccessAction';
+import { EadTrustAccessPanel } from './components/EadTrustAccessPanel';
 import TurmaDetailsHeader from '../../components/TurmaDetailsHeader';
 import React, { useEffect, useState } from 'react';
 import {
@@ -18,6 +18,7 @@ import {
   useTurmaEadAlunosDisponiveis,
   useTurmaEadPagamentos,
   useTurmaEadResumo,
+  useTurmaEadTrustAccess,
 } from './hooks/useTurmaEadQueries';
 import {
   useMatricularAlunoEadMutation,
@@ -32,6 +33,7 @@ import StatCard from './components/EadStatCard';
 import { formatCurrency, statusStyle, statusLabel, normalizeStatus, isEadEnrollmentActive, isEadEnrollmentPending } from './ead-turma.presentation';
 import {
   canAccessGestaoTurmaTab,
+  canAccessGestorModule,
   type GestorPermissions,
 } from '../../../access-control';
 
@@ -47,6 +49,8 @@ const TurmaEadDetalhes: React.FC<TurmaEadDetalhesProps> = ({ turma, onBack, perm
   const canManageEnrollment = canAddAlunoEad(permissions);
   const canChooseFinancial = canChooseEadFinancial(permissions);
   const canViewFinanceiro = canAccessGestaoTurmaTab(permissions, 'financeiro');
+  const canViewAlunos = canAccessGestaoTurmaTab(permissions, 'alunos');
+  const canGrantTrust = canAccessGestorModule(permissions, 'gestao');
   const [searchAluno, setSearchAluno] = useState('');
   const [showAddAluno, setShowAddAluno] = useState(false);
   const normalizedSearchAluno = searchAluno.trim();
@@ -59,7 +63,9 @@ const TurmaEadDetalhes: React.FC<TurmaEadDetalhesProps> = ({ turma, onBack, perm
   useTurmaEadRealtime(turma.id);
 
   const resumoQuery = useTurmaEadResumo(turma.id);
-  const alunosQuery = useTurmaEadAlunos(turma.id);
+  const canReadFullStudents = canViewAlunos || canViewFinanceiro;
+  const alunosQuery = useTurmaEadAlunos(turma.id, canReadFullStudents);
+  const trustQuery = useTurmaEadTrustAccess(turma.id, canGrantTrust);
   const alunosDisponiveisQuery = useTurmaEadAlunosDisponiveis(turma.id, debouncedSearchAluno, showAddAluno && canManageEnrollment);
   const matricularMutation = useMatricularAlunoEadMutation(
     turma.id,
@@ -91,13 +97,16 @@ const TurmaEadDetalhes: React.FC<TurmaEadDetalhesProps> = ({ turma, onBack, perm
   );
 
   const resumo = resumoQuery.data;
-  const alunos = alunosQuery.data || [];
+  const alunos = canReadFullStudents ? alunosQuery.data || [] : [];
   const alunosComAcesso = alunos.filter((aluno) => isEadEnrollmentActive(aluno.status));
   const alunosPendentes = alunos.filter((aluno) => isEadEnrollmentPending(aluno.status));
-  const alunosLiberados = alunosComAcesso.length;
-  const alunosConcluidos = alunosComAcesso.filter((aluno) => normalizeStatus(aluno.status) === 'CONCLUIDO').length;
+  const alunosLiberados = canReadFullStudents ? alunosComAcesso.length : resumo?.alunosLiberados ?? 0;
+  const alunosConcluidos = canReadFullStudents
+    ? alunosComAcesso.filter((aluno) => normalizeStatus(aluno.status) === 'CONCLUIDO').length : resumo?.alunosConcluidos ?? 0;
   const alunosPendentesCount = alunosPendentes.length;
   const pagamentosQuery = useTurmaEadPagamentos(turma.id, canViewFinanceiro);
+  const renderTrustAccess = () => <EadTrustAccessPanel turmaId={turma.id} alunos={canGrantTrust ? trustQuery.data || [] : []}
+    allowed={canGrantTrust} isLoading={trustQuery.isLoading} isError={trustQuery.isError} />;
 
   const tabs = [
     { id: 'resumo', label: 'Resumo', icon: <BarChart3 size={17} /> },
@@ -239,56 +248,7 @@ const TurmaEadDetalhes: React.FC<TurmaEadDetalhesProps> = ({ turma, onBack, perm
         </div>
       )}
 
-      {canViewFinanceiro && alunosPendentes.length > 0 && (
-        <div className="mt-4 rounded-xl border border-amber-100 bg-amber-50/40 p-6">
-          <div className="mb-4">
-            <h4 className="text-sm font-medium uppercase tracking-tight text-[#001a33]">Pendências de pagamento</h4>
-            <p className="text-xs font-normal text-slate-500">Não entram como acesso ativo até a confirmação da matrícula.</p>
-          </div>
-
-          <div className="overflow-x-auto rounded-lg border border-amber-100 bg-white">
-            <div className="grid min-w-[900px] grid-cols-[1.4fr_0.9fr_0.9fr_0.8fr_0.7fr] gap-3 bg-amber-50 px-4 py-3 text-[11px] font-medium text-amber-700">
-              <span>Aluno</span>
-              <span>Status</span>
-              <span>Progresso</span>
-              <span>Certificado</span>
-              <span className="text-right">Ação</span>
-            </div>
-            <div className="divide-y divide-amber-100">
-              {alunosPendentes.map((aluno) => (
-                <div key={aluno.matriculaId} className="grid min-w-[900px] grid-cols-[1.4fr_0.9fr_0.9fr_0.8fr_0.7fr] gap-3 px-4 py-4 text-sm">
-                  <div className="min-w-0">
-                    <p className="truncate font-medium text-[#001a33]" title={aluno.nome}>{aluno.nome}</p>
-                    <p className="truncate text-xs font-normal text-slate-400" title={aluno.email || ''}>{aluno.email || 'Sem email'}</p>
-                  </div>
-                  <div>
-                    <span className={`inline-flex rounded-full border px-2.5 py-1 text-[10px] font-medium uppercase tracking-wider ${statusStyle(aluno.status)}`}>
-                      {statusLabel(aluno.status)}
-                    </span>
-                    {aluno.inscricaoStatus === 'AGUARDANDO_PAGAMENTO' && (
-                      <p className="mt-1 text-[10px] font-normal text-amber-600">boleto/pagamento pendente</p>
-                    )}
-                  </div>
-                  <div>
-                    <p className="text-xs font-medium text-[#122b42]">{aluno.progressoPercentual}%</p>
-                    <p className="text-[10px] font-normal uppercase text-slate-400">
-                      {aluno.aulasConcluidas}/{aluno.totalAulas} aulas • {aluno.atividadesConcluidas}/{aluno.totalAtividades} atividades
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs font-medium uppercase text-slate-600">{aluno.certificadoStatus || 'Nao emitido'}</p>
-                    <p className="text-[10px] font-normal text-slate-400">Prova: {aluno.notaProva ?? '-'}</p>
-                  </div>
-                  <div className="text-right">
-                    <EadTrustAccessAction matriculaId={aluno.matriculaId} turmaId={turma.id}
-                      expiresAt={aluno.acessoTemporarioAte} allowed={canManageEnrollment} />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
+      {renderTrustAccess()}
 
       <AdicionarAlunoEadModal
         open={showAddAluno && canManageEnrollment}
@@ -395,6 +355,7 @@ const TurmaEadDetalhes: React.FC<TurmaEadDetalhesProps> = ({ turma, onBack, perm
       </TurmaDetailsHeader>
 
       <div className="gestao-turma-content">
+        {!canViewAlunos && renderTrustAccess()}
         {tabs.length === 0 ? (
           <div className="rounded-xl border border-amber-100 bg-amber-50 p-5 text-center">
             <LockKeyhole className="mx-auto text-amber-600" size={28} />

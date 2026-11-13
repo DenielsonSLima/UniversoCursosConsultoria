@@ -1,5 +1,5 @@
 import { supabase } from '../../../../../lib/supabase';
-import { AlunoDisponivel, EadAlunoTurma, EadPagamentoTurma, EadTurmaResumo } from './ead-turma.types';
+import { AlunoDisponivel, EadAlunoTurma, EadPagamentoTurma, EadTurmaResumo, type EadTrustAccessStudent } from './ead-turma.types';
 import { normalizeRpcList, normalizeRpcRecord } from './ead-rpc.utils';
 import type { PublicCheckoutResult } from '../../../../asaas/checkout-result';
 import type { EadEnrollmentInput, EadEnrollmentResult } from './ead-enrollment.model';
@@ -11,10 +11,20 @@ export const eadTurmaService = {
     return normalizeRpcRecord<EadTurmaResumo>(data, 'ead_get_turma_dashboard');
   },
 
-  async getAlunos(turmaId: string): Promise<EadAlunoTurma[]> {
-    const { data, error } = await supabase.rpc('ead_get_turma_alunos', { p_turma_id: turmaId });
+  async getAlunos(turmaId: string, signal?: AbortSignal): Promise<EadAlunoTurma[]> {
+    let request = supabase.rpc('ead_get_turma_alunos', { p_turma_id: turmaId });
+    if (signal) request = request.abortSignal(signal);
+    const { data, error } = await request;
     if (error) throw error;
     return normalizeRpcList<EadAlunoTurma>(data, 'ead_get_turma_alunos');
+  },
+
+  async getTrustAccess(turmaId: string, signal?: AbortSignal): Promise<EadTrustAccessStudent[]> {
+    let request = supabase.rpc('ead_get_turma_trust_access', { p_turma_id: turmaId });
+    if (signal) request = request.abortSignal(signal);
+    const { data, error } = await request;
+    if (error) throw error;
+    return normalizeRpcList<EadTrustAccessStudent>(data, 'ead_get_turma_trust_access');
   },
 
   async getAlunosDisponiveis(turmaId: string, search: string): Promise<AlunoDisponivel[]> {

@@ -37,8 +37,8 @@ export const migrationNames = [
   '20261027223070_create_private_math_publication_packages.sql',
 ];
 
-export const database = async () => {
-  const db = await newDatabase({ courseConfig: configFor() });
+export const database = async (options = {}) => {
+  const db = await newDatabase({ ...options, courseConfig: configFor() });
   // Usa as funções reais do cofre e feedback, além dos emissores já carregados.
   await db.exec(`DROP FUNCTION internal_academic.ead_restore_assessment_answers(jsonb,jsonb,jsonb);
     DROP FUNCTION internal_academic.ead_collect_assessment_answer_keys(jsonb,jsonb,jsonb);
