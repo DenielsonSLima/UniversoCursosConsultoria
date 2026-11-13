@@ -80,6 +80,13 @@ Histórico arquivado: [08/11/2026 — versão 4.8.265](./changelog/2026-11-08-ve
 
 Histórico arquivado: [08/11/2026 — versão 4.8.266](./changelog/2026-11-08-versao-4-8-266.md).
 
+Histórico arquivado: [08/11/2026 — versão 4.8.267](./changelog/2026-11-08-versao-4-8-267.md).
+
+## [4.8.335] - 2026-11-13
+
+- Fontes das migrations e testes de importação externa de NFS-e preservados no GitHub, correspondentes ao banco já implantado.
+- Registros de publicação do Pix, portal do aluno e confiança EAD atualizados com as evidências de entrega.
+
 ## [4.8.334] - 2026-11-13
 
 - EAD: confiança por 24 horas inclui aulas, prova e certificado; confirmação canônica do pagamento ativa a matrícula e consolida o certificado automaticamente. Sem confirmação no prazo, acesso bloqueado e código revogado.
@@ -489,10 +496,3 @@ Histórico arquivado: [08/11/2026 — versão 4.8.266](./changelog/2026-11-08-ve
 - Editor e preparação exibem prévia da descrição; variáveis desconhecidas são rejeitadas.
 - Recebimento permanece distinto da competência fiscal. Acesso por polo e piloto preservados.
 - Validação: 67 testes frontend, 10 SQL isolados e smoke Safari local.
-
-## [4.8.267] - 2026-11-08
-
-### Corrigido
-- Cartões PJ mostram fantasia como título e razão social em linha secundária, sem depender do tooltip.
-- Cadastro, edição e busca preservam ambos os nomes; detalhes usam seletores próprios e criação de categoria/parceria sem sair.
-- Despesas mostram fantasia abaixo da categoria e permitem cadastrar novo credor no lançamento, mantendo pagamentos parciais.

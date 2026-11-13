@@ -2,7 +2,7 @@
 
 ## Objetivo e autorização
 
-Aplicar o padrão compacto da gestão ao acesso do aluno, priorizando celular e as ações de estudar, pagar e obter documentos. O usuário solicitou revisão com três agentes, prévia local e, depois, autorizou expressamente GitHub e produção. Candidato 4.8.333, revisão 342; a base 4.8.332 já publicada é preservada nesta entrega.
+Aplicar o padrão compacto da gestão ao acesso do aluno, priorizando celular e as ações de estudar, pagar e obter documentos. O usuário solicitou revisão com três agentes, prévia local e, depois, autorizou expressamente GitHub e produção. Entrega 4.8.333, revisão 342, publicada pela [PR424](https://github.com/DenielsonSLima/UniversoCursosConsultoria/pull/424), merge `3882478317aaed8c4a277ab17ff41631bf3d50ae` em `main`; a base 4.8.332 foi preservada.
 
 ## Etapas da entrega
 
@@ -31,7 +31,8 @@ Professor, geradores PDF, banco, Auth, autorização, contratos acadêmicos, cá
 - Prévia offline temporária com componentes reais e dados sintéticos em `http://127.0.0.1:4786`; sem ligação com produção.
 - Safari: desktop, 390/320 px; navegação, menu/Escape/teclado, fixação, documentos/pedidos, cobrança, sala EAD e prova simulada de dez questões exercitados. Certificado da simulação apenas registra ação de download.
 - Smoke autenticado de aluno e documentos oficiais permanece pendente por ausência de sessão útil; a prévia não comprova autorização, liquidação bancária, emissão documental ou latência real.
-- Build completo aprovado com Node24.22.1, ESLint do manifesto e teto de500 linhas aprovados. Nova conferência após o estado de carregamento; publicação autorizada e em fechamento.
+- Build completo aprovado com Node24.22.1, ESLint do manifesto e teto de500 linhas aprovados. Os 12/12 workflows da árvore final `6bc8d393031bf8e07900e0a1bdc6fc8e51730d33` concluíram com sucesso, incluindo [Qualidade do produto](https://github.com/DenielsonSLima/UniversoCursosConsultoria/actions/runs/43360728488) e Documentos e grade do aluno.
+- [Deploy 4.8.333 de produção](https://vercel.com/denielson-limas-projects/universo-cursos-consultoria/AtdDg3WuDn7Hwt2cVPxATghyYKF5) `dpl_AtdDg3WuDn7Hwt2cVPxATghyYKF5` READY, sem erro de alias, pronto em 13/11/2026 às 00:50:41 (America/Maceio), no commit do merge. A conferência MCP Vercel de 13/11 confirmou a entrega no histórico; a produção ativa já avançou para 4.8.334 pela PR425, que preserva o portal compacto. O domínio público e seu bundle principal responderam HTTP200 com a versão4.8.334. Smoke autenticado permanece pendente conforme descrito acima.
 - O hook do Início apenas expõe indicadores de carregamento já disponíveis; não houve alteração de query, cálculo ou payload.
 
 ## Manifesto explícito

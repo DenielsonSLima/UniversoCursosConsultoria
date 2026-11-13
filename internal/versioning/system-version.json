@@ -1,8 +1,8 @@
 {
-  "version": "4.8.334",
+  "version": "4.8.335",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 343,
+  "revision": 344,
   "releasedAt": "2026-11-13",
-  "summary": "EAD: confiança de 24 horas com prova, certificado e confirmação automática do pagamento"
+  "summary": "Fontes fiscais e testes sincronizados com o banco publicado; registros de entrega atualizados"
 }
