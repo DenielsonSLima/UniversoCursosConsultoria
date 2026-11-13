@@ -68,6 +68,14 @@ Histórico arquivado: [07/11/2026 — versão 4.8.254](./changelog/2026-11-07-ve
 
 Histórico arquivado: [07/11/2026 — versão 4.8.255](./changelog/2026-11-07-versao-4-8-255.md).
 
+Histórico arquivado: [07/11/2026 — versão 4.8.256](./changelog/2026-11-07-versao-4-8-256.md).
+
+## [4.8.327] - 2026-11-12
+
+### Adicionado
+- Serviços NFS-e geram recebíveis obrigatórios após autorização, com planejamento financeiro, parcelas e opção BolePix em Financeiro > A Receber > Serviços.
+- Cancelamento fiscal encaminha a baixa dos boletos não pagos, com confirmação bancária; pagamentos são preservados e documentos exibem número da NFS-e e descrição integral do serviço.
+
 ## [4.8.326] - 2026-11-12
 
 ### Corrigido
@@ -489,12 +497,3 @@ Histórico arquivado: [07/11/2026 — versão 4.8.255](./changelog/2026-11-07-ve
 - Submódulos internos da Secretaria seguem a interface compacta, com cabeçalhos leves, campos brancos e abas com linha inferior.
 - Seletores de turmas, modalidades, documentos, filtros e recebimentos usam listas pesquisáveis do sistema, preservando IDs e bloqueios.
 - Apresentação responsiva e estilos de tela isolados dos documentos e da impressão.
-
-## [4.8.256] - 2026-11-07
-
-### Adicionado
-- Emissor NFS-e após Financeiro, com Preparar emissão, Pendentes, Emitidas, Erros e Modelos.
-- NFS-e Portal Contribuinte na matriz, organizado pelos estabelecimentos de Polos e Filiais.
-- Liberação inicial individual, confirmada no servidor e isolada dos perfis compartilhados.
-- Contratos RPC, TanStack Query, Realtime e API interna separados; cálculo financeiro reservado ao backend.
-- Emissão, gravações fiscais e cadastro de credenciais permanecem indisponíveis nesta etapa.

@@ -1,6 +1,7 @@
 import { PDFDocument, rgb } from "npm:pdf-lib@1.17.1";
 import { embedBaneseBrandAssets } from "../pdf/branding.ts";
 import { BANESE_PDF_PAGE, baneseDocumentFonts } from "../pdf/primitives.ts";
+import { renderServiceInvoiceAppendices } from "../pdf/service-invoice-details.ts";
 import {
   type BaneseBoletoDocumentInput,
   type BaneseDocumentBranding,
@@ -176,5 +177,6 @@ export const buildBaneseCarnetPdf = async (
     }
   }
 
+  renderServiceInvoiceAppendices(pdf, fonts, items);
   return pdf.save();
 };

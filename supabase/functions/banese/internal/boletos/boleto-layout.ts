@@ -25,6 +25,7 @@ import {
   wrapBaneseWords as wrapWords,
 } from "../pdf/primitives.ts";
 import { presentBaneseFinancialTerms } from "../pdf/financial-terms.ts";
+import { serviceInvoiceInstructionVariants } from "../pdf/service-invoice-details.ts";
 
 const instructionProfiles = [
   { size: 7, lineHeight: 8.4, blockGap: 2 },
@@ -265,28 +266,33 @@ export const drawBaneseBoletoSlip = async (
     : 0;
   const instructionTop = y + detailsHeight - 22;
   const instructionBottom = y + 7 + pixCopyHeight;
-  const preparedInstructions = instructionProfiles.map((profile) => {
-    const blocks = instructions.map((instruction) => {
-      const isCashierWarning = /CAIXA/i.test(instruction);
-      const font = isCashierWarning ? fonts.bold : fonts.regular;
-      return {
-        isCashierWarning,
-        lines: wrapWords(
-          instruction,
-          font,
-          profile.size,
-          instructionsWidth - 16,
-        ),
-      };
-    });
-    const height = blocks.reduce(
-      (total, block, index) =>
-        total + block.lines.length * profile.lineHeight +
-        (index < blocks.length - 1 ? profile.blockGap : 0),
-      0,
-    );
-    return { profile, blocks, height };
-  });
+  const preparedInstructions = serviceInvoiceInstructionVariants(
+    input,
+    instructions,
+  ).flatMap((variant) =>
+    instructionProfiles.map((profile) => {
+      const blocks = variant.map((instruction) => {
+        const isCashierWarning = /CAIXA/i.test(instruction);
+        const font = isCashierWarning ? fonts.bold : fonts.regular;
+        return {
+          isCashierWarning,
+          lines: wrapWords(
+            instruction,
+            font,
+            profile.size,
+            instructionsWidth - 16,
+          ),
+        };
+      });
+      const height = blocks.reduce(
+        (total, block, index) =>
+          total + block.lines.length * profile.lineHeight +
+          (index < blocks.length - 1 ? profile.blockGap : 0),
+        0,
+      );
+      return { profile, blocks, height };
+    })
+  );
   const instructionLayout = preparedInstructions.find(({ height }) =>
     instructionTop - height >= instructionBottom
   );

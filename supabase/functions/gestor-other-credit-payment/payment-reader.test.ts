@@ -54,6 +54,8 @@ const mockAdmin = (options: {
   authError?: boolean;
   institutionAllowed?: boolean;
   loan?: boolean;
+  service?: boolean;
+  classificationError?: boolean;
 } = {}) => {
   const reads: Array<{ table: string; filters: Array<[string, unknown]> }> = [];
   const authTokens: string[] = [];
@@ -86,6 +88,10 @@ const mockAdmin = (options: {
       },
     },
     rpc: (name: string) => {
+      if (name === "get_nfse_service_boleto_context_internal") return Promise.resolve({
+        data: options.service ? { serviceId: ID, operationId: ID } : null,
+        error: options.classificationError ? new Error("unavailable") : null,
+      });
       assert.equal(name, "portal_identidade_institucional_acesso_liberado");
       return Promise.resolve({
         data: options.institutionAllowed !== false,
@@ -142,6 +148,19 @@ const rejectsStatus = (operation: Promise<unknown>, status: number) =>
     (error: unknown) =>
       error instanceof PaymentReadError && error.status === status,
   );
+
+Deno.test("service ledger uses Receber without granting ordinary Outros Créditos", async () => {
+  const user = { permissoes: { modules: ["financeiro"], tabs: { financeiro: ["receber"] } } };
+  const service = mockAdmin({ service: true, user });
+  assert.equal((await readOtherCreditPayment(request(), service.admin, ID)).payment.id, ID);
+  const ordinary = mockAdmin({ user });
+  await rejectsStatus(readOtherCreditPayment(request(), ordinary.admin, ID), 403);
+  const othersOnly = mockAdmin({ service: true });
+  await rejectsStatus(readOtherCreditPayment(request(), othersOnly.admin, ID), 403);
+  const failed = mockAdmin({ service: true, user, classificationError: true });
+  await rejectsStatus(readOtherCreditPayment(request(), failed.admin, ID), 503);
+  assert(!failed.reads.some(read => read.table === "contas_receber"));
+});
 
 Deno.test("get exige ID UUID e não aceita ação de emissão/refresh", () => {
   assert.equal(

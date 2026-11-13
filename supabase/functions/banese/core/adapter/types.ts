@@ -1,5 +1,6 @@
 // Provider identifier for the bank named Banese Card; CREDIT_CARD is not supported.
 import type { BaneseFinancialTermsInput } from "../../internal/financial-terms.ts";
+import type { BaneseCreationEvidence } from "./creation-evidence.ts";
 
 export const BANESE_PROVIDER_CODE = "banese_card" as const;
 
@@ -45,6 +46,8 @@ export type AdapterCreateChargeInput = {
    * repetiu o QrCode oficial. Outros consumidores continuam falhando fechado.
    */
   allowPendingBolePix?: boolean;
+  /** Backend-only durable acknowledgement before any post-creation GET. */
+  onCreationEvidence?: (evidence: BaneseCreationEvidence) => Promise<void>;
 };
 
 export type AdapterCreateChargeResult = {

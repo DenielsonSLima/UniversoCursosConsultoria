@@ -101,7 +101,9 @@ export default function ServicosParceirosNfseTab() {
           <td>{item.modelName}<small>{item.serviceDescription}</small></td>
           <td>{nfsePartnerDate(item.serviceDate)}</td>
           <td className="nfse-amount">{formatNfseMoney(item.amount)}</td>
-          <td>{item.receivableAction === 'CREATED' ? 'Criada' : item.receivableAction === 'LINKED' ? 'Vinculada' : 'Não gerada'}</td>
+          <td>{item.receivableAction === 'CREATED' ? 'Criada · A Receber > Serviços'
+            : item.receivableAction === 'LINKED' ? 'Conta existente selecionada'
+              : item.receivableAction === 'PENDING' ? 'Após autorização da NFS-e' : 'Sem plano financeiro'}</td>
           <td><span className="nfse-status">{operationLabel(item.state)}</span>{item.number && <small>NFS-e {item.number}</small>}</td>
           <td><button type="button" className="nfse-button nfse-button-secondary" disabled={blocked}
             onClick={() => { setEmissionIntent('CONSULT'); return !item.state || item.state === 'PREVIEWED' ? setBatch([item]) : setEmission(item); }}>{!item.state || item.state === 'PREVIEWED' ? 'Emitir NFS-e' : 'Detalhes da NFS-e'}</button></td>

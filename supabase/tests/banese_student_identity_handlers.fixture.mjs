@@ -14,7 +14,7 @@ const ROOT = path.resolve('supabase/functions');
 
 /** Executes the real handler and identity reader; external APIs/PDF engines are isolated. */
 export async function identityHandlerFixture(endpoint, options = {}) {
-  const trace = { queries: [], clients: [], gestor: 0, scope: 0, pdf: 0, recovery: 0 };
+  const trace = { queries: [], clients: [], rpcs: [], gestor: 0, scope: 0, pdf: 0, recovery: 0 };
   const user = options.invalidSession ? null : {
     id: options.authUserId || UID,
     email: 'univa00000001@acesso.universocc.invalid',
@@ -67,7 +67,13 @@ export async function identityHandlerFixture(endpoint, options = {}) {
       then(resolve, reject) { return Promise.resolve(result()).then(resolve, reject); },
     };
   };
-  const client = { from: query, auth: { getUser: async token => {
+  const client = { from: query, rpc: async (name,args) => {
+    assert.equal(name,'get_nfse_service_boleto_context_internal');
+    assert.deepEqual(Object.keys(args),['p_receivable_id']);
+    assert.equal(args.p_receivable_id,PAYMENT_ID);
+    trace.rpcs.push({name,args});
+    return {data:null,error:options.serviceRpcError?new Error('synthetic service projection unavailable'):null};
+  }, auth: { getUser: async token => {
     assert.equal(token, 'valid-fixture-token');
     return { data: { user }, error: options.invalidSession ? new Error('invalid') : null };
   } } };

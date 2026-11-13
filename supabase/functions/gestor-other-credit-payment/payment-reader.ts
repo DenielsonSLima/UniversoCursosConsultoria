@@ -370,10 +370,17 @@ export const readOtherCreditPayment = async (
         : "Não foi possível validar o acesso à cobrança.",
     );
   }
+  const classified = await admin.rpc("get_nfse_service_boleto_context_internal", { p_receivable_id: receivableId });
+  if (classified.error) throw new PaymentReadError(503, "Não foi possível validar a origem da cobrança.");
+  const isService = classified.data !== null;
+  if (isService && (!classified.data || typeof classified.data !== "object" || Array.isArray(classified.data)
+    || !UUID_RE.test(String(classified.data.serviceId || "")) || !UUID_RE.test(String(classified.data.operationId || "")))) {
+    throw new PaymentReadError(503, "Origem da cobrança inválida.");
+  }
   try {
-    requireGestorTab(gestor, "financeiro", "outros-creditos");
+    requireGestorTab(gestor, "financeiro", isService ? "receber" : "outros-creditos");
   } catch {
-    throw new PaymentReadError(403, "Acesso a Outros Créditos não autorizado.");
+    throw new PaymentReadError(403, "Acesso à cobrança não autorizado.");
   }
   const { data: row, error } = await admin.from("contas_receber")
     .select(OTHER_CREDIT_PAYMENT_SELECT).eq("id", receivableId).maybeSingle();

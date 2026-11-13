@@ -32,6 +32,11 @@ import {
   isUniqueEligibleBaneseStudentOwner,
 } from "./document-policy.ts";
 import { readBaneseStudentIdentity } from "../_shared/banese-student-identity.ts";
+import {
+  hasScopedServiceDocumentReadAccess,
+  readServiceDocumentContext,
+  withServiceDocumentContext,
+} from "../banese/internal/service-document-context.ts";
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -182,6 +187,7 @@ Deno.serve(async (req: Request) => {
       .maybeSingle();
     if (receivableError) throw receivableError;
     if (!row) throw new HttpError(404, "Boleto Banese não encontrado.");
+    const serviceContext = await readServiceDocumentContext(admin, receivableId);
 
     const [
       { data: payer, error: payerError },
@@ -213,7 +219,13 @@ Deno.serve(async (req: Request) => {
     if (!isOwner) {
       try {
         const gestor = await requireGestorAtivo(req, admin);
-        try {
+        if (serviceContext) {
+          const caller = createClient(supabaseUrl, serviceRoleKey, {
+            global: { headers: { Authorization: `Bearer ${token}` } },
+            auth: { persistSession: false, autoRefreshToken: false },
+          });
+          if (!await hasScopedServiceDocumentReadAccess(caller, receivableId)) throw new Error("Acesso negado.");
+        } else try {
           requireBaneseBoletoDocumentReadAccess(gestor, row.tipo_lancamento);
         } catch {
           const caller = createClient(supabaseUrl, serviceRoleKey, {
@@ -280,7 +292,7 @@ Deno.serve(async (req: Request) => {
     // Títulos legados continuam renderizáveis com o compositor que já os
     // acompanhava. Somente títulos novos, com snapshot próprio, recebem a
     // apresentação neutra da disciplina e a regra bancária de 60 dias.
-    const academicContext = usesIsolatedDependencyPresentation
+    const academicContext = usesIsolatedDependencyPresentation || serviceContext
       ? null
       : await loadBaneseAcademicBillingContext(
         admin,
@@ -288,7 +300,7 @@ Deno.serve(async (req: Request) => {
         row.turma_id,
       );
 
-    const input: BaneseBoletoDocumentInput = {
+    const baseInput: BaneseBoletoDocumentInput = {
       receivableId: row.id,
       environment,
       digitableLine: text(row.gateway_boleto_linha_digitavel),
@@ -338,6 +350,7 @@ Deno.serve(async (req: Request) => {
       },
       pix,
     };
+    const input = serviceContext ? withServiceDocumentContext(baseInput, serviceContext) : baseInput;
 
     const isLegacyMatrizLogo = !issuer.logo_url ||
       String(issuer.logo_url).includes("logo_1781993986277.jpg") ||

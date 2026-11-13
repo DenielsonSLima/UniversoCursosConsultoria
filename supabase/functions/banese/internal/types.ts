@@ -12,6 +12,12 @@ import {
   type BaneseFinancialTermsInput,
   normalizeBaneseFinancialTerms,
 } from "./financial-terms.ts";
+import {
+  type ServiceInvoiceDetails,
+  validateServiceInvoiceDetails,
+} from "./service-invoice.ts";
+export type { ServiceInvoiceDetails } from "./service-invoice.ts";
+export { validateServiceInvoiceDetails } from "./service-invoice.ts";
 
 export type { BanesePixDocumentData } from "./pix-validation.ts";
 
@@ -47,6 +53,7 @@ export type BaneseBoletoDocumentInput = {
   processingDate: string;
   dueDate: string;
   amount: number;
+  serviceInvoice?: ServiceInvoiceDetails;
   installment?: {
     current: number;
     total: number;
@@ -244,6 +251,9 @@ export const normalizeBaneseBoletoDocument = (
     ),
     dueDate,
     amount: Number(amount.toFixed(2)),
+    serviceInvoice: input.serviceInvoice === undefined
+      ? undefined
+      : validateServiceInvoiceDetails(input.serviceInvoice),
     installment: normalizeInstallment(input.installment),
     beneficiary: {
       ...input.beneficiary,

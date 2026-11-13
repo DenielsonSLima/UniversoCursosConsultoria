@@ -5,6 +5,8 @@ import { assertScope, integer, unwrapNfseEnvelope } from '../../services/nfse.va
 import { NfseContractError } from '../../services/nfse.errors';
 import { NFSE_PARTNER_SERVICE_FILTERS, NFSE_PARTNER_SERVICE_PAGE_SIZE, type NfsePartnerServiceFilters, type NfsePartnerServiceInput } from '../types/nfse-partner-services.types';
 import { nfsePartnerServiceDefinition, parseNfsePartnerServiceOptions, parseNfsePartnerServiceSaved, parseNfsePartnerServicesPage, parseNfseServicePartnerSearch, partnerServiceUuid } from './nfse-partner-services.contract';
+import { parseNfseServiceFinancialPlan, parseNfseServiceFinancialPreview } from './nfse-service-financial-plan.contract';
+import type { NfseServiceFinancialPlan } from '../types/nfse-partner-services.types';
 
 export function createNfsePartnerServices(transport: NfseRpcTransport) {
   const call = async (name: string, scope: NfseScope, args: Record<string, unknown>, signal?: AbortSignal) => {
@@ -13,6 +15,15 @@ export function createNfsePartnerServices(transport: NfseRpcTransport) {
       p_environment: scope.environment, p_month: scope.month, ...args }, signal), scope);
   };
   return {
+    async previewFinancialPlan(scope: NfseScope, partnerId: string, amount: string, description: string, plan: NfseServiceFinancialPlan, signal?: AbortSignal) {
+      const input = parseNfseServiceFinancialPlan(plan);
+      const result = parseNfseServiceFinancialPreview(await call('preview_nfse_service_financial_plan_secure', scope, {
+        p_partner_id: partnerServiceUuid(partnerId), p_amount: amount, p_service_description: description,
+        p_financial_plan: input,
+      }, signal));
+      if (Object.entries(input).some(([key, value]) => key !== 'previewToken' && result.financialPlan[key as keyof NfseServiceFinancialPlan] !== value)) throw new NfseContractError();
+      return result;
+    },
     async searchPartners(scope: NfseScope, term: string, selectedId?: string | null, signal?: AbortSignal) {
       const search = term.trim();
       if (search.length > 100) throw new NfseContractError();
@@ -37,7 +48,7 @@ export function createNfsePartnerServices(transport: NfseRpcTransport) {
       if (!definition.serviceDate.startsWith(`${scope.month}-`)) throw new NfseContractError();
       const saved = parseNfsePartnerServiceSaved(await call('save_nfse_partner_service_secure', scope,
         { p_request_id: partnerServiceUuid(input.requestId), p_definition: definition }));
-      const expectedAction = definition.generateReceivable ? definition.existingReceivableId ? 'LINKED' : 'CREATED' : 'NONE';
+      const expectedAction = definition.existingReceivableId ? 'LINKED' : 'PENDING';
       if (saved.receivableAction !== expectedAction
         || (definition.existingReceivableId && saved.receivableId !== definition.existingReceivableId)) throw new NfseContractError();
       return saved;
