@@ -1,6 +1,8 @@
+import { retrySqlDeadlock } from '../_shared/sql-deadlock-retry.ts';
+
 export type RpcClient = { rpc(name: string, parameters: Record<string, unknown>): PromiseLike<{ data: any; error: unknown }> };
 export type Claim = {
-  mode: 'CANCEL_ALLOWED' | 'CONFIRM_ONLY' | 'LOCAL' | 'COMPLETE' | 'BUSY';
+  mode: 'CANCEL_ALLOWED' | 'CONFIRM_ONLY' | 'LOCAL' | 'COMPLETE' | 'BUSY' | 'FAILED_SAFE';
   leaseToken?: string; receivable?: Record<string, any>; payerDocument?: string;
   transactionId?: string; result?: any;
 };
@@ -14,7 +16,7 @@ export interface PaymentStore {
   claim(id: string): Promise<Claim>;
   start(id: string, lease: string): Promise<void>;
   complete(id: string, lease: string, evidence: PaymentEvidence): Promise<any>;
-  review(id: string, lease: string, reason: string): Promise<void>;
+  review(id: string, lease: string, reason: string): Promise<{ safeToEdit: boolean }>;
 }
 export const createPaymentStore = (admin: RpcClient): PaymentStore => {
   const call = async (name: string, parameters: Record<string, unknown>) => {
@@ -28,11 +30,15 @@ export const createPaymentStore = (admin: RpcClient): PaymentStore => {
       const data = await call('start_receivable_payment_service', { p_attempt_id: id, p_lease_token: lease });
       if (data?.started !== true) throw new Error('PAYMENT_INTENT_NOT_PERSISTED');
     },
-    complete: (id, lease, evidence) => call('complete_receivable_payment_service', {
-      p_attempt_id: id, p_lease_token: lease, p_evidence: evidence,
-    }),
-    review: async (id, lease, reason) => { await call('review_receivable_payment_service', {
-      p_attempt_id: id, p_lease_token: lease, p_reason: reason,
-    }); },
+    complete: (id, lease, evidence) => {
+      const parameters = { p_attempt_id: id, p_lease_token: lease, p_evidence: evidence };
+      return retrySqlDeadlock(() => admin.rpc('complete_receivable_payment_service', parameters));
+    },
+    review: async (id, lease, reason) => {
+      const data = await call('review_receivable_payment_service', {
+        p_attempt_id: id, p_lease_token: lease, p_reason: reason,
+      });
+      return { safeToEdit: data?.reviewed === true && data?.state === 'FAILED_SAFE' && data?.safeToEdit === true };
+    },
   };
 };

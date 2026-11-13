@@ -16,6 +16,7 @@ export const migrationNames=[
  '20261112225820_ead_trust_certificate_public_delivery.sql',
  '20261112225850_ead_trust_certificate_reconciliation.sql',
  '20261112225900_ead_trust_certificate_callbacks.sql',
+ '20261112225925_ead_trust_manual_payment_projection.sql',
 ];
 const functionSource=(sql,name)=>{
  const start=sql.search(new RegExp(`create(?: or replace)? function ${name.replaceAll('.','\\.')}\\(`,'i'));

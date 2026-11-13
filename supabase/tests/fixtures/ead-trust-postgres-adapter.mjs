@@ -27,7 +27,7 @@ export async function newTrustPostgresDatabase() {
     const client = new Client({ connectionString: url.href, application_name: applicationName });
     try {
       await client.connect();
-      await client.query("SET lock_timeout='8s'; SET statement_timeout='12s'");
+      await client.query("SET TIME ZONE 'America/Maceio'; SET lock_timeout='8s'; SET statement_timeout='12s'");
     } catch (error) { await client.end().catch(() => {}); throw error; }
     clients.push(client);
     return {

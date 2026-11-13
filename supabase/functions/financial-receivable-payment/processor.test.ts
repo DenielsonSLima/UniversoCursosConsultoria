@@ -19,7 +19,7 @@ function harness(mode: Claim['mode'] = 'CANCEL_ALLOWED') {
     complete: async (_id, _lease, proof) => {
       calls.push('complete'); assert.equal(proof.paymentsCount, 0); return result;
     },
-    review: async (_id, _lease, reason) => { calls.push(reason); },
+    review: async (_id, _lease, reason) => { calls.push(reason); return { safeToEdit: false }; },
   };
   const bank: ReceiptBank = async (_claim, start) => {
     calls.push('get');

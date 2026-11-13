@@ -5,6 +5,7 @@ import type {
   ManualSettlementResult,
 } from "./manual-settlement.types.ts";
 import { moneyToCents } from "./manual-settlement-money.ts";
+import { retrySqlDeadlock } from "../../_shared/sql-deadlock-retry.ts";
 
 const throwIfError = (error: any) => {
   if (error) throw error;
@@ -184,14 +185,10 @@ export const createManualSettlementRepository = (
   },
 
   async finalize(attemptId, leaseToken) {
-    const { data, error } = await admin.rpc(
-      "finalize_receivable_manual_settlement",
-      {
-        p_settlement_id: attemptId,
-        p_lease_token: leaseToken,
-      },
-    );
-    throwIfError(error);
+    const parameters = { p_settlement_id: attemptId, p_lease_token: leaseToken };
+    const data = await retrySqlDeadlock<any>(() => admin.rpc(
+      "finalize_receivable_manual_settlement", parameters,
+    ));
     if (!data || typeof data !== "object" || data.success !== true) {
       throw new Error("O banco não confirmou a conclusão da baixa manual.");
     }

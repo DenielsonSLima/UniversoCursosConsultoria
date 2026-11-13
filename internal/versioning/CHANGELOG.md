@@ -78,6 +78,13 @@ Histórico arquivado: [07/11/2026 — versão 4.8.264](./changelog/2026-11-07-ve
 
 Histórico arquivado: [08/11/2026 — versão 4.8.265](./changelog/2026-11-08-versao-4-8-265.md).
 
+Histórico arquivado: [08/11/2026 — versão 4.8.266](./changelog/2026-11-08-versao-4-8-266.md).
+
+## [4.8.334] - 2026-11-13
+
+- EAD: confiança por 24 horas inclui aulas, prova e certificado; confirmação canônica do pagamento ativa a matrícula e consolida o certificado automaticamente. Sem confirmação no prazo, acesso bloqueado e código revogado.
+- Baixa manual confirma somente o recebível da própria matrícula; conflitos SQL podem ser retomados sem repetir cancelamento bancário.
+
 ## [4.8.333] - 2026-11-13
 
 ### Melhorias
@@ -489,12 +496,3 @@ Histórico arquivado: [08/11/2026 — versão 4.8.265](./changelog/2026-11-08-ve
 - Cartões PJ mostram fantasia como título e razão social em linha secundária, sem depender do tooltip.
 - Cadastro, edição e busca preservam ambos os nomes; detalhes usam seletores próprios e criação de categoria/parceria sem sair.
 - Despesas mostram fantasia abaixo da categoria e permitem cadastrar novo credor no lançamento, mantendo pagamentos parciais.
-
-## [4.8.266] - 2026-11-08
-
-- NFS-e: seletores pesquisáveis de tributação nacional, NBS e indicador da operação com catálogos oficiais versionados.
-
-- NFS-e: mês por extenso também no cabeçalho; alunos e modelo selecionado permanecem na preparação entre abas.
-- Modelos de serviço por polo com tributação nacional, NBS, ISSQN, indicador da operação e informações complementares, cadastrados por RPC com auditoria e controle de versão.
-- Consulta histórica usa projeção do valor recebido e conserva pagamentos parciais e estornos; outubro validado em 171 ms, sem divergência de valores.
-- Acesso piloto preservado; emissão fiscal permanece desabilitada nesta etapa.
