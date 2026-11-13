@@ -11,8 +11,9 @@ if (args.length > 1 || (args[0] && args[0] !== '--performance')) {
   throw new Error('Uso: node scripts/test-caixa-report.mjs [--performance]');
 }
 const performanceOnly = args[0] === '--performance';
+const modalDomConfigured = Boolean(process.env.CAIXA_JSDOM_PATH || process.env.CAIXA_UI_JSDOM_PATH);
 const testEnvironment = { ...process.env };
-if (performanceOnly) {
+if (performanceOnly || modalDomConfigured) {
   const require = createRequire(import.meta.url);
   let jsdomPath;
   try {
@@ -51,6 +52,7 @@ const reportTests = [
   'modules/gestor/caixa/report/caixa-report.service.test.ts',
   'modules/gestor/caixa/report/caixa-report.pagination.test.ts',
   'modules/gestor/caixa/report/caixa-report.vector-pdf.test.ts',
+  'modules/gestor/caixa/report/caixa-report.concise-pdf.test.ts',
   'modules/gestor/caixa/report/caixa-report.fechamento-implantacao.test.tsx',
   'modules/gestor/caixa/report/caixa-report.composicao-parcial.test.tsx',
 ];
@@ -82,6 +84,8 @@ try {
 
   // This test bundles its real page itself; preserve its source-relative URLs.
   if (performanceOnly) outputs.push(resolve(root, 'modules/gestor/caixa/caixa-first-summary.behavior.test.mjs'));
+  else if (modalDomConfigured) outputs.push(resolve(root, 'modules/gestor/caixa/report/CaixaReportPreviewModal.interaction.test.mjs'));
+  else console.info('SKIP smoke DOM do modal: CAIXA_JSDOM_PATH ausente; o workflow dedicado do Caixa configura e exige esse smoke.');
 
   const result = spawnSync(
     process.execPath,

@@ -1,4 +1,5 @@
 import type { jsPDF } from 'jspdf';
+import { formatCaixaReportModality } from './caixa-report.presentation';
 import {
   formatCaixaCurrency,
   formatCaixaDate,
@@ -93,7 +94,7 @@ export const drawMovementTable = (
       const columns: Array<{ lines: string[]; color?: string; firstStyle?: FontStyle; align?: 'left' | 'right' }> = [
         { lines: [formatCaixaDate(row.dataPagamento), `Venc.: ${formatCaixaDate(row.dataVencimento)}`, formatCaixaInstallment(row.parcelaNumero, row.totalParcelas, receipt?.tipoLancamento)], firstStyle: 'bold' },
         { lines: [receipt?.pagador || expense?.fornecedor || '-', row.descricao], firstStyle: 'bold' },
-        { lines: [receipt?.curso || expense?.categoria || '-', receipt ? `${receipt.modalidade} · ${receipt.turma}` : `${expense?.curso || '-'} · ${expense?.turma || '-'}`], firstStyle: 'bold' },
+        { lines: [receipt?.curso || expense?.categoria || '-', receipt ? `${formatCaixaReportModality(receipt.modalidade)} · ${receipt.turma}` : `${expense?.curso || '-'} · ${expense?.turma || '-'}`], firstStyle: 'bold' },
         { lines: [row.conta, `${row.formaPagamento} · ${row.polo}`], firstStyle: 'semibold' },
         { lines: [formatCaixaCurrency(row.valorBase)], align: 'right', firstStyle: 'bold' },
         { lines: buildCaixaAdjustmentLines(row) },

@@ -7,6 +7,8 @@ on:
       - 'scripts/test-caixa-report.mjs'
       - 'scripts/check-node-security.mjs'
       - 'modules/gestor/caixa/**'
+      - 'supabase/migrations/*caixa_nfse_service*'
+      - 'supabase/tests/caixa_nfse_services*'
       - 'modules/gestor/components/GestorModuleContent.tsx'
       - 'modules/gestor/secretaria/shared/**'
       - 'modules/shared/**'
@@ -19,6 +21,8 @@ on:
       - 'scripts/test-caixa-report.mjs'
       - 'scripts/check-node-security.mjs'
       - 'modules/gestor/caixa/**'
+      - 'supabase/migrations/*caixa_nfse_service*'
+      - 'supabase/tests/caixa_nfse_services*'
       - 'modules/gestor/components/GestorModuleContent.tsx'
       - 'modules/gestor/secretaria/shared/**'
       - 'modules/shared/**'
@@ -57,7 +61,17 @@ jobs:
         run: npm ci
 
       - name: Preparar DOM temporário
-        run: npm install --prefix "$RUNNER_TEMP/universo-caixa-tests" --no-save --package-lock=false --ignore-scripts jsdom@26.1.0
+        run: npm install --prefix "$RUNNER_TEMP/universo-caixa-tests" --no-save --package-lock=false --ignore-scripts jsdom@26.1.0 @electric-sql/pglite@0.3.14
+
+      - name: Conferir origem NFS-e e pagamentos parciais no Caixa
+        env:
+          CAIXA_TEST_PGLITE_MODULE: ${{ runner.temp }}/universo-caixa-tests/node_modules/@electric-sql/pglite/dist/index.js
+        run: node --test supabase/tests/caixa_nfse_services.isolated.test.mjs
+
+      - name: Conferir relatórios completo e resumido
+        env:
+          CAIXA_JSDOM_PATH: ${{ runner.temp }}/universo-caixa-tests/node_modules/jsdom
+        run: node scripts/test-caixa-report.mjs
 
       - name: Conferir primeiro resumo e invalidação financeira
         env:
