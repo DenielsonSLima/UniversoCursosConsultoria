@@ -1,8 +1,8 @@
 {
-  "version": "4.8.323",
+  "version": "4.8.325",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 332,
+  "revision": 334,
   "releasedAt": "2026-11-12",
-  "summary": "Turmas EAD compactas em quatro colunas com atualização automática"
+  "summary": "Pix destacado nas duas vias e cópia no financeiro EAD do aluno"
 }

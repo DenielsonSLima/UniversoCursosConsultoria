@@ -10,6 +10,7 @@ export interface StudentReceivable {
   status: string;
   tipo_lancamento: string | null;
   can_open_boleto: boolean;
+  pix_copy_payload?: string | null;
   matriculas: { id: string; status: string; data_matricula: string } | null;
   turmas: { nome: string; codigo: string; cursos: { id?: string; nome: string; modalidade?: string | null }; polos: { nome: string } } | null;
 }
