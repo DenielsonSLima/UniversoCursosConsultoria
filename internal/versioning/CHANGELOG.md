@@ -84,6 +84,11 @@ Histórico arquivado: [08/11/2026 — versão 4.8.267](./changelog/2026-11-08-ve
 
 Histórico arquivado: [08/11/2026 — versões 4.8.268 a 4.8.269](./changelog/2026-11-08-versoes-4-8-268-a-269.md).
 
+## [4.8.338] - 2026-11-13
+
+- Atividade recente mostra a data civil do pagamento sem atribuir hora exata ou usar a criação da cobrança como data de pagamento.
+- Matrícula e documento exibem tempos legíveis, como “há 5 horas”, respeitando offsets, datas ausentes e inválidas.
+
 ## [4.8.337] - 2026-11-13
 
 - Caixa limita os recebíveis ao mês, polo e status antes das consultas individuais de elegibilidade.

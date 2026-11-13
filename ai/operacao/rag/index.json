@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "retrieval": "lexical-bm25-with-source-citations",
-  "builtAt": "2026-11-13T09:13:23.098Z",
+  "builtAt": "2026-11-13T18:42:44.688Z",
   "manifestVersion": 2,
-  "sourceSignature": "31ba13cc6a29d4b8edb7a3a1fae37e2b393b42a96bfd7013cf9e7f4d7849eabf",
+  "sourceSignature": "4aa54f01f53b2ef65517815519a8638d15bbb3a455cbbb8419bbba46c065975d",
   "sources": [
     {
       "path": "AGENTS.md",
@@ -11,7 +11,7 @@
     },
     {
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "hash": "ffee5dc0888ad7a1acf5ae542a2d912ef75e74cca62ae4d0e20f61b0e6da4a21"
+      "hash": "52d3c17bc2d918549029c2693861a930d6751811b0f7881153d913c44b438177"
     },
     {
       "path": "ai/operacao/MEMORIA_CANONICA.md",
@@ -208,24 +208,14 @@
       "part": 1
     },
     {
-      "id": "609f33565945b3945756",
-      "hash": "609f33565945b3945756f9d909ae19152d93ac7044b7bcaed151491f36d6bf31",
+      "id": "be97a0b78369529e8c3e",
+      "hash": "be97a0b78369529e8c3e00b6cdeaba476e75e6953c9611a286ddb729d41a5810",
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Lote: 2026-11-13-sincronizacao-fontes-publicadas",
-      "text": "Objetivo: completar o GitHub com fontes fiscais já aplicadas e atualizar os comprovantes de publicação recentes. Status: revisão das diferenças e correspondência com produção concluídas; entrega operacional 4.8.335, revisão 344, sujeita aos gates da PR e à conferência do deploy associado. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-13-sincronizacao-fontes-publicadas.md`. Base confirmada: 4.8.334, main b82b04a412050e2d3defe0ec450e7e83094e0e44, produção READY e HTTP 200. Confiança EAD ativada em 13/11 às 01:08:48 de Maceió. Aceite do usuário: revisar e conferir antes de atualizar o projeto, corrigindo as pendências identificadas na conferência com três agentes. Entrega: três migrations administrativas imutáveis, dois testes e registro da importação externa; comprovantes finais de Pix, portal compacto e confiança EAD; versão e manifestos correspondentes. Guarda: não reaplicar migrations, modificar dados, emitir/cancelar documentos ou cobranças, nem reimplantar funções Edge. Sem sessão de navegador controlada. Nenhuma sincronização ampla do checkout ou integração de PRs históricos. Validação: hashes locais e SQL do ledger coincidentes; testes fiscais sintéticos em",
-      "normalizedText": "objetivo completar o github com fontes fiscais ja aplicadas e atualizar os comprovantes de publicacao recentes status revisao das diferencas e correspondencia com producao concluidas entrega operacional 4 8 335 revisao 344 sujeita aos gates da pr e a conferencia do deploy associado manifesto explicito ai operacao registros alteracoes 2026 11 13 sincronizacao fontes publicadas md base confirmada 4 8 334 main b82b04a412050e2d3defe0ec450e7e83094e0e44 producao ready e http 200 confianca ead ativada em 13 11 as 01 08 48 de maceio aceite do usuario revisar e conferir antes de atualizar o projeto corrigindo as pendencias identificadas na conferencia com tres agentes entrega tres migrations administrativas imutaveis dois testes e registro da importacao externa comprovantes finais de pix portal compacto e confianca ead versao e manifestos correspondentes guarda nao reaplicar migrations modificar dados emitir cancelar documentos ou cobrancas nem reimplantar funcoes edge sem sessao de navegador controlada nenhuma sincronizacao ampla do checkout ou integracao de prs historicos validacao hashes locais e sql do ledger coincidentes testes fiscais sinteticos em",
-      "tokenCount": 151,
+      "section": "Lote: 2026-11-13-dashboard-atividade-datas",
+      "text": "Objetivo: distinguir data civil de pagamento de timestamps reais na atividade recente. Status: RPC v2 aplicada e contrato real validado; frontend preparado para revisão, CI, Preview e publicação autorizada. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-13-dashboard-atividade-datas.md`. Base: main `690f19cc20118bee2d0d423075b2cf800293846c`, 4.8.337; entrega 4.8.338, revisão 347. Aceite: “Ajuste isso pq tá confuso” e autorização de produção após a confirmação de envio ao GitHub e PR draft. Guarda: nenhuma alteração de registros financeiros, matrícula, dados de aluno, cálculos ou permissões; RPC original preservada. Validação: 23 testes Node/PGlite, quatro fusos, build, lint e linhas; consulta real de 20 eventos preservou ordem e conteúdo. Banco: migration `20261113184005` / `dashboard_activity_civil_dates`; ausência de identidade bloqueada, anon sem EXECUTE. Limite: smoke visual/autenticado pendente por indisponibilidade do navegador; status e evidências finais ficam na PR.",
+      "normalizedText": "objetivo distinguir data civil de pagamento de timestamps reais na atividade recente status rpc v2 aplicada e contrato real validado frontend preparado para revisao ci preview e publicacao autorizada manifesto explicito ai operacao registros alteracoes 2026 11 13 dashboard atividade datas md base main 690f19cc20118bee2d0d423075b2cf800293846c 4 8 337 entrega 4 8 338 revisao 347 aceite ajuste isso pq ta confuso e autorizacao de producao apos a confirmacao de envio ao github e pr draft guarda nenhuma alteracao de registros financeiros matricula dados de aluno calculos ou permissoes rpc original preservada validacao 23 testes node pglite quatro fusos build lint e linhas consulta real de 20 eventos preservou ordem e conteudo banco migration 20261113184005 dashboard activity civil dates ausencia de identidade bloqueada anon sem execute limite smoke visual autenticado pendente por indisponibilidade do navegador status e evidencias finais ficam na pr",
+      "tokenCount": 128,
       "part": 1
-    },
-    {
-      "id": "033d7180a99f5b4c95a2",
-      "hash": "033d7180a99f5b4c95a273b397cd0a7467b19c3703f806e8407d6d3287b7feb7",
-      "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Lote: 2026-11-13-sincronizacao-fontes-publicadas",
-      "text": "PGlite; versão/histórico, teto de 500 linhas, revisão independente, CI e Preview. Migrations de 11–13/11: 138/138 presentes por nome em produção. Limite: smoke autenticado dos fluxos existentes permanece pendente; disponibilidade HTTP e assets não o substituem. Evidências finais de GitHub e Vercel ficam associadas à PR desta entrega.",
-      "normalizedText": "pglite versao historico teto de 500 linhas revisao independente ci e preview migrations de 11 13 11 138 138 presentes por nome em producao limite smoke autenticado dos fluxos existentes permanece pendente disponibilidade http e assets nao o substituem evidencias finais de github e vercel ficam associadas a pr desta entrega",
-      "tokenCount": 46,
-      "part": 2
     },
     {
       "id": "cbd4dd650a86dc9a8867",
