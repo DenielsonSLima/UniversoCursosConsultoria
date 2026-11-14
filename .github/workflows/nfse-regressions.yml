@@ -131,6 +131,7 @@ jobs:
           modules/gestor/emissor-nfse/individual/NfseIndividualCancellation.interaction.test.mjs
           modules/gestor/emissor-nfse/emissao/NfseDailyFlow.interaction.test.mjs
           modules/gestor/emissor-nfse/emissao/NfseBatchEmissionModal.interaction.test.mjs
+          modules/gestor/emissor-nfse/emissao/NfseServicePostIssue.interaction.test.mjs
           modules/gestor/emissor-nfse/emitidas/NfseIssuedList.interaction.test.mjs
           modules/gestor/emissor-nfse/emitidas/NfseIssuedPeriod.interaction.test.mjs
           modules/gestor/emissor-nfse/queries/nfse-summary-cache.interaction.test.mjs

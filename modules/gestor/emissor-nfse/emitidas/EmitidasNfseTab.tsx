@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { Download, X } from 'lucide-react';
 import NfseDocumentsList from '../components/NfseDocumentsList';
 import { useNfseTabContext } from '../components/NfseTabContext';
@@ -7,17 +7,36 @@ import NfseDocumentActions from './NfseDocumentActions';
 import { useNfseDownloads } from './useNfseDownloads';
 import './nfse-issued-downloads.css';
 import { useNfseIssuedSelection } from '../visualizador/hooks/useNfseIssuedSelection';
+import { useNfseIssuedPeriod } from './NfseIssuedPeriodContext';
+import { createNfseIssuedPeriod } from './nfse-issued-period';
 
 const NfseXmlViewerModal = lazy(() => import('../visualizador/NfseXmlViewerModal'));
 
-export default function EmitidasNfseTab({ issuedState = 'ACTIVE' }: { issuedState?: 'ACTIVE' | 'CANCELLED' }) {
+export default function EmitidasNfseTab({ issuedState = 'ACTIVE', initialDocument, onInitialDocumentConsumed }: {
+  issuedState?: 'ACTIVE' | 'CANCELLED'; initialDocument?: NfseDocument; onInitialDocumentConsumed?: () => void;
+}) {
   const { scope, canRead } = useNfseTabContext();
+  const period = useNfseIssuedPeriod();
   const scopeKey = JSON.stringify([scope, issuedState]);
-  const [selected, setSelected] = useState<{ document: NfseDocument; scopeKey: string } | null>(null);
+  const [selected, setSelected] = useState<{ document: NfseDocument; scopeKey: string; authorizationConfirmed?: boolean } | null>(null);
+  const initialSelection = useRef<string | null>(null);
+  useEffect(() => {
+    if (!scope || !canRead || issuedState !== 'ACTIVE' || !initialDocument
+      || initialDocument.sourceKind !== 'PARTNER_SERVICE' || initialDocument.state !== 'AUTHORIZED'
+      || initialDocument.status !== 'EMITIDA' || !/^\d{1,15}$/.test(initialDocument.number ?? '')
+      || !/^\d{50}$/.test(initialDocument.accessKey ?? '')) return;
+    const identity = `${scopeKey}:${initialDocument.id}`;
+    if (initialSelection.current === identity) return;
+    initialSelection.current = identity;
+    period?.setFilters(createNfseIssuedPeriod(scope.month));
+    setSelected({ document: initialDocument, scopeKey, authorizationConfirmed: true });
+    onInitialDocumentConsumed?.();
+  }, [scope, scopeKey, canRead, issuedState, initialDocument, onInitialDocumentConsumed, period]);
   const [checked, setChecked] = useState<{ scopeKey: string; ids: ReadonlySet<string> }>({ scopeKey, ids: new Set() });
   const ids = checked.scopeKey === scopeKey ? checked.ids : new Set<string>();
   const downloads = useNfseDownloads(scope, canRead);
-  const document = useNfseIssuedSelection(scope, canRead && selected?.scopeKey === scopeKey ? selected.document : null);
+  const document = useNfseIssuedSelection(scope, canRead && selected?.scopeKey === scopeKey ? selected.document : null,
+    Boolean(selected?.authorizationConfirmed));
   return <>
     <NfseDocumentsList status="EMITIDA" issuedState={issuedState} title={issuedState === 'CANCELLED' ? 'Notas canceladas' : 'Notas emitidas'} description="Autorizações deste estabelecimento, com a situação fiscal confirmada."
       emptyTitle={issuedState === 'CANCELLED' ? 'Nenhuma nota cancelada neste período' : 'Nenhuma nota emitida neste período'} emptyDescription="Cada emissão confirmada será identificada pelo número e pela chave de acesso."

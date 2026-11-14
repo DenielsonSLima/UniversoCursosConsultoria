@@ -1,5 +1,5 @@
 import { createContext, useContext } from 'react';
-import type { NfseScope, NfseWorkspace } from '../types/nfse.types';
+import type { NfseDocument, NfseScope, NfseWorkspace } from '../types/nfse.types';
 
 export interface NfseTabContextValue {
   scope: NfseScope | null;
@@ -9,6 +9,7 @@ export interface NfseTabContextValue {
   loading: boolean;
   canPrepareQueue?: boolean;
   onPrepared: (message?: string) => void;
+  onServiceAuthorized?: (document: NfseDocument, scope: NfseScope) => void;
 }
 
 export const NfseTabContext = createContext<NfseTabContextValue | null>(null);
