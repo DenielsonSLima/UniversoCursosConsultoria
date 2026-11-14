@@ -45,11 +45,6 @@ jobs:
     name: Gestor, portal móvel e PostgreSQL isolado
     runs-on: ubuntu-24.04
     timeout-minutes: 15
-    env:
-      PGLITE_MODULE_PATH: ${{ runner.temp }}/professor-contracts/node_modules/@electric-sql/pglite
-      NFSE_TEST_JSDOM_MODULE: ${{ runner.temp }}/professor-contracts/node_modules/jsdom/lib/api.js
-      PROFESSOR_TEST_JSDOM_PATH: ${{ runner.temp }}/professor-contracts/node_modules/jsdom/lib/api.js
-      BIBLIOTECA_JSDOM_PATH: ${{ runner.temp }}/professor-contracts/node_modules/jsdom
     steps:
       - uses: actions/checkout@v4
         with:
@@ -68,6 +63,11 @@ jobs:
           npm install --prefix "$RUNNER_TEMP/professor-contracts" --no-save --package-lock=false --ignore-scripts jsdom@26.1.0 @electric-sql/pglite@0.3.14
           printf '%s\n' '{"nodeModulesDir":"none","lock":false}' > "$RUNNER_TEMP/professor-contracts.deno.json"
       - name: Testar Gestor, portal e SQL sem credenciais
+        env:
+          PGLITE_MODULE_PATH: ${{ runner.temp }}/professor-contracts/node_modules/@electric-sql/pglite
+          NFSE_TEST_JSDOM_MODULE: ${{ runner.temp }}/professor-contracts/node_modules/jsdom/lib/api.js
+          PROFESSOR_TEST_JSDOM_PATH: ${{ runner.temp }}/professor-contracts/node_modules/jsdom/lib/api.js
+          BIBLIOTECA_JSDOM_PATH: ${{ runner.temp }}/professor-contracts/node_modules/jsdom
         run: |
           node --test \
             modules/gestor/parceiros/components/viewparceiros/professor/professor-turmas.service.test.mjs \
