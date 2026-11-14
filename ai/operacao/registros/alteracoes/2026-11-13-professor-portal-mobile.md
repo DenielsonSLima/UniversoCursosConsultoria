@@ -1,7 +1,7 @@
 # Portal do professor: mobile e atualização automática
 
 Pedido iniciado em 13/11/2026 (America/Maceio).
-Status: implementação, revisão e conferência local concluídas em 14/11/2026. Produção da PR #429 autorizada pelo usuário; publicação 4.8.339 estável, revisão 348, em andamento, sem confirmação de conclusão.
+Status: publicado em produção em 14/11/2026: 4.8.339 estável, revisão 348. PR #429 integrada, deploy READY e versão do bundle confirmada no domínio. Smoke autenticado do Professor permanece pendente.
 Escopo: todo acesso depois do login, incluindo menu lateral/móvel, polo, Início, Disciplinas/diários, Plano de Curso, Assinaturas, Agenda, Financeiro, Biblioteca, Comunicação e Perfil. Consolida também o cadastro/perfil docente do Gestor já implementado neste fluxo.
 
 ## Contratos e decisões
@@ -156,11 +156,14 @@ Total: 116 arquivos.
 - Regressões do Gestor: 22 testes passaram. Portal/contratos/PGlite de sinais: 21 passaram; os 7 testes existentes de sessão/dias do Plano de Curso passaram com Deno --sloppy-imports, além dos 2 testes de renderização. Dossiê e leitura financeira também passaram no PostgreSQL isolado.
 - Auditoria de drift contra main 41ff2ba4 (4.8.338): 47 arquivos existentes e 62 novos; registros de Caixa mensal/Dashboard preservados no índice de manifestos.
 
-## Publicação autorizada em andamento
+## Publicação confirmada em 14/11/2026
 
-- Usuário autorizou publicar a PR #429 em produção em 14/11/2026. Versão preparada: `4.8.339`, fase `stable`, revisão `348`, data `2026-11-14`; candidato RC e histórico preservados.
-- Aplicação das quatro migrations e pós-checagem remota confirmadas pelo MCP; merge/deploy e smoke de produção ainda sem conclusão registrada.
-- Pós-checagem: 9 RPCs/helpers, 4 tabelas com RLS, 7 policies, bucket privado, 5 triggers e Realtime conferidos. Sem identidade, helpers retornam false e 2 RPCs negam com `42501`. Advisor: 3 INFO `rls_enabled_no_policy` esperados nas tabelas internas de arquivos/eventos/operações do dossiê, com grants diretos revogados e deny-all intencional; nenhuma policy permissiva adicionada.
+- Usuário autorizou publicar a PR #429 em produção em 14/11/2026. Versão publicada: `4.8.339`, fase `stable`, revisão `348`, data `2026-11-14`; candidato RC e histórico preservados.
+- Quatro migrations aplicadas e pós-checagem remota confirmadas pelo MCP. PR #429 integrada por squash em `a735226868837232b17b16f65175f9b6e8165b87`; árvore idêntica à revisada. 21/21 checks do head estável `1f8a98c8` aprovados.
+- Vercel: `dpl_EJf4F2FHguPXpGapiN1YSZzyc7wG`, ambiente production, READY, Vite, build em 56 s; aliases www.universocc.com.br e universocc.com.br atribuídos.
+- HTTP público: página inicial e /sistema/login retornaram 200; /assets/main-C_nstLJD.js retornou 200 e identificou 4.8.339 / ESTÁVEL. Vercel não retornou grupos error/fatal do deploy na janela de 10 minutos consultada.
+- Conferência autenticada do Professor pendente conforme opção pelos ensaios sintéticos. Nenhuma mutação acadêmica/financeira ou assinatura real foi executada no smoke.
+- Pós-checagem: 9 RPCs/helpers, 4 tabelas com RLS, 7 policies, bucket privado, 5 triggers e Realtime conferidos. Sem identidade, helpers retornam false e 2 RPCs negam com `42501`. Advisor: 3 INFO `rls_enabled_no_policy` esperados nas tabelas internas de arquivos/eventos/operações do dossiê, com grants diretos revogados e deny-all intencional; nenhuma policy permissiva adicionada. [Referência do advisor](https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy).
 
 ## Ledger das migrations aplicadas
 
@@ -177,7 +180,7 @@ Nomes locais alinhados às versões atribuídas pelo MCP. SHA-256 e bytes de cad
 
 - Ensaios sintéticos exercitam componentes reais, sem afirmar autenticação/autorizações/latência de produção. Contextos e alunos são fictícios.
 - Não assinar, emitir, quitar ou preencher dados acadêmicos reais como parte do smoke.
-- GitHub e Supabase somente pelo MCP e manifesto explícito; preservar main 4.8.338 e alterações publicadas de outros lotes. A autorização atual abrange produção da PR #429; a conclusão exige evidência das operações e do smoke.
+- GitHub e Supabase somente pelo MCP e manifesto explícito; preservar main 4.8.338 e alterações publicadas de outros lotes. Produção da PR #429 autorizada e concluída; evidências acima distinguem HTTP, contratos e a pendência de sessão autenticada.
 - Fixture, API de ensaio, imagens e saídas de build em tmp são regeneráveis e não integram o manifesto.
 
 Regra operacional sincronizada na skill instalada e em nota da memória pessoal. RAG reindexado no fechamento: 15 fontes e 80 trechos. Checks remotos e preview acompanhados na PR.

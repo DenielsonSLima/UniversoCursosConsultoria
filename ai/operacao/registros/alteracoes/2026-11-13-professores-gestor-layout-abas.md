@@ -2,7 +2,7 @@
 
 Data: 13/11/2026 (America/Maceio).
 Classificação: mudança crítica (Supabase/Storage e leitura financeira).
-Status: implementação local validada e consolidada na PR #429. As três migrations desta frente foram aplicadas pelo MCP em 14/11/2026, com pós-checagem remota de permissões aprovada; publicação ainda sem conclusão registrada.
+Status: consolidado e publicado pela PR #429 na versão 4.8.339 em 14/11/2026. Três migrations desta frente aplicadas, pós-checagem aprovada e deploy READY; conferência autenticada permanece pendente conforme registro consolidado.
 
 ## Pedido e aceite
 
@@ -86,4 +86,4 @@ Total: 35 arquivos.
 
 1. Conferir cadastro, edição, cinco abas e seletores no Safari desktop/móvel; usuário adiou esta etapa.
 2. As três migrations foram aplicadas no lote consolidado com versões reais `20261114033433`, `20261114033440` e `20261114033449`; não reaplicar. Mapeamento e hashes preservados no registro do portal.
-3. Publicar somente o manifesto por MCP GitHub/Supabase, validar RPCs e Storage autenticados e conferir o deploy associado.
+3. Publicação concluída por MCP GitHub/Supabase e deploy READY. A conferência autenticada de RPCs/Storage e telas fica pendente, sem repetir migrations aplicadas.
