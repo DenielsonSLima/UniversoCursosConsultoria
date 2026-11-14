@@ -16,6 +16,14 @@ const receiptMigration = readFileSync(resolve(
 const page = readFileSync(resolve(root, 'modules/professor/financeiro/FinanceiroPage.tsx'), 'utf8');
 const service = readFileSync(resolve(root, 'modules/professor/financeiro/financeiro.service.ts'), 'utf8');
 const queries = readFileSync(resolve(root, 'modules/professor/financeiro/financeiro.queries.ts'), 'utf8');
+const financeRealtime = readFileSync(resolve(
+  root,
+  'modules/professor/financeiro/useProfessorFinanceRealtime.ts',
+), 'utf8');
+const realtimeSignals = readFileSync(resolve(
+  root,
+  'modules/shared/realtime/portal-realtime-signals.ts',
+), 'utf8');
 const receiptPdf = readFileSync(resolve(
   root,
   'modules/professor/financeiro/professor-financeiro-receipt.pdf.ts',
@@ -188,7 +196,7 @@ test('frontend apresenta o payload e nunca consulta ou recalcula o domínio fina
   assert.doesNotMatch(page, /\.from\(['"]contas_pagar/);
   assert.doesNotMatch(page, /\.reduce\(|\.filter\(|\.slice\(|new Date\(/);
   assert.match(page, /financeQuery\.isError \|\| !financeQuery\.data/);
-  assert.match(page, /financeQuery\.refetch\(\)/);
+  assert.doesNotMatch(page, /\.refetch\s*\(/);
   assert.match(service, /supabase\.rpc\('portal_professor_financeiro_listar'/);
   assert.match(service, /supabase\.rpc\('portal_professor_financeiro_preparar_recibo'/);
   assert.match(service, /request = request\.abortSignal\(signal\)/);
@@ -196,6 +204,34 @@ test('frontend apresenta o payload e nunca consulta ou recalcula o domínio fina
   assert.match(presentation, /error\.message\.toLowerCase\(\)/);
   assert.doesNotMatch(presentation, /return\s+(?:error\.message|message)\b/);
   assert.match(presentation, /Verifique sua conexão e tente novamente/);
+});
+
+test('atualização financeira usa sinal privado e invalida somente professor e polo afetados', () => {
+  assert.match(page, /useProfessorFinanceRealtime\(professorId,\s*poloId\)/);
+  assert.match(financeRealtime, /if \(!professorId \|\| !poloId\) return undefined/);
+  assert.match(
+    financeRealtime,
+    /portalRealtimeSignalFilter\(`portal:professor:\$\{professorId\}:polo:\$\{poloId\}:financeiro`\), invalidation\.schedule/,
+  );
+  assert.match(realtimeSignals, /portalRealtimeSignalTable = 'portal_realtime_signals'/);
+  assert.match(realtimeSignals, /event: 'INSERT'/);
+  assert.match(realtimeSignals, /filter: `topic=eq\.\$\{topic\}`/);
+  assert.doesNotMatch(financeRealtime, /table:\s*['"]contas_pagar['"]/);
+
+  const scopedInvalidations = [...financeRealtime.matchAll(
+    /client\.invalidateQueries\(\{\s*queryKey:\s*professorFinanceiroKeys\.(\w+)\(professorId,\s*poloId\)\s*\}\)/g,
+  )].map((match) => match[1]);
+  assert.deepEqual(scopedInvalidations, ['lists', 'receipts']);
+  assert.equal((financeRealtime.match(/client\.invalidateQueries\(/g) ?? []).length, 2);
+  assert.match(financeRealtime, /subscribe\(invalidation\.onChannelStatus\)/);
+  assert.match(financeRealtime, /invalidation\.dispose\(\); void supabase\.removeChannel\(channel\)/);
+
+  for (const option of ['professorFinanceiroListOptions', 'professorFinanceiroReceiptOptions']) {
+    const source = queries.split(`export const ${option} =`)[1]?.split('export const ')[0] ?? '';
+    assert.match(source, /retry: 2,/);
+    assert.match(source, /refetchOnReconnect: 'always',/);
+    assert.doesNotMatch(source, /refetchInterval|retry:\s*(?:true|Infinity)/);
+  }
 });
 
 test('TanStack separa professor, polo, filtros, página e recibo', () => {
