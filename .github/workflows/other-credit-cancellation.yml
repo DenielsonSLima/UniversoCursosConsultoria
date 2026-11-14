@@ -40,3 +40,5 @@ jobs:
           node scripts/test-other-credit-cancellation-ui.mjs
           node --test --test-force-exit modules/gestor/financeiro/outros-creditos/other-credit-cancellation.smoke.test.mjs
           node --test modules/gestor/financeiro/hooks/useFinanceiroRealtime*.test.*
+      - name: Exercise credit creation and returned payment link
+        run: node --test modules/gestor/financeiro/outros-creditos/other-credit-create.interaction.test.mjs modules/gestor/financeiro/outros-creditos/other-credit-create-modal.test.ts

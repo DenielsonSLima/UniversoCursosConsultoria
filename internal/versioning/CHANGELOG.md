@@ -86,6 +86,14 @@ Histórico arquivado: [08/11/2026 — versões 4.8.268 a 4.8.269](./changelog/20
 
 Histórico arquivado: [08/11/2026 — versões 4.8.270 a 4.8.271](./changelog/2026-11-08-versoes-4-8-270-a-271.md).
 
+Histórico arquivado: [08/11/2026 — versão 4.8.272](./changelog/2026-11-08-versao-4-8-272.md).
+
+## [4.8.340] - 2026-11-14
+
+- PDF completo do Caixa inclui todas as origens, com Serviços NFS-e vinculado ao recebimento confirmado.
+- PDF resumido mantém duas páginas e compartilha cartões, composições, tipografia e painéis do completo.
+- Outros Créditos mostra validações e oferece a cópia do link retornado ao gerar cobrança bancária; preserva idempotência e modos locais/PDV.
+
 ## [4.8.339] - 2026-11-14
 
 - Portal do professor compacto e responsivo, com navegação móvel, diários e planejamento nas datas definidas pela Gestão.
@@ -488,12 +496,3 @@ Histórico arquivado: [08/11/2026 — versões 4.8.270 a 4.8.271](./changelog/20
 - Configuração fiscal por estabelecimento e cadastro A1 protegido no Supabase Vault, sem senha ou chave devolvida à interface.
 - Cadastro confere arquivo, validade, CNPJ e cadeia ICP-Brasil; emissão e cancelamento continuam bloqueados até homologação.
 - DPS, assinatura e eventos nacionais têm contratos e validação offline com XSD por ambiente.
-
-## [4.8.272] - 2026-11-08
-
-- Mês atual abre agrupado por categoria; Em aberto e Todos abrem por mês nas despesas fixas e variáveis.
-- A troca de período restaura o agrupamento correspondente, mantendo a escolha manual disponível.
-- Despesas variáveis aparece antes de Despesas fixas na ordem visual das abas.
-- Custo rateado abre detalhes dos polos e valores autorizados em modal, pela tabela ou cartão.
-- Ajustes do valor iniciam recolhidos; convênio e turma usam Não/Sim, preservando campos, valores e bloqueios.
-- Textos do parcelamento foram simplificados para remover termos de implementação.

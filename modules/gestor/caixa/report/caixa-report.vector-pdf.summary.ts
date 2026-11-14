@@ -148,11 +148,48 @@ export const drawComposition = (
   }
 };
 
-export const drawSummaryPanels = (pdf: jsPDF, report: CaixaDetailedReport, y: number) => {
+export const drawBreakdownPanel = (
+  pdf: jsPDF,
+  rows: CaixaDetailedReport['resumo']['receitasPorModalidade'],
+  options: { x: number; y: number; width: number; height: number; eyebrow: string; title: string; tone: Tone },
+) => {
+  const { x, y, width, height, eyebrow, title, tone } = options;
+  const step = Math.min(10.5, (height - 16) / Math.max(rows.length, 1));
+  if (step < 5) throw new Error('As origens financeiras não cabem integralmente no painel do relatório resumido de duas páginas.');
+  pdf.setFillColor(COLORS.white);
+  pdf.setDrawColor(COLORS.slate200);
+  pdf.roundedRect(x, y, width, height, 2.2, 2.2, 'FD');
+  setText(pdf, COLORS.blue, 5.8, 'black');
+  drawText(pdf, eyebrow.toUpperCase(), x + 3, y + 2.8);
+  setText(pdf, COLORS.navy, 7.2, 'black');
+  drawText(pdf, title.toUpperCase(), x + 3, y + 6.5);
+  pdf.setDrawColor(COLORS.slate100);
+  pdf.line(x + 3, y + 10.5, x + width - 3, y + 10.5);
+  if (!rows.length) {
+    setText(pdf, COLORS.slate500, 5.8);
+    drawText(pdf, 'Sem movimentos confirmados.', x + 3, y + 14);
+  }
+  rows.forEach((item, index) => {
+    const rowY = y + 13.5 + index * step;
+    setText(pdf, COLORS.slate700, 6.2, 'bold');
+    drawText(pdf, item.rotulo, x + 3, rowY, width - 36, { maxLines: 1 });
+    setText(pdf, COLORS.slate500, 5.2);
+    const detail = item.codigo === 'SERVICOS_NFSE'
+      ? `${item.quantidade} recebimento(s) · NFS-e de serviço emitida`
+      : `${item.quantidade} movimento(s) confirmado(s)`;
+    drawText(pdf, detail, x + 3, rowY + 2.7, width - 36, { maxLines: 1 });
+    setText(pdf, tone === 'rose' ? COLORS.rose700 : COLORS.emerald700, 6.4, 'bold');
+    drawText(pdf, formatCaixaCurrency(item.valor), x + width - 3, rowY + 1, undefined, { align: 'right' });
+  });
+};
+
+export const drawSummaryPanels = (
+  pdf: jsPDF, report: CaixaDetailedReport, y: number,
+  courseContinuation: 'na Seção 4' | 'no relatório completo' = 'na Seção 4',
+) => {
   const gap = 2.5;
   const half = (CONTENT_WIDTH - gap) / 2;
   const panelHeight = Math.min(68, FOOTER_TOP - y - 7);
-  const modalityStep = Math.min(10.5, (panelHeight - 19) / 4);
   const drawPanel = (x: number, eyebrow: string, title: string) => {
     pdf.setFillColor(COLORS.white);
     pdf.setDrawColor(COLORS.slate200);
@@ -164,22 +201,11 @@ export const drawSummaryPanels = (pdf: jsPDF, report: CaixaDetailedReport, y: nu
     pdf.setDrawColor(COLORS.slate100);
     pdf.line(x + 3, y + 10.5, x + half - 3, y + 10.5);
   };
-  drawPanel(CONTENT_LEFT, 'Origem das entradas', 'Receitas recebidas por modalidade');
-  drawPanel(CONTENT_LEFT + half + gap, 'Acompanhamento mensal', 'Resumo financeiro por curso');
-
-  const modalities = ['EAD', 'ESPECIALIZACAO', 'TECNICO', 'LIVRE'].map((code) => (
-    report.resumo.receitasPorModalidade.find((item) => item.codigo === code)
-  )).filter(Boolean);
-  modalities.forEach((item, index) => {
-    if (!item) return;
-    const rowY = y + 13.5 + (index * modalityStep);
-    setText(pdf, COLORS.slate700, 6.2, 'bold');
-    drawText(pdf, item.rotulo, CONTENT_LEFT + 3, rowY, half - 33, { maxLines: 1 });
-    setText(pdf, COLORS.slate500, 5.2);
-    drawText(pdf, `${item.quantidade} recebimento(s) confirmado(s)`, CONTENT_LEFT + 3, rowY + 3.8);
-    setText(pdf, COLORS.emerald700, 6.4, 'bold');
-    drawText(pdf, formatCaixaCurrency(item.valor), CONTENT_LEFT + half - 3, rowY + 1, undefined, { align: 'right' });
+  drawBreakdownPanel(pdf, report.resumo.receitasPorModalidade, {
+    x: CONTENT_LEFT, y, width: half, height: panelHeight,
+    eyebrow: 'Origem das entradas', title: 'Receitas recebidas por modalidade', tone: 'emerald',
   });
+  drawPanel(CONTENT_LEFT + half + gap, 'Acompanhamento mensal', 'Resumo financeiro por curso');
 
   const courseX = CONTENT_LEFT + half + gap;
   if (report.resumoCursos.itens.length === 0) {
@@ -218,14 +244,18 @@ export const drawSummaryPanels = (pdf: jsPDF, report: CaixaDetailedReport, y: nu
 
   if (report.resumoCursos.quantidadeOmitidas > 0) {
     setText(pdf, COLORS.slate400, 4.6, 'bold');
-    drawText(pdf, `+ ${report.resumoCursos.quantidadeOmitidas} curso(s) na Seção 4`, courseX + half - 3, y + panelHeight - 2.2, undefined, { align: 'right' });
+    drawText(pdf, `+ ${report.resumoCursos.quantidadeOmitidas} curso(s) ${courseContinuation}`, courseX + half - 3, y + panelHeight - 2.2, undefined, { align: 'right' });
   }
 };
 
-export const drawSummaryPage = (pdf: jsPDF, report: CaixaDetailedReport, contentTop: number) => {
+export const drawSummaryPage = (
+  pdf: jsPDF, report: CaixaDetailedReport, contentTop: number,
+  title = 'PRESTAÇÃO DE CONTAS MENSAL',
+  courseContinuation: 'na Seção 4' | 'no relatório completo' = 'na Seção 4',
+) => {
   const monthly = report.resumo.compromissos.inadimplenciaMensal;
   setText(pdf, COLORS.navy, 15, 'black');
-  drawText(pdf, 'PRESTAÇÃO DE CONTAS MENSAL', CONTENT_LEFT, contentTop);
+  drawText(pdf, title, CONTENT_LEFT, contentTop);
   setText(pdf, COLORS.slate500, 6.2);
   drawText(
     pdf,
@@ -363,5 +393,5 @@ export const drawSummaryPage = (pdf: jsPDF, report: CaixaDetailedReport, content
     : 'Leitura correta: o resultado mensal representa o fluxo de caixa confirmado, não lucro contábil por competência. O saldo Banese é a posição contábil do sistema; a integração atual não consulta o extrato bancário.';
   drawText(pdf, notice, CONTENT_LEFT + 3, noticeTop + 1.4, CONTENT_WIDTH - 6, { maxLines: 1 });
 
-  drawSummaryPanels(pdf, report, noticeTop + 7.5);
+  drawSummaryPanels(pdf, report, noticeTop + 7.5, courseContinuation);
 };
