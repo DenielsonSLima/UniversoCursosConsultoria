@@ -1,7 +1,7 @@
 # NFS-e de serviço: navegação depois da autorização
 
 Data: 14/11/2026. Classificação: mudança padrão de interface, com confirmação fiscal e visualizador preservados.
-Status: implementado e revisado; publicação no GitHub e produção autorizada pelo usuário. Versão preparada: 4.8.341, revisão 350.
+Status: publicado no GitHub e em produção. Versão 4.8.341, revisão 350.
 
 ## Pedido e aceite
 
@@ -45,3 +45,12 @@ Total: 14 arquivos.
 - Snapshots de origem, patch e manifesto em `/tmp/universo-nfse-pos-emissao-20261114`; artefatos temporários fora do lote.
 
 Autorização explícita recebida: “Publicar NFS-e no GitHub e produção”. Publicação isolada sobre main `81ecc80448f2a6a824d238f6852770dade0e1458`, preservando o Caixa 4.8.340 e alterações paralelas. Nova regressão registrada no workflow NFS-e existente; entrada 4.8.273 movida integralmente ao arquivo histórico para respeitar 500 linhas.
+
+## Publicação e verificação
+
+- PR [#431](https://github.com/DenielsonSLima/UniversoCursosConsultoria/pull/431); head `fb29d6f5ca614f5e63e01e60954d30317f8d4ef9`; squash em main `3cae0a3672faaf1f066e3021f4e2eae6086060ef`. Manifesto remoto conferido: 14 arquivos, sem mudanças paralelas.
+- 9/9 check-runs concluídos com sucesso e status Vercel aprovado; nova regressão executada no CI existente. Preview `dpl_8zZhWAbEiqN3MZc22njmVFBz4fRv` READY.
+- Produção `dpl_FczbiwExejrCdLk6NkvJiJtGekJP` READY no commit de merge; aliases oficiais `www.universocc.com.br` e `universocc.com.br`.
+- `/gestor` e `/assets/main-CNF7n85S.js` retornaram HTTP 200; bundle confirma 4.8.341 / ESTÁVEL. Consulta de logs de erro/fatal desse deploy sem registros na janela inicial de 10 minutos.
+- Safari disponível, mas a janela ativa mudou durante a navegação e interrompeu a verificação visual. Smoke autenticado pós-emissão permanece pendente; nenhuma nota real, cobrança ou alteração de dados foi executada.
+- Registro final atualizado após a verificação; índice RAG regenerado localmente, fora do manifesto de publicação.
