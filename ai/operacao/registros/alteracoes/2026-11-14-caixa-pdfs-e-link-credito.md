@@ -1,7 +1,7 @@
 # Caixa: PDFs e retorno da criação de crédito
 
 Data: 14/11/2026. Classificação: mudança crítica de apresentação financeira/PDF.
-Status: publicação 4.8.340 autorizada pelo usuário em 14/11/2026; gates da base limpa e revisão em andamento. Sem mutação financeira ou de banco.
+Status: publicado em produção em 14/11/2026, versão 4.8.340 estável, revisão349. PR #430 integrada; deploy READY e versão pública confirmada. Sem mutação financeira ou de banco.
 
 ## Pedido e aceite
 
@@ -71,3 +71,14 @@ Comandos focados: testes de `caixa-report.vector-pdf`, `caixa-report.concise-pdf
 - Revisão independente encontrou e corrigiu aviso de cursos omitidos no resumido: agora direciona ao relatório completo, sem referir uma Seção4 inexistente. Regressão adicional cobre o cenário.
 
 - Revisão independente concluída sem pendências materiais após corrigir a continuação de cursos.15testes específicos dos PDFs aprovados, incluindo a nova regressão. Build final repetido após esse ajuste e aprovado.
+
+
+## Resultado da publicação
+
+- PR #430: https://github.com/DenielsonSLima/UniversoCursosConsultoria/pull/430. Head `ca3e84a41b4bda42010318b00def0b9a68465a5a`, 10checks aprovados e statusVercel success; merge squash `0a26d5b23fcea3607115453027fe548bc27cd1cc`.
+- Árvore de produto integrada `92d690b322d2967f4ffec25cb890e1ef6dd2abf6`, idêntica ao commit revisado.
+- Preview `dpl_CGT2U4xyxvtzmNNobGuKCTs1vCwR`: READY, build54s. A leituraHTTP protegida foi bloqueada pela revisão automática porque a ferramenta criaria/reutilizaria compartilhamento temporário; nenhum acesso foi criado. Prontidão verificada pelos metadados/logs Vercel.
+- Produção `dpl_GtzTeSr1jM8szSJ2E29UeQo2TEwF`: READY, build61s, commit de merge confirmado e aliases `www.universocc.com.br`/`universocc.com.br` atribuídos.
+- HTTP público200 em `/gestor` e no bundle `/assets/main-B3sPF5bH.js`, com4.8.340 eESTÁVEL confirmados. Consulta de logs Vercel não retornou grupos error/fatal para o deploy na janela de10min.
+- Safari autenticado confirmou a versão4.8.340 no Caixa. Ação de abrirPDF pós-deploy interrompida por alterações simultâneas do usuário no Safari; essa conferência específica permanece pendente. Smoke local dos PDFs, trocas e retornodo crédito já aprovado; nenhuma emissão/baixa/criação financeira real foi usada na validação.
+- Solicitações posteriores de auditoria dos cancelamentos e navegação NFS-e são frentes separadas e não integram esta publicação.
