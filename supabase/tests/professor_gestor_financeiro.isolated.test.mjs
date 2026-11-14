@@ -87,7 +87,7 @@ test('financeiro do professor autoriza fontes, separa origens e pagina no banco'
       INSERT INTO matricula_dependencia_cobrancas VALUES('${id(37)}');
       INSERT INTO internal_proesc.obligation_links VALUES('${id(38)}');
     `);
-    await db.exec(readFileSync(new URL('../migrations/20261114021000_professor_gestor_financeiro_read.sql', import.meta.url), 'utf8'));
+    await db.exec(readFileSync(new URL('../migrations/20261114033449_professor_gestor_financeiro_read.sql', import.meta.url), 'utf8'));
     const privileges = (await db.query(`SELECT
       has_function_privilege('anon','${signature}','EXECUTE') AS anon,
       has_function_privilege('service_role','${signature}','EXECUTE') AS service,

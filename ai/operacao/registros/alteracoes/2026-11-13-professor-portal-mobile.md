@@ -1,7 +1,7 @@
 # Portal do professor: mobile e atualização automática
 
 Pedido iniciado em 13/11/2026 (America/Maceio).
-Status: implementação, revisão e conferência local concluídas em 14/11/2026. Entregue na PR #429 do GitHub; produção não autorizada.
+Status: implementação, revisão e conferência local concluídas em 14/11/2026. Produção da PR #429 autorizada pelo usuário; publicação 4.8.339 estável, revisão 348, em andamento, sem confirmação de conclusão.
 Escopo: todo acesso depois do login, incluindo menu lateral/móvel, polo, Início, Disciplinas/diários, Plano de Curso, Assinaturas, Agenda, Financeiro, Biblioteca, Comunicação e Perfil. Consolida também o cadastro/perfil docente do Gestor já implementado neste fluxo.
 
 ## Contratos e decisões
@@ -11,7 +11,7 @@ Escopo: todo acesso depois do login, incluindo menu lateral/móvel, polo, Iníci
 - Preparar aulas significa editar conteúdo futuro nas datas/cargas definidas pela Gestão; não cria permissão para reagendar encontros.
 - Plano de Curso foi dividido em editor no fluxo normal e prévia institucional. Compositor PDF, snapshot, revisão-base e bloqueios preservados.
 - TanStack Query+Realtime, invalidação por escopo e reconexão automática. Sem botões manuais de atualização. Regra solicitada registrada em lote operacional separado.
-- Quatro migrations novas permanecem locais: 2 de dossiê privado, 1 de leitura financeira do Gestor e 1 de sinais privados de financeiro/assinaturas do Professor. Nenhuma aplicação remota nesta tarefa.
+- Quatro migrations aplicadas pelo MCP em 14/11/2026: 2 de dossiê privado, 1 de leitura financeira do Gestor e 1 de sinais privados de financeiro/assinaturas do Professor. Fontes alinhadas às versões reais sem alterar os corpos SQL; pós-checagem remota de permissões aprovada.
 - Novos sinais não transportam valores, conteúdo de documentos ou imagem de assinatura; RLS existente restringe audiência.
 
 ## Manifesto explícito
@@ -41,9 +41,9 @@ Escopo: todo acesso depois do login, incluindo menu lateral/móvel, polo, Iníci
 - `modules/gestor/parceiros/components/viewparceiros/professor/ProfessorDocumentoForms.tsx`
 - `modules/gestor/parceiros/components/viewparceiros/professor/professor-documentos.presentation.ts`
 - `modules/gestor/parceiros/components/viewparceiros/professor/professor-documentos.service.ts`
-- `supabase/migrations/20261114020500_professor_private_dossier_schema.sql`
-- `supabase/migrations/20261114020510_professor_private_dossier_rpc.sql`
-- `supabase/migrations/20261114021000_professor_gestor_financeiro_read.sql`
+- `supabase/migrations/20261114033433_professor_private_dossier_schema.sql`
+- `supabase/migrations/20261114033440_professor_private_dossier_rpc.sql`
+- `supabase/migrations/20261114033449_professor_gestor_financeiro_read.sql`
 - `supabase/tests/professor_private_dossier.fixture.ts`
 - `supabase/tests/professor_private_dossier.isolated.test.ts`
 - `ai/operacao/LOTE_ATIVO.md`
@@ -95,7 +95,7 @@ Escopo: todo acesso depois do login, incluindo menu lateral/móvel, polo, Iníci
 - `modules/professor/professor.page.tsx`
 - `modules/gestor/calendario/components/AgendaWorkspace.tsx`
 - `modules/shared/assinatura-eletronica/ElectronicSignatureInbox.tsx`
-- `supabase/migrations/20261114033000_professor_finance_signature_signals.sql`
+- `supabase/migrations/20261114033458_professor_finance_signature_signals.sql`
 - `supabase/tests/professor_finance_signature_signals.isolated.test.mjs`
 - `ai/operacao/politicas/INTERFACE.md`
 - `ai/operacao/MEMORIA_CANONICA.md`
@@ -156,11 +156,28 @@ Total: 116 arquivos.
 - Regressões do Gestor: 22 testes passaram. Portal/contratos/PGlite de sinais: 21 passaram; os 7 testes existentes de sessão/dias do Plano de Curso passaram com Deno --sloppy-imports, além dos 2 testes de renderização. Dossiê e leitura financeira também passaram no PostgreSQL isolado.
 - Auditoria de drift contra main 41ff2ba4 (4.8.338): 47 arquivos existentes e 62 novos; registros de Caixa mensal/Dashboard preservados no índice de manifestos.
 
+## Publicação autorizada em andamento
+
+- Usuário autorizou publicar a PR #429 em produção em 14/11/2026. Versão preparada: `4.8.339`, fase `stable`, revisão `348`, data `2026-11-14`; candidato RC e histórico preservados.
+- Aplicação das quatro migrations e pós-checagem remota confirmadas pelo MCP; merge/deploy e smoke de produção ainda sem conclusão registrada.
+- Pós-checagem: 9 RPCs/helpers, 4 tabelas com RLS, 7 policies, bucket privado, 5 triggers e Realtime conferidos. Sem identidade, helpers retornam false e 2 RPCs negam com `42501`. Advisor: 3 INFO `rls_enabled_no_policy` esperados nas tabelas internas de arquivos/eventos/operações do dossiê, com grants diretos revogados e deny-all intencional; nenhuma policy permissiva adicionada.
+
+## Ledger das migrations aplicadas
+
+Nomes locais alinhados às versões atribuídas pelo MCP. SHA-256 e bytes de cada corpo SQL conferidos antes/depois da renomeação, sem alteração. Não reaplicar estas migrations.
+
+| Versão local anterior | Versão aplicada | Migration | SHA-256 |
+| --- | --- | --- | --- |
+| `20261114020500` | `20261114033433` | `professor_private_dossier_schema` | `ab78647885b88f32293e90c157df7acc3930d17e08958c45e588cbfdbc5dba5d` |
+| `20261114020510` | `20261114033440` | `professor_private_dossier_rpc` | `90c2219bd40ab8559bd83a684f4796547b134ef39c39373bc9c9a4df4cc999c4` |
+| `20261114021000` | `20261114033449` | `professor_gestor_financeiro_read` | `738a8f56382882bb0d0c8d7968a911483c704494431aaf07f2c2b2f697da1a04` |
+| `20261114033000` | `20261114033458` | `professor_finance_signature_signals` | `5fe6250a5a3f48a54164548cfb51fb233287da483e691ff2c3136fb5e2d7fd19` |
+
 ## Limites e entrega
 
 - Ensaios sintéticos exercitam componentes reais, sem afirmar autenticação/autorizações/latência de produção. Contextos e alunos são fictícios.
 - Não assinar, emitir, quitar ou preencher dados acadêmicos reais como parte do smoke.
-- GitHub somente pelo MCP e manifesto explícito; preservar main 4.8.338 e alterações publicadas de outros lotes. Branch/PR de revisão não implica aplicação de migrations ou publicação em produção.
+- GitHub e Supabase somente pelo MCP e manifesto explícito; preservar main 4.8.338 e alterações publicadas de outros lotes. A autorização atual abrange produção da PR #429; a conclusão exige evidência das operações e do smoke.
 - Fixture, API de ensaio, imagens e saídas de build em tmp são regeneráveis e não integram o manifesto.
 
 Regra operacional sincronizada na skill instalada e em nota da memória pessoal. RAG reindexado no fechamento: 15 fontes e 80 trechos. Checks remotos e preview acompanhados na PR.

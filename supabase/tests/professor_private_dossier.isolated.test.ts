@@ -49,8 +49,8 @@ Deno.test('dossiê privado: solicitações, versões, revisão, replay e barreir
     await db.exec(dossierFixture);
     for (
       const name of [
-        '20261114020500_professor_private_dossier_schema',
-        '20261114020510_professor_private_dossier_rpc',
+        '20261114033433_professor_private_dossier_schema',
+        '20261114033440_professor_private_dossier_rpc',
       ]
     ) {
       await db.exec(await Deno.readTextFile(new URL(`../migrations/${name}.sql`, import.meta.url)));

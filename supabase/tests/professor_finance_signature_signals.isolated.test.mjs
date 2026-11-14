@@ -23,7 +23,7 @@ test('sinais financeiros e de assinatura invalidam somente audiência docente an
       CREATE TABLE public.assinatura_eletronica_envelopes(id uuid PRIMARY KEY,status text);
       CREATE TABLE public.assinatura_eletronica_participantes(id uuid PRIMARY KEY,envelope_id uuid,parceiro_id uuid,status text);
     `);
-    await db.exec(readFileSync(new URL('../migrations/20261114033000_professor_finance_signature_signals.sql', import.meta.url), 'utf8'));
+    await db.exec(readFileSync(new URL('../migrations/20261114033458_professor_finance_signature_signals.sql', import.meta.url), 'utf8'));
     await db.query('INSERT INTO parceiros VALUES($1,$2),($3,$2),($4,$5)', [id(1),'Professor',id(2),id(3),'Aluno']);
     await db.query('INSERT INTO despesas_lancamentos VALUES($1,$2,$3,100)', [id(10),id(1),id(20)]);
     await db.query('UPDATE despesas_lancamentos SET valor=120 WHERE id=$1', [id(10)]);

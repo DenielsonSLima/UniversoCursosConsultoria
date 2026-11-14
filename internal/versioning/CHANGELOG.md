@@ -86,6 +86,12 @@ Histórico arquivado: [08/11/2026 — versões 4.8.268 a 4.8.269](./changelog/20
 
 Histórico arquivado: [08/11/2026 — versões 4.8.270 a 4.8.271](./changelog/2026-11-08-versoes-4-8-270-a-271.md).
 
+## [4.8.339] - 2026-11-14
+
+- Portal do professor compacto e responsivo, com navegação móvel, diários e planejamento nas datas definidas pela Gestão.
+- Cadastro docente no Gestor com turmas, dossiê privado e consulta financeira; demais módulos adaptados ao celular.
+- TanStack Query e Realtime mantêm os dados atualizados sem recarga manual. Produção autorizada pelo usuário; publicação em andamento.
+
 ## [4.8.339-rc.1] - 2026-11-14
 
 - Candidato para revisão: portal do professor compacto e responsivo, com navegação móvel, diários, planejamento, financeiro e demais módulos.

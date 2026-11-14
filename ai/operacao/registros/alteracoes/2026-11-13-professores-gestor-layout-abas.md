@@ -2,14 +2,14 @@
 
 Data: 13/11/2026 (America/Maceio).
 Classificação: mudança crítica (Supabase/Storage e leitura financeira).
-Status: implementação local validada; conferência visual adiada pelo usuário, migrations e publicação remotas pendentes.
+Status: implementação local validada e consolidada na PR #429. As três migrations desta frente foram aplicadas pelo MCP em 14/11/2026, com pós-checagem remota de permissões aprovada; publicação ainda sem conclusão registrada.
 
 ## Pedido e aceite
 
 Reformular cadastro e perfil do professor no acesso Gestor conforme o padrão compacto aprovado e desenvolver as abas Turmas/Disciplinas, Documentos e Financeiro mostradas nas capturas.
 Aceite funcional: preservar campos e ações; retirar placeholders; exibir vínculos reais, dossiê privado e lançamentos vinculados; respeitar identidade, polo e permissões.
 Teste visual Safari foi explicitamente adiado pelo usuário nesta conversa. Essa conferência permanece pendente.
-Produção não foi solicitada nesta etapa; não há aceite de publicação confirmado.
+Na etapa inicial, produção não foi solicitada. A publicação foi posteriormente autorizada na PR #429 e é acompanhada no registro `2026-11-13-professor-portal-mobile.md`.
 
 ## Implementação
 
@@ -47,9 +47,9 @@ Produção não foi solicitada nesta etapa; não há aceite de publicação conf
 - `modules/gestor/parceiros/components/viewparceiros/professor/ProfessorDocumentoForms.tsx`
 - `modules/gestor/parceiros/components/viewparceiros/professor/professor-documentos.presentation.ts`
 - `modules/gestor/parceiros/components/viewparceiros/professor/professor-documentos.service.ts`
-- `supabase/migrations/20261114020500_professor_private_dossier_schema.sql`
-- `supabase/migrations/20261114020510_professor_private_dossier_rpc.sql`
-- `supabase/migrations/20261114021000_professor_gestor_financeiro_read.sql`
+- `supabase/migrations/20261114033433_professor_private_dossier_schema.sql`
+- `supabase/migrations/20261114033440_professor_private_dossier_rpc.sql`
+- `supabase/migrations/20261114033449_professor_gestor_financeiro_read.sql`
 - `supabase/tests/professor_private_dossier.fixture.ts`
 - `supabase/tests/professor_private_dossier.isolated.test.ts`
 - `ai/operacao/LOTE_ATIVO.md`
@@ -85,5 +85,5 @@ Total: 35 arquivos.
 ## Retomada
 
 1. Conferir cadastro, edição, cinco abas e seletores no Safari desktop/móvel; usuário adiou esta etapa.
-2. Para entrega remota, confirmar explicitamente produção e critérios de aceite; conferir alvo/ledger antes das três migrations novas, sem reaplicar as existentes.
+2. As três migrations foram aplicadas no lote consolidado com versões reais `20261114033433`, `20261114033440` e `20261114033449`; não reaplicar. Mapeamento e hashes preservados no registro do portal.
 3. Publicar somente o manifesto por MCP GitHub/Supabase, validar RPCs e Storage autenticados e conferir o deploy associado.
