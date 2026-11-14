@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { AlertTriangle, ArrowLeft, Loader2, RefreshCw } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, Loader2 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 
 import CanonicalDocumentPreviewModal from '../../gestor/secretaria/shared/CanonicalDocumentPreviewModal';
@@ -21,8 +21,7 @@ interface ProfessorFinanceiroReceiptModalProps {
 const ReceiptPreparationOverlay: React.FC<{
   error?: string;
   onClose: () => void;
-  onRetry?: () => void;
-}> = ({ error, onClose, onRetry }) => {
+}> = ({ error, onClose }) => {
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
     const closeOnEscape = (event: KeyboardEvent) => {
@@ -64,15 +63,7 @@ const ReceiptPreparationOverlay: React.FC<{
             >
               <ArrowLeft size={15} /> Voltar
             </button>
-            {error && onRetry ? (
-              <button
-                type="button"
-                onClick={onRetry}
-                className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-black uppercase tracking-wide text-white transition-colors hover:bg-emerald-700"
-              >
-                <RefreshCw size={15} /> Tentar novamente
-              </button>
-            ) : null}
+
           </div>
         </div>
       </div>
@@ -133,7 +124,6 @@ const ProfessorFinanceiroReceiptModal: React.FC<ProfessorFinanceiroReceiptModalP
       <ReceiptPreparationOverlay
         error={professorFinancialErrorMessage(receiptQuery.error)}
         onClose={onClose}
-        onRetry={() => { void receiptQuery.refetch(); }}
       />
     );
   }

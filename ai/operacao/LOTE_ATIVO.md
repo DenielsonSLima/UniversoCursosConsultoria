@@ -1,12 +1,11 @@
 # Lote ativo
 
-## Lote: 2026-11-13-dashboard-atividade-datas
-Objetivo: distinguir data civil de pagamento de timestamps reais na atividade recente.
-Status: RPC v2 aplicada e contrato real validado; frontend preparado para revisão, CI, Preview e publicação autorizada.
-Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-13-dashboard-atividade-datas.md`.
-Base: main `690f19cc20118bee2d0d423075b2cf800293846c`, 4.8.337; entrega 4.8.338, revisão 347.
-Aceite: “Ajuste isso pq tá confuso” e autorização de produção após a confirmação de envio ao GitHub e PR draft.
-Guarda: nenhuma alteração de registros financeiros, matrícula, dados de aluno, cálculos ou permissões; RPC original preservada.
-Validação: 23 testes Node/PGlite, quatro fusos, build, lint e linhas; consulta real de 20 eventos preservou ordem e conteúdo.
-Banco: migration `20261113184005` / `dashboard_activity_civil_dates`; ausência de identidade bloqueada, anon sem EXECUTE.
-Limite: smoke visual/autenticado pendente por indisponibilidade do navegador; status e evidências finais ficam na PR.
+## Lote: 2026-11-13-professor-portal-mobile
+Objetivo: reformular todo o portal do professor após o login, com prioridade celular, e concluir cadastro/perfil docente do Gestor.
+Status: implementação, revisão, conferência sintética no Safari e gates finais concluídos. Usuário autorizou a produção da PR #429 em 14/11/2026; publicação 4.8.339 estável, revisão 348, em andamento, sem confirmação de conclusão.
+Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-13-professor-portal-mobile.md`.
+Aceite: menu/polo e telas responsivos; frequência/notas/diários e conteúdo futuro usáveis no celular; contratos acadêmicos e documentos preservados; nenhum botão manual de atualização.
+Regra operacional separada: `ai/operacao/registros/alteracoes/2026-11-13-regra-atualizacao-automatica.md`, por pedido explícito para skill/memória/RAG.
+Guarda: quatro migrations aplicadas pelo MCP, com versões reais e hashes no registro; pós-checagem remota de permissões aprovada. Merge/deploy e smoke de produção ainda sem conclusão registrada. Nenhuma emissão/assinatura/baixa real faz parte do smoke.
+Validação: componentes reais com dados sintéticos; usuário escolheu esse caminho após sessão local expirar. Safari em 360/390 px e 1280 px, contratos PGlite, testes React, build/TypeScript/ESLint e teto de 500 linhas aprovados.
+Paralelo preservado: publicação 4.8.338 em main e lotes operacionais anteriores; nenhuma sincronização ampla do checkout.

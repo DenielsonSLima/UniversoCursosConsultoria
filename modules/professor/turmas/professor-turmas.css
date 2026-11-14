@@ -1,0 +1,25 @@
+@media screen {
+  .professor-academic-workspace { min-width: 0; color: #334155; font-size: 13px; line-height: 1.5; }
+  .professor-academic-workspace > header h2 { font-size: 23px; font-weight: 500; color: #122b42; }
+  .professor-assignment-card { min-width: 0; display: flex; flex-direction: column; border: 1px solid #e3e9ee; border-radius: 12px; background: #fff; padding: 16px; }
+  .professor-assignment-card > button { margin-top: auto; transform: translateY(0); }
+  .professor-assignment-card dl { margin-bottom: 16px; }
+  .professor-academic-primary, .professor-academic-action { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 38px; border-radius: 8px; padding: 8px 14px; font-size: 13px; font-weight: 500; }
+  .professor-academic-primary { background: #17374f; color: white; }
+  .professor-academic-primary:hover { background: #244b68; }
+  .professor-academic-action { border: 1px solid #dbe3ed; background: white; color: #526779; }
+  .professor-academic-primary:focus-visible, .professor-academic-action:focus-visible { outline: 2px solid #4169e1; outline-offset: 2px; }
+  .professor-assignment-tabs { display: flex; flex-wrap: nowrap; gap: 22px; max-width: 100%; overflow-x: auto; border-bottom: 1px solid #e3e9ee; scrollbar-width: thin; }
+  .professor-assignment-tabs button { display: inline-flex; align-items: center; gap: 7px; flex-shrink: 0; min-height: 44px; border-bottom: 2px solid transparent; padding: 8px 1px; color: #607286; font-size: 13px; font-weight: 400; white-space: nowrap; }
+  .professor-assignment-tabs button[aria-current='page'] { border-bottom-color: #4169e1; color: #122b42; font-weight: 500; }
+  .professor-assignment-tabs button:disabled { opacity: .55; cursor: not-allowed; }
+  .professor-assignment-tabs button:focus-visible { outline: 2px solid #4169e1; outline-offset: -3px; }
+  .professor-assignment-summary { border: 1px solid #e3e9ee; border-radius: 12px; background: #fff; padding: 16px; }
+  .professor-assignment-summary h3 { font-size: 18px; font-weight: 500; overflow-wrap: anywhere; }
+  @media (max-width: 767px) {
+    .professor-academic-workspace > header h2 { font-size: 21px; }
+    .professor-academic-primary, .professor-academic-action { min-height: 44px; }
+    .professor-assignment-card { padding: 14px; }
+    .professor-assignment-summary { padding: 14px; }
+  }
+}

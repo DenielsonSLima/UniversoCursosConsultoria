@@ -192,6 +192,8 @@ const GestorModuleContentView: React.FC<GestorModuleContentProps> = ({
     return (
       <ParceirosPage
         financeCacheScope={JSON.stringify([profile.id, profile.contextId, currentPoloId, permissions])}
+        allowedFinancialTabs={canOpenModule('financeiro') ? getEffectiveFinanceiroTabs(permissions) : []}
+        financialPoloId={currentPoloId}
         initialForm={initialForm}
         poloId={scopedPoloId}
         includeGlobal={isGlobal}
@@ -206,6 +208,8 @@ const GestorModuleContentView: React.FC<GestorModuleContentProps> = ({
     case 'parceiros': return (
       <ParceirosPage
         financeCacheScope={JSON.stringify([profile.id, profile.contextId, currentPoloId, permissions])}
+        allowedFinancialTabs={canOpenModule('financeiro') ? getEffectiveFinanceiroTabs(permissions) : []}
+        financialPoloId={currentPoloId}
         poloId={scopedPoloId}
         includeGlobal={isGlobal}
         onRequestScrollTop={onRequestScrollTop}

@@ -5,9 +5,11 @@ import test from 'node:test';
 const read = (path) => readFile(new URL(path, import.meta.url), 'utf8');
 
 test('Professor usa apenas RPCs seguras e mantém conclusão no backend', async () => {
-  const [service, page] = await Promise.all([
+  const [service, page, editor, preview] = await Promise.all([
     read('./plano-curso.service.ts'),
     read('../../professor/plano-curso/PlanoCursoPage.tsx'),
+    read('../../professor/plano-curso/usePlanoCursoEditor.ts'),
+    read('../../professor/plano-curso/PlanoCursoInstitutionalPreview.tsx'),
   ]);
 
   assert.match(service, /listar_planos_curso_professor_secure/);
@@ -15,19 +17,20 @@ test('Professor usa apenas RPCs seguras e mantém conclusão no backend', async 
   assert.match(service, /salvar_plano_curso_professor_secure/);
   assert.match(service, /concluir_plano_curso_professor_secure/);
   assert.doesNotMatch(service, /\.from\(['"]planos_curso['"]\)/);
-  assert.match(page, /conteudosAulas: expandPlanoCursoConteudosByDay/);
-  assert.match(page, /groupPlanoCursoAulasByDay/);
-  assert.match(page, /Aulas do mesmo dia aparecem reunidas/);
-  assert.doesNotMatch(page, /PlanoCursoPdfPreview/);
-  assert.doesNotMatch(page, /preparar_plano_curso_documento_secure/);
+  assert.match(editor, /conteudosAulas: expandPlanoCursoConteudosByDay/);
+  assert.match(editor, /groupPlanoCursoAulasByDay/);
+  assert.match(preview, /Aulas do mesmo dia aparecem reunidas/);
+  assert.doesNotMatch(page + editor + preview, /PlanoCursoPdfPreview/);
+  assert.doesNotMatch(page + editor + preview, /preparar_plano_curso_documento_secure/);
 });
 
 test('Grade carrega estados em lote e prepara documento diretamente pelo plano canônico', async () => {
-  const [service, hooks, grade, turmaRealtime] = await Promise.all([
+  const [service, hooks, grade, turmaRealtime, gradePreview] = await Promise.all([
     read('./plano-curso.service.ts'),
     read('./plano-curso.hooks.ts'),
     read('../../gestor/gestao/tecnicos/detalhes/components/TurmaGrade.tsx'),
     read('../../gestor/gestao/tecnicos/detalhes/hooks/useTurmaTecnicoRealtime.ts'),
+    read('../../gestor/gestao/tecnicos/detalhes/components/grade/useTurmaGradePlanoCursoPreview.tsx'),
   ]);
 
   assert.match(service, /listar_planos_curso_gestao_secure['"], \{ p_turma_id: turmaId \}/);
@@ -36,8 +39,8 @@ test('Grade carrega estados em lote e prepara documento diretamente pelo plano c
   assert.match(hooks, /failureCount < 1 && !isPostgrestFunctionCacheError\(error\)/);
   assert.match(hooks, /retry: shouldRetryGestaoPlanosCurso/);
   assert.match(grade, /useGestaoPlanosCurso\(turma\.id\)/);
-  assert.match(grade, /planoId: plano\.planoId,[\s\S]*revisao: plano\.revisao,[\s\S]*templateRevision: plano\.templateRevision,[\s\S]*documentoFingerprint: plano\.documentoFingerprint/);
-  assert.match(grade, /plano\.status !== ['"]CONCLUIDO['"]/);
+  assert.match(gradePreview, /planoId: plano\.planoId,[\s\S]*revisao: plano\.revisao,[\s\S]*templateRevision: plano\.templateRevision,[\s\S]*documentoFingerprint: plano\.documentoFingerprint/);
+  assert.match(gradePreview, /plano\.status !== ['"]CONCLUIDO['"]/);
   assert.match(grade, /planoCursoKeys\.gestaoStatusList\(turma\.id\)/);
   assert.doesNotMatch(grade, /useGestaoPlanoCurso/);
   assert.match(turmaRealtime, /planoCursoKeys\.gestaoStatusList\(turmaId\)/);
@@ -87,9 +90,9 @@ test('PDF usa páginas do backend, ativos isolados, rótulos canônicos e assina
 });
 
 test('preview e estados intermediários prendem e restauram o foco do teclado', async () => {
-  const [modal, grade] = await Promise.all([
+  const [modal, gradePreview] = await Promise.all([
     read('../../gestor/secretaria/shared/CanonicalDocumentPreviewModal.tsx'),
-    read('../../gestor/gestao/tecnicos/detalhes/components/TurmaGrade.tsx'),
+    read('../../gestor/gestao/tecnicos/detalhes/components/grade/useTurmaGradePlanoCursoPreview.tsx'),
   ]);
 
   assert.match(modal, /returnFocusRef/);
@@ -97,25 +100,26 @@ test('preview e estados intermediários prendem e restauram o foco do teclado', 
   assert.match(modal, /event\.shiftKey/);
   assert.match(modal, /returnFocusRef\.current\?\.isConnected/);
   assert.match(modal, /data-preview-initial-focus/);
-  assert.match(grade, /planoCursoDialogRef/);
-  assert.match(grade, /data-plano-initial-focus/);
-  assert.match(grade, /event\.shiftKey/);
-  assert.match(grade, /returnFocus\?\.isConnected/);
+  assert.match(gradePreview, /planoCursoDialogRef/);
+  assert.match(gradePreview, /data-plano-initial-focus/);
+  assert.match(gradePreview, /event\.shiftKey/);
+  assert.match(gradePreview, /returnFocus\?\.isConnected/);
 });
 
 test('editor preserva draft concorrente e a Grade não transforma erro em loading eterno', async () => {
-  const [page, grade, moduleView, disciplineView, statusControl] = await Promise.all([
-    read('../../professor/plano-curso/PlanoCursoPage.tsx'),
+  const [editor, form, grade, moduleView, disciplineView, statusControl] = await Promise.all([
+    read('../../professor/plano-curso/usePlanoCursoEditor.ts'),
+    read('../../professor/plano-curso/PlanoCursoEditorForm.tsx'),
     read('../../gestor/gestao/tecnicos/detalhes/components/TurmaGrade.tsx'),
     read('../../gestor/gestao/tecnicos/detalhes/components/grade/TurmaGradeModulo.tsx'),
     read('../../gestor/gestao/tecnicos/detalhes/components/grade/TurmaGradeDisciplina.tsx'),
     read('../../gestor/gestao/tecnicos/detalhes/components/grade/plano-curso/PlanoCursoStatusControl.tsx'),
   ]);
 
-  assert.match(page, /reconcilePlanoCursoEditorSession/);
-  assert.match(page, /editorSessionRef\.current\.baseRevision/);
-  assert.match(page, /hasRemoteConflict/);
-  assert.match(page, /Carregar versão atual/);
+  assert.match(editor, /reconcilePlanoCursoEditorSession/);
+  assert.match(editor, /editorSessionRef\.current\.baseRevision/);
+  assert.match(editor, /hasRemoteConflict/);
+  assert.match(form, /Descartar minhas alterações/);
   assert.match(grade, /planosCursoLoading=\{planosCursoQuery\.isLoading\}/);
   assert.match(grade, /planosCursoError=\{planosCursoQuery\.isError\}/);
   assert.match(moduleView, /planoCursoError=\{planosCursoError\}/);

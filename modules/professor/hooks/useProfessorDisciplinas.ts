@@ -64,6 +64,8 @@ export const useProfessorDisciplinas = (professorId: string, poloId: string) => 
   queryKey: professorDisciplinasKeys.list(professorId, poloId),
   enabled: Boolean(professorId && poloId),
   staleTime: 15_000,
+  refetchOnReconnect: 'always',
+  retry: 2,
   queryFn: async () => {
     const { data, error } = await supabase.rpc('get_professor_disciplinas_portal', {
       p_polo_id: poloId,

@@ -17,6 +17,10 @@ Preservar o padrão já aprovado pelo usuário. Consultar `docs/design/interface
 - Formulários com cabeçalho enxuto, etapas compactas, seções separadas por linhas e rodapé claro. Formulários longos preservam rolagem e todos os campos, avisos, validações e ações.
 - Remover apenas títulos e descrições que repetem a navegação sem acrescentar informação. Não apagar ajuda operacional, status, composição de valores ou permissões.
 
+## Atualização automática
+
+- Não oferecer botões manuais para atualizar, recarregar ou sincronizar dados. O sistema usa TanStack Query e Realtime: invalidar o menor escopo após mutações/eventos, recuperar conexão automaticamente e usar retry limitado. Mostrar estado de carregamento/erro sem transferir a atualização dos dados ao usuário.
+
 ## Seletores próprios
 
 Para opções de identidade fechada, usar `modules/shared/components/InstitutionalSelect.tsx` ou um picker existente equivalente do domínio. O texto de busca não substitui o ID selecionado. Não usar `<select>`/`<datalist>` nativo nos campos incluídos no pedido.

@@ -1,4 +1,5 @@
 import React from 'react';
+import InstitutionalSelect from '../../shared/components/InstitutionalSelect';
 import {
   CalendarDays,
   Filter,
@@ -59,7 +60,7 @@ const FinanceiroFilters: React.FC<FinanceiroFiltersProps> = ({
           Histórico de honorários
         </h3>
         <p className="mt-1 text-[10px] font-medium text-slate-400">
-          Filtros, totais e paginação processados no servidor.
+          Filtre seus recebimentos por período e categoria.
         </p>
       </div>
       <div className="grid w-full grid-cols-2 gap-2 sm:w-auto">
@@ -134,14 +135,8 @@ const FinanceiroFilters: React.FC<FinanceiroFiltersProps> = ({
         <label className="mb-2 block text-[10px] font-black uppercase tracking-wider text-slate-500">
           <span className="inline-flex items-center gap-1"><Filter size={12} /> Categoria</span>
         </label>
-        <select
-          value={category}
-          onChange={(event) => onCategoryChange(event.target.value)}
-          className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs font-bold text-slate-700 focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-100"
-        >
-          <option value="TODOS">Todas</option>
-          {categories.map((item) => <option key={item} value={item}>{item}</option>)}
-        </select>
+        <InstitutionalSelect ariaLabel="Categoria dos honorários" value={category} onValueChange={onCategoryChange}
+          options={[{ value: 'TODOS', label: 'Todas' }, ...categories.map((item) => ({ value: item, label: item }))]} />
       </div>
     </div>
 

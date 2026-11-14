@@ -1,0 +1,36 @@
+@media screen {
+  .professor-diary-header { gap: 12px; margin-bottom: 16px; }
+  .professor-diary-header > div { min-width: 0; }
+  .professor-diary-header > div:last-child { flex-wrap: wrap; }
+  .professor-diary-header h3 { font-size: 18px; font-weight: 500; text-transform: none; letter-spacing: normal; }
+  .professor-diary-header p { font-size: 12px; font-weight: 400; overflow-wrap: anywhere; }
+  .professor-diary-header button { min-height: 38px; border-radius: 8px; padding: 8px 12px; box-shadow: none; font-size: 12px; font-weight: 500; text-transform: none; letter-spacing: normal; }
+  .professor-diary-meta { margin-bottom: 16px; padding: 14px; border-radius: 12px; box-shadow: none; }
+  .professor-diary-meta > div { gap: 12px; }
+  .professor-diary-meta p { font-size: 12px; font-weight: 400; text-transform: none; letter-spacing: normal; overflow-wrap: anywhere; }
+  .professor-diary-meta p:last-child { font-size: 13px; font-weight: 500; }
+  .professor-diary-tabs { gap: 20px; margin-bottom: 16px; padding: 0 8px; }
+  .professor-diary-tabs button { font-size: 13px; font-weight: 500; text-transform: none; letter-spacing: normal; }
+  .professor-diary-panels { min-height: 0; border-radius: 12px; }
+  .professor-diary-readonly { margin-bottom: 16px; border-radius: 12px; font-weight: 400; }
+  .professor-diary-mobile { display: none; }
+  .professor-diary-desktop { font-size: 13px; }
+  .professor-diary-desktop :is(th, td) { font-size: 12px; }
+  .professor-diary-desktop :is(.font-black, .font-bold) { font-weight: 500; }
+  .professor-diary-desktop input { min-height: 38px; font-size: 13px; }
+  @media (max-width: 767px) {
+    .professor-diary-header button { min-height: 44px; }
+    .professor-diary-header > div:first-child { gap: 10px; }
+    .professor-diary-meta > div { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .professor-diary-desktop { display: none; }
+    .professor-diary-mobile { display: block; min-width: 0; padding: 16px; font-size: 13px; line-height: 1.5; color: #334155; }
+    .professor-diary-mobile :is(button, input) { min-height: 44px; }
+    .professor-diary-mobile :is(input, textarea) { width: 100%; min-width: 0; border: 1px solid #dbe3ed; border-radius: 8px; background: white; padding: 10px; font-size: 16px; font-weight: 400; color: #122b42; }
+    .professor-diary-mobile textarea { min-height: 110px; resize: vertical; }
+    .professor-diary-mobile :is(input, textarea):focus { outline: 2px solid #4169e1; outline-offset: 1px; }
+    .professor-diary-mobile :is(input, textarea):disabled { background: #f8fafc; color: #64748b; }
+    .professor-diary-mobile .diary-mobile-label { display: block; min-width: 0; font-size: 12px; font-weight: 500; color: #607286; }
+    .professor-diary-mobile .diary-mobile-label :is(input, textarea) { margin-top: 5px; }
+    .professor-diary-mobile .diary-mobile-card { min-width: 0; border: 1px solid #e3e9ee; border-radius: 12px; padding: 14px; }
+  }
+}

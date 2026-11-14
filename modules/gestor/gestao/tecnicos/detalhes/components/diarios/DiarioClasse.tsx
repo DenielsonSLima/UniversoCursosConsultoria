@@ -385,6 +385,7 @@ const DiarioClasseOperacional: React.FC<DiarioClasseProps> = ({
     return (
       <div className="mx-auto max-w-[1400px] py-8">
         <TechnicalDataError
+          automaticRecovery={effectiveAccessMode === 'PROFESSOR'}
           title="Diário não carregado"
           message="Frequência, notas e conteúdo não foram exibidos para evitar que dados incompletos sejam salvos sobre os registros existentes."
           retrying={retrying}
@@ -397,6 +398,7 @@ const DiarioClasseOperacional: React.FC<DiarioClasseProps> = ({
   return (
     <div className=" max-w-[1400px] mx-auto">
       <DiarioClasseHeader
+        professorLayout={effectiveAccessMode === 'PROFESSOR'}
         disciplina={disciplina}
         moduloNome={moduloNome}
         turma={turma}

@@ -1,0 +1,36 @@
+@media screen {
+  .professor-profile {
+    width: 100%;
+    min-width: 0;
+    margin-bottom: 24px;
+    border: 1px solid #e3e9ee;
+    border-radius: 14px;
+    background: white;
+    color: #334155;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 13px;
+    line-height: 1.55;
+  }
+  .professor-profile-header { display: flex; align-items: center; gap: 14px; padding: 20px; }
+  .professor-profile-header h2 { color: #122b42; font-size: 22px; font-weight: 500; line-height: 1.35; overflow-wrap: anywhere; }
+  .professor-profile-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 14px; margin-top: 6px; font-size: 12px; color: #607286; }
+  .professor-status { padding: 2px 8px; border-radius: 6px; font-size: 12px; font-weight: 500; }
+  .professor-profile-tabs { display: flex; gap: 16px; overflow-x: auto; border-bottom: 1px solid #e3e9ee; padding: 0 20px; }
+  .professor-profile-tabs > button { display: inline-flex; align-items: center; gap: 7px; min-height: 42px; flex-shrink: 0; border-bottom: 2px solid transparent; padding: 8px 0; color: #607286; font-size: 13px; font-weight: 500; }
+  .professor-profile-tabs > button[aria-selected='true'] { color: #122b42; border-bottom-color: #4169e1; }
+  .professor-profile-tabs > button[aria-selected='true'] svg { color: #4169e1; }
+  .professor-profile-content { min-width: 0; padding: 20px; }
+  .professor-profile .professor-action { display: inline-flex; min-height: 38px; align-items: center; justify-content: center; gap: 6px; padding: 7px 12px; border: 1px solid #dbe3ed; border-radius: 8px; background: white; font-size: 12px; font-weight: 500; color: #334155; }
+  .professor-profile .professor-action:disabled { opacity: .5; cursor: not-allowed; }
+  .professor-profile .professor-back { flex-shrink: 0; padding: 8px; }
+  .professor-profile .professor-input { width: 100%; min-width: 0; height: 38px; border: 1px solid #dbe3ed; border-radius: 8px; padding: 8px 10px; background: white; font-size: 13px; }
+  .professor-profile :is(button, input):focus-visible { outline: 2px solid #4169e1; outline-offset: 2px; }
+  @media (max-width: 639px) {
+    .professor-profile-header { padding: 16px; align-items: flex-start; gap: 10px; }
+    .professor-profile-header h2 { font-size: 20px; }
+    .professor-profile-tabs { padding: 0 16px; }
+    .professor-profile-content { padding: 16px; }
+    .professor-profile .professor-action, .professor-profile-tabs > button { min-height: 44px; }
+    .professor-profile .professor-input { height: 44px; font-size: 16px; }
+  }
+}

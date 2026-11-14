@@ -1,8 +1,8 @@
 {
-  "version": "4.8.338",
+  "version": "4.8.339",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 347,
-  "releasedAt": "2026-11-13",
-  "summary": "Atividade recente distingue a data civil do pagamento dos horários reais de matrícula e documento"
+  "revision": 348,
+  "releasedAt": "2026-11-14",
+  "summary": "Portal docente mobile, dossiê no Gestor e atualização automática"
 }

@@ -1,3 +1,4 @@
+import DiarioResultadoMobile from './mobile/DiarioResultadoMobile';
 import React from 'react';
 import { AlertCircle, SlidersHorizontal } from 'lucide-react';
 import { DiarioStudent } from './diario-classe.service';
@@ -8,7 +9,8 @@ import { buildDocumentaryGradeColumns, documentaryGradeCellText, diaryGradeNumbe
 
 type GradeField = 'p' | 'ti' | 'tg' | 's' | 'cq' | 'o' | 'rec';
 
-interface DiarioResultadoTabProps {
+export interface DiarioResultadoTabProps {
+  mobileLayout?: boolean;
   students: DiarioStudent[];
   localGrades: GradesMap;
   isReadOnly: boolean;
@@ -19,7 +21,9 @@ interface DiarioResultadoTabProps {
   onSaveGrade: (studentId: string, field: GradeField) => void;
 }
 
-const DiarioResultadoTab: React.FC<DiarioResultadoTabProps> = ({
+const DiarioResultadoTab: React.FC<DiarioResultadoTabProps> = (props) => {
+  const {
+  mobileLayout = false,
   students,
   localGrades,
   isReadOnly,
@@ -28,7 +32,7 @@ const DiarioResultadoTab: React.FC<DiarioResultadoTabProps> = ({
   getStats,
   onGradeChange,
   onSaveGrade,
-}) => {
+} = props;
   const documentary = useDiarioDocumentary();
   const instrumentsList: { key: keyof ActiveInstruments; label: string; fullTitle: string }[] = [
     { key: 'p', label: 'P', fullTitle: 'Prova Escrita' },
@@ -46,7 +50,9 @@ const DiarioResultadoTab: React.FC<DiarioResultadoTabProps> = ({
   const instrumentColumnCount = documentaryColumns?.length ?? visibleInstruments.length;
 
   return (
-    <div>
+    <>
+    {mobileLayout && <DiarioResultadoMobile {...props} />}
+    <div className={mobileLayout ? 'professor-diary-desktop' : undefined}>
       {/* Barra de controle dos Instrumentos Avaliativos */}
       <div className="p-4 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2 text-xs font-bold text-slate-700">
@@ -219,6 +225,7 @@ const DiarioResultadoTab: React.FC<DiarioResultadoTabProps> = ({
         </div>
       </div>
     </div>
+    </>
   );
 };
 

@@ -1,4 +1,5 @@
 import '../partner-registration.css';
+import './professor-registration.css';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   AlertCircle,
@@ -48,8 +49,8 @@ const STEPS = [
   { id: 4, label: 'Endereço e contato', icon: MapPin },
 ] as const;
 
-const inputCls = 'w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[#001a33] font-medium focus:border-purple-500 focus:bg-white outline-none transition-all placeholder:text-slate-400 text-sm disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400';
-const labelCls = 'block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1.5 ml-0.5';
+const inputCls = 'w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-[#001a33] focus:border-blue-500 outline-none transition-colors placeholder:text-slate-400 text-sm disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400';
+const labelCls = 'block text-xs font-medium text-slate-600 mb-1.5';
 
 const ParceiroProfessorForm: React.FC<ParceiroProfessorFormProps> = ({
   onCancel,
@@ -200,57 +201,48 @@ const ParceiroProfessorForm: React.FC<ParceiroProfessorFormProps> = ({
   };
 
   return (
-    <div className="partner-registration">
+    <div className="partner-registration professor-registration">
       <div className="partner-registration-header mb-6 flex items-center justify-between border-b border-slate-100 pb-5">
         <div>
           <h3 className="text-xl font-black uppercase tracking-tight text-[#001a33]">Novo professor</h3>
           <p className="mt-0.5 text-sm font-medium text-slate-500">Somente polo, nome e CPF são obrigatórios.</p>
         </div>
         {onCancel && (
-          <button type="button" onClick={onCancel} className="rounded-full p-2 text-slate-400 transition-colors hover:bg-slate-50 hover:text-red-500" aria-label="Cancelar cadastro">
+          <button type="button" onClick={onCancel} disabled={isSaving || isUploadingPhoto} className="rounded-full p-2 text-slate-400 transition-colors hover:bg-slate-50 hover:text-red-500" aria-label="Cancelar cadastro">
             <X size={20} />
           </button>
         )}
       </div>
 
-      <div className="partner-registration-steps relative mb-8 flex items-center justify-between">
-        <div className="absolute left-0 right-0 top-5 z-0 h-0.5 bg-slate-100" />
+      <nav className="professor-registration-steps" aria-label="Etapas do cadastro do professor">
         {STEPS.map((step) => {
           const Icon = step.icon;
           const done = currentStep > step.id;
           const active = currentStep === step.id;
           return (
-            <div key={step.id} className="z-10 flex flex-1 flex-col items-center gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  if (done) {
-                    setValidationError('');
-                    setCurrentStep(step.id);
-                  }
-                }}
-                className={`flex h-10 w-10 items-center justify-center rounded-full border-2 transition-all duration-300 ${
-                  done
-                    ? 'cursor-pointer border-emerald-500 bg-emerald-500 text-white'
-                    : active
-                      ? 'border-purple-600 bg-purple-600 text-white shadow-lg shadow-purple-500/30'
-                      : 'cursor-default border-slate-200 bg-white text-slate-400'
-                }`}
-                aria-label={`Etapa ${step.id}: ${step.label}`}
-              >
-                {done ? <CheckCircle2 size={18} /> : <Icon size={16} />}
-              </button>
-              <span className={`text-center text-[9px] font-black uppercase leading-tight tracking-wider ${
-                active ? 'text-purple-600' : done ? 'text-emerald-600' : 'text-slate-400'
-              }`}>
-                {step.label}
-              </span>
-            </div>
+            <button
+              key={step.id}
+              type="button"
+              className="professor-registration-step"
+              aria-current={active ? 'step' : undefined}
+              disabled={(!done && !active) || isSaving || isUploadingPhoto}
+              onClick={() => {
+                if (done) {
+                  setValidationError('');
+                  setCurrentStep(step.id);
+                }
+              }}
+              aria-label={`Etapa ${step.id}: ${step.label}`}
+            >
+              {done ? <CheckCircle2 size={16} /> : <Icon size={16} />}
+              <span>{step.label}</span>
+            </button>
           );
         })}
-      </div>
+      </nav>
 
       <form onSubmit={handleSubmit} noValidate>
+        <fieldset disabled={isSaving || isUploadingPhoto}>
         {validationError && (
           <div role="alert" aria-live="assertive" className="mb-5 flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
             <AlertCircle size={18} className="mt-0.5 shrink-0" />
@@ -279,30 +271,26 @@ const ParceiroProfessorForm: React.FC<ParceiroProfessorFormProps> = ({
         {currentStep === 4 && <ProfessorContactStep formData={formData} inputCls={inputCls} labelCls={labelCls} onChange={handleChange} onCepBlur={handleCepBlur} />}
 
         <div className="partner-registration-footer mt-6 flex justify-between gap-3 border-t border-slate-100 pt-6">
-          <button type="button" onClick={currentStep === 1 ? onCancel : handleBack} disabled={isSaving} className="flex items-center gap-2 rounded-xl border border-slate-200 px-6 py-3 text-xs font-bold uppercase tracking-wider text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50">
+          <button type="button" onClick={currentStep === 1 ? onCancel : handleBack} disabled={isSaving || isUploadingPhoto} className="flex items-center gap-2 rounded-xl border border-slate-200 px-6 py-3 text-xs font-bold uppercase tracking-wider text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50">
             <ChevronLeft size={16} /> {currentStep === 1 ? 'Cancelar' : 'Voltar'}
           </button>
           {currentStep < 4 ? (
-            <button key="next-step" type="button" onClick={handleNext} className="flex items-center gap-2 rounded-xl bg-purple-600 px-8 py-3 text-xs font-bold uppercase tracking-wider text-white shadow-lg shadow-purple-500/20 transition-all hover:bg-purple-700">
+            <button key="next-step" type="button" onClick={handleNext} disabled={isSaving || isUploadingPhoto} className="professor-registration-primary flex items-center gap-2 rounded-xl bg-blue-600 px-8 py-3 text-xs font-bold uppercase tracking-wider text-white shadow-lg shadow-purple-500/20 transition-all hover:bg-purple-700">
               Próximo <ChevronRight size={16} />
             </button>
           ) : (
-            <button key="submit-professor" type="submit" disabled={isSaving} className="flex items-center gap-2 rounded-xl bg-[#001a33] px-8 py-3 text-xs font-bold uppercase tracking-wider text-white shadow-lg shadow-purple-900/20 transition-all hover:bg-purple-900 disabled:cursor-not-allowed disabled:opacity-60">
+            <button key="submit-professor" type="submit" disabled={isSaving || isUploadingPhoto} className="professor-registration-primary flex items-center gap-2 rounded-xl bg-[#001a33] px-8 py-3 text-xs font-bold uppercase tracking-wider text-white shadow-lg shadow-purple-900/20 transition-all hover:bg-purple-900 disabled:cursor-not-allowed disabled:opacity-60">
               {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
               {isSaving ? 'Salvando...' : 'Salvar professor'}
             </button>
           )}
         </div>
 
-        <div className="mt-4">
-          <div className="mb-1 flex justify-between text-[10px] font-bold uppercase tracking-wider text-slate-400">
-            <span>Etapa {currentStep} de 4</span>
-            <span>{Math.round((currentStep / 4) * 100)}% concluído</span>
-          </div>
-          <div className="h-1.5 w-full rounded-full bg-slate-100">
-            <div className="h-1.5 rounded-full bg-purple-600 transition-all duration-500" style={{ width: `${(currentStep / 4) * 100}%` }} />
-          </div>
+        <div className="professor-registration-progress" role="status" aria-live="polite">
+          <span>Etapa {currentStep} de 4</span>
+          <span>{Math.round((currentStep / 4) * 100)}% concluído</span>
         </div>
+        </fieldset>
       </form>
     </div>
   );

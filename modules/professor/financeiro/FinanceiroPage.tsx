@@ -5,8 +5,10 @@ import React, {
   useState,
 } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { AlertTriangle, CreditCard, Loader2, RefreshCw } from 'lucide-react';
+import { AlertTriangle, CreditCard, Loader2 } from 'lucide-react';
 
+import '../components/professor-pages.css';
+import { useProfessorFinanceRealtime } from './useProfessorFinanceRealtime';
 import FinanceiroFilters from './FinanceiroFilters';
 import FinanceiroPaymentsList from './FinanceiroPaymentsList';
 import ProfessorFinanceiroReceiptModal from './ProfessorFinanceiroReceiptModal';
@@ -45,6 +47,7 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ professorId, poloId }) 
     page,
     pageSize: PAGE_SIZE,
   }), [category, deferredSearch, endDate, page, startDate, status]);
+  useProfessorFinanceRealtime(professorId, poloId);
   const financeQuery = useQuery(professorFinanceiroListOptions(professorId, poloId, filters));
 
   useEffect(() => {
@@ -110,13 +113,7 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ professorId, poloId }) 
         <p className="mx-auto mt-2 max-w-xl text-xs font-medium leading-relaxed">
           {professorFinancialErrorMessage(financeQuery.error)}
         </p>
-        <button
-          type="button"
-          onClick={() => { void financeQuery.refetch(); }}
-          className="mt-5 inline-flex items-center gap-2 rounded-xl bg-rose-700 px-4 py-2.5 text-xs font-black uppercase tracking-wide text-white transition-colors hover:bg-rose-800"
-        >
-          <RefreshCw size={15} /> Tentar novamente
-        </button>
+
       </div>
     );
   }
@@ -124,7 +121,7 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ professorId, poloId }) 
   const payload = financeQuery.data;
 
   return (
-    <div className="animate-fadeIn space-y-6">
+    <div className="professor-page professor-finance animate-fadeIn space-y-5">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h2 className="flex items-center gap-2 text-2xl font-black uppercase tracking-tight text-[#001a33]">

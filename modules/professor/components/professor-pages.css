@@ -1,0 +1,46 @@
+@media screen {
+  .professor-page { min-width: 0; color: #334155; font-size: 13px; line-height: 1.55; }
+  .professor-page :is(h1,h2,h3,h4,p,button,label,span) { text-transform: none; letter-spacing: normal; }
+  .professor-page :is(.font-black,.font-extrabold,.font-bold) { font-weight: 600; }
+  .professor-page :is(.text-\[9px\],.text-\[10px\],.text-\[11px\]) { font-size: 12px; }
+  .professor-page :is(.text-slate-400,.text-slate-450) { color: #607286; }
+  .professor-page h2 { font-size: 22px; font-weight: 500; line-height: 1.35; }
+  .professor-page h3 { font-size: 15px; font-weight: 500; }
+  .professor-page :is(.rounded-3xl,.rounded-\[2\.5rem\],.rounded-\[2rem\]) { border-radius: 12px; }
+  .professor-page :is(.shadow-lg,.shadow-xl,.shadow-md) { box-shadow: none; }
+  .professor-page :is(input:not([type='checkbox']):not([type='radio']),textarea) { min-width: 0; border-radius: 8px; background: white; font-size: 13px; font-weight: 400; }
+  .professor-page input:not([type='checkbox']):not([type='radio']) { min-height: 38px; }
+  .professor-page button { min-height: 38px; }
+  .professor-finance > section { padding: 16px; }
+  .professor-finance :is(.font-black,.font-extrabold,.font-bold,strong) { font-weight: 500; }
+  .professor-finance strong { text-transform: none; letter-spacing: normal; }
+  .professor-finance > .grid { gap: 12px; }
+  .professor-finance > .grid > div { padding: 16px; }
+  .professor-finance article { padding: 16px; box-shadow: none; }
+  .professor-finance article > .absolute { display: none; }
+  .professor-finance article h4 { font-size: 14px; font-weight: 500; }
+  .professor-finance article .rounded-2xl { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; border: 0; border-radius: 0; background: transparent; padding: 0; }
+  .professor-finance article .rounded-2xl p { min-width: 0; margin: 0; overflow-wrap: anywhere; }
+  .professor-finance article .rounded-2xl p:nth-child(3) { grid-column: 1 / -1; }
+  .professor-page-tabs { display: flex; gap: 18px; max-width: 100%; overflow-x: auto; border-bottom: 1px solid #e3e9ee; }
+  .professor-page-tabs > button { flex: none; padding: 8px 0; border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: transparent; box-shadow: none; color: #607286; font-size: 13px; font-weight: 500; white-space: nowrap; }
+  .professor-page-tabs > button[aria-selected='true'] { color: #122b42; border-bottom-color: #4169e1; }
+  .professor-signatures [role='tablist'] { gap: 16px; padding: 0; border: 0; border-bottom: 1px solid #e3e9ee; border-radius: 0; background: transparent; }
+  .professor-signatures [role='tab'] { padding: 8px 0; border-bottom: 2px solid transparent; border-radius: 0; background: transparent; color: #607286; font-size: 13px; font-weight: 500; box-shadow: none; }
+  .professor-signatures [role='tab'][aria-selected='true'] { color: #122b42; border-bottom-color: #4169e1; }
+  .professor-signatures section > div:first-child { padding: 16px; background: white; color: #334155; }
+  .professor-signatures section > div:first-child :is(h3,p) { color: #334155; }
+  .professor-library .biblioteca-explorer-file > button[aria-pressed] { min-width: 44px; min-height: 44px; }
+  @media (max-width: 767px) {
+    body:has(#root .professor-library) .biblioteca-upload-dialog :is(input:not([type='checkbox']):not([type='radio']),textarea) { min-height: 44px; font-size: 16px; }
+
+    .professor-page h2 { font-size: 20px; }
+    .professor-page :is(input:not([type='checkbox']):not([type='radio']),textarea) { min-height: 44px; font-size: 16px; }
+    .professor-page button { min-height: 44px; }
+    .professor-page .p-8 { padding: 16px; }
+    .professor-page .p-6 { padding: 14px; }
+    .professor-page .gap-6 { gap: 12px; }
+    .professor-page .calendario-agenda-identity { min-width: 0; }
+    .professor-page .calendario-agenda-heading { padding: 14px; }
+  }
+}

@@ -6,6 +6,7 @@ interface TechnicalDataErrorProps {
   message: string;
   onRetry: () => void;
   retrying?: boolean;
+  automaticRecovery?: boolean;
 }
 
 const TechnicalDataError: React.FC<TechnicalDataErrorProps> = ({
@@ -13,6 +14,7 @@ const TechnicalDataError: React.FC<TechnicalDataErrorProps> = ({
   message,
   onRetry,
   retrying = false,
+  automaticRecovery = false,
 }) => (
   <div className="rounded-2xl border border-rose-200 bg-rose-50 p-5 text-rose-800" role="alert">
     <div className="flex items-start gap-3">
@@ -20,7 +22,7 @@ const TechnicalDataError: React.FC<TechnicalDataErrorProps> = ({
       <div className="min-w-0 flex-1">
         <p className="text-xs font-black uppercase tracking-wider">{title}</p>
         <p className="mt-1 text-xs leading-relaxed">{message}</p>
-        <button
+        {automaticRecovery ? <p role="status" className="mt-3 text-xs">A conexão será retomada automaticamente.</p> : <button
           type="button"
           onClick={onRetry}
           disabled={retrying}
@@ -28,7 +30,7 @@ const TechnicalDataError: React.FC<TechnicalDataErrorProps> = ({
         >
           <RefreshCw size={13} className={retrying ? 'animate-spin' : ''} />
           Tentar novamente
-        </button>
+        </button>}
       </div>
     </div>
   </div>

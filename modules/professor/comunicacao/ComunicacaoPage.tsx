@@ -1,426 +1,173 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Plus } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
-import { MessageSquare, Clock, CheckCircle, Tag, Plus, Sparkles } from 'lucide-react';
-import { CommunicationAttachmentPreview } from '../../shared/comunicacao/CommunicationAttachmentPreview';
 import { resolveCommunicationAttachmentUrls } from '../../shared/comunicacao/comunicacao-attachments.service';
+import useMediaQuery from '../../shared/hooks/useMediaQuery';
+import ToastNotification, { useToast } from '../../gestor/components/ToastNotification';
 import { ProfessorNewChatModal } from './ProfessorNewChatModal';
-import { ProfessorMessageComposer } from './ProfessorMessageComposer';
-import {
-  professorComunicacaoService,
-} from './professor-comunicacao.service';
+import { professorComunicacaoService } from './professor-comunicacao.service';
 import { professorComunicacaoQueryKeys } from './professor-comunicacao.query-keys';
 import { useProfessorComunicacaoRealtime } from './useProfessorComunicacaoRealtime';
+import ProfessorChatList from './ProfessorChatList';
+import ProfessorChatThread from './ProfessorChatThread';
+import '../components/professor-screens.css';
+import './professor-chat.css';
 
-interface ComunicacaoPageProps {
-  professorId: string;
-  professorNome: string;
-}
-
+interface ComunicacaoPageProps { professorId: string; professorNome: string; }
 const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ professorId, professorNome }) => {
-  const queryClient = useQueryClient();
+  const client = useQueryClient();
+  const { toasts, removeToast, toast } = useToast();
+  const desktop = useMediaQuery('(min-width: 768px)');
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const [messageText, setMessageText] = useState('');
   const [showNewChatModal, setShowNewChatModal] = useState(false);
-  
-  // New Chat Form States
   const [newChatCategory, setNewChatCategory] = useState('');
   const [newChatSubject, setNewChatSubject] = useState('');
   const [pendingFile, setPendingFile] = useState<File | null>(null);
-  const [uploadingFile, setUploadingFile] = useState(false);
-
+  const [sending, setSending] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const sendingRef = useRef(false);
+  const creatingRef = useRef(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   useProfessorComunicacaoRealtime(professorId, activeChatId);
 
-  // 1. Fetch Categories
-  const { data: categories = [] } = useQuery<any[]>({
+  const categoriesQuery = useQuery<any[]>({
     queryKey: professorComunicacaoQueryKeys.categories,
+    refetchOnReconnect: 'always',
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('comunicacao_categorias')
-        .select('*')
-        .eq('ativo', true);
+      const { data, error } = await supabase.from('comunicacao_categorias').select('*').eq('ativo', true);
       if (error) throw error;
       return data || [];
-    }
+    },
   });
-
-  // 2. Fetch Teacher's Chats
-  const { data: chats = [], isLoading: loadingChats } = useQuery<any[]>({
+  const chatsQuery = useQuery<any[]>({
     queryKey: professorComunicacaoQueryKeys.chats(professorId),
+    enabled: Boolean(professorId),
+    refetchOnReconnect: 'always',
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('comunicacao_chats')
-        .select('*')
-        .eq('remetente_id', professorId)
-        .order('ultima_data', { ascending: false });
+      const { data, error } = await supabase.from('comunicacao_chats').select('*')
+        .eq('remetente_id', professorId).order('ultima_data', { ascending: false });
       if (error) throw error;
       return data || [];
-    }
+    },
   });
-
-  // 3. Fetch Messages for Active Chat
-  const { data: messages = [], isLoading: loadingMessages } = useQuery<any[]>({
+  const messagesQuery = useQuery<any[]>({
     queryKey: professorComunicacaoQueryKeys.messages(activeChatId || ''),
-    enabled: !!activeChatId,
+    enabled: Boolean(activeChatId),
+    refetchOnReconnect: 'always',
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('comunicacao_mensagens')
-        .select('*')
-        .eq('chat_id', activeChatId)
-        .order('created_at', { ascending: true });
+      const { data, error } = await supabase.from('comunicacao_mensagens').select('*')
+        .eq('chat_id', activeChatId).order('created_at', { ascending: true });
       if (error) throw error;
       return resolveCommunicationAttachmentUrls(data || []);
-    }
+    },
   });
-
-  // 4. Autoscroll to bottom
+  const categories = categoriesQuery.data || [];
+  const chats = chatsQuery.data || [];
+  const messages = messagesQuery.data || [];
+  const currentChat = chats.find((chat) => chat.id === activeChatId);
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
-
-  // Set default active chat
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  }, [messagesQuery.data]);
   useEffect(() => {
-    if (chats.length > 0 && !activeChatId) {
-      setActiveChatId(chats[0].id);
-    }
-  }, [chats, activeChatId]);
-
-  // Send Message
-  const handleSendMessage = async () => {
-    if (!activeChatId) return;
-    const text = messageText.trim();
-    const fileToSend = pendingFile;
-    if (!text && !fileToSend) return;
-
+    if (desktop && chats.length > 0 && !activeChatId) setActiveChatId(chats[0].id);
+  }, [desktop, chatsQuery.data, activeChatId]);
+  useEffect(() => {
+    setActiveChatId(null);
     setMessageText('');
     setPendingFile(null);
-    setUploadingFile(Boolean(fileToSend));
+  }, [professorId]);
 
+  const handleSendMessage = async () => {
+    if (!activeChatId || sendingRef.current) return;
+    const chatId = activeChatId;
+    const text = messageText.trim();
+    const file = pendingFile;
+    if (!text && !file) return;
+    sendingRef.current = true;
+    setSending(true);
     try {
-      await professorComunicacaoService.sendMessage({
-        chatId: activeChatId,
-        file: fileToSend,
-        professorId,
-        professorNome,
-        text,
-      });
-
+      await professorComunicacaoService.sendMessage({ chatId, file, professorId, professorNome, text });
+      setMessageText('');
+      setPendingFile(null);
       await Promise.all([
-        queryClient.invalidateQueries({
-          queryKey: professorComunicacaoQueryKeys.messages(activeChatId),
-          exact: true,
-        }),
-        queryClient.invalidateQueries({
-          queryKey: professorComunicacaoQueryKeys.chats(professorId),
-          exact: true,
-        }),
+        client.invalidateQueries({ queryKey: professorComunicacaoQueryKeys.messages(chatId), exact: true }),
+        client.invalidateQueries({ queryKey: professorComunicacaoQueryKeys.chats(professorId), exact: true }),
       ]);
-    } catch (err) {
-      console.error('Erro ao enviar mensagem:', err);
-      alert('Erro ao enviar mensagem.');
+    } catch (error) {
+      toast.error('Mensagem não enviada', error instanceof Error ? error.message : 'A mensagem foi preservada para você tentar novamente.');
     } finally {
-      setUploadingFile(false);
+      sendingRef.current = false;
+      setSending(false);
     }
   };
-
-  // Open New Chat Ticket
-  const handleCreateNewChat = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newChatCategory || !newChatSubject.trim()) return;
-
+  const handleCreateNewChat = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!newChatCategory || !newChatSubject.trim() || creatingRef.current) return;
+    creatingRef.current = true;
+    setCreating(true);
     try {
-      const selectedCat = categories.find(c => c.id === newChatCategory);
-      const catName = selectedCat ? selectedCat.nome : 'Suporte';
-
-      const { data: newChat, error: chatErr } = await supabase
-        .from('comunicacao_chats')
-        .insert({
-          remetente_id: professorId,
-          remetente_nome: professorNome,
-          remetente_tipo: 'Professor',
-          categoria_id: newChatCategory,
-          status: 'pendente',
-          ultimo_texto: newChatSubject,
-          ultima_data: new Date().toISOString()
-        })
-        .select()
-        .single();
-
-      if (chatErr) throw chatErr;
-
-      const { error: msgErr } = await supabase
-        .from('comunicacao_mensagens')
-        .insert({
-          chat_id: newChat.id,
-          remetente_id: professorId,
-          remetente_nome: professorNome,
-          remetente_tipo: 'professor',
-          conteudo: `Iniciou o chamado sobre [${catName}]: ${newChatSubject}`
-        });
-
-      if (msgErr) throw msgErr;
-
+      const category = categories.find((item) => item.id === newChatCategory);
+      const { data: chat, error } = await supabase.from('comunicacao_chats').insert({
+        remetente_id: professorId,
+        remetente_nome: professorNome,
+        remetente_tipo: 'Professor',
+        categoria_id: newChatCategory,
+        status: 'pendente',
+        ultimo_texto: newChatSubject,
+        ultima_data: new Date().toISOString(),
+      }).select().single();
+      if (error) throw error;
+      const { error: messageError } = await supabase.from('comunicacao_mensagens').insert({
+        chat_id: chat.id,
+        remetente_id: professorId,
+        remetente_nome: professorNome,
+        remetente_tipo: 'professor',
+        conteudo: `Iniciou o chamado sobre [${category?.nome || 'Suporte'}]: ${newChatSubject}`,
+      });
+      if (messageError) throw messageError;
       setShowNewChatModal(false);
       setNewChatCategory('');
       setNewChatSubject('');
-      
-      await queryClient.invalidateQueries({
-        queryKey: professorComunicacaoQueryKeys.chats(professorId),
-        exact: true,
-      });
-      setActiveChatId(newChat.id);
-      
-      alert('Chamado aberto com sucesso!');
-    } catch (err) {
-      console.error('Erro ao abrir chamado:', err);
-      alert('Erro ao abrir chamado.');
+      await client.invalidateQueries({ queryKey: professorComunicacaoQueryKeys.chats(professorId), exact: true });
+      setActiveChatId(chat.id);
+      toast.success('Chamado aberto', 'Sua solicitação foi enviada à coordenação.');
+    } catch (error) {
+      toast.error('Chamado não aberto', error instanceof Error ? error.message : 'Revise os dados e tente novamente.');
+    } finally {
+      creatingRef.current = false;
+      setCreating(false);
     }
-  };
-
-  const currentChat = chats.find(c => c.id === activeChatId);
-
-  const getCategoryInfo = (catId: string | null) => {
-    if (!catId) return { nome: 'Geral', cor: '#475569' };
-    const cat = categories.find(c => c.id === catId);
-    return cat || { nome: 'Geral', cor: '#475569' };
-  };
-
-  const formatTime = (isoString: string) => {
-    if (!isoString) return '';
-    const d = new Date(isoString);
-    const today = new Date();
-    if (d.toDateString() === today.toDateString()) {
-      return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-    }
-    return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-140px)] bg-white rounded-3xl border border-slate-100 overflow-hidden shadow-sm animate-fadeIn">
-      {/* Top Header */}
-      <div className="bg-white px-6 py-4 border-b border-slate-150 flex justify-between items-center shrink-0">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-purple-50 text-purple-650 rounded-2xl flex items-center justify-center">
-            <MessageSquare size={22} />
-          </div>
-          <div>
-            <h1 className="text-xl font-black text-[#001a33] uppercase tracking-tight">Comunicação e Suporte</h1>
-            <p className="text-xs text-slate-450 font-medium">Fale com a coordenação pedagógica ou setor operacional da escola</p>
-          </div>
-        </div>
-
-        <button 
-          onClick={() => setShowNewChatModal(true)}
-          className="flex items-center gap-1.5 px-4.5 py-2.5 bg-[#001a33] hover:bg-purple-650 text-white font-bold text-xs uppercase tracking-widest rounded-xl transition-all shadow-md"
-        >
-          <Plus size={14} />
-          <span>Novo Chamado</span>
-        </button>
+    <div className="professor-screen professor-chatpage" data-chat-open={Boolean(activeChatId && currentChat)}>
+      <header>
+        <div><h2>Comunicação e suporte</h2><p className="mt-1 professor-help">Fale com a coordenação pedagógica e os setores da escola.</p></div>
+        <button type="button" className="professor-button professor-button--primary" onClick={() => setShowNewChatModal(true)}><Plus size={16} />Novo chamado</button>
+      </header>
+      <div className="professor-chatbody">
+        <ProfessorChatList chats={chats} activeId={activeChatId} loading={chatsQuery.isPending} error={chatsQuery.isError} categories={categories} onSelect={setActiveChatId} />
+        <ProfessorChatThread
+          chat={currentChat} category={categories.find((item) => item.id === currentChat?.categoria_id)?.nome || 'Geral'}
+          professorId={professorId} messages={messages} loading={messagesQuery.isPending}
+          error={messagesQuery.isError} messageText={messageText} pendingFile={pendingFile} sending={sending}
+          fileInputRef={fileInputRef} messagesEndRef={messagesEndRef} onBack={() => setActiveChatId(null)}
+          onMessage={setMessageText} onFile={setPendingFile} onFileError={(message) => toast.error('Anexo não selecionado', message)} onSend={handleSendMessage}
+        />
       </div>
-
-      <div className="flex-1 flex overflow-hidden min-h-0">
-        
-        {/* Left Sidebar */}
-        <div className="w-80 border-r border-slate-200 flex flex-col bg-slate-50/50 shrink-0">
-          <div className="p-3 bg-white border-b border-slate-200 text-[10px] text-slate-400 font-black uppercase tracking-wider">
-            Histórico de Chamados
-          </div>
-
-          <div className="flex-1 overflow-y-auto p-2 space-y-1.5 custom-scrollbar">
-            {loadingChats ? (
-              <div className="flex justify-center items-center py-10">
-                <div className="w-6 h-6 border-2 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
-              </div>
-            ) : chats.length === 0 ? (
-              <div className="text-center py-12 text-slate-400 px-4">
-                <MessageSquare size={24} className="mx-auto text-slate-350 mb-2" />
-                <p className="text-[10px] font-black uppercase tracking-widest">Nenhum chamado</p>
-                <p className="text-[9px] mt-0.5">Use o botão acima para abrir um chamado com a coordenação.</p>
-              </div>
-            ) : (
-              chats.map(chat => {
-                const catInfo = getCategoryInfo(chat.categoria_id);
-                const isSelected = activeChatId === chat.id;
-
-                return (
-                  <button 
-                    key={chat.id}
-                    onClick={() => setActiveChatId(chat.id)}
-                    className={`w-full flex items-start gap-3 p-3 rounded-2xl text-left transition-all ${
-                      isSelected ? 'bg-white shadow-sm border border-slate-200' : 'hover:bg-slate-100 border border-transparent'
-                    }`}
-                  >
-                    <div className="w-9 h-9 bg-purple-50 text-purple-650 rounded-xl flex items-center justify-center shrink-0">
-                      <MessageSquare size={16} />
-                    </div>
-
-                    <div className="flex-1 min-w-0">
-                      <div className="flex justify-between items-baseline mb-0.5">
-                        <h4 className="font-bold truncate text-xs text-[#001a33]">
-                          Coordenação Universo
-                        </h4>
-                        <span className="text-[9px] text-slate-400 font-bold shrink-0">{formatTime(chat.ultima_data)}</span>
-                      </div>
-                      
-                      <p className="text-[10px] text-slate-500 truncate font-medium">
-                        {chat.ultimo_texto}
-                      </p>
-
-                      <div className="flex items-center gap-1.5 mt-2">
-                         <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: catInfo.cor }}></div>
-                         <span className="text-[8px] text-slate-400 font-black uppercase tracking-wider">{catInfo.nome}</span>
-                         <span className="text-[8px] text-slate-300 font-medium">|</span>
-                         <span className={`text-[8px] font-black uppercase tracking-wider ${
-                           chat.status === 'pendente' ? 'text-amber-600' : 'text-emerald-600'
-                         }`}>
-                           {chat.status === 'pendente' ? 'Aberto' : 'Resolvido'}
-                         </span>
-                      </div>
-                    </div>
-                  </button>
-                );
-              })
-            )}
-          </div>
-        </div>
-
-        {/* Right chat panel */}
-        {activeChatId && currentChat ? (
-          <div className="flex-1 flex flex-col bg-white">
-            <div className="p-4 border-b border-slate-200 flex justify-between items-center bg-white shadow-sm z-10">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 bg-purple-50 text-purple-650 rounded-xl flex items-center justify-center">
-                  <MessageSquare size={16} />
-                </div>
-                <div>
-                  <h3 className="font-bold text-xs text-slate-800">
-                    Chamado de Suporte Docente
-                  </h3>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <span className="text-[9px] uppercase font-black text-slate-500 tracking-wider flex items-center gap-1">
-                      <Tag size={9} /> {getCategoryInfo(currentChat.categoria_id).nome}
-                    </span>
-                    <span className="w-1 h-1 bg-slate-300 rounded-full"></span>
-                    <span className={`text-[9px] uppercase font-black tracking-wider flex items-center gap-1 ${
-                      currentChat.status === 'pendente' ? 'text-amber-500' : 'text-emerald-500'
-                    }`}>
-                      {currentChat.status === 'pendente' ? <Clock size={9} /> : <CheckCircle size={9} />}
-                      {currentChat.status === 'pendente' ? 'Aberto' : 'Resolvido'}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-4 bg-slate-50/50 space-y-4 custom-scrollbar">
-              {loadingMessages ? (
-                <div className="flex justify-center items-center py-20">
-                  <div className="w-8 h-8 border-2 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
-                </div>
-              ) : (
-                messages.map((msg) => {
-                  const isSelf = msg.remetente_id === professorId || msg.remetente_tipo === 'professor';
-                  const isSystem = msg.remetente_tipo === 'sistema';
-
-                  if (isSystem) {
-                    return (
-                      <div key={msg.id} className="flex justify-center my-6">
-                        <span className="bg-slate-100 border border-slate-200 text-slate-500 text-[9px] font-bold uppercase tracking-widest px-3 py-1 rounded-full shadow-inner flex items-center gap-1">
-                          <Sparkles size={9} /> {msg.conteudo}
-                        </span>
-                      </div>
-                    );
-                  }
-
-                  return (
-                    <div 
-                      key={msg.id} 
-                      className={`flex items-end gap-2 ${isSelf ? 'justify-end' : 'justify-start'}`}
-                    >
-                      {!isSelf && (
-                        <div className="w-7 h-7 bg-purple-650 text-white rounded-lg flex items-center justify-center font-bold text-[10px] shrink-0 uppercase">
-                          AD
-                        </div>
-                      )}
-                      
-                      <div 
-                        className={`rounded-2xl max-w-md shadow-sm border overflow-hidden ${
-                          isSelf 
-                            ? 'bg-[#001a33] text-white border-transparent rounded-br-sm' 
-                            : 'bg-white text-slate-700 border-slate-100 rounded-bl-sm'
-                        }`}
-                      >
-                        <CommunicationAttachmentPreview attachment={msg} outgoing={isSelf} />
-                        <div className="p-3">
-                          <p className={`text-[8px] font-black uppercase tracking-wider mb-1 ${
-                            isSelf ? 'text-purple-300' : 'text-purple-600'
-                          }`}>
-                            {isSelf ? 'Você' : msg.remetente_nome}
-                          </p>
-                          {msg.conteudo && !msg.conteudo.startsWith('📎') && (
-                            <p className="text-xs font-medium leading-relaxed break-words">{msg.conteudo}</p>
-                          )}
-                          <div className="flex items-center justify-end mt-1">
-                            <span className="text-[8px] font-bold text-slate-400">{formatTime(msg.created_at)}</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-              <div ref={messagesEndRef} />
-            </div>
-
-            <div className="p-3 bg-white border-t border-slate-200">
-              {currentChat.status === 'solucionada' ? (
-                <div className="text-center py-3 bg-slate-50 rounded-xl border border-slate-150 text-slate-400 text-[10px] font-black uppercase tracking-widest">
-                  Este chamado foi solucionado.
-                </div>
-              ) : (
-                <ProfessorMessageComposer
-                  fileInputRef={fileInputRef}
-                  messageText={messageText}
-                  pendingFile={pendingFile}
-                  uploading={uploadingFile}
-                  onFile={setPendingFile}
-                  onFileError={(message) => alert(message)}
-                  onMessage={setMessageText}
-                  onSend={handleSendMessage}
-                />
-              )}
-            </div>
-          </div>
-        ) : (
-          <div className="flex-1 flex flex-col items-center justify-center bg-slate-50 px-8 text-center">
-            <div className="w-16 h-16 bg-purple-50 rounded-2xl flex items-center justify-center text-purple-300 mb-4 shadow-sm">
-              <MessageSquare size={30} />
-            </div>
-            <h3 className="text-lg font-black text-[#001a33] tracking-tight">Suporte ao Docente</h3>
-            <p className="text-slate-400 text-xs font-medium max-w-xs mt-1">
-              Selecione um chamado ao lado para abrir a conversa, ou clique em Novo Chamado para se conectar com a coordenação pedagógica.
-            </p>
-          </div>
-        )}
-      </div>
-
-      {/* NEW TICKET MODAL */}
       {showNewChatModal && (
         <ProfessorNewChatModal
-          categories={categories}
-          categoryId={newChatCategory}
-          subject={newChatSubject}
-          onCategoryChange={setNewChatCategory}
-          onClose={() => setShowNewChatModal(false)}
-          onSubmit={handleCreateNewChat}
-          onSubjectChange={setNewChatSubject}
+          categories={categories} categoryId={newChatCategory} subject={newChatSubject} busy={creating}
+          categoriesLoading={categoriesQuery.isPending} categoriesError={categoriesQuery.isError}
+          onCategoryChange={setNewChatCategory} onClose={() => setShowNewChatModal(false)}
+          onSubmit={handleCreateNewChat} onSubjectChange={setNewChatSubject}
         />
       )}
-
+      <ToastNotification toasts={toasts} onRemove={removeToast} />
     </div>
   );
 };
-
 export default ComunicacaoPage;

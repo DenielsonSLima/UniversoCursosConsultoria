@@ -1,3 +1,4 @@
+import '../components/professor-pages.css';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
@@ -224,7 +225,7 @@ const CalendarioProfessorPage: React.FC<CalendarioProfessorPageProps> = ({
   };
 
   return (
-    <>
+    <div className="professor-page professor-calendar">
       <AgendaWorkspace
         variant="professor"
         currentYear={currentYear}
@@ -288,7 +289,7 @@ const CalendarioProfessorPage: React.FC<CalendarioProfessorPageProps> = ({
           onClose={() => setPdfPreview(null)}
         />
       ) : null}
-    </>
+    </div>
   );
 };
 

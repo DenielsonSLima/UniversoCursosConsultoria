@@ -23,6 +23,7 @@ import { useParceirosFilters, ParceirosTabType } from './hooks/useParceirosFilte
 import { useParceirosMutations } from './hooks/useParceirosMutations';
 import { useParceirosQueries } from './hooks/useParceirosQueries';
 import { filterTurmasByModalidades } from './parceiros-turmas.utils';
+import type { FinanceiroTabId } from '../access-control';
 import type { GestorGlobalSearchResult } from '../global-search/gestor-global-search.types';
 
 const ParceiroAlunoDetalhes = React.lazy(() => import('./components/viewparceiros/aluno/ParceiroAlunoDetalhes'));
@@ -44,6 +45,8 @@ const RESPONSAVEL_CREATE_UNAVAILABLE_REASON =
 
 interface ParceirosPageProps {
   financeCacheScope?: string;
+  allowedFinancialTabs?: readonly FinanceiroTabId[];
+  financialPoloId?: string | null;
   activeTabInicial?: ParceirosTabType;
   initialForm?: ParceiroFormType;
   poloId?: string | null;
@@ -66,6 +69,8 @@ const tabs = [
 
 const ParceirosPage: React.FC<ParceirosPageProps> = ({
   financeCacheScope,
+  allowedFinancialTabs = [],
+  financialPoloId,
   activeTabInicial = 'todos',
   initialForm,
   poloId,
@@ -230,7 +235,7 @@ const ParceirosPage: React.FC<ParceirosPageProps> = ({
         onBack={handleBackFromDetails} onRequestScrollTop={onRequestScrollTop} financeCacheScope={financeCacheScope} />
     ) : selectedParceiro.tipo === 'Professor' ? (
       <ParceiroProfessorDetalhes key={selectedParceiro.id} professorInicial={selectedParceiro}
-        onBack={handleBackFromDetails} />
+        onBack={handleBackFromDetails} poloId={poloId} financialPoloId={financialPoloId} financeCacheScope={financeCacheScope} allowedFinancialTabs={allowedFinancialTabs} />
     ) : selectedParceiro.tipo === 'PJ' ? (
       <ParceiroPJDetalhes key={selectedParceiro.id} pjInicial={selectedParceiro} canManagePolos={includeGlobal}
         onBack={handleBackFromDetails} />

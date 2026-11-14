@@ -1,9 +1,12 @@
+import '../components/professor-pages.css';
 import React from 'react';
 import type { PortalContextScope } from '../../login/portal-context.contract';
 import ElectronicSignatureInbox from '../../shared/assinatura-eletronica/ElectronicSignatureInbox';
+import { useProfessorSignatureRealtime } from './useProfessorSignatureRealtime';
 import { hasCoordinationSignatureAccess } from './professor-signature-access';
 
 interface ProfessorAssinaturasPageProps {
+  professorId?: string;
   capabilities?: readonly string[];
   contextId: string;
   poloId?: string | null;
@@ -11,16 +14,19 @@ interface ProfessorAssinaturasPageProps {
 }
 
 const ProfessorAssinaturasPage: React.FC<ProfessorAssinaturasPageProps> = ({
+  professorId,
   capabilities,
   contextId,
   poloId,
   scopes,
 }) => {
+  useProfessorSignatureRealtime(professorId, contextId);
   const canReviewAsCoordinator = hasCoordinationSignatureAccess({ capabilities, scopes });
 
   return (
-    <div className="space-y-6">
+    <div className="professor-page professor-signatures space-y-5">
       <ElectronicSignatureInbox
+        compact
         audience="professor"
         profile="PROFESSOR"
         contextId={contextId}
@@ -30,6 +36,7 @@ const ProfessorAssinaturasPage: React.FC<ProfessorAssinaturasPageProps> = ({
 
       {canReviewAsCoordinator ? (
         <ElectronicSignatureInbox
+          compact
           audience="coordenador"
           profile="COORDENADOR"
           contextId={contextId}

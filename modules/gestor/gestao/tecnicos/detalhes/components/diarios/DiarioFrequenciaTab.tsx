@@ -1,3 +1,4 @@
+import DiarioFrequenciaMobile from './mobile/DiarioFrequenciaMobile';
 import React from 'react';
 import { AlertCircle, Calendar } from 'lucide-react';
 import { DiarioAula, DiarioStudent } from './diario-classe.service';
@@ -5,7 +6,8 @@ import { AttendanceMap, DiarioStudentStats } from './diario-classe.types';
 import { useDiarioDocumentary } from './historico/DiarioDocumentaryContext';
 import { documentaryAttendanceText } from './historico/diario-documentary.presentation';
 
-interface DiarioFrequenciaTabProps {
+export interface DiarioFrequenciaTabProps {
+  mobileLayout?: boolean;
   students: DiarioStudent[];
   aulas: DiarioAula[];
   attendanceMap: AttendanceMap;
@@ -14,19 +16,23 @@ interface DiarioFrequenciaTabProps {
   getStats: (studentId: string) => DiarioStudentStats;
 }
 
-const DiarioFrequenciaTab: React.FC<DiarioFrequenciaTabProps> = ({
+const DiarioFrequenciaTab: React.FC<DiarioFrequenciaTabProps> = (props) => {
+  const {
+  mobileLayout = false,
   students,
   aulas,
   attendanceMap,
   isReadOnly,
   onToggleAttendance,
   getStats,
-}) => {
+} = props;
   const documentary = useDiarioDocumentary();
   const totalSessoes = aulas.reduce((total, aula) => total + aula.sessoes.length, 0);
 
   return (
-  <div>
+  <>
+  {mobileLayout && <DiarioFrequenciaMobile {...props} />}
+  <div className={mobileLayout ? 'professor-diary-desktop' : undefined}>
     {students.length === 0 ? (
       <div className="py-20 text-center text-slate-400 flex flex-col items-center">
         <AlertCircle size={48} className="mb-4 opacity-50 text-slate-300" />
@@ -194,6 +200,7 @@ const DiarioFrequenciaTab: React.FC<DiarioFrequenciaTabProps> = ({
       </div>
     )}
   </div>
+  </>
   );
 };
 

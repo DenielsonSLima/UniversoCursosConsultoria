@@ -84,6 +84,20 @@ Histórico arquivado: [08/11/2026 — versão 4.8.267](./changelog/2026-11-08-ve
 
 Histórico arquivado: [08/11/2026 — versões 4.8.268 a 4.8.269](./changelog/2026-11-08-versoes-4-8-268-a-269.md).
 
+Histórico arquivado: [08/11/2026 — versões 4.8.270 a 4.8.271](./changelog/2026-11-08-versoes-4-8-270-a-271.md).
+
+## [4.8.339] - 2026-11-14
+
+- Portal do professor compacto e responsivo, com navegação móvel, diários e planejamento nas datas definidas pela Gestão.
+- Cadastro docente no Gestor com turmas, dossiê privado e consulta financeira; demais módulos adaptados ao celular.
+- TanStack Query e Realtime mantêm os dados atualizados sem recarga manual. Produção autorizada pelo usuário; publicação em andamento.
+
+## [4.8.339-rc.1] - 2026-11-14
+
+- Candidato para revisão: portal do professor compacto e responsivo, com navegação móvel, diários, planejamento, financeiro e demais módulos.
+- Cadastro docente no Gestor com turmas, dossiê privado e consulta financeira. Atualização automática com TanStack Query e Realtime, sem recarga manual.
+- Testes locais e sintéticos aprovados; quatro migrations e a conferência autenticada permanecem pendentes. Sem implantação em produção nesta etapa.
+
 ## [4.8.338] - 2026-11-13
 
 - Atividade recente mostra a data civil do pagamento sem atribuir hora exata ou usar a criação da cobrança como data de pagamento.
@@ -483,16 +497,3 @@ Histórico arquivado: [08/11/2026 — versões 4.8.268 a 4.8.269](./changelog/20
 - Custo rateado abre detalhes dos polos e valores autorizados em modal, pela tabela ou cartão.
 - Ajustes do valor iniciam recolhidos; convênio e turma usam Não/Sim, preservando campos, valores e bloqueios.
 - Textos do parcelamento foram simplificados para remover termos de implementação.
-
-## [4.8.271] - 2026-11-08
-
-- Despesas fixas e variáveis iniciam agrupadas por mês de vencimento e permitem alternar para fornecedor, categoria ou lista simples.
-- Controles de tabela, cartões e agrupamento ficam ao lado das abas; cartões usam quatro colunas em telas largas e seleção é preservada na troca de agrupamento.
-- Leitor SQL mantém autorização por polo, filtros e totais canônicos, incluindo baixas parciais.
-
-## [4.8.270] - 2026-11-08
-
-- NFS-e: nova aba Serviços para parceiros, com opção explícita de criar ou vincular conta a receber por RPC.
-- Visualizador XML com DANFSe vetorial A4, prévia, download e impressão; projeção de tributos pelo servidor.
-- Revalidação da permissão mantém o Emissor e seus rascunhos durante consultas em segundo plano; recusa e erro continuam bloqueando.
-- Validação: 83 testes frontend, 55 SQL isolados, teste estrutural PDF e smoke Safari desktop/390px; sem transmissão fiscal.

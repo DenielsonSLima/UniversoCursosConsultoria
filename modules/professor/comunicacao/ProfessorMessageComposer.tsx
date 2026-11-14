@@ -64,13 +64,14 @@ export const ProfessorMessageComposer: React.FC<ProfessorMessageComposerProps> =
   return (
     <div className="space-y-2">
       {pendingFile && (
-        <div className="flex items-center gap-2 rounded-xl border border-purple-100 bg-purple-50 px-3 py-2">
+        <div className="flex items-center gap-2 rounded-xl border border-blue-100 bg-blue-50 px-3 py-2">
           {/^image\//i.test(pendingFile.type) ? <Image size={14} /> : <FileText size={14} />}
           <span className="flex-1 truncate text-xs font-bold text-slate-700">{pendingFile.name}</span>
           <button
             type="button"
             onClick={() => onFile(null)}
-            className="rounded-full p-0.5 transition-colors hover:bg-purple-200"
+            disabled={uploading}
+            className="professor-composer-button hover:bg-blue-100"
             aria-label="Remover anexo"
           >
             <X size={12} className="text-slate-500" />
@@ -82,8 +83,9 @@ export const ProfessorMessageComposer: React.FC<ProfessorMessageComposerProps> =
           type="button"
           onClick={() => fileInputRef.current?.click()}
           disabled={uploading}
-          className="rounded-xl p-2.5 text-slate-450 transition-colors hover:bg-purple-50 hover:text-purple-600 disabled:opacity-40"
+          className="professor-composer-button text-slate-600 hover:bg-blue-50 disabled:opacity-40"
           title="Anexar arquivo"
+          aria-label="Anexar arquivo"
         >
           <Paperclip size={18} />
         </button>
@@ -91,24 +93,33 @@ export const ProfessorMessageComposer: React.FC<ProfessorMessageComposerProps> =
           ref={fileInputRef}
           type="file"
           accept={PROFESSOR_ATTACHMENT_ACCEPT}
+          disabled={uploading}
           className="hidden"
           onChange={handleFileChange}
         />
-        <div className="flex flex-1 items-center overflow-hidden rounded-xl border border-slate-150 bg-slate-50 px-4.5 py-1.5 shadow-inner transition-all focus-within:border-purple-500 focus-within:bg-white">
+        <div className="min-w-0 flex-1">
           <input
             type="text"
             value={messageText}
             onChange={(event) => onMessage(event.target.value)}
-            onKeyDown={(event) => event.key === 'Enter' && !event.shiftKey && onSend()}
-            placeholder="Escreva sua mensagem..."
-            className="w-full border-none bg-transparent py-1.5 text-xs font-medium text-slate-700 outline-none"
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing && !uploading) {
+                event.preventDefault();
+                onSend();
+              }
+            }}
+            placeholder="Escreva sua mensagem…"
+            aria-label="Mensagem"
+            disabled={uploading}
+            className="professor-input"
           />
         </div>
         <button
           type="button"
           onClick={onSend}
+          aria-label="Enviar mensagem"
           disabled={(!messageText.trim() && !pendingFile) || uploading}
-          className="rounded-xl bg-[#001a33] p-2.5 text-white shadow-lg transition-colors hover:bg-purple-650 disabled:opacity-50"
+          className="professor-composer-button bg-[#001a33] text-white disabled:opacity-50"
         >
           {uploading ? (
             <span className="block h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
@@ -117,7 +128,7 @@ export const ProfessorMessageComposer: React.FC<ProfessorMessageComposerProps> =
           )}
         </button>
       </div>
-      <p className="pl-12 text-[9px] font-medium text-slate-400">
+      <p className="professor-help">
         Aceita: PNG, JPEG, PDF, DOC e DOCX (até 25 MB)
       </p>
     </div>

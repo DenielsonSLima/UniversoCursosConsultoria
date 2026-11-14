@@ -128,6 +128,26 @@ test('calendário usa tópicos separados para geral, escopo docente e acadêmico
 test('chat nunca injeta CDC bruto nem registra conteúdo de mensagem', () => {
   assert.doesNotMatch(communicationPageSource, /setQueryData|Realtime message received/);
   assert.doesNotMatch(communicationRealtimeSource, /console\.|payload|resolveCommunicationAttachmentUrls/);
-  assert.match(communicationPageSource, /professorComunicacaoQueryKeys\.messages\(activeChatId\)/);
+  assert.match(
+    communicationPageSource,
+    /queryKey:\s*professorComunicacaoQueryKeys\.messages\(activeChatId\s*\|\|\s*(?:''|"")\),\s*enabled:\s*Boolean\(activeChatId\)/,
+    'A consulta vazia permanece desabilitada até existir uma conversa ativa',
+  );
+  const sendStart = communicationPageSource.indexOf('const handleSendMessage');
+  const sendEnd = communicationPageSource.indexOf('const handleCreateNewChat', sendStart);
+  assert.ok(sendStart >= 0 && sendEnd > sendStart, 'O envio deve manter uma fronteira própria');
+  const sendSource = communicationPageSource.slice(sendStart, sendEnd);
+  assert.match(sendSource, /if\s*\(!activeChatId\s*\|\|\s*sendingRef\.current\)\s*return/);
+  assert.match(
+    sendSource,
+    /const chatId\s*=\s*activeChatId;[\s\S]*await professorComunicacaoService\.sendMessage\(\{\s*chatId/,
+    'A identidade da conversa deve ser capturada antes da operação assíncrona',
+  );
+  assert.match(
+    sendSource,
+    /invalidateQueries\(\{\s*queryKey:\s*professorComunicacaoQueryKeys\.messages\(chatId\),\s*exact:\s*true/,
+    'O resultado invalida somente a conversa capturada, mesmo após troca de conversa',
+  );
+  assert.doesNotMatch(sendSource, /professorComunicacaoQueryKeys\.messages\(activeChatId\)/);
   assert.match(communicationRealtimeSource, /invalidateQueries/);
 });

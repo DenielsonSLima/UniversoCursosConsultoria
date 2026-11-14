@@ -33,13 +33,11 @@ async function components() {
 
 test('Publicação em quatro etapas conserva validações, escopo e payload sem I/O', async context => {
   const dom = new JSDOM('<!doctype html><html><body><div id="root" class="biblioteca-workspace"></div></body></html>', { url: 'http://localhost/', pretendToBeVisual: true });
-  const names = ['window', 'document', 'HTMLElement', 'HTMLInputElement', 'Element', 'Node', 'Event', 'MouseEvent', 'KeyboardEvent', 'MutationObserver', 'navigator', 'fetch', 'alert', 'IS_REACT_ACT_ENVIRONMENT'];
+  const names = ['window', 'document', 'HTMLElement', 'HTMLInputElement', 'Element', 'Node', 'Event', 'MouseEvent', 'KeyboardEvent', 'MutationObserver', 'navigator', 'fetch', 'IS_REACT_ACT_ENVIRONMENT'];
   const previous = new Map(names.map(name => [name, Object.getOwnPropertyDescriptor(globalThis, name)]));
   names.forEach(name => Object.defineProperty(globalThis, name, { configurable: true, writable: true, value: name === 'IS_REACT_ACT_ENVIRONMENT' ? true : dom.window[name] }));
   let network = 0;
-  const alerts = [];
   globalThis.fetch = async () => { network++; throw Error('Network prohibited'); };
-  globalThis.alert = message => { alerts.push(message); };
   dom.window.HTMLElement.prototype.scrollIntoView = () => {};
   const oldCreate = URL.createObjectURL;
   const oldRevoke = URL.revokeObjectURL;
@@ -52,6 +50,14 @@ test('Publicação em quatro etapas conserva validações, escopo e payload sem 
   const classes = [{ id: 'class-demo', nome: 'Turma sintética', codigo: 'DEMO', curso_id: 'course-demo' }];
   const polos = [{ id: 'polo-demo', nome: 'Polo sintético', cidade: 'Cidade sintética', uf: 'SE' }];
   const button = text => [...dom.window.document.querySelectorAll('button')].find(item => item.textContent.trim() === text);
+  const visibleValidationMessage = () => {
+    const message = dom.window.document.querySelector('[role="alert"]');
+    assert.ok(message?.isConnected, 'A validação deve aparecer no formulário com role="alert"');
+    assert.equal(message.hidden, false);
+    assert.notEqual(dom.window.getComputedStyle(message).display, 'none');
+    assert.notEqual(dom.window.getComputedStyle(message).visibility, 'hidden');
+    return message.textContent;
+  };
   const click = async element => { assert.ok(element && !element.disabled); await act(async () => element.click()); };
   const change = async (element, value) => {
     assert.ok(element);
@@ -85,7 +91,7 @@ test('Publicação em quatro etapas conserva validações, escopo e payload sem 
     polosService.getAll = async () => polos;
     let renderKey = 0;
     const render = async (teacher = false) => {
-      uploads = []; closes = 0; alerts.length = 0;
+      uploads = []; closes = 0;
       await act(async () => root.render(React.createElement(Upload, { key: ++renderKey, isOpen: true,
         onClose: () => { closes++; }, onUpload: async payload => { uploads.push(payload); },
         pastaId: 'folder-demo', teacherId: teacher ? 'teacher-demo' : null, restrictToTeacherScope: teacher })));
@@ -98,11 +104,11 @@ test('Publicação em quatro etapas conserva validações, escopo e payload sem 
     await context.test('arquivo obrigatório e limites rejeitam publicação antes de criar payload', async () => {
       await render();
       await next();
-      assert.match(alerts.pop(), /arquivo/);
+      assert.match(visibleValidationMessage(), /arquivo/);
       await file('arquivo.exe');
-      assert.match(alerts.pop(), /formato|permitido|suportad/i);
+      assert.match(visibleValidationMessage(), /formato|permitido|suportad/i);
       await file('grande.png', 10 * 1024 * 1024 + 1);
-      assert.match(alerts.pop(), /10MB/);
+      assert.match(visibleValidationMessage(), /10MB/);
       assert.equal(uploads.length, 0);
     });
     await context.test('combobox de abrangência e período mantêm IDs, dias inclusivos e revisão sem envio', async () => {
@@ -112,7 +118,7 @@ test('Publicação em quatro etapas conserva validações, escopo e payload sem 
       assert.equal(dom.window.document.querySelectorAll('select').length, 0);
       await pick('Abrangencia', 'Polo especifico');
       await next();
-      assert.match(alerts.pop(), /polo/i);
+      assert.match(visibleValidationMessage(), /polo/i);
       await click([...dom.window.document.querySelectorAll('button')].find(item => item.textContent.includes('Polo sintético')));
       await next();
       await click([...dom.window.document.querySelectorAll('button')].find(item => item.textContent.includes('Periodo definido')));
@@ -137,7 +143,7 @@ test('Publicação em quatro etapas conserva validações, escopo e payload sem 
       assert.equal(dom.window.document.querySelector('input[aria-label="Abrangencia"]'), null);
       assert.ok(button('Turmas vinculadasLibere para alunos das turmas ativas em que você leciona.'));
       await click([...dom.window.document.querySelectorAll('button')].find(item => item.textContent.includes('Turmas vinculadas')));
-      await next(); assert.match(alerts.pop(), /turma/i);
+      await next(); assert.match(visibleValidationMessage(), /turma/i);
       await click([...dom.window.document.querySelectorAll('button')].find(item => item.textContent.includes('Turma sintética')));
       await next(); await next(); assert.equal(uploads.length, 0);
       await submit();
