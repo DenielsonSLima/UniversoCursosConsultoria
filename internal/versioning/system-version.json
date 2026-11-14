@@ -1,8 +1,8 @@
 {
-  "version": "4.8.339",
+  "version": "4.8.340",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 348,
+  "revision": 349,
   "releasedAt": "2026-11-14",
-  "summary": "Portal docente mobile, dossiê no Gestor e atualização automática"
+  "summary": "Caixa com origens completas, PDFs alinhados e retorno do link bancário"
 }

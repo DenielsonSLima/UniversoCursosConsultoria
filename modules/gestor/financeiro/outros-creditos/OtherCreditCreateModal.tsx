@@ -313,7 +313,9 @@ export const OtherCreditCreateModal = ({ model }: { model: ModalModel }) => {
                   className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-6 py-3 text-xs font-black uppercase tracking-wider text-white shadow-lg shadow-emerald-900/15 disabled:opacity-50"
                 >
                   {createMutation.isPending ? <Loader2 className="animate-spin" size={16} /> : <Plus size={16} />}
-                  {mode === 'GATEWAY' && bankPresentation === 'PDV' ? 'Gerar e abrir caixa' : 'Salvar crédito'}
+                  {createMutation.isPending ? 'Salvando...'
+                    : mode === 'GATEWAY' ? bankPresentation === 'PDV' ? 'Gerar e abrir caixa' : 'Gerar link bancário'
+                    : 'Salvar crédito'}
                 </button>
               </div>
             </fieldset>

@@ -53,6 +53,7 @@ const reportTests = [
   'modules/gestor/caixa/report/caixa-report.pagination.test.ts',
   'modules/gestor/caixa/report/caixa-report.vector-pdf.test.ts',
   'modules/gestor/caixa/report/caixa-report.concise-pdf.test.ts',
+  'modules/gestor/caixa/report/caixa-report.summary-parity.test.ts',
   'modules/gestor/caixa/report/caixa-report.fechamento-implantacao.test.tsx',
   'modules/gestor/caixa/report/caixa-report.composicao-parcial.test.tsx',
 ];

@@ -118,8 +118,13 @@ export const useOutrosCreditos = (scopedPoloId?: string | null) => {
         mode === 'GATEWAY' && bankPresentation === 'PDV'
           ? 'O caixa está aberto com os dados desta cobrança.'
           : mode === 'GATEWAY' && created.asaasInvoiceUrl
-          ? 'A cobrança foi enviada para a rota bancária configurada e o link já está disponível.'
+          ? 'O link bancário está pronto para compartilhar com o pagador.'
+          : mode === 'GATEWAY'
+          ? 'A cobrança foi salva. O link ainda não está disponível; acompanhe esta cobrança em Outros Créditos.'
           : 'O lançamento foi salvo em Outros Créditos.',
+        mode === 'GATEWAY' && bankPresentation === 'LINK' && created.asaasInvoiceUrl
+          ? { actionLabel: 'Copiar link do pagador', onAction: () => { void copyLink(created); } }
+          : undefined,
       );
     },
     onError: (error: any) => toast.error('Erro ao criar crédito', error.message),
@@ -312,34 +317,34 @@ export const useOutrosCreditos = (scopedPoloId?: string | null) => {
     if (createMutation.isPending) return;
     const numericValue = parseCurrencyInput(value);
     if (!description.trim() && !isPdvOpen) {
-      toast.warning('Descrição obrigatória', 'Informe a origem do crédito.');
+      toast.info('Descrição obrigatória', 'Informe a origem do crédito.');
       return;
     }
     if (!numericValue || numericValue <= 0) {
-      toast.warning('Valor inválido', 'Informe um valor maior que zero.');
+      toast.info('Valor inválido', 'Informe um valor maior que zero.');
       return;
     }
     if (!effectivePoloId) {
-      toast.warning('Polo ativo obrigatório', 'Selecione uma unidade no topo do portal antes de lançar o crédito.');
+      toast.info('Polo ativo obrigatório', 'Selecione uma unidade no topo do portal antes de lançar o crédito.');
       return;
     }
     if (!dueDate || !/^\d{4}-\d{2}-\d{2}$/.test(dueDate)) {
-      toast.warning('Vencimento obrigatório', 'Informe a data de vencimento da cobrança.');
+      toast.info('Vencimento obrigatório', 'Informe a data de vencimento da cobrança.');
       return;
     }
     if (mode === 'LOCAL_PAGO' && !accountId) {
-      toast.warning('Conta obrigatória', 'Selecione a conta/caixa onde o valor entrou.');
+      toast.info('Conta obrigatória', 'Selecione a conta/caixa onde o valor entrou.');
       return;
     }
     if (mode === 'GATEWAY' && (!partnerType || !partnerId)) {
-      toast.warning(
+      toast.info(
         'Parceiro obrigatório',
         'Selecione o tipo e o parceiro para o Banese emitir a cobrança BolePix.',
       );
       return;
     }
     if (mode === 'GATEWAY' && paymentMethod !== 'BOLETO') {
-      toast.warning('Forma inválida', 'O link bancário de Outros Créditos usa somente BolePix do Banese.');
+      toast.info('Forma inválida', 'O link bancário de Outros Créditos usa somente BolePix do Banese.');
       return;
     }
     createMutation.mutate();
