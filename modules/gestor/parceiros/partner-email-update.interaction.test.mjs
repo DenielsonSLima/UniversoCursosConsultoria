@@ -10,7 +10,7 @@ const { JSDOM } = await import(pathToFileURL(resolve(process.env.NFSE_TEST_JSDOM
 test('teacher first-access correction stays editable until canonical save succeeds and double clicks cannot duplicate the operation', async () => {
   await mkdir('tmp', { recursive: true }); const temp = await mkdtemp(resolve('tmp/partner-email-form-'));
   const dom = new JSDOM('<div id="root"></div>', { url: 'http://localhost/', pretendToBeVisual: true });
-  Object.assign(globalThis, { window: dom.window, document: dom.window.document, HTMLElement: dom.window.HTMLElement, IS_REACT_ACT_ENVIRONMENT: true });
+  Object.assign(globalThis, { window: dom.window, document: dom.window.document, HTMLElement: dom.window.HTMLElement, MutationObserver: dom.window.MutationObserver, IS_REACT_ACT_ENVIRONMENT: true });
   const output = resolve(temp, 'ui.mjs');
   const compiled = await build({ stdin: { contents: `export {default as Professor} from './modules/gestor/parceiros/components/viewparceiros/professor/ParceiroProfessorDados';
     export {default as Address} from './modules/gestor/parceiros/components/viewparceiros/aluno/ParceiroAlunoAddressSection';`, resolveDir: process.cwd(), loader: 'tsx' },

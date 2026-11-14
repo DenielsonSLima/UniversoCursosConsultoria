@@ -1,10 +1,15 @@
 // File: modules/gestor/parceiros/components/viewparceiros/professor/ParceiroProfessorDetalhes.tsx
 
+import './professor-profile.css';
 import React, { useState } from 'react';
-import { ArrowLeft, User, BookOpen, FileText, DollarSign, KeyRound } from 'lucide-react';
+import { ArrowLeft, User, BookOpen, FileText, DollarSign, KeyRound, Loader2 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import ParceiroAcesso from '../shared/ParceiroAcesso';
 import ParceiroProfessorDados from './ParceiroProfessorDados';
+import ParceiroProfessorTurmas from './ParceiroProfessorTurmas';
+import ParceiroProfessorFinanceiro from './ParceiroProfessorFinanceiro';
+import ParceiroProfessorDocumentos from './ParceiroProfessorDocumentos';
+import type { FinanceiroTabId } from '../../../../access-control';
 import { parceirosService } from '../../../parceiros.service';
 import ToastNotification, { useToast } from '../../shared/ToastNotification';
 import { invalidatePartnerEmailAccess, partnerEmailUpdateFeedback } from '../../../partner-email-feedback';
@@ -13,24 +18,29 @@ import { PartnerEmailPartialSaveError } from '../../../partner-email-update';
 interface ParceiroProfessorDetalhesProps {
   professorInicial: any;
   onBack: () => void;
+  poloId?: string | null;
+  financeCacheScope?: string;
+  financialPoloId?: string | null;
+  allowedFinancialTabs?: readonly FinanceiroTabId[];
 }
 
-const ParceiroProfessorDetalhes: React.FC<ParceiroProfessorDetalhesProps> = ({ professorInicial, onBack }) => {
+const ParceiroProfessorDetalhes: React.FC<ParceiroProfessorDetalhesProps> = ({ professorInicial, onBack, poloId, financialPoloId, financeCacheScope, allowedFinancialTabs = [] }) => {
   const queryClient = useQueryClient();
   const { toasts, removeToast, toast } = useToast();
   const [activeTab, setActiveTab] = useState<'dados' | 'turmas' | 'docs' | 'financeiro' | 'acesso'>('dados');
 
-  // Carrega dados do professor usando React Query com initialData
-  const { data: professorData = professorInicial } = useQuery({
-    queryKey: ['parceiro', professorInicial.id],
+  const profileKey = ['parceiro', professorInicial.id, financeCacheScope];
+  const profileQuery = useQuery({
+    queryKey: profileKey,
     queryFn: () => parceirosService.getById(professorInicial.id),
-    initialData: professorInicial,
+    placeholderData: professorInicial,
   });
+  const professorData = profileQuery.data || professorInicial;
 
   const updateMutation = useMutation({
     mutationFn: (newData: any) => parceirosService.update(professorData.id, newData),
     onSuccess: async (updated) => {
-      queryClient.setQueryData(['parceiro', professorData.id], updated);
+      queryClient.setQueryData(profileKey, updated);
       const emailFeedback = partnerEmailUpdateFeedback(updated.emailUpdateResult);
       if (emailFeedback) {
         await invalidatePartnerEmailAccess(queryClient, professorData.id);
@@ -120,7 +130,7 @@ const ParceiroProfessorDetalhes: React.FC<ParceiroProfessorDetalhesProps> = ({ p
 
   const handlePhotoUploaded = (fotoUrl: string, nextData: any) => {
     const updatedProfessor = { ...professorData, ...nextData, foto: fotoUrl };
-    queryClient.setQueryData(['parceiro', professorData.id], updatedProfessor);
+    queryClient.setQueryData(profileKey, updatedProfessor);
     queryClient.invalidateQueries({ queryKey: ['parceiros'] });
     toast.success('Foto do professor atualizada', `${updatedProfessor.nome || 'Professor'} agora tem uma foto de perfil no cadastro.`, {
       avatarUrl: fotoUrl,
@@ -138,86 +148,59 @@ const ParceiroProfessorDetalhes: React.FC<ParceiroProfessorDetalhesProps> = ({ p
   };
 
   const tabs = [
-    { id: 'dados', label: 'Dados do Professor', icon: <User size={18} /> },
-    { id: 'turmas', label: 'Turmas/Disciplinas', icon: <BookOpen size={18} /> },
-    { id: 'docs', label: 'Documentos', icon: <FileText size={18} /> },
-    { id: 'financeiro', label: 'Financeiro', icon: <DollarSign size={18} /> },
-    { id: 'acesso', label: 'Acesso', icon: <KeyRound size={18} /> },
-  ];
+    { id: 'dados', label: 'Dados do professor', icon: User },
+    { id: 'turmas', label: 'Turmas e disciplinas', icon: BookOpen },
+    { id: 'docs', label: 'Documentos', icon: FileText },
+    { id: 'financeiro', label: 'Financeiro', icon: DollarSign },
+    { id: 'acesso', label: 'Acesso', icon: KeyRound },
+  ] as const;
+  const profileLoading = profileQuery.isPending || profileQuery.isPlaceholderData;
 
   return (
-    <div className="min-h-screen pb-20">
-      
-      {/* Header */}
-      <div className="bg-white border-b border-slate-200 px-8 py-4 shadow-sm -mx-8 -mt-8 mb-8">
-        <div className="max-w-7xl mx-auto">
-            <div className="flex items-center gap-4 mb-6">
-                <button 
-                    onClick={onBack}
-                    className="p-2 rounded-xl border border-slate-200 text-slate-400 hover:text-purple-600 hover:border-purple-200 transition-colors bg-slate-50"
-                >
-                    <ArrowLeft size={20} />
-                </button>
-                <div>
-                    <h2 className="text-2xl font-black text-[#001a33] uppercase tracking-tight leading-none">
-                        {professorData.nome}
-                    </h2>
-                    <p className="text-xs text-slate-500 font-bold mt-1 uppercase tracking-wider">
-                        Professor • Documento: {professorData.cpf || 'Não informado'} • Status: <span className={professorData.status === 'ATIVO' ? 'text-emerald-600' : 'text-amber-600'}>{professorData.status || 'ATIVO'}</span>
-                    </p>
-                </div>
-            </div>
-
-            {/* Navegação de Abas */}
-            <div className="flex overflow-x-auto gap-2 pb-1 scrollbar-hide">
-                {tabs.map((tab) => (
-                    <button
-                        key={tab.id}
-                        onClick={() => setActiveTab(tab.id as any)}
-                        className={`flex items-center gap-2 px-6 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-all whitespace-nowrap ${
-                            activeTab === tab.id 
-                            ? 'bg-[#001a33] text-white shadow-lg shadow-purple-900/20' 
-                            : 'bg-slate-50 text-slate-500 hover:bg-slate-100 hover:text-slate-800'
-                        }`}
-                    >
-                        {tab.icon}
-                        {tab.label}
-                    </button>
-                ))}
-            </div>
+    <div className="professor-profile">
+      <header className="professor-profile-header">
+        <button type="button" onClick={onBack} aria-label="Voltar à lista de parceiros" className="professor-action professor-back"><ArrowLeft size={18} /></button>
+        <div className="min-w-0">
+          <h2>{professorData.nome}</h2>
+          <div className="professor-profile-meta">
+            <span>Professor</span><span>CPF: {professorData.cpf || 'Não informado'}</span>
+            <span className={`professor-status ${professorData.status === 'ATIVO' ? 'text-emerald-700 bg-emerald-50' : 'text-amber-700 bg-amber-50'}`}>
+              {professorData.status || 'Não informado'}
+            </span>
+          </div>
         </div>
+      </header>
+      <div role="tablist" aria-label="Perfil do professor" className="professor-profile-tabs">
+        {tabs.map(({ id, label, icon: Icon }) => (
+          <button type="button" role="tab" id={`professor-tab-${id}`} aria-controls={`professor-panel-${id}`}
+            aria-selected={activeTab === id} tabIndex={activeTab === id ? 0 : -1} key={id} onClick={() => setActiveTab(id)}
+            onKeyDown={(event) => {
+              const index = tabs.findIndex((tab) => tab.id === id);
+              const next = event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1
+                : event.key === 'ArrowRight' ? (index + 1) % tabs.length : event.key === 'ArrowLeft' ? (index + tabs.length - 1) % tabs.length : null;
+              if (next === null) return;
+              event.preventDefault(); setActiveTab(tabs[next].id);
+              const buttons = event.currentTarget.parentElement?.querySelectorAll('[role="tab"]');
+              (buttons?.[next] as HTMLElement | undefined)?.focus();
+            }}>
+            <Icon size={15} />{label}
+          </button>
+        ))}
       </div>
-
-      {/* Conteúdo */}
-      <div className="max-w-5xl mx-auto bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm min-h-[600px] ">
-        {activeTab === 'dados' && (
-            <ParceiroProfessorDados
-              data={professorData}
-              onChange={handleDataChange}
-              onPhotoUploaded={handlePhotoUploaded}
-              onPhotoUploadError={handlePhotoUploadError}
-            />
-        )}
-        {activeTab === 'turmas' && (
-            <div className="text-slate-500 text-center py-20">Em desenvolvimento: Turmas do Professor</div>
-        )}
-        {activeTab === 'docs' && (
-            <div className="text-slate-500 text-center py-20">Em desenvolvimento: Documentos (PDF, Imagens, Pendências)</div>
-        )}
-        {activeTab === 'financeiro' && (
-            <div className="text-slate-500 text-center py-20">Em desenvolvimento: Financeiro (A pagar/Receber)</div>
-        )}
-        {activeTab === 'acesso' && (
-          <ParceiroAcesso
-            parceiroId={professorData.id}
-            tipo="Professor"
-            email={professorData.email || null}
-          />
-        )}
+      <div role="tabpanel" id={`professor-panel-${activeTab}`} aria-labelledby={`professor-tab-${activeTab}`} className="professor-profile-content">
+        {profileLoading ? <p role="status" className="flex items-center gap-2 py-8 text-slate-500"><Loader2 size={16} className="animate-spin" /> Carregando cadastro completo…</p>
+          : profileQuery.isError || !profileQuery.data ? <div role="alert" className="text-red-800">Não foi possível carregar o cadastro completo. A conexão será retomada automaticamente.</div>
+          : <>
+            {activeTab === 'dados' && <ParceiroProfessorDados data={professorData} onChange={handleDataChange}
+              onPhotoUploaded={handlePhotoUploaded} onPhotoUploadError={handlePhotoUploadError} />}
+            {activeTab === 'turmas' && <ParceiroProfessorTurmas professorId={professorData.id} poloId={poloId} cacheScope={financeCacheScope} />}
+            {activeTab === 'docs' && <ParceiroProfessorDocumentos key={`${professorData.id}:${financeCacheScope}`} professorId={professorData.id} cacheScope={financeCacheScope} toast={toast} />}
+            {activeTab === 'financeiro' && <ParceiroProfessorFinanceiro professorId={professorData.id} poloId={financialPoloId || poloId}
+              cacheScope={financeCacheScope} allowedFinancialTabs={allowedFinancialTabs} />}
+            {activeTab === 'acesso' && <ParceiroAcesso parceiroId={professorData.id} tipo="Professor" email={professorData.email || null} toast={toast} />}
+          </>}
       </div>
-
       <ToastNotification toasts={toasts} onRemove={removeToast} />
-
     </div>
   );
 };

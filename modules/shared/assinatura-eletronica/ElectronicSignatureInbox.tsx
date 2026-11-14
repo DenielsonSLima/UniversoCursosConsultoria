@@ -6,7 +6,6 @@ import {
   Eye,
   FileSignature,
   Loader2,
-  RefreshCw,
   ShieldCheck,
 } from 'lucide-react';
 import type {
@@ -27,14 +26,6 @@ interface ElectronicSignatureInboxProps {
   compact?: boolean;
   poloId?: string | null;
 }
-
-const audienceLabels: Record<ElectronicSignatureAudience, string> = {
-  gestor: 'gestão',
-  professor: 'professor',
-  coordenador: 'coordenador',
-  aluno: 'aluno',
-  responsavel: 'responsável',
-};
 
 const tabs: Array<{
   id: ElectronicSignatureInboxTab;
@@ -85,10 +76,10 @@ const ElectronicSignatureInbox: React.FC<ElectronicSignatureInboxProps> = ({
     getNextPageParam: (lastPage) => lastPage.nextCursor || undefined,
     enabled: Boolean(contextId),
     staleTime: 30_000,
-    retry: false,
+    retry: 2,
+    refetchOnReconnect: 'always',
   });
   const items = inboxQuery.data?.pages.flatMap((page) => page.items) || [];
-  const audienceLabel = audienceLabels[audience];
   const activateTabFromKeyboard = (
     event: React.KeyboardEvent,
     currentIndex: number,
@@ -119,7 +110,7 @@ const ElectronicSignatureInbox: React.FC<ElectronicSignatureInboxProps> = ({
               <div>
                 <p className="text-[10px] font-black uppercase tracking-[0.18em] text-blue-200">Assinatura eletrônica</p>
                 <h3 className="mt-0.5 text-base font-black tracking-tight text-white">{heading}</h3>
-                <p className="mt-1 text-xs font-medium leading-relaxed text-slate-300">A caixa é preenchida pelo serviço autorizado para este perfil.</p>
+                <p className="mt-1 text-xs font-medium leading-relaxed text-slate-300">Acompanhe os documentos enviados para sua assinatura.</p>
               </div>
             </div>
             <ShieldCheck size={19} className="mt-1 shrink-0 text-blue-200" aria-hidden="true" />
@@ -171,19 +162,13 @@ const ElectronicSignatureInbox: React.FC<ElectronicSignatureInboxProps> = ({
           ) : inboxQuery.isError ? (
             <div className="rounded-xl border border-rose-100 bg-rose-50 p-4">
               <p className="text-xs font-bold text-rose-700">Não foi possível consultar a caixa de assinaturas.</p>
-              <button
-                type="button"
-                onClick={() => void inboxQuery.refetch()}
-                className="mt-3 inline-flex min-h-9 items-center gap-2 rounded-lg bg-white px-3 text-[10px] font-black uppercase tracking-wide text-rose-700 shadow-sm ring-1 ring-rose-100 transition-colors hover:bg-rose-100"
-              >
-                <RefreshCw size={13} /> Tentar novamente
-              </button>
+
             </div>
           ) : items.length === 0 ? (
             <div className="flex min-h-28 flex-col items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50 px-5 py-6 text-center">
               {activeTab === 'pending' ? <Clock3 size={22} className="text-slate-400" /> : <CheckCircle2 size={22} className="text-emerald-500" />}
               <p className="mt-2 text-xs font-black text-[#001a33]">Nenhuma assinatura {activeTab === 'pending' ? 'pendente' : 'concluída'} disponível</p>
-              <p className="mt-1 max-w-md text-[11px] font-medium leading-relaxed text-slate-500">Quando houver um envelope para {audienceLabel}, ele será listado aqui pelo serviço de assinatura.</p>
+              <p className="mt-1 max-w-md text-[11px] font-medium leading-relaxed text-slate-500">Os documentos enviados para você aparecerão aqui.</p>
             </div>
           ) : (
             <>

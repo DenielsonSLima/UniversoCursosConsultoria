@@ -50,15 +50,17 @@ const DiarioHistoricoBoundary = ({ children, ...props }: DiarioClasseProps & { c
     enabled: Boolean(actorId && turma.id && disciplina.id),
     staleTime: 60_000,
     refetchOnMount: 'always',
-    retry: false,
+    retry: accessMode === 'PROFESSOR' ? 2 : false,
+    refetchOnReconnect: 'always',
   });
 
   if ((sessionReady && !actorId) || historyQuery.isError) {
     return (
       <div className="mx-auto max-w-[1400px] py-8">
         <TechnicalDataError
+          automaticRecovery={accessMode === 'PROFESSOR'}
           title="Diário não carregado"
-          message="Não foi possível carregar os registros deste diário. Tente novamente."
+          message={accessMode === 'PROFESSOR' ? 'Os registros estão protegidos. A conexão será retomada automaticamente.' : 'Não foi possível carregar os registros deste diário. Tente novamente.'}
           retrying={historyQuery.isFetching}
           onRetry={() => {
             if (!actorId) setSessionAttempt((attempt) => attempt + 1);
@@ -79,7 +81,7 @@ const DiarioHistoricoBoundary = ({ children, ...props }: DiarioClasseProps & { c
   // Absence or completed server materialization may mount normal editor/export hooks.
   if (historyQuery.data === null) return children;
   if (!historyQuery.data) return (
-    <TechnicalDataError title="Diário indisponível"
+    <TechnicalDataError automaticRecovery={accessMode === 'PROFESSOR'} title="Diário indisponível"
       message="Não foi possível carregar os registros deste diário."
       retrying={historyQuery.isFetching} onRetry={() => { void historyQuery.refetch(); }} />
   );
@@ -89,6 +91,7 @@ const DiarioHistoricoBoundary = ({ children, ...props }: DiarioClasseProps & { c
   return (
     <div className="mx-auto max-w-[1400px]">
       <DiarioClasseHeader
+        professorLayout={accessMode === 'PROFESSOR'}
         disciplina={disciplina} moduloNome={moduloNome} turma={turma} onBack={onBack}
         activeTab={activeTab} setActiveTab={setActiveTab}
         exportDisabled isReadOnly onOpenExportModal={() => undefined}

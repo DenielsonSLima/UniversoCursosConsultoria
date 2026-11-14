@@ -1,3 +1,4 @@
+import './mobile/professor-diary-mobile.css';
 import type { Dispatch, SetStateAction } from 'react';
 import { Loader2 } from 'lucide-react';
 import DiarioConteudoTab from './DiarioConteudoTab';
@@ -91,10 +92,11 @@ const DiarioClasseTabs = ({
   closurePending,
   onRetryClosure,
 }: DiarioClasseTabsProps) => (
-  <div className="mb-8 flex min-h-[500px] flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+  <div className={`${accessMode === 'PROFESSOR' ? 'professor-diary-panels ' : ''}mb-8 flex min-h-[500px] flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm`}>
     <div className="flex-1">
       {activeTab === 'frequencia' && (
         <DiarioFrequenciaTab
+          mobileLayout={accessMode === 'PROFESSOR'}
           students={students}
           aulas={aulas}
           attendanceMap={attendanceMap}
@@ -105,6 +107,7 @@ const DiarioClasseTabs = ({
       )}
       {activeTab === 'resultado' && (
         <DiarioResultadoTab
+          mobileLayout={accessMode === 'PROFESSOR'}
           students={students}
           localGrades={localGrades}
           isReadOnly={isReadOnly}
@@ -117,6 +120,7 @@ const DiarioClasseTabs = ({
       )}
       {activeTab === 'conteudo' && (
         <DiarioConteudoTab
+          mobileLayout={accessMode === 'PROFESSOR'}
           aulas={aulas}
           extraClassCredit={extraClassCredit}
           localTitulos={localTitulos}
@@ -149,8 +153,9 @@ const DiarioClasseTabs = ({
       {activeTab === 'fechamento' && closureError && (
         <div className="p-6">
           <TechnicalDataError
+            automaticRecovery={accessMode === 'PROFESSOR'}
             title="Fechamento não carregado"
-            message="Os demais dados do diário continuam disponíveis em modo seguro. Tente carregar novamente o estado de fechamento."
+            message={accessMode === 'PROFESSOR' ? 'Os demais dados continuam disponíveis em modo seguro. A conexão será retomada automaticamente.' : 'Os demais dados do diário continuam disponíveis em modo seguro. Tente carregar novamente o estado de fechamento.'}
             retrying={closureRetrying}
             onRetry={onRetryClosure}
           />

@@ -12,6 +12,7 @@ import {
 import { DiarioActiveTab } from './diario-classe.types';
 
 interface DiarioClasseHeaderProps {
+  professorLayout?: boolean;
   disciplina: any;
   moduloNome: string;
   turma: any;
@@ -26,6 +27,7 @@ interface DiarioClasseHeaderProps {
 }
 
 const DiarioClasseHeader: React.FC<DiarioClasseHeaderProps> = ({
+  professorLayout = false,
   disciplina,
   moduloNome,
   turma,
@@ -39,7 +41,7 @@ const DiarioClasseHeader: React.FC<DiarioClasseHeaderProps> = ({
   setActiveTab,
 }) => (
   <>
-    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+    <div className={`${professorLayout ? 'professor-diary-header ' : ''}flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6`}>
       <div className="flex items-center gap-4">
         <button
           onClick={onBack}
@@ -76,7 +78,7 @@ const DiarioClasseHeader: React.FC<DiarioClasseHeaderProps> = ({
     </div>
 
     {isReadOnly && (
-      <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-bold text-amber-900">
+      <div className={`${professorLayout ? 'professor-diary-readonly ' : ''}mb-6 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-bold text-amber-900`}>
         <div className="flex items-start gap-3">
           <LockKeyhole size={18} className="mt-0.5 shrink-0 text-amber-700" />
           <div>
@@ -87,7 +89,7 @@ const DiarioClasseHeader: React.FC<DiarioClasseHeaderProps> = ({
       </div>
     )}
 
-    <div className="bg-white rounded-2xl border border-slate-200 p-6 mb-6 shadow-sm">
+    <div className={`${professorLayout ? 'professor-diary-meta ' : ''}bg-white rounded-2xl border border-slate-200 p-6 mb-6 shadow-sm`}>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <div>
           <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">Curso</p>
@@ -112,7 +114,7 @@ const DiarioClasseHeader: React.FC<DiarioClasseHeaderProps> = ({
 
     <nav
       aria-label="Seções do diário"
-      className="mb-6 flex max-w-full flex-nowrap items-center gap-6 overflow-x-auto border-b border-slate-200 bg-white px-5 pb-2 [scrollbar-color:#94a3b8_#e2e8f0] [scrollbar-width:thin] [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-slate-400 [&::-webkit-scrollbar-thumb:hover]:bg-slate-500 [&::-webkit-scrollbar-track]:rounded-full [&::-webkit-scrollbar-track]:bg-slate-200"
+      className={`${professorLayout ? 'professor-diary-tabs ' : ''}mb-6 flex max-w-full flex-nowrap items-center gap-6 overflow-x-auto border-b border-slate-200 bg-white px-5 pb-2 [scrollbar-color:#94a3b8_#e2e8f0] [scrollbar-width:thin] [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-slate-400 [&::-webkit-scrollbar-thumb:hover]:bg-slate-500 [&::-webkit-scrollbar-track]:rounded-full [&::-webkit-scrollbar-track]:bg-slate-200`}
     >
       <TabButton active={activeTab === 'frequencia'} onClick={() => setActiveTab('frequencia')} icon={<Calendar size={15} />}>
         Frequência

@@ -5,7 +5,6 @@ import {
   ImageUp,
   Loader2,
   LockKeyhole,
-  RefreshCw,
   ShieldCheck,
   Upload,
 } from 'lucide-react';
@@ -39,6 +38,7 @@ const ProfessorSignaturePanel: React.FC<ProfessorSignaturePanelProps> = ({
     queryKey: ['signatures', 'professor', professorId],
     queryFn: () => assinaturasRegistryService.getProfessorSignature(professorId),
     enabled: Boolean(professorId),
+    refetchOnReconnect: 'always',
   });
 
   const uploadMutation = useMutation({
@@ -95,21 +95,16 @@ const ProfessorSignaturePanel: React.FC<ProfessorSignaturePanelProps> = ({
 
         <div className="grid gap-5 lg:grid-cols-[1.15fr_0.85fr]">
           <section className="overflow-hidden rounded-3xl border border-slate-100 bg-white shadow-sm">
-            <div className="flex min-h-64 items-center justify-center bg-[linear-gradient(135deg,#f8fafc,#faf5ff)] p-6 sm:p-8">
+            <div className="flex min-h-48 items-center justify-center bg-[linear-gradient(135deg,#f8fafc,#faf5ff)] p-6 sm:p-8">
               {signatureQuery.isLoading ? (
                 <div className="flex items-center gap-2 text-sm font-semibold text-slate-600">
-                  <Loader2 size={18} className="animate-spin text-purple-600" />
+                  <Loader2 size={18} className="animate-spin text-blue-600" />
                   Carregando assinatura...
                 </div>
               ) : signatureQuery.isError ? (
-                <button
-                  type="button"
-                  onClick={() => signatureQuery.refetch()}
-                  className="flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700 transition hover:bg-rose-100"
-                >
-                  <RefreshCw size={15} />
-                  Tentar carregar novamente
-                </button>
+                <p role="alert" className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                  A assinatura está indisponível. A consulta será retomada automaticamente ao reconectar.
+                </p>
               ) : signature?.previewUrl ? (
                 <img
                   src={signature.previewUrl}
@@ -118,7 +113,7 @@ const ProfessorSignaturePanel: React.FC<ProfessorSignaturePanelProps> = ({
                 />
               ) : (
                 <div className="w-full max-w-md text-center">
-                  <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-purple-100 bg-white text-purple-700 shadow-sm">
+                  <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-blue-100 bg-white text-blue-700 shadow-sm">
                     <ImageUp size={25} strokeWidth={1.8} />
                   </div>
                   <p className="text-base font-extrabold text-[#001a33]">Adicione sua assinatura em imagem</p>
@@ -129,7 +124,7 @@ const ProfessorSignaturePanel: React.FC<ProfessorSignaturePanelProps> = ({
                     type="button"
                     onClick={openFilePicker}
                     disabled={uploadMutation.isPending}
-                    className="mx-auto mt-5 flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#6d28d9] px-6 py-3 text-sm font-bold text-white shadow-md shadow-purple-900/15 transition hover:bg-[#5b21b6] focus:outline-none focus:ring-4 focus:ring-purple-200 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="mx-auto mt-5 flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#4169e1] px-6 py-3 text-sm font-bold text-white shadow-md shadow-blue-900/15 transition hover:bg-[#294eac] focus:outline-none focus:ring-4 focus:ring-blue-200 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {uploadMutation.isPending ? (
                       <Loader2 size={18} className="animate-spin" />
@@ -181,8 +176,8 @@ const ProfessorSignaturePanel: React.FC<ProfessorSignaturePanelProps> = ({
           </section>
 
           <aside className="space-y-3">
-            <div className="rounded-3xl border border-purple-100 bg-purple-50/60 p-5">
-              <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-2xl bg-white text-purple-700 shadow-sm">
+            <div className="rounded-3xl border border-blue-100 bg-blue-50/60 p-5">
+              <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-2xl bg-white text-blue-700 shadow-sm">
                 <ShieldCheck size={19} />
               </div>
               <h5 className="text-sm font-extrabold text-[#001a33]">Arquivo protegido</h5>

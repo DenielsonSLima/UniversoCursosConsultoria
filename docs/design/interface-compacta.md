@@ -24,6 +24,10 @@ Referência aprovada pelo usuário em 05–07/11/2026: fontes mais leves, menos 
 - Não reduzir fonte até tornar CPF, status ou ajuda ilegíveis; ajustar largura, quebra e hierarquia primeiro.
 - Não aplicar estilos de tela aos PDFs, documentos de impressão ou captura de modelos.
 
+## Atualização automática
+
+- Não oferecer botões manuais para atualizar, recarregar ou sincronizar dados. O sistema usa TanStack Query e Realtime: invalidar o menor escopo após mutações/eventos, recuperar conexão automaticamente e usar retry limitado. Mostrar estado de carregamento/erro sem transferir a atualização dos dados ao usuário.
+
 ## Interação dos seletores
 
 `InstitutionalSelect` mantém opção selecionada por ID, pesquisa local com acentos, teclado, ARIA, opção desabilitada, lista vazia, carregamento, erro e validação de obrigatório. Seu painel é próprio do sistema e usa portal para evitar recorte.

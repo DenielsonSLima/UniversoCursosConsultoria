@@ -1,9 +1,9 @@
 @media screen {
-  body:has(#root .biblioteca-workspace) .biblioteca-upload-overlay {
+  body:has(#root :is(.biblioteca-workspace,.professor-library)) .biblioteca-upload-overlay {
     padding: 12px;
   }
 
-  body:has(#root .biblioteca-workspace) .biblioteca-dialog.biblioteca-upload-dialog {
+  body:has(#root :is(.biblioteca-workspace,.professor-library)) .biblioteca-dialog.biblioteca-upload-dialog {
     padding: 0;
     border-radius: 12px;
     max-height: calc(100dvh - 24px);

@@ -101,13 +101,13 @@ const AtividadesExtraClasse: React.FC<AtividadesExtraClasseProps> = (props) => {
       return (
         <div className="rounded-2xl border border-red-100 bg-red-50 p-5 text-xs font-bold text-red-700">
           <p>Não consegui carregar as atividades e os alunos desta turma.</p>
-          <button
+          {props.modo === 'PROFESSOR' ? <p role="status" className="mt-3 font-normal">A conexão será retomada automaticamente.</p> : <button
             type="button"
             onClick={() => void retryLoad()}
             className="mt-3 rounded-xl border border-red-200 bg-white px-3 py-2 text-[10px] font-black uppercase tracking-widest text-red-700"
           >
             Tentar novamente
-          </button>
+          </button>}
         </div>
       );
     }

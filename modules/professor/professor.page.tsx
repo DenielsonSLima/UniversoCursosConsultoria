@@ -53,16 +53,28 @@ interface ProfessorPoloTransitionState {
 const POLO_TRANSITION_MINIMUM_MS = 550;
 const POLO_TRANSITION_SUCCESS_MS = 450;
 
-const ProfessorConnectionError: React.FC<{ onRetry: () => void }> = ({ onRetry }) => (
-  <main className="flex min-h-screen items-center justify-center bg-slate-100 p-6">
-    <section className="w-full max-w-xl rounded-3xl border border-rose-100 bg-white p-8 text-center shadow-xl">
-      <RefreshCw className="mx-auto text-rose-600" size={28} />
-      <h1 className="mt-4 text-xl font-black text-[#001a33]">Não foi possível conferir o acesso</h1>
-      <p className="mt-2 text-sm font-medium leading-relaxed text-slate-500">Nenhum dado do portal foi liberado. Verifique a conexão e tente novamente; sua sessão não foi encerrada.</p>
-      <button type="button" onClick={onRetry} className="mt-6 inline-flex h-11 items-center gap-2 rounded-xl bg-[#001a33] px-5 text-xs font-black uppercase tracking-wide text-white hover:bg-blue-900"><RefreshCw size={16} /> Tentar novamente</button>
-    </section>
-  </main>
-);
+const ProfessorConnectionError: React.FC<{ onRetry: () => void }> = ({ onRetry }) => {
+  useEffect(() => {
+    const recover = () => { if (document.visibilityState === 'visible') onRetry(); };
+    window.addEventListener('online', recover);
+    window.addEventListener('focus', recover);
+    document.addEventListener('visibilitychange', recover);
+    return () => {
+      window.removeEventListener('online', recover);
+      window.removeEventListener('focus', recover);
+      document.removeEventListener('visibilitychange', recover);
+    };
+  }, [onRetry]);
+  return (
+    <main className="flex min-h-dvh items-center justify-center bg-slate-100 p-4">
+      <section className="w-full max-w-xl rounded-xl border border-rose-100 bg-white p-6 text-center">
+        <RefreshCw className="mx-auto text-rose-600" size={24} />
+        <h1 className="mt-4 text-lg font-medium text-[#122b42]">Não foi possível conferir o acesso</h1>
+        <p role="status" className="mt-2 text-sm leading-relaxed text-slate-600">A conferência será retomada automaticamente quando a conexão voltar ou você retornar ao portal. Sua sessão foi preservada.</p>
+      </section>
+    </main>
+  );
+};
 
 const ProfessorPage: React.FC = () => {
   const navigate = useNavigate();
@@ -323,6 +335,7 @@ const ProfessorPage: React.FC = () => {
       case 'assinatura-eletronica':
         return (
           <ProfessorAssinaturasPage
+            professorId={professorId}
             capabilities={profile.capabilities}
             contextId={profile.contextId || ''}
             poloId={currentPoloId}

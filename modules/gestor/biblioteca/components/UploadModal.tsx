@@ -58,6 +58,7 @@ const UploadModal: React.FC<UploadModalProps> = ({
   const [liberacaoData, setLiberacaoData] = useState('');
   const [liberacaoDataFim, setLiberacaoDataFim] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [validationError, setValidationError] = useState('');
 
   const [searchCurso, setSearchCurso] = useState('');
   const [searchTurma, setSearchTurma] = useState('');
@@ -86,6 +87,7 @@ const UploadModal: React.FC<UploadModalProps> = ({
 
   useEffect(() => {
     if (isOpen) {
+      setValidationError('');
       setCurrentStep(0);
       setAccessMode(isProfessorUpload ? 'PRIVADO' : 'ALUNOS');
       setAvailabilityMode('FREE');
@@ -208,17 +210,18 @@ const UploadModal: React.FC<UploadModalProps> = ({
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setValidationError('');
     if (e.target.files && e.target.files[0]) {
       const selectedFile = e.target.files[0];
       const { ext } = detectFileType(selectedFile.name);
       const allowedExtensions = ['PDF', 'DOC', 'DOCX', 'XLS', 'XLSX', 'JPG', 'PNG', 'JPEG', 'GIF', 'WEBP'];
       if (selectedFile.size > 10 * 1024 * 1024) {
-        alert('Arquivo excede 10MB. Selecione um arquivo menor.');
+        setValidationError('Arquivo excede 10MB. Selecione um arquivo menor.');
         e.target.value = '';
         return;
       }
       if (!allowedExtensions.includes(ext)) {
-        alert('Formato não suportado. Use PDF, DOC/DOCX, XLS/XLSX ou JPG/PNG/GIF/WEBP.');
+        setValidationError('Formato não suportado. Use PDF, DOC/DOCX, XLS/XLSX ou JPG/PNG/GIF/WEBP.');
         e.target.value = '';
         return;
       }
@@ -296,9 +299,10 @@ const UploadModal: React.FC<UploadModalProps> = ({
   };
 
   const goNext = () => {
+    setValidationError('');
     const validationMessage = validateStep(currentStep);
     if (validationMessage) {
-      alert(validationMessage);
+      setValidationError(validationMessage);
       return;
     }
 
@@ -306,16 +310,19 @@ const UploadModal: React.FC<UploadModalProps> = ({
   };
 
   const goBack = () => {
+    setValidationError('');
     setCurrentStep(prev => Math.max(prev - 1, 0) as WizardStep);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
+    setValidationError('');
 
     for (const step of [0, 1, 2] as WizardStep[]) {
       const validationMessage = validateStep(step);
       if (validationMessage) {
-        alert(validationMessage);
+        setValidationError(validationMessage);
         setCurrentStep(step);
         return;
       }
@@ -367,7 +374,7 @@ const UploadModal: React.FC<UploadModalProps> = ({
       });
       onClose();
     } catch (err) {
-      alert('Não foi possível publicar o documento. Tente novamente.');
+      setValidationError('Não foi possível publicar o documento. Tente novamente.');
     } finally {
       setIsSubmitting(false);
     }
@@ -375,7 +382,7 @@ const UploadModal: React.FC<UploadModalProps> = ({
 
   return createPortal(
     <div className="biblioteca-upload-overlay fixed inset-0 z-[100] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-[#001a33]/60 backdrop-blur-sm transition-opacity" onClick={onClose}></div>
+      <div className="absolute inset-0 bg-[#001a33]/60 backdrop-blur-sm transition-opacity" onClick={() => { if (!isSubmitting) onClose(); }}></div>
 
       <div className="biblioteca-dialog biblioteca-upload-dialog relative bg-white rounded-[2rem] w-full max-w-5xl shadow-2xl animate-fadeIn border border-slate-100 max-h-[92vh] overflow-hidden flex flex-col">
         <div className="biblioteca-upload-header flex justify-between items-start gap-5 px-7 py-6 border-b border-slate-100 shrink-0">
@@ -383,11 +390,12 @@ const UploadModal: React.FC<UploadModalProps> = ({
             <h3 className="text-xl font-black text-[#001a33] uppercase tracking-tight">Publicar Documento</h3>
             <p className="text-xs text-slate-500 font-medium">Organize o envio em etapas antes de salvar no acervo.</p>
           </div>
-          <button onClick={onClose} className="p-2 rounded-full hover:bg-slate-50 text-slate-400 hover:text-red-500 transition-colors">
+          <button disabled={isSubmitting} onClick={onClose} className="p-2 rounded-full hover:bg-slate-50 text-slate-400 hover:text-red-500 transition-colors">
             <X size={20} />
           </button>
         </div>
 
+        {validationError && <p role="alert" className="mx-4 mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">{validationError}</p>}
         <div className="biblioteca-upload-navigation px-7 pt-5 pb-3 border-b border-slate-100 shrink-0">
           <div className="biblioteca-upload-stepper grid grid-cols-4 gap-2">
             {steps.map((step, index) => {

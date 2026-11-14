@@ -48,7 +48,8 @@ export const professorFinanceiroListOptions = (
   ),
   enabled: Boolean(professorId && poloId),
   staleTime: 30_000,
-  retry: 1,
+  retry: 2,
+  refetchOnReconnect: 'always',
 });
 
 export const professorFinanceiroReceiptOptions = (
@@ -59,5 +60,6 @@ export const professorFinanceiroReceiptOptions = (
   enabled: Boolean(request.professorId && request.poloId && request.paymentId),
   staleTime: 0,
   gcTime: 0,
-  retry: 1,
+  retry: 2,
+  refetchOnReconnect: 'always',
 });

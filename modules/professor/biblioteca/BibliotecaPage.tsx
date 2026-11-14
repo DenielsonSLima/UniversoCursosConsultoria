@@ -1,3 +1,4 @@
+import '../components/professor-pages.css';
 import React, { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { BookOpen, Folder, FileText, Lock } from 'lucide-react';
@@ -46,7 +47,7 @@ const BibliotecaPage: React.FC<BibliotecaPageProps> = ({ professorId }) => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto animate-fadeIn min-h-[600px] pb-12 space-y-8 text-xs font-sans">
+    <div className="professor-page professor-library mx-auto animate-fadeIn space-y-5">
       
       {/* Header Panel */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 border-b border-slate-100 pb-6">
@@ -60,9 +61,9 @@ const BibliotecaPage: React.FC<BibliotecaPageProps> = ({ professorId }) => {
       </div>
 
       {/* Tabs Navigation */}
-      <div className="bg-white p-1.5 rounded-[2rem] border border-slate-150 shadow-sm flex gap-1 w-full max-w-md">
+      <div className="professor-page-tabs" role="tablist" aria-label="Acervo da biblioteca">
           <button
-              onClick={() => setActiveTab('meus-arquivos')}
+              role="tab" aria-selected={activeTab === 'meus-arquivos'} onClick={() => setActiveTab('meus-arquivos')}
               className={`flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-wider transition-all ${
                   activeTab === 'meus-arquivos' 
                   ? 'bg-purple-600 text-white shadow-md' 
@@ -72,7 +73,7 @@ const BibliotecaPage: React.FC<BibliotecaPageProps> = ({ professorId }) => {
               <Folder size={14} /> Meus Arquivos
           </button>
           <button
-              onClick={() => setActiveTab('institucional')}
+              role="tab" aria-selected={activeTab === 'institucional'} onClick={() => setActiveTab('institucional')}
               className={`flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-wider transition-all ${
                   activeTab === 'institucional' 
                   ? 'bg-[#001a33] text-white shadow-md' 

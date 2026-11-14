@@ -1,3 +1,4 @@
+import DiarioConteudoMobile from './mobile/DiarioConteudoMobile';
 import React, { Dispatch, SetStateAction } from 'react';
 import { BookOpen, CheckCircle2, Loader2, Save } from 'lucide-react';
 import { isAcademicClassContentPending } from '../../../../../../../lib/academicClassMeetings';
@@ -7,7 +8,8 @@ import DiarioExtraClasseConteudo from './DiarioExtraClasseConteudo';
 import { extraClassOriginLabel, orderedDiaryContent } from './diario-content-order';
 import { useDiarioDocumentary } from './historico/DiarioDocumentaryContext';
 
-interface DiarioConteudoTabProps {
+export interface DiarioConteudoTabProps {
+  mobileLayout?: boolean;
   aulas: DiarioAula[];
   extraClassCredit?: DiarioExtraClassCredit;
   localTitulos: Record<string, string>;
@@ -21,7 +23,9 @@ interface DiarioConteudoTabProps {
   onSavePratica: (aulaId: string, text: string) => void;
 }
 
-const DiarioConteudoTab: React.FC<DiarioConteudoTabProps> = ({
+const DiarioConteudoTab: React.FC<DiarioConteudoTabProps> = (props) => {
+  const {
+  mobileLayout = false,
   aulas,
   extraClassCredit,
   localTitulos,
@@ -33,11 +37,13 @@ const DiarioConteudoTab: React.FC<DiarioConteudoTabProps> = ({
   savingAulaId,
   onSaveAulaTitle,
   onSavePratica,
-}) => {
+} = props;
   const documentary = useDiarioDocumentary();
   const entries = orderedDiaryContent<DiarioAula>(aulas, documentary ? undefined : extraClassCredit);
   return (
-  <div className="p-6">
+  <>
+  {mobileLayout && <DiarioConteudoMobile {...props} />}
+  <div className={mobileLayout ? 'professor-diary-desktop p-6' : 'p-6'}>
     {aulas.length === 0 ? (
       <div className="py-20 text-center text-slate-400 flex flex-col items-center">
         <BookOpen size={48} className="mb-4 opacity-50 text-slate-300" />
@@ -154,6 +160,7 @@ const DiarioConteudoTab: React.FC<DiarioConteudoTabProps> = ({
       </div>
     )}
   </div>
+  </>
   );
 };
 

@@ -1,0 +1,48 @@
+@media screen {
+  .professor-dados { color: #334155; font-size: 13px; line-height: 1.5; }
+  .professor-dados section + section { margin-top: 22px; padding-top: 20px; border-top: 1px solid #e3e9ee; }
+  .professor-dados h3 { margin: 0; color: #122b42; font-size: 14px; font-weight: 600; }
+  .professor-dados-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+  .professor-dados-personal { display: flex; align-items: flex-start; gap: 20px; }
+  .professor-dados-photo { display: flex; flex: 0 0 88px; flex-direction: column; align-items: center; gap: 8px; }
+  .professor-dados-avatar { position: relative; width: 80px; height: 80px; overflow: hidden; border: 1px solid #e3e9ee; border-radius: 12px; background: #f1f5f9; }
+  .professor-dados-fields { flex: 1; min-width: 0; }
+  .professor-dados-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+  .professor-dados-grid--edit { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .professor-dados-wide { grid-column: span 2; }
+  .professor-dados-field { min-width: 0; }
+  .professor-dados-field > span, .professor-dados label { display: block; margin-bottom: 5px; color: #607286; font-size: 12px; font-weight: 500; }
+  .professor-dados-field p { margin: 0; overflow-wrap: anywhere; color: #122b42; font-size: 13px; }
+  .professor-dados-field .professor-dados-empty { color: #607286; }
+  .professor-dados input:not([type='file']) { width: 100%; height: 38px; padding: 8px 11px; border: 1px solid #dbe3ed; border-radius: 8px; background: white; font-size: 13px; font-weight: 400; outline: none; }
+  .professor-dados .institutional-select input { padding-right: 32px; padding-left: 33px; }
+  .professor-dados input:focus { border-color: #4169e1; box-shadow: 0 0 0 2px rgb(65 105 225 / 12%); }
+  .professor-dados input:read-only { background: #f8fafc; color: #607286; cursor: not-allowed; }
+  .professor-dados button { display: inline-flex; min-height: 36px; align-items: center; justify-content: center; gap: 7px; padding: 7px 12px; border: 1px solid #dbe3ed; border-radius: 8px; background: #fff; color: #334155; font-size: 12px; font-weight: 500; }
+  .professor-dados button:hover { background: #f8fafc; }
+  .professor-dados button:disabled { cursor: wait; opacity: .6; }
+  .professor-dados button.professor-dados-primary { border-color: #001a33; background: #001a33; color: #fff; }
+  .professor-dados button.professor-dados-link { min-height: 28px; padding: 2px 0; border: 0; background: transparent; color: #4169e1; }
+  .professor-dados .professor-dados-photo label { display: inline-flex; min-height: 28px; align-items: center; gap: 5px; margin: 0; color: #4169e1; cursor: pointer; }
+  .professor-dados-help { margin: 5px 0; color: #607286; font-size: 12px; font-weight: 400; }
+  .professor-dados-label-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .professor-dados-polos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 12px; }
+  .professor-dados-polo { display: flex; min-width: 0; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid #e3e9ee; border-radius: 8px; background: #f8fafc; }
+  .professor-dados-polo span { min-width: 0; overflow-wrap: anywhere; text-align: left; }
+  .professor-dados-polo small { display: block; margin-top: 2px; color: #607286; font-size: 12px; font-weight: 400; }
+  .professor-dados button.professor-dados-polo { justify-content: space-between; }
+  .professor-dados button.professor-dados-polo[aria-pressed='true'] { border-color: #b9c8f8; background: #eff4ff; color: #294eac; }
+  .professor-dados-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 22px; padding-top: 16px; border-top: 1px solid #e3e9ee; }
+  @media (max-width: 767px) {
+    .professor-dados-personal { flex-direction: column; gap: 16px; }
+    .professor-dados-photo { flex-basis: auto; flex-direction: row; flex-wrap: wrap; }
+    .professor-dados-avatar { width: 64px; height: 64px; }
+    .professor-dados-fields { width: 100%; }
+    .professor-dados-grid, .professor-dados-grid--edit, .professor-dados-polos { grid-template-columns: minmax(0, 1fr); }
+    .professor-dados-wide { grid-column: auto; }
+    .professor-dados input:not([type='file']) { height: 44px; font-size: 16px; }
+    .professor-dados button, .professor-dados .professor-dados-photo label { min-height: 44px; }
+    .professor-dados-label-row { align-items: baseline; }
+    .professor-dados-actions { flex-wrap: wrap; }
+  }
+}

@@ -44,7 +44,7 @@ const ProfessorPersonalStep: React.FC<ProfessorPersonalStepProps> = ({
       <h4 className="text-xs font-black uppercase tracking-wider">Dados pessoais e identificação</h4>
     </div>
 
-    <div className="flex flex-col items-center gap-6 rounded-2xl border border-slate-200 bg-slate-50 p-5 md:flex-row">
+    <div className="professor-registration-photo-row flex items-center gap-4">
       <div className="partner-registration-photo group relative h-24 w-24 shrink-0 overflow-hidden rounded-full border-2 border-slate-200 bg-slate-100">
         {formData.foto ? (
           <img src={formData.foto} alt="Prévia da foto do professor" className="h-full w-full object-cover" />
@@ -77,7 +77,7 @@ const ProfessorPersonalStep: React.FC<ProfessorPersonalStepProps> = ({
       </div>
     </div>
 
-    <fieldset className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+    <fieldset className="professor-registration-polo-section">
       <legend className="px-1 text-[10px] font-black uppercase tracking-wider text-slate-500">
         Polos / unidades vinculadas <span className="text-red-500">*</span>
       </legend>
@@ -99,7 +99,7 @@ const ProfessorPersonalStep: React.FC<ProfessorPersonalStepProps> = ({
       )}
 
       {!polosLoading && !polosError && (
-        <div className="mt-3 grid grid-cols-1 gap-2">
+        <div className="professor-registration-polos mt-3 grid grid-cols-1 gap-2 md:grid-cols-2">
           {polosList.map((polo) => {
             const isSelected = formData.poloIds.includes(polo.id);
             return (
@@ -108,15 +108,11 @@ const ProfessorPersonalStep: React.FC<ProfessorPersonalStepProps> = ({
                 key={polo.id}
                 aria-pressed={isSelected}
                 onClick={() => onTogglePolo(polo.id)}
-                className={`flex w-full items-center justify-between gap-3 rounded-xl border px-4 py-3 text-left transition-all ${
-                  isSelected
-                    ? 'border-purple-600 bg-purple-600 text-white shadow-md shadow-purple-600/10'
-                    : 'border-slate-200 bg-white text-slate-700 hover:border-purple-300 hover:bg-purple-50'
-                }`}
+                className={`professor-registration-polo ${isSelected ? 'is-selected' : ''}`}
               >
                 <span className="min-w-0">
-                  <span className="block truncate text-xs font-black uppercase tracking-wider">{polo.nome}</span>
-                  <span className={`mt-1 block text-xs font-medium ${isSelected ? 'text-purple-100' : 'text-slate-500'}`}>
+                  <span className="block break-words text-xs font-medium">{polo.nome}</span>
+                  <span className="mt-0.5 block text-xs text-slate-500">
                     {formatPoloLocation(polo)}
                   </span>
                 </span>

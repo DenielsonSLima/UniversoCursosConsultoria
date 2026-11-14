@@ -1,11 +1,12 @@
-// File: modules/gestor/parceiros/components/viewparceiros/professor/ParceiroProfessorDados.tsx
-
 import React, { useState, useEffect, useRef } from 'react';
-import { Save, Edit2, Camera, Loader2, User } from 'lucide-react';
+import { Save, Edit2, Camera, CheckCircle2, Loader2, User } from 'lucide-react';
 import { parceirosService } from '../../../parceiros.service';
 import { formatCpf } from '../../../../../../lib/documentFormatters';
 import { RACA_COR_OPTIONS } from '../../../utils/parceiros.constants';
 import { canCorrectPendingPartnerEmail } from '../../../partner-email-update';
+import InstitutionalSelect from '../../../../../shared/components/InstitutionalSelect';
+import { UFS } from '../../formularioparceiros/professor/professor-form.model';
+import './professor-dados.css';
 
 interface ParceiroProfessorDadosProps {
   data: any;
@@ -14,12 +15,23 @@ interface ParceiroProfessorDadosProps {
   onPhotoUploadError?: (message: string) => void;
 }
 
+const DisplayField = ({ label, value, wide = false }: { label: string; value: any; wide?: boolean }) => (
+  <div className={`professor-dados-field ${wide ? 'professor-dados-wide' : ''}`}>
+    <span>{label}</span>
+    <p>{value || <span className="professor-dados-empty">Não informado</span>}</p>
+  </div>
+);
+const poloLocation = (polo: any) => [polo?.cidade, polo?.uf || polo?.estado].filter(Boolean).join(' / ');
+
 const ParceiroProfessorDados: React.FC<ParceiroProfessorDadosProps> = ({ data, onChange, onPhotoUploaded, onPhotoUploadError }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState(data);
   const [polosList, setPolosList] = useState<any[]>([]);
+  const [polosError, setPolosError] = useState('');
+  const [polosLoading, setPolosLoading] = useState(true);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
-  const [isSaving, setIsSaving] = useState(false), [saveError, setSaveError] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
   const saving = useRef(false);
   const hasLinkedAccess = Boolean(data.authUserId || formData.authUserId);
   const emailReadOnly = hasLinkedAccess && !canCorrectPendingPartnerEmail(data);
@@ -29,311 +41,182 @@ const ParceiroProfessorDados: React.FC<ParceiroProfessorDadosProps> = ({ data, o
   }, [data, isEditing]);
 
   useEffect(() => {
-    const fetchPolos = async () => {
-      try {
-        const res = await parceirosService.getPolos();
-        setPolosList(res);
-      } catch (err) {
-        console.error('Erro ao buscar polos:', err);
-      }
-    };
-    fetchPolos();
+    let active = true;
+    parceirosService.getPolos().then((polos) => {
+      if (active) setPolosList(polos);
+    }).catch(() => {
+      if (active) setPolosError('Não foi possível carregar as unidades vinculadas.');
+    }).finally(() => { if (active) setPolosLoading(false); });
+    return () => { active = false; };
   }, []);
 
-  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    e.target.value = '';
-    if (!file) return;
+  const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file || isSaving || isUploadingPhoto) return;
     setIsUploadingPhoto(true);
     try {
       const url = await parceirosService.uploadProfilePhoto(data.id, formData, file);
       const nextData = { ...formData, foto: url };
       setFormData(nextData);
       onPhotoUploaded?.(url, nextData);
-    } catch (err: any) {
-      onPhotoUploadError?.(err?.message || 'Erro ao enviar foto.');
+    } catch (error: any) {
+      onPhotoUploadError?.(error?.message || 'Erro ao enviar foto.');
     } finally {
       setIsUploadingPhoto(false);
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value, type } = e.target;
+  const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value, type } = event.target;
     if (name === 'email' && emailReadOnly) return;
-    let finalValue = value;
-    if (type === 'text' || e.target.tagName === 'SELECT') {
-      if (name !== 'email') {
-        finalValue = value.toUpperCase();
-      }
-    }
-    const maskCPF = (v: string) => v.replace(/\D/g,'').replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d{1,2})/,'$1-$2').replace(/(-\d{2})\d+?$/,'$1');
-    const maskCEP = (v: string) => v.replace(/\D/g,'').replace(/(\d{5})(\d)/,'$1-$2').replace(/(-\d{3})\d+?$/,'$1');
-    const maskPhone = (v: string) => v.replace(/\D/g,'').replace(/(\d{2})(\d)/,'($1) $2').replace(/(\d{5})(\d)/,'$1-$2').replace(/(-\d{4})\d+?$/,'$1');
-    const maskDate = (v: string) => v.replace(/\D/g,'').replace(/(\d{2})(\d)/,'$1/$2').replace(/(\d{2})(\d)/,'$1/$2').replace(/(\/\d{4})\d+?$/,'$1');
-
-    if (name === 'cpf') finalValue = maskCPF(finalValue);
-    if (name === 'cep') finalValue = maskCEP(finalValue);
-    if (name === 'telefone') finalValue = maskPhone(finalValue);
-    if (name === 'dataNascimento') finalValue = maskDate(finalValue);
-
-    setFormData({ ...formData, [name]: finalValue });
+    let finalValue = type === 'text' && name !== 'email' ? value.toUpperCase() : value;
+    if (name === 'cpf') finalValue = value.replace(/\D/g, '').slice(0, 11).replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d{1,2})/, '$1-$2');
+    if (name === 'cep') finalValue = value.replace(/\D/g, '').slice(0, 8).replace(/(\d{5})(\d)/, '$1-$2');
+    if (name === 'telefone') finalValue = value.replace(/\D/g, '').slice(0, 11).replace(/(\d{2})(\d)/, '($1) $2').replace(/(\d{5})(\d)/, '$1-$2');
+    setFormData((previous: any) => ({
+      ...previous,
+      [name]: finalValue,
+      ...(name === 'nome' ? { nomeCompleto: finalValue } : {}),
+      ...(name === 'telefone' ? { contato1: finalValue } : {}),
+    }));
   };
 
   const handleSave = async () => {
     if (saving.current || isUploadingPhoto) return;
-    saving.current = true; setIsSaving(true); setSaveError('');
-    try { await onChange(formData); setIsEditing(false); }
-    catch (error) { setSaveError(error instanceof Error ? error.message : 'Não foi possível salvar. Seus dados continuam em edição.'); }
-    finally { saving.current = false; setIsSaving(false); }
+    saving.current = true;
+    setIsSaving(true);
+    setSaveError('');
+    try {
+      await onChange(formData);
+      setIsEditing(false);
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : 'Não foi possível salvar. Seus dados continuam em edição.');
+    } finally {
+      saving.current = false;
+      setIsSaving(false);
+    }
   };
 
-  // Helper para renderizar os campos
-  const DisplayField = ({ label, value }: { label: string, value: any }) => (
-    <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-      <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">{label}</span>
-      <p className="font-medium text-[#001a33] mt-1">{value || <span className="text-slate-400 italic">Não informado</span>}</p>
-    </div>
-  );
+  const togglePolo = (poloId: string) => {
+    setFormData((previous: any) => {
+      const current = previous.poloIds || [];
+      const next = current.includes(poloId) ? current.filter((id: string) => id !== poloId) : [...current, poloId];
+      return { ...previous, poloIds: next, poloId: next[0] || '' };
+    });
+  };
 
   return (
-    <div className="">
-      {/* Dados Pessoais */}
-      <section className="mb-12">
-        <div className="flex justify-between items-center mb-6">
-            <h3 className="text-lg font-bold text-[#001a33] tracking-tight">Dados Pessoais</h3>
-            {!isEditing && (
-                <button 
-                  onClick={() => { setSaveError(''); setIsEditing(true); }}
-                  className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-blue-100 transition-colors"
-                >
-                  <Edit2 size={14} /> Editar
-                </button>
-            )}
+    <div className="professor-dados">
+      <section>
+        <div className="professor-dados-header">
+          <h3>Dados pessoais</h3>
+          {!isEditing && <button type="button" onClick={() => { setSaveError(''); setIsEditing(true); }}><Edit2 size={14} /> Editar</button>}
         </div>
-
-        <div className="flex flex-col md:flex-row gap-8 pt-4 mb-6">
-          {/* Foto do Professor */}
-          <div className="flex flex-col items-center gap-4 shrink-0">
-            <div className="w-40 h-40 rounded-full bg-slate-100 border-4 border-white shadow-lg relative overflow-hidden group">
-              {formData.foto ? (
-                  <img src={formData.foto} alt="Professor" className="w-full h-full object-cover" />
-              ) : (
-                  <div className="w-full h-full flex items-center justify-center text-slate-300">
-                      <User size={64} />
-                  </div>
+        <div className="professor-dados-personal">
+          <div className="professor-dados-photo">
+            <div className="professor-dados-avatar">
+              {formData.foto ? <img src={formData.foto} alt="Professor" className="h-full w-full object-cover" /> : (
+                <div className="flex h-full w-full items-center justify-center text-slate-400"><User size={36} /></div>
               )}
-              {isEditing && !isUploadingPhoto && (
-                <label className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
-                    <Camera className="text-white" size={32} />
-                    <input type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
-                </label>
-              )}
-              {isUploadingPhoto && (
-                <div className="absolute inset-0 bg-black/45 flex items-center justify-center text-white">
-                    <Loader2 className="animate-spin" size={32} />
-                </div>
-              )}
+              {isUploadingPhoto && <div className="absolute inset-0 flex items-center justify-center bg-black/45 text-white"><Loader2 size={24} className="animate-spin" /></div>}
             </div>
-            {isEditing && (
-              <div className="flex gap-3">
-                <label className="text-[10px] font-bold text-purple-600 uppercase tracking-wider hover:underline cursor-pointer">
-                  Alterar Foto
-                  <input type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} disabled={isUploadingPhoto} />
-                </label>
-                {formData.foto && (
-                  <button
-                    type="button"
-                    onClick={() => setFormData((prev: any) => ({ ...prev, foto: '' }))}
-                    className="text-[10px] font-bold text-red-500 uppercase tracking-wider hover:underline"
-                  >
-                    Remover
-                  </button>
-                )}
-              </div>
-            )}
+            {isEditing && <>
+              <label><Camera size={14} /> Alterar foto<input type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} disabled={isUploadingPhoto || isSaving} /></label>
+              {formData.foto && <button type="button" className="professor-dados-link" disabled={isSaving || isUploadingPhoto} onClick={() => setFormData((previous: any) => ({ ...previous, foto: '' }))}>Remover</button>}
+            </>}
           </div>
-
-          {/* Form Fields */}
-          <div className="flex-1">
+          <div className="professor-dados-fields">
             {isEditing ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="md:col-span-1 space-y-2">
-                    <label className="text-xs font-bold text-slate-500 uppercase ml-1">Nome Completo</label>
-                    <input type="text" name="nome" value={formData.nome || ''} onChange={handleChange} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[#001a33] font-bold focus:border-purple-500 outline-none" />
+              <fieldset disabled={isSaving} className="professor-dados-grid professor-dados-grid--edit">
+                <div>
+                  <label htmlFor="professor-nome">Nome completo</label>
+                  <input id="professor-nome" type="text" name="nome" value={formData.nome || ''} onChange={handleChange} />
                 </div>
-                <div className="md:col-span-1 space-y-2">
-                    <div className="flex justify-between items-center mb-1">
-                        <label className="text-xs font-bold text-slate-500 uppercase ml-1">Nome Social</label>
-                        <button type="button" onClick={() => setFormData({...formData, nomeSocial: formData.nome})} className="text-[10px] text-purple-600 font-bold uppercase tracking-wider hover:underline bg-purple-50 px-2 py-0.5 rounded">
-                            Usar Completo
-                        </button>
-                    </div>
-                    <input type="text" name="nomeSocial" value={formData.nomeSocial || ''} onChange={handleChange} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-purple-700 focus:border-purple-500 outline-none" placeholder="Como prefere ser chamado" />
+                <div>
+                  <div className="professor-dados-label-row"><label htmlFor="professor-nome-social">Nome social</label><button type="button" className="professor-dados-link" onClick={() => setFormData((previous: any) => ({ ...previous, nomeSocial: previous.nome }))}>Usar completo</button></div>
+                  <input id="professor-nome-social" type="text" name="nomeSocial" value={formData.nomeSocial || ''} onChange={handleChange} placeholder="Como prefere ser chamado" />
                 </div>
-                <div className="space-y-2">
-                    <label className="text-xs font-bold text-slate-500 uppercase ml-1">CPF</label>
-                    <input type="text" name="cpf" value={formData.cpf || ''} onChange={handleChange} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:border-purple-500 outline-none" />
+                <div>
+                  <label htmlFor="professor-cpf">CPF</label>
+                  <input id="professor-cpf" type="text" name="cpf" inputMode="numeric" maxLength={14} value={formData.cpf || ''} onChange={handleChange} />
                 </div>
-                <div className="space-y-2">
-                    <label className="text-xs font-bold text-slate-500 uppercase ml-1">Telefone</label>
-                    <input type="text" name="telefone" value={formData.telefone || ''} onChange={handleChange} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:border-purple-500 outline-none" />
+                <div>
+                  <label htmlFor="professor-telefone">Telefone</label>
+                  <input id="professor-telefone" type="text" name="telefone" inputMode="tel" value={formData.telefone || ''} onChange={handleChange} />
                 </div>
-                <div className="space-y-2">
-                    <label className="text-xs font-bold text-slate-500 uppercase ml-1">Raça/Cor</label>
-                    <select name="racaCor" value={formData.racaCor || ''} onChange={handleChange} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:border-purple-500 outline-none">
-                      <option value="">Selecione...</option>
-                      {RACA_COR_OPTIONS.map((option) => <option key={option} value={option}>{option}</option>)}
-                    </select>
+                <div>
+                  <label htmlFor="professor-raca">Raça/cor</label>
+                  <InstitutionalSelect id="professor-raca" ariaLabel="Raça/cor" value={formData.racaCor || ''} onValueChange={(racaCor) => setFormData((previous: any) => ({ ...previous, racaCor }))} options={[{ value: '', label: 'Não informado' }, ...RACA_COR_OPTIONS.map((value) => ({ value, label: value }))]} />
                 </div>
-                <div className="space-y-2 md:col-span-2">
-                    <label className="text-xs font-bold text-slate-500 uppercase ml-1">E-mail</label>
-                    {hasLinkedAccess && (
-                      <p className="text-[10px] font-semibold leading-relaxed text-slate-400">
-                        {emailReadOnly ? 'O e-mail de acesso já existente será preservado.' : 'Ao salvar, o e-mail do primeiro acesso será corrigido e um novo link será enviado.'}
-                      </p>
-                    )}
-                    <input type="email" name="email" value={formData.email || ''} onChange={handleChange} readOnly={emailReadOnly} disabled={isSaving} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:border-purple-500 outline-none read-only:cursor-not-allowed read-only:text-slate-500" />
+                <div className="professor-dados-wide">
+                  <label htmlFor="professor-email">E-mail</label>
+                  {hasLinkedAccess && <p className="professor-dados-help">{emailReadOnly ? 'O e-mail de acesso já existente será preservado.' : 'Ao salvar, o e-mail do primeiro acesso será corrigido e um novo link será enviado.'}</p>}
+                  <input id="professor-email" type="email" name="email" value={formData.email || ''} onChange={handleChange} readOnly={emailReadOnly} disabled={isSaving} />
                 </div>
-              </div>
+              </fieldset>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <div className="md:col-span-2"><DisplayField label="Nome Completo" value={formData.nome} /></div>
-                <DisplayField label="Nome Social" value={formData.nomeSocial || formData.nome} />
+              <div className="professor-dados-grid">
+                <DisplayField label="Nome completo" value={formData.nome} wide />
+                <DisplayField label="Nome social" value={formData.nomeSocial || formData.nome} />
                 <DisplayField label="CPF" value={formatCpf(formData.cpf)} />
                 <DisplayField label="Telefone" value={formData.telefone} />
-                <DisplayField label="Raça/Cor" value={formData.racaCor} />
-                <DisplayField label="E-mail" value={formData.email} />
+                <DisplayField label="Raça/cor" value={formData.racaCor} />
+                <DisplayField label="E-mail" value={formData.email} wide />
               </div>
             )}
           </div>
         </div>
       </section>
 
-      {/* Polos / Vínculos de Unidade */}
-      <section className="mb-12">
-        <h3 className="text-lg font-bold text-[#001a33] tracking-tight mb-6">Polos / Vínculos de Unidade</h3>
-        {isEditing ? (
-          <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200">
-            <label className="block text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-2 ml-0.5">Polos Vinculados (Selecione um ou mais)</label>
-            <div className="flex flex-wrap gap-3 mt-1">
-              {polosList.map((poloItem) => {
-                const isSelected = (formData.poloIds || []).includes(poloItem.id);
-                return (
-                  <button
-                    type="button"
-                    key={poloItem.id}
-                    onClick={() => {
-                      const currentPoloIds = formData.poloIds || [];
-                      const isAlreadySelected = currentPoloIds.includes(poloItem.id);
-                      let newPoloIds = [];
-                      if (isAlreadySelected) {
-                        newPoloIds = currentPoloIds.filter((id: string) => id !== poloItem.id);
-                      } else {
-                        newPoloIds = [...currentPoloIds, poloItem.id];
-                      }
-                      const firstPolo = newPoloIds[0] || '';
-                      const poloKey = firstPolo === '44444444-4444-4444-4444-444444444444' 
-                        ? 'matriz' 
-                        : (firstPolo === '55555555-5555-5555-5555-555555555555' ? 'estancia' : 'matriz');
-                      
-                      setFormData((prev: any) => ({
-                        ...prev,
-                        poloIds: newPoloIds,
-                        polo: poloKey
-                      }));
-                    }}
-                    className={`px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all border ${
-                      isSelected
-                        ? 'bg-purple-600 text-white border-purple-600 shadow-md shadow-purple-600/10'
-                        : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-                    }`}
-                  >
-                    {poloItem.nome}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        ) : (
-          <div className="flex flex-wrap gap-2">
-            {(formData.poloIds || []).length > 0 ? (
-              (formData.poloIds || []).map((pId: string) => {
-                const poloObj = polosList.find(p => p.id === pId);
-                const pName = poloObj ? poloObj.nome : (pId === '44444444-4444-4444-4444-444444444444' ? 'Matriz - Aracaju' : 'Polo Estância');
-                return (
-                  <span key={pId} className="px-3 py-1.5 bg-purple-50 text-purple-700 border border-purple-100 rounded-xl text-xs font-bold uppercase tracking-wider">
-                    {pName}
-                  </span>
-                );
-              })
-            ) : (
-              <span className="text-slate-400 italic text-sm">Nenhum polo vinculado</span>
-            )}
-          </div>
+      <section>
+        <h3>Polos / vínculos de unidade</h3>
+        {polosLoading && <p className="professor-dados-help" role="status">Carregando unidades…</p>}
+        {polosError && <p className="professor-dados-help" role="alert">{polosError}</p>}
+        {isEditing ? <>
+          <p className="professor-dados-help">Selecione uma ou mais unidades.</p>
+          <fieldset disabled={isSaving || polosLoading || Boolean(polosError)} className="professor-dados-polos">
+            {polosList.map((polo) => {
+              const selected = (formData.poloIds || []).includes(polo.id);
+              return <button type="button" key={polo.id} className="professor-dados-polo" aria-pressed={selected} onClick={() => togglePolo(polo.id)}>
+                <span>{polo.nome}<small>{poloLocation(polo)}</small></span>{selected && <CheckCircle2 size={16} className="shrink-0" />}
+              </button>;
+            })}
+          </fieldset>
+        </> : (
+          (formData.poloIds || []).length > 0 ? <div className="professor-dados-polos">
+            {formData.poloIds.map((id: string) => {
+              const polo = polosList.find((item) => item.id === id);
+              return <div key={id} className="professor-dados-polo"><span>{polo?.nome || 'Unidade vinculada'}{poloLocation(polo) && <small>{poloLocation(polo)}</small>}</span></div>;
+            })}
+          </div> : <p className="professor-dados-help">Nenhum polo vinculado</p>
         )}
       </section>
 
-      {/* Endereço */}
-      <section className="mb-12">
-        <h3 className="text-lg font-bold text-[#001a33] tracking-tight mb-6">Endereço</h3>
+      <section>
+        <div className="professor-dados-header"><h3>Endereço</h3></div>
         {isEditing ? (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="md:col-span-1 space-y-2">
-                <label className="text-xs font-bold text-slate-500 uppercase ml-1">CEP</label>
-                <input type="text" name="cep" value={formData.cep || ''} onChange={handleChange} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:border-purple-500 outline-none" />
-            </div>
-            <div className="md:col-span-2 space-y-2">
-                <label className="text-xs font-bold text-slate-500 uppercase ml-1">Rua / Avenida</label>
-                <input type="text" name="endereco" value={formData.endereco || ''} onChange={handleChange} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:border-purple-500 outline-none" />
-            </div>
-            <div className="md:col-span-1 space-y-2">
-                <label className="text-xs font-bold text-slate-500 uppercase ml-1">Bairro</label>
-                <input type="text" name="bairro" value={formData.bairro || ''} onChange={handleChange} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:border-purple-500 outline-none" />
-            </div>
-            <div className="md:col-span-1 space-y-2">
-                <label className="text-xs font-bold text-slate-500 uppercase ml-1">Cidade</label>
-                <input type="text" name="cidade" value={formData.cidade || ''} onChange={handleChange} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:border-purple-500 outline-none" />
-            </div>
-             <div className="md:col-span-1 space-y-2">
-                <label className="text-xs font-bold text-slate-500 uppercase ml-1">Estado</label>
-                <input type="text" name="estado" value={formData.estado || ''} onChange={handleChange} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:border-purple-500 outline-none" />
-            </div>
-          </div>
+          <fieldset disabled={isSaving} className="professor-dados-grid">
+            <div><label htmlFor="professor-cep">CEP</label><input id="professor-cep" type="text" name="cep" inputMode="numeric" maxLength={9} value={formData.cep || ''} onChange={handleChange} /></div>
+            <div className="professor-dados-wide"><label htmlFor="professor-endereco">Rua / avenida</label><input id="professor-endereco" type="text" name="endereco" value={formData.endereco || ''} onChange={handleChange} /></div>
+            <div><label htmlFor="professor-bairro">Bairro</label><input id="professor-bairro" type="text" name="bairro" value={formData.bairro || ''} onChange={handleChange} /></div>
+            <div><label htmlFor="professor-cidade">Cidade</label><input id="professor-cidade" type="text" name="cidade" value={formData.cidade || ''} onChange={handleChange} /></div>
+            <div><label htmlFor="professor-uf">Estado</label><InstitutionalSelect id="professor-uf" ariaLabel="Estado" value={formData.uf || formData.estado || ''} onValueChange={(uf) => setFormData((previous: any) => ({ ...previous, uf }))} options={[{ value: '', label: 'Não informado' }, ...UFS.map((value) => ({ value, label: value }))]} /></div>
+          </fieldset>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-             <div className="md:col-span-1"><DisplayField label="CEP" value={formData.cep} /></div>
-             <div className="md:col-span-2"><DisplayField label="Endereço" value={formData.endereco} /></div>
-             <DisplayField label="Bairro" value={formData.bairro} />
-             <DisplayField label="Cidade" value={formData.cidade} />
-             <DisplayField label="Estado" value={formData.estado} />
+          <div className="professor-dados-grid">
+            <DisplayField label="CEP" value={formData.cep} /><DisplayField label="Endereço" value={formData.endereco} wide />
+            <DisplayField label="Bairro" value={formData.bairro} /><DisplayField label="Cidade" value={formData.cidade} /><DisplayField label="Estado" value={formData.uf || formData.estado} />
           </div>
         )}
       </section>
-
-      {/* Form Actions */}
-      {saveError && <p role="alert" className="mb-4 text-sm text-red-700">{saveError}</p>}
-      {isEditing && (
-        <div className="flex justify-end gap-3 pt-6 border-t border-slate-100">
-           <button 
-             disabled={isSaving}
-             onClick={() => {
-                 setFormData(data);
-                 setSaveError('');
-                 setIsEditing(false);
-             }}
-             className="px-6 py-3 rounded-xl border border-slate-200 font-bold text-slate-500 uppercase tracking-widest text-xs hover:bg-slate-50 transition-colors"
-           >
-              Cancelar
-           </button>
-           <button 
-             onClick={handleSave}
-             disabled={isSaving || isUploadingPhoto}
-             className="flex items-center gap-2 px-6 py-3 rounded-xl bg-[#001a33] text-white font-bold uppercase tracking-widest text-xs hover:bg-purple-900 transition-colors shadow-lg shadow-purple-900/20"
-           >
-              {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />} {isSaving ? 'Salvando…' : 'Salvar Alterações'}
-           </button>
-        </div>
-      )}
+      {saveError && <p role="alert" className="mt-4 text-sm text-red-700">{saveError}</p>}
+      {isEditing && <div className="professor-dados-actions">
+        <button type="button" disabled={isSaving || isUploadingPhoto} onClick={() => { setFormData(data); setSaveError(''); setIsEditing(false); }}>Cancelar</button>
+        <button type="button" className="professor-dados-primary" onClick={handleSave} disabled={isSaving || isUploadingPhoto}>
+          {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />} {isSaving ? 'Salvando…' : 'Salvar Alterações'}
+        </button>
+      </div>}
     </div>
   );
 };

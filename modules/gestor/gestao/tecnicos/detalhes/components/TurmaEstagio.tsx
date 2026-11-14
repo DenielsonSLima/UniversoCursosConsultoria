@@ -279,6 +279,7 @@ const TurmaEstagio: React.FC<TurmaEstagioProps> = ({
     return (
       <div className="py-8">
         <TechnicalDataError
+          automaticRecovery={effectiveModo === 'PROFESSOR'}
           title="Dados do estágio não carregados"
           message="Avaliações e situação vacinal foram bloqueadas para impedir uma ficha vazia ou a liberação indevida de aluno com pendências."
           retrying={retryingCriticalData}

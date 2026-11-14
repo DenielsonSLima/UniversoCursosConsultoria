@@ -1,0 +1,38 @@
+@media screen {
+  .professor-screen { min-width: 0; color: #334155; font-size: 13px; line-height: 1.5; }
+  .professor-screen h2 { color: #122b42; font-size: 22px; font-weight: 500; }
+  .professor-screen h3 { color: #122b42; font-size: 15px; font-weight: 600; }
+  .professor-screen h4 { color: #122b42; font-size: 14px; font-weight: 600; }
+  .professor-screen :is(.uppercase,.tracking-widest,.tracking-wider,.tracking-wide) { text-transform: none; letter-spacing: normal; }
+  .professor-screen :is(.font-black,.font-extrabold,.font-bold) { font-weight: 600; }
+  .professor-screen :is(.text-\[8px\],.text-\[9px\],.text-\[10px\],.text-\[11px\]) { font-size: 12px; line-height: 1.5; }
+  .professor-screen .text-slate-400 { color: #607286; }
+  .professor-screen :is(.rounded-3xl,.rounded-\[2\.5rem\],.rounded-\[2rem\]) { border-radius: 12px; }
+  .professor-screen :is(.shadow-lg,.shadow-xl,.shadow-md,.shadow-sm) { box-shadow: none; }
+  .professor-card { min-width: 0; border: 1px solid #e3e9ee; border-radius: 12px; background: #fff; padding: 16px; }
+  .professor-heading { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+  .professor-heading h2, .professor-heading h3 { margin: 0; }
+  .professor-heading p { margin: 4px 0 0; color: #607286; font-size: 12px; }
+  .professor-button { display: inline-flex; min-height: 38px; align-items: center; justify-content: center; gap: 7px; border: 1px solid #dbe3ed; border-radius: 8px; background: #fff; padding: 8px 12px; color: #334155; font-size: 13px; font-weight: 500; }
+  .professor-button:hover { border-color: #b9c8f8; background: #f8fafc; }
+  .professor-button:disabled { cursor: not-allowed; opacity: .6; }
+  .professor-button--primary { border-color: #001a33; background: #001a33; color: white; }
+  .professor-button--primary:hover { background: #123959; }
+  .professor-tabs { display: flex; max-width: 100%; gap: 20px; overflow-x: auto; border-bottom: 1px solid #e3e9ee; }
+  .professor-tabs button { display: inline-flex; min-height: 42px; flex-shrink: 0; align-items: center; gap: 7px; border: 0; border-bottom: 2px solid transparent; background: transparent; padding: 8px 0; color: #607286; font-size: 13px; font-weight: 500; }
+  .professor-tabs button[aria-selected='true'] { border-bottom-color: #4169e1; color: #294eac; }
+  .professor-field { min-width: 0; }
+  .professor-field > label { display: block; margin-bottom: 5px; color: #607286; font-size: 12px; font-weight: 500; }
+  .professor-field > p { margin: 0; overflow-wrap: anywhere; color: #122b42; }
+  .professor-input { display: block; width: 100%; min-width: 0; min-height: 38px; border: 1px solid #dbe3ed; border-radius: 8px; background: white; padding: 8px 11px; font-size: 13px; outline: none; }
+  .professor-input:focus { border-color: #4169e1; box-shadow: 0 0 0 2px rgb(65 105 225 / 12%); }
+  .professor-field .institutional-select input { font-weight: 400; }
+  .professor-help { color: #607286; font-size: 12px; }
+  @media (max-width: 767px) {
+    .professor-screen h2 { font-size: 20px; }
+    .professor-card { padding: 14px; }
+    .professor-button { min-height: 44px; }
+    .professor-input { min-height: 44px; font-size: 16px; }
+    .professor-tabs button { min-height: 44px; }
+  }
+}

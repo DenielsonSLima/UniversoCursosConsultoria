@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import InstitutionalSelect from '../../../shared/components/InstitutionalSelect';
 import {
   BookOpen,
   CalendarDays,
@@ -294,10 +295,12 @@ const AgendaWorkspace: React.FC<AgendaWorkspaceProps> = ({
           <div className={`calendario-agenda-filters grid flex-1 grid-cols-1 gap-2 sm:grid-cols-2 ${isProfessor || isStudent ? 'xl:grid-cols-3' : 'xl:grid-cols-4'}`}>
             <label className="relative">
               <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500">Mês</span>
+              {isProfessor ? <InstitutionalSelect ariaLabel="Mês da agenda" value={String(currentMonthIndex)} onValueChange={(value) => onMonthChange(Number(value))} options={MONTHS.map((month,index) => ({ value:String(index), label:month }))} /> : <>
               <select value={currentMonthIndex} onChange={event => onMonthChange(Number(event.target.value))} className="w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 pr-8 text-xs font-semibold uppercase text-slate-700 outline-none focus:border-blue-400">
                 {MONTHS.map((month, index) => <option key={month} value={index}>{month}</option>)}
               </select>
               <ChevronDown size={13} className="pointer-events-none absolute bottom-3 right-3 text-slate-400" />
+              </>}
             </label>
             {!isProfessor && !isStudent ? <label className="relative">
               <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500">Professor</span>
@@ -309,19 +312,23 @@ const AgendaWorkspace: React.FC<AgendaWorkspaceProps> = ({
             </label> : null}
             <label className="relative">
               <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500">Turma</span>
+              {isProfessor ? <InstitutionalSelect ariaLabel="Turma da agenda" value={String(selectedTurmaId)} onValueChange={onTurmaChange} options={[{ value:'', label:'Todas' }, ...turmas.map((turma) => ({ value:turma.id,label:turma.nome }))]} /> : <>
               <select value={selectedTurmaId} onChange={event => onTurmaChange(event.target.value)} className="w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 pr-8 text-xs font-semibold uppercase text-slate-700 outline-none focus:border-blue-400">
                 <option value="">Todas</option>
                 {turmas.map(turma => <option key={turma.id} value={turma.id}>{turma.nome}</option>)}
               </select>
               <ChevronDown size={13} className="pointer-events-none absolute bottom-3 right-3 text-slate-400" />
+              </>}
             </label>
             <label className="relative">
               <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500">Categoria</span>
+              {isProfessor ? <InstitutionalSelect ariaLabel="Categoria da agenda" value={String(selectedCategoryId)} onValueChange={onCategoryChange} options={[{ value:'', label:'Todas' }, ...eventTypes.map((type) => ({ value:type.id,label:type.label }))]} /> : <>
               <select value={selectedCategoryId} onChange={event => onCategoryChange(event.target.value)} className="w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 pr-8 text-xs font-semibold uppercase text-slate-700 outline-none focus:border-blue-400">
                 <option value="">Todas</option>
                 {eventTypes.map(type => <option key={type.id} value={type.id}>{type.label}</option>)}
               </select>
               <ChevronDown size={13} className="pointer-events-none absolute bottom-3 right-3 text-slate-400" />
+              </>}
             </label>
           </div>
 
