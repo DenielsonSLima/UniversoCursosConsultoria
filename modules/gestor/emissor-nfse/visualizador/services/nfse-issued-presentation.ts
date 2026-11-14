@@ -17,7 +17,8 @@ export function nfseIssuedXmlQueryKey(scope: NfseScope | null, document: IssuedN
     document.id, document.accessKey, document.number, document.state ?? null, document.cancelPreviewId ?? null] as const;
 }
 
-export function resolveNfseIssuedDocument(client: QueryClient, scope: NfseScope, selected: NfseDocument): NfseDocument | null {
+export function resolveNfseIssuedDocument(client: QueryClient, scope: NfseScope, selected: NfseDocument,
+  allowUnlistedAuthorization = false): NfseDocument | null {
   const queries = client.getQueryCache().findAll({ queryKey: [...nfseQueryKeys.scope(scope), 'documents', 'EMITIDA'] });
   if (queries.some(query => query.state.error instanceof NfseAccessError)) return null;
   const activeRefreshAt = queries.reduce((latest, query) => query.queryKey.at(-1) === 'ACTIVE'
@@ -37,6 +38,8 @@ export function resolveNfseIssuedDocument(client: QueryClient, scope: NfseScope,
   }
   // A refreshed Active page can remove a newly cancelled note. Hide the stale
   // viewer/download until its canonical Cancelled row is available; never infer it.
-  if (!found && current.state !== 'CANCELLED' && queries.some(query => query.queryKey.at(-1) === 'ACTIVE')) return null;
+  const confirmedOutsideList = allowUnlistedAuthorization && selected.state === 'AUTHORIZED' && selected.status === 'EMITIDA';
+  if (!found && current.state !== 'CANCELLED' && !confirmedOutsideList
+    && queries.some(query => query.queryKey.at(-1) === 'ACTIVE')) return null;
   return current;
 }

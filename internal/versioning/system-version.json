@@ -1,8 +1,8 @@
 {
-  "version": "4.8.340",
+  "version": "4.8.341",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 349,
+  "revision": 350,
   "releasedAt": "2026-11-14",
-  "summary": "Caixa com origens completas, PDFs alinhados e retorno do link bancário"
+  "summary": "NFS-e de serviço abre Emitidas e a prévia após autorização"
 }

@@ -88,6 +88,13 @@ Histórico arquivado: [08/11/2026 — versões 4.8.270 a 4.8.271](./changelog/20
 
 Histórico arquivado: [08/11/2026 — versão 4.8.272](./changelog/2026-11-08-versao-4-8-272.md).
 
+Histórico arquivado: [08/11/2026 — versão 4.8.273](./changelog/2026-11-08-versao-4-8-273.md).
+
+## [4.8.341] - 2026-11-14
+
+- NFS-e de serviço autorizada seleciona Emitidas e abre automaticamente a prévia da nota; em lote, aguarda todas as autorizações e abre a última.
+- Emissões de alunos mantêm o fluxo atual; falhas, resultados incertos, cancelamentos e bloqueios de acesso não abrem uma prévia automática.
+
 ## [4.8.340] - 2026-11-14
 
 - PDF completo do Caixa inclui todas as origens, com Serviços NFS-e vinculado ao recebimento confirmado.
@@ -489,10 +496,3 @@ Histórico arquivado: [08/11/2026 — versão 4.8.272](./changelog/2026-11-08-ve
 - Clonar pergunta Pendente/Pago e abre o formulário preenchido, com parceiro em branco e confirmação antes de salvar.
 - Datas de lançamento, vencimento e pagamento permanecem independentes; novas baixas preservam a data conferida.
 - Categorias financeiras existentes são padronizadas em maiúsculas; a regra passa a valer também para novos cadastros e edições.
-
-## [4.8.273] - 2026-11-08
-
-- Preparação NFS-e salva na fila com snapshot, reserva atômica e recuperação sem duplicidade.
-- Configuração fiscal por estabelecimento e cadastro A1 protegido no Supabase Vault, sem senha ou chave devolvida à interface.
-- Cadastro confere arquivo, validade, CNPJ e cadeia ICP-Brasil; emissão e cancelamento continuam bloqueados até homologação.
-- DPS, assinatura e eventos nacionais têm contratos e validação offline com XSD por ambiente.

@@ -1,11 +1,11 @@
-import React, { lazy, Suspense, useMemo, useRef, useState } from 'react';
+import React, { lazy, Suspense, useCallback, useMemo, useRef, useState } from 'react';
 import { AlertCircle, BriefcaseBusiness, Building2, CheckCheck, ClipboardList, FileText, FileX2, Layers } from 'lucide-react';
 import FinancialUnderlineTabs from '../financeiro/components/FinancialUnderlineTabs';
 import { useNfseWorkspace } from './hooks/useNfseQueries';
 import { useNfseRealtime } from './hooks/useNfseRealtime';
 import { NfseAccessError, NfseUnavailableError } from './services/nfse.errors';
 import { getNfseCurrentMonth, isNfseScopeValid } from './types/nfse.scope';
-import type { NfseScope, NfseTab } from './types/nfse.types';
+import type { NfseDocument, NfseScope, NfseTab } from './types/nfse.types';
 import { NfseTabContext } from './components/NfseTabContext';
 import NfseDataState from './components/NfseDataState';
 import { formatNfseMoney } from './components/nfse.presentation';
@@ -50,6 +50,7 @@ const tabs = [
 
 const NfseWorkspace: React.FC<EmissorNfsePageProps> = ({ poloId, poloName, isMatriz, contextKey }) => {
   const [tab, setTab] = useState<NfseWorkspaceTab>('preparar');
+  const [authorizedService, setAuthorizedService] = useState<{ document: NfseDocument; scopeKey: string } | null>(null);
   const [environment] = useNfseEnvironment({ poloId, contextKey });
   const [month, setMonth] = useState(getNfseCurrentMonth);
   const monthInputRef = useRef<HTMLInputElement>(null);
@@ -67,7 +68,16 @@ const NfseWorkspace: React.FC<EmissorNfsePageProps> = ({ poloId, poloName, isMat
   const workspace = accessDenied ? undefined : query.data;
   const unavailable = !scope || query.error instanceof NfseUnavailableError;
   const canRead = Boolean(scope && workspace && !accessDenied);
+  const scopeKey = JSON.stringify(scope);
+  const onServiceAuthorized = useCallback((document: NfseDocument, issuedScope: NfseScope) => {
+    if (JSON.stringify(issuedScope) !== scopeKey || document.sourceKind !== 'PARTNER_SERVICE'
+      || document.state !== 'AUTHORIZED' || document.status !== 'EMITIDA') return;
+    setAuthorizedService({ document, scopeKey });
+    setTab('emitidas');
+  }, [scopeKey]);
+  const consumeAuthorizedService = useCallback(() => setAuthorizedService(null), []);
   const context = { scope, workspace, unavailable, canRead, loading: Boolean(scope && query.isPending),
+    onServiceAuthorized,
     canPrepareQueue: Boolean(!queue.error && queue.data), onPrepared: (message?: string) => {
     setTab('pendentes');
     toast.success('Preparação confirmada', message || 'Os documentos foram adicionados aos pendentes.');
@@ -111,7 +121,9 @@ const NfseWorkspace: React.FC<EmissorNfsePageProps> = ({ poloId, poloName, isMat
             {tab === 'preparar' && <PrepararNfseTab />}
             {tab === 'servicos' && <ServicosParceirosNfseTab />}
             {tab === 'pendentes' && <PendentesNfseTab />}
-            {tab === 'emitidas' && <EmitidasNfseTab />}
+            {tab === 'emitidas' && <EmitidasNfseTab
+              initialDocument={authorizedService?.scopeKey === scopeKey ? authorizedService.document : undefined}
+              onInitialDocumentConsumed={consumeAuthorizedService} />}
             {tab === 'canceladas' && <CanceladasNfseTab />}
             {tab === 'erros' && <ErrosNfseTab />}
             {tab === 'modelos' && <ModelosNfseTab />}

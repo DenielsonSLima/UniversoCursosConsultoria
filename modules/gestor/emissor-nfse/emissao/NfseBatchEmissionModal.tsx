@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState, useSyncExternalStore, type ComponentRef } from 'react';
+import { useContext, useEffect, useId, useRef, useState, useSyncExternalStore, type ComponentRef } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import type { NfseScope } from '../types/nfse.types';
@@ -12,6 +12,7 @@ import { operationLabel } from './nfse-operation.contract';
 import { batchCanIssue, createNfseBatchController, type NfseBatchInput, type NfseBatchItem } from './nfse-batch.core';
 import type { NfseFiscalNotice } from './nfse-fiscal-notice';
 import { useNfseBatchRealtime } from './useNfseBatchRealtime';
+import { NfseTabContext } from '../components/NfseTabContext';
 import '../individual/nfse-individual.css';
 import '../fila/fiscal-review/nfse-fiscal-review.css';
 import './nfse-batch.css';
@@ -25,6 +26,25 @@ export default function NfseBatchEmissionModal({ scope, items, onClose, onChange
   }, { onChanged, onNotice }));
   useNfseBatchRealtime(scope, controller.signalChange, service === nfseIndividualService);
   const view = useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot);
+  const onServiceAuthorized = useContext(NfseTabContext)?.onServiceAuthorized;
+  const openedService = useRef<string | null>(null);
+  useEffect(() => {
+    if (!onServiceAuthorized || view.busy || !view.items.length
+      || view.items.some(item => item.source.kind !== 'PARTNER_SERVICE' || item.uncertain
+        || item.operation?.state === 'CANCELLED' || item.operation?.cancelPreviewId
+        || item.result?.state !== 'AUTHORIZED' || item.result.cancelPreviewId || !/^\d{1,15}$/.test(item.result.number ?? '')
+        || !/^\d{50}$/.test(item.result.accessKey ?? ''))) return;
+    const item = view.items[view.items.length - 1], result = item.result!;
+    if (openedService.current === result.previewId) return;
+    openedService.current = result.previewId;
+    onServiceAuthorized({
+      id: result.previewId, operationId: result.previewId, requestId: item.requestId,
+      sourceKind: 'PARTNER_SERVICE', sourceId: item.source.id, state: 'AUTHORIZED', status: 'EMITIDA',
+      studentName: result.payload.recipientName, classLabel: 'Serviço', amount: result.payload.amount,
+      modelLabel: result.payload.modelName, number: result.number, accessKey: result.accessKey,
+      errorCode: null, errorMessage: null, retryable: false, origin: 'SERVICO',
+    }, scope);
+  }, [view.items, view.busy, onServiceAuthorized, scope]);
   useEffect(() => {
     controller.activate();
     let current = true;
