@@ -1,0 +1,93 @@
+name: Contratos e interação do Portal do Professor
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/professor-portal-contracts.yml'
+      - 'modules/professor/**'
+      - 'modules/gestor/parceiros/**'
+      - 'modules/gestor/biblioteca/**'
+      - 'modules/gestor/gestao/tecnicos/detalhes/**'
+      - 'modules/gestor/calendario/components/AgendaWorkspace.tsx'
+      - 'modules/shared/plano-curso/**'
+      - 'modules/shared/assinatura-eletronica/**'
+      - 'modules/shared/realtime/**'
+      - 'modules/shared/components/InstitutionalSelect*'
+      - 'supabase/migrations/*professor*.sql'
+      - 'supabase/tests/professor*'
+      - 'package*.json'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/professor-portal-contracts.yml'
+      - 'modules/professor/**'
+      - 'modules/gestor/parceiros/**'
+      - 'modules/gestor/biblioteca/**'
+      - 'modules/gestor/gestao/tecnicos/detalhes/**'
+      - 'modules/gestor/calendario/components/AgendaWorkspace.tsx'
+      - 'modules/shared/plano-curso/**'
+      - 'modules/shared/assinatura-eletronica/**'
+      - 'modules/shared/realtime/**'
+      - 'modules/shared/components/InstitutionalSelect*'
+      - 'supabase/migrations/*professor*.sql'
+      - 'supabase/tests/professor*'
+      - 'package*.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+concurrency:
+  group: professor-contracts-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  professor-contracts:
+    name: Gestor, portal móvel e PostgreSQL isolado
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      PGLITE_MODULE_PATH: ${{ runner.temp }}/professor-contracts/node_modules/@electric-sql/pglite
+      NFSE_TEST_JSDOM_MODULE: ${{ runner.temp }}/professor-contracts/node_modules/jsdom/lib/api.js
+      PROFESSOR_TEST_JSDOM_PATH: ${{ runner.temp }}/professor-contracts/node_modules/jsdom/lib/api.js
+      BIBLIOTECA_JSDOM_PATH: ${{ runner.temp }}/professor-contracts/node_modules/jsdom
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.22.1'
+          cache: npm
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: '2.9.1'
+      - name: Preparar dependências e runtimes temporários
+        run: |
+          npm ci --ignore-scripts
+          mkdir -p tmp
+          npm install --prefix "$RUNNER_TEMP/professor-contracts" --no-save --package-lock=false --ignore-scripts jsdom@26.1.0 @electric-sql/pglite@0.3.14
+          printf '%s\n' '{"nodeModulesDir":"none","lock":false}' > "$RUNNER_TEMP/professor-contracts.deno.json"
+      - name: Testar Gestor, portal e SQL sem credenciais
+        run: |
+          node --test \
+            modules/gestor/parceiros/components/viewparceiros/professor/professor-turmas.service.test.mjs \
+            modules/gestor/parceiros/components/formularioparceiros/professor/professor-form.interaction.test.mjs \
+            modules/gestor/parceiros/components/viewparceiros/professor/professor-dados.interaction.test.mjs \
+            modules/gestor/parceiros/partner-email-update.interaction.test.mjs \
+            modules/gestor/parceiros/components/viewparceiros/professor/professor-profile.interaction.test.mjs \
+            modules/gestor/parceiros/components/viewparceiros/professor/professor-financeiro.query.test.ts \
+            modules/gestor/parceiros/components/viewparceiros/professor/professor-documentos.service.test.mjs \
+            modules/professor/turmas/professor-academic-mobile.interaction.test.mjs \
+            modules/professor/components/professor-portal.interaction.test.mjs \
+            modules/professor/plano-curso/plano-curso-mobile-render.test.mjs \
+            modules/gestor/biblioteca/components/library-upload.behavior.test.mjs \
+            modules/shared/plano-curso/plano-curso.contract.test.mjs \
+            supabase/tests/professor_gestor_financeiro.isolated.test.mjs \
+            supabase/tests/professor_finance_signature_signals.isolated.test.mjs
+      - name: Testar planejamento e dossiê em PostgreSQL WASM
+        run: |
+          deno test --config "$RUNNER_TEMP/professor-contracts.deno.json" --allow-read --sloppy-imports \
+            modules/professor/plano-curso/plano-curso-editor-session.test.ts \
+            modules/professor/plano-curso/plano-curso-day-editor.test.ts \
+            modules/professor/plano-curso/plano-curso-professor-ui.contract.test.ts \
+            supabase/tests/professor_private_dossier.isolated.test.ts

@@ -24,10 +24,7 @@ Este arquivo é um índice curto de contexto durável. Ajustes rápidos não pre
 - Migrations já aplicadas permanecem imutáveis mesmo acima do teto. Novas migrations devem ser divididas antes da aplicação quando a separação for tecnicamente segura; gerados, lockfiles, binários e terceiros ficam fora da contagem.
 - Testes-fonte e migrations permanecem no repositório mesmo depois de executados.
 - tmp, caches, relatórios e PDFs/PNGs de QA são regeneráveis e podem ser limpos.
-
-## Atualização de dados — preferência explícita de 13/11/2026
-
-- O Universo usa TanStack Query e Realtime e não deve ter botões manuais para atualizar/recarregar/sincronizar dados. Mutações, eventos e reconexão devem invalidar automaticamente o escopo afetado; recuperação tem retry limitado e feedback de estado.
+- Preferência explícita de 13/11/2026: o Universo usa TanStack Query e Realtime e não deve ter botões manuais para atualizar/recarregar/sincronizar dados. Mutações, eventos e reconexão devem invalidar automaticamente o escopo afetado; recuperação tem retry limitado e feedback de estado.
 
 ## Políticas condicionais
 

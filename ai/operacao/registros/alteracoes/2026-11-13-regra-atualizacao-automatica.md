@@ -20,4 +20,4 @@ Total: 6 arquivos.
 
 ## Validação
 
-Regra acrescentada às fontes canônicas e à skill versionada; cópia instalada e nota da memória pessoal serão sincronizadas. Índice RAG será refeito uma vez no fechamento.
+Regra acrescentada às fontes canônicas e à skill versionada; cópia instalada e nota da memória pessoal sincronizadas. Índice RAG refeito no fechamento com 15 fontes e 80 trechos.

@@ -1,7 +1,7 @@
 # Portal do professor: mobile e atualização automática
 
 Pedido iniciado em 13/11/2026 (America/Maceio).
-Status: implementação, revisão e conferência local concluídas em 14/11/2026. Preparado para branch/PR no GitHub; produção não autorizada.
+Status: implementação, revisão e conferência local concluídas em 14/11/2026. Entregue na PR #429 do GitHub; produção não autorizada.
 Escopo: todo acesso depois do login, incluindo menu lateral/móvel, polo, Início, Disciplinas/diários, Plano de Curso, Assinaturas, Agenda, Financeiro, Biblioteca, Comunicação e Perfil. Consolida também o cadastro/perfil docente do Gestor já implementado neste fluxo.
 
 ## Contratos e decisões
@@ -126,9 +126,19 @@ Escopo: todo acesso depois do login, incluindo menu lateral/móvel, polo, Iníci
 - `modules/gestor/biblioteca/components/biblioteca-upload.css`
 - `ai/operacao/registros/alteracoes/2026-11-13-professor-portal-mobile.md`
 
-Total: 109 arquivos.
+- `modules/gestor/biblioteca/components/library-upload.behavior.test.mjs`
+- `.github/workflows/professor-portal-contracts.yml`
+- `internal/versioning/system-version.json`
+- `internal/versioning/CHANGELOG.md`
+- `internal/versioning/changelog/2026-11-08-versoes-4-8-270-a-271.md`
+
+Total: 114 arquivos.
 
 ## Validação
+
+- Entrega de revisão: [PR #429](https://github.com/DenielsonSLima/UniversoCursosConsultoria/pull/429), branch `codex/professor-portal-mobile-20261113`, candidato `4.8.339-rc.1`.
+- Biblioteca: 15 testes passaram com as mesmas guardas de publicação, verificando erro inline. Regressões novas do professor integradas em workflow próprio sem credenciais nem I/O em produção.
+- Checagem remota de histórico exigiu avanço de versão; acrescentado RC, preservadas integralmente as entradas publicadas e arquivadas 4.8.270–271 para cumprir o teto de linhas.
 
 - Gestor local autenticado: perfil compacto, seleção por teclado e cancelamento de edição, vínculos reais consultados. Documentos/Financeiro detectaram migrations ainda não instaladas no banco conectado.
 - Usuário escolheu continuar testes sintéticos após expiração da sessão local; nenhuma nota, frequência, assinatura ou pagamento real gravado.
@@ -138,7 +148,7 @@ Total: 109 arquivos.
 - Dossiê do Gestor com RPCs reais em PGlite: adicionar pendência, upload PDF, prévia, aprovação e histórico passaram, com contadores/status atualizados sem ação de recarga. Financeiro do cadastro retornou fontes reais da fixture e filtrou em aberto no banco.
 - Contratos SQL reais testados em PGlite isolado para dossiê, leitura financeira e sinais. Revisão independente das guardas, grants, escopos e chaves concluída sem pendências novas.
 - Perfil e navegação: 16 campos, rascunho, falha de gravação, senha, Google, polo por ID, bottomnav e drawer em testes de interação. Filiais com mesmo nome mantêm cidade/UF visíveis no celular.
-- Build completo em Node 24.22.1, TypeScript geral e ESLint do manifesto passaram. Teto de 500 linhas e diff whitespace passaram para os 109 arquivos.
+- Build completo em Node 24.22.1, TypeScript geral e ESLint do manifesto passaram. Teto de 500 linhas e diff whitespace passaram para os 114 arquivos.
 - Regressões do Gestor: 22 testes passaram. Portal/contratos/PGlite de sinais: 21 passaram; os 7 testes existentes de sessão/dias do Plano de Curso passaram com Deno --sloppy-imports, além dos 2 testes de renderização. Dossiê e leitura financeira também passaram no PostgreSQL isolado.
 - Auditoria de drift contra main 41ff2ba4 (4.8.338): 47 arquivos existentes e 62 novos; registros de Caixa mensal/Dashboard preservados no índice de manifestos.
 
@@ -148,3 +158,5 @@ Total: 109 arquivos.
 - Não assinar, emitir, quitar ou preencher dados acadêmicos reais como parte do smoke.
 - GitHub somente pelo MCP e manifesto explícito; preservar main 4.8.338 e alterações publicadas de outros lotes. Branch/PR de revisão não implica aplicação de migrations ou publicação em produção.
 - Fixture, API de ensaio, imagens e saídas de build em tmp são regeneráveis e não integram o manifesto.
+
+Regra operacional sincronizada na skill instalada e em nota da memória pessoal. RAG reindexado no fechamento: 15 fontes e 80 trechos. Checks remotos e preview acompanhados na PR.
