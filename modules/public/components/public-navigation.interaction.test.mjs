@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { join } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { build } from 'esbuild';
@@ -14,7 +14,7 @@ const coursePaths = ['/cursos-livres', '/ead', '/especializacao', '/cursos-tecni
 class TestMessageChannel {
   constructor() {
     this.port1 = { onmessage: null };
-    this.port2 = { postMessage: () => queueMicrotask(() => this.port1.onmessage?.({ data: undefined })) };
+    this.port2 = { postMessage: () => globalThis.queueMicrotask(() => this.port1.onmessage?.({ data: undefined })) };
   }
 }
 
@@ -146,6 +146,21 @@ test('links públicos reais preservam SPA, navegação nativa, seções e menu m
       assert.equal(current(), '/ead');
       assert.equal(mobile(), null);
       assert.equal(menuButton().getAttribute('aria-expanded'), 'false');
+    });
+
+    await t.test('Safari sem foco no link mantém menu aberto até o clique navegar', async () => {
+      await mount('/');
+      const details = desktop().querySelector('details');
+      const summary = details.querySelector('summary');
+      await act(async () => { summary.focus(); summary.click(); });
+      assert.equal(details.open, true);
+      await act(async () => summary.dispatchEvent(new dom.window.FocusEvent('focusout', {
+        bubbles: true, relatedTarget: null,
+      })));
+      assert.equal(details.open, true, 'Safari não informa novo foco ao clicar em links; não ocultar o alvo antes do click');
+      await click(linkNamed(desktop(), 'Cursos Técnicos'));
+      assert.equal(current(), '/cursos-tecnicos');
+      assert.equal(details.open, false);
     });
 
     await t.test('Escape e clique externo fecham o disclosure acessível', async () => {

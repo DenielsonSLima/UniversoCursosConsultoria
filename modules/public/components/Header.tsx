@@ -47,7 +47,7 @@ const CoursesMenu: React.FC<CoursesMenuProps> = ({ mobile = false, active, onNav
   return (
     <details ref={menuRef} className={`group ${mobile ? 'border-b border-slate-100' : 'relative'}`}
       onBlur={(event) => {
-        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) event.currentTarget.open = false;
+        if (event.relatedTarget && !event.currentTarget.contains(event.relatedTarget as Node)) event.currentTarget.open = false;
       }}
       onKeyDown={(event) => {
         if (event.key !== 'Escape') return;
