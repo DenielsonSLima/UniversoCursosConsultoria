@@ -43,6 +43,10 @@ export function FinancialPaymentEditor({ form, accounts, expense }: { form: Fina
     .map(account => ({
       value: account.id,
       label: `${account.banco} · ${account.conta}`,
+      trailingLabel: Number.isFinite(account.saldoAtual)
+        ? `Saldo ${account.saldoAtual.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`
+        : 'Saldo indisponível',
+      trailingTone: !Number.isFinite(account.saldoAtual) ? 'muted' : account.saldoAtual < 0 ? 'negative' : 'positive',
       description: account.natureza === 'CAIXA_INTERNO' ? `Caixa interno · ${account.titular}` : `Ag. ${account.agencia} · ${account.titular}`,
       keywords: [account.banco, account.conta, account.agencia, account.titular, account.poloNome].filter(Boolean).join(' '),
       icon: account.natureza === 'CAIXA_INTERNO' ? <WalletCards size={17} /> : <Landmark size={17} />,

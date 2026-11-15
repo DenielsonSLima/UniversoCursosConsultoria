@@ -1,8 +1,8 @@
 {
-  "version": "4.8.341",
+  "version": "4.8.342",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 350,
-  "releasedAt": "2026-11-14",
-  "summary": "NFS-e de serviço abre Emitidas e a prévia após autorização"
+  "revision": 351,
+  "releasedAt": "2026-11-15",
+  "summary": "Seletor de contas preserva rolagem e mostra saldo ao lado do nome"
 }

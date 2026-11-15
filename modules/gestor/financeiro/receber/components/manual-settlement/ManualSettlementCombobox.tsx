@@ -8,6 +8,8 @@ export interface ManualSettlementComboboxOption {
   description?: string;
   keywords?: string;
   icon?: React.ReactNode;
+  trailingLabel?: string;
+  trailingTone?: 'positive' | 'negative' | 'muted';
 }
 
 interface ManualSettlementComboboxProps {
@@ -40,10 +42,12 @@ const ManualSettlementCombobox: React.FC<ManualSettlementComboboxProps> = ({
   const rootRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
   const ignoreNextFocusRef = useRef(false);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
+  const [revealRequest, setRevealRequest] = useState<{ index: number } | null>(null);
   const [position, setPosition] = useState({ left: 0, top: 0, width: 0, maxHeight: 280 });
   const selected = options.find((option) => option.value === value);
   const filtered = useMemo(() => {
@@ -55,6 +59,7 @@ const ManualSettlementCombobox: React.FC<ManualSettlementComboboxProps> = ({
       option.keywords,
     ].filter(Boolean).join(' ')).includes(normalizedQuery));
   }, [options, query]);
+  const selectedIndex = Math.max(0, filtered.findIndex((option) => option.value === value));
 
   const updatePosition = () => {
     const rect = inputRef.current?.getBoundingClientRect();
@@ -100,9 +105,9 @@ const ManualSettlementCombobox: React.FC<ManualSettlementComboboxProps> = ({
 
   useEffect(() => {
     if (!open) return;
-    const selectedIndex = filtered.findIndex((option) => option.value === value);
-    setActiveIndex(selectedIndex >= 0 ? selectedIndex : 0);
-  }, [filtered, open, value]);
+    setActiveIndex(selectedIndex);
+    setRevealRequest({ index: selectedIndex });
+  }, [open, query, selectedIndex, value]);
 
   useEffect(() => {
     if (!disabled) return;
@@ -111,12 +116,15 @@ const ManualSettlementCombobox: React.FC<ManualSettlementComboboxProps> = ({
   }, [disabled]);
 
   useEffect(() => {
-    const activeOption = filtered[activeIndex];
-    if (!open || !activeOption) return;
-    document.getElementById(`${listboxId}-${activeOption.value}`)?.scrollIntoView({
-      block: 'nearest',
-    });
-  }, [activeIndex, filtered, listboxId, open]);
+    const list = listRef.current;
+    const option = revealRequest && list?.querySelectorAll<HTMLElement>('[role="option"]')[revealRequest.index];
+    if (!open || !list || !option) return;
+    // Reveal only on opening/search/keyboard; hover and refreshed props keep manual scroll.
+    const listRect = list.getBoundingClientRect();
+    const optionRect = option.getBoundingClientRect();
+    if (optionRect.top < listRect.top) list.scrollTop += optionRect.top - listRect.top;
+    else if (optionRect.bottom > listRect.bottom) list.scrollTop += optionRect.bottom - listRect.bottom;
+  }, [open, revealRequest]);
 
   const openPicker = () => {
     if (disabled) return;
@@ -158,11 +166,10 @@ const ManualSettlementCombobox: React.FC<ManualSettlementComboboxProps> = ({
         openPicker();
         return;
       }
-      setActiveIndex((current) => {
-        if (filtered.length === 0) return 0;
-        const delta = event.key === 'ArrowDown' ? 1 : -1;
-        return (current + delta + filtered.length) % filtered.length;
-      });
+      const delta = event.key === 'ArrowDown' ? 1 : -1;
+      const nextIndex = filtered.length ? (activeIndex + delta + filtered.length) % filtered.length : 0;
+      setActiveIndex(nextIndex);
+      setRevealRequest({ index: nextIndex });
       return;
     }
     if (event.key === 'Enter' && open && filtered[activeIndex]) {
@@ -188,6 +195,7 @@ const ManualSettlementCombobox: React.FC<ManualSettlementComboboxProps> = ({
           <span aria-live="polite" className="rounded-full bg-emerald-50 px-2 py-1 text-[10px] font-black text-emerald-700">{filtered.length}</span>
         </div>
         <div
+          ref={listRef}
           id={listboxId}
           role="listbox"
           aria-label={label}
@@ -223,7 +231,15 @@ const ManualSettlementCombobox: React.FC<ManualSettlementComboboxProps> = ({
                   </span>
                 ) : null}
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-xs font-black text-[#001a33]">{option.label}</span>
+                  <span className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
+                    <span className="min-w-0 break-words text-xs font-black text-[#001a33]">{option.label}</span>
+                    {option.trailingLabel ? (
+                      <span className={`shrink-0 text-xs font-semibold tabular-nums ${
+                        option.trailingTone === 'negative' ? 'text-rose-600'
+                          : option.trailingTone === 'positive' ? 'text-emerald-700' : 'text-slate-500'
+                      }`}>{option.trailingLabel}</span>
+                    ) : null}
+                  </span>
                   {option.description ? (
                     <span className="mt-0.5 block truncate text-[10px] font-semibold text-slate-500">{option.description}</span>
                   ) : null}

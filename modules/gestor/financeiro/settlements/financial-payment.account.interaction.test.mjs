@@ -12,12 +12,28 @@ const require = createRequire(import.meta.url);
 const rootDirectory = fileURLToPath(new URL('../../../../', import.meta.url));
 const id = value => `00000000-0000-4000-8000-${String(value).padStart(12, '0')}`;
 
-test('modal real: padrão por conta, edição livre, múltiplas formas, reabertura e retomada sem confirmar pagamento', async () => {
+test('modal real: contas, saldo, rolagem e retomada sem confirmar pagamento', async t => {
   const jsdomPath = process.env.FINANCIAL_PAYMENT_JSDOM_PATH;
   const { JSDOM } = require(jsdomPath ? resolve(jsdomPath) : 'jsdom');
   const temporary = await mkdtemp(join(tmpdir(), 'payment-account-interaction-'));
   const dom = new JSDOM('<!doctype html><html><body></body></html>', { url: 'http://localhost' });
-  dom.window.HTMLElement.prototype.scrollIntoView = function () {};
+  const ancestorScrolls = [];
+  dom.window.HTMLElement.prototype.scrollIntoView = function () { ancestorScrolls.push(this.id); };
+  dom.window.HTMLElement.prototype.getBoundingClientRect = function () {
+    const listbox = this.getAttribute('role') === 'listbox' ? this : this.closest('[role="listbox"]');
+    let top = 160;
+    let height = 40;
+    if (listbox) {
+      top = 200;
+      height = 160;
+      if (this.getAttribute('role') === 'option') {
+        const index = [...listbox.querySelectorAll('[role="option"]')].indexOf(this);
+        top += index * 64 - listbox.scrollTop;
+        height = 64;
+      }
+    }
+    return { left: 100, right: 600, top, bottom: top + height, width: 500, height, x: 100, y: top, toJSON() {} };
+  };
   const previousGlobals = new Map();
   const channels = [];
   previousGlobals.set('MessageChannel', Object.getOwnPropertyDescriptor(globalThis, 'MessageChannel'));
@@ -67,11 +83,15 @@ test('modal real: padrão por conta, edição livre, múltiplas formas, reabertu
       agencia: '001', titular: 'Conta sintética', tipo: 'CORRENTE', saldoInicial: 0, poloId: id(5), polosUso: [id(5)], ativo: true });
     const accounts = [account(2, 'CAIXA DA UNIDADE', 'CAIXA_INTERNO'), account(3, 'BANESE', 'BANCARIA'),
       account(4, 'CAIXA ECONÔMICA', 'BANCARIA'), account(6, 'PROESC', 'BANCARIA')];
+    Object.assign(accounts[0], { saldoAtual: 1234.56 });
+    Object.assign(accounts[1], { saldoAtual: -12.34, saldoContabilConta: -12.34, saldoGerencialPolo: 9999, compartilhada: true });
+    Object.assign(accounts[2], { saldoAtual: 0 });
     const container = document.createElement('div');
     document.body.appendChild(container);
     const tick = (ms = 0) => new Promise(done => setTimeout(done, ms));
     const settle = async (ms = 0) => { await act(async () => { await tick(ms); }); };
     const close = async () => { await act(async () => reactRoot.unmount()); reactRoot = null; };
+    t.afterEach(async () => { if (reactRoot) await close(); });
     let props;
     const mount = async (initialAccountId, sourceKind = 'EXPENSE') => {
       reactRoot = createRoot(container);
@@ -87,6 +107,53 @@ test('modal real: padrão por conta, edição livre, múltiplas formas, reabertu
       await click(picker(row, field));
       await click([...document.querySelectorAll('[role="option"]')].find(option => option.id.endsWith(`-${value}`)));
     };
+    const key = async value => {
+      await act(async () => { picker(1, 0).dispatchEvent(new window.KeyboardEvent('keydown', { key: value, bubbles: true })); await tick(); });
+    };
+    await t.test('abertura e teclado revelam a opção só na rolagem interna da lista', async () => {
+      await mount(id(4));
+      ancestorScrolls.length = 0;
+      await click(picker(1, 0));
+      const listbox = document.querySelector('[role="listbox"]');
+      assert.equal(listbox.scrollTop, 32, 'a conta selecionada deve aparecer ao abrir');
+      await key('ArrowDown');
+      assert.equal(listbox.scrollTop, 96, 'a próxima conta deve aparecer ao navegar pelo teclado');
+      assert.deepEqual(ancestorScrolls, [], 'revelar opção não pode rolar o modal ou a página');
+      await close();
+    });
+    await t.test('hover e atualização de contas preservam a posição escolhida ao rolar', async () => {
+      await mount(id(4));
+      await click(picker(1, 0));
+      const listbox = document.querySelector('[role="listbox"]');
+      listbox.scrollTop = 100;
+      ancestorScrolls.length = 0;
+      await act(async () => {
+        listbox.querySelector('[role="option"]').dispatchEvent(new window.MouseEvent('mouseover', { bubbles: true }));
+        await tick();
+      });
+      assert.equal(listbox.scrollTop, 100, 'passar o mouse não deve puxar a lista para outra conta');
+      assert.deepEqual(ancestorScrolls, [], 'hover não deve disparar rolagem imperativa');
+      await act(async () => { reactRoot.render(React.createElement(FinancialPaymentModal, { ...props, accounts: [...accounts] })); await tick(); });
+      assert.equal(listbox.scrollTop, 100, 'atualização do saldo não deve reiniciar a rolagem');
+      assert.deepEqual(ancestorScrolls, [], 'atualização de props não deve rolar ancestrais');
+      await close();
+    });
+    await t.test('saldo da conta fica ao lado do nome: positivo, negativo, zero e indisponível', async () => {
+      for (const sourceKind of ['EXPENSE', 'RECEIVABLE']) {
+        await mount(id(3), sourceKind);
+        await click(picker(1, 0));
+        const expected = ['Saldo R$ 1.234,56', 'Saldo -R$ 12,34', 'Saldo R$ 0,00', 'Saldo indisponível'];
+        for (const [index, option] of [...document.querySelectorAll('[role="option"]')].entries()) {
+          const leaves = [...option.querySelectorAll('span')].filter(span => span.childElementCount === 0);
+          const label = leaves.find(span => span.textContent === `${accounts[index].banco} · ${accounts[index].conta}`);
+          const balance = leaves.find(span => span.textContent.replace(/\s/g, ' ') === expected[index]);
+          assert.ok(balance, `${sourceKind}: ${expected[index]}`);
+          assert.equal(balance.parentElement, label.parentElement, 'saldo e nome devem ocupar a primeira linha');
+        }
+        assert.doesNotMatch(document.querySelector('[role="listbox"]').textContent, /9\.999,00/, 'a posição gerencial do polo não substitui o saldo da conta');
+        await close();
+      }
+    });
     await mount(id(3));
     assert.equal(picker(1, 1).value, 'Pix', 'Banese inicial deve sugerir Pix');
     await settle(300);
