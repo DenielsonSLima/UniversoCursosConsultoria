@@ -1,5 +1,7 @@
 # Histórico de alterações
 
+Histórico 4.8.278: [versão arquivada](./changelog/2026-11-09-versao-4-8-278.md).
+
 Histórico 4.8.277: [versão arquivada](./changelog/2026-11-09-versao-4-8-277.md).
 
 Histórico 4.8.276: [versão arquivada](./changelog/2026-11-09-versao-4-8-276.md).
@@ -95,6 +97,12 @@ Histórico arquivado: [08/11/2026 — versões 4.8.270 a 4.8.271](./changelog/20
 Histórico arquivado: [08/11/2026 — versão 4.8.272](./changelog/2026-11-08-versao-4-8-272.md).
 
 Histórico arquivado: [08/11/2026 — versão 4.8.273](./changelog/2026-11-08-versao-4-8-273.md).
+
+## [4.8.345] - 2026-11-15
+
+- Pagamentos Banese revisados usam total e data oficiais, com identidade bancária e autorização explícitas.
+- Diferença fica auditada sem inferir juros, multa ou desconto; baixa e evidência são atômicas, com replay e CAS.
+- Conciliação automática mantém a faixa financeira estrita, sem emissão ou manutenção bancária nesta revisão.
 
 ## [4.8.344] - 2026-11-15
 
@@ -486,10 +494,3 @@ Histórico arquivado: [08/11/2026 — versão 4.8.273](./changelog/2026-11-08-ve
 - Grade & Profs apresenta aulas e atividades extra-classe juntas em ordem cronológica, sem separar todas as extras ao fim.
 - Numeração, edição, carga horária e conteúdo preservados; datas não definidas ficam ao fim e atividades arquivadas continuam em sua seção recuperável.
 - Regressões cobrem intercalação, datas iguais/ausentes, mudanças de prazo e preservação do editor. Sem alteração de banco ou cálculos acadêmicos.
-
-## [4.8.278] - 2026-11-09
-
-### Corrigido
-- Atividades extra-classe publicadas e realizadas compõem a frequência individual, respeitando ingresso, trancamento e transferência na data acadêmica.
-- Diário, resultado de matrícula e projeção legada usam o crédito sem fabricar chamadas; histórico e aproveitamentos permanecem prioritários.
-- Conteúdo e PDF vetorial exibem as extras; novos diários assinados congelam a evidência e conservam os documentos anteriores.
