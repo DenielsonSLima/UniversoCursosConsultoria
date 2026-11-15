@@ -1,13 +1,15 @@
 import { access, mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { PUBLIC_PAGES, PUBLIC_SITE_URL } from '../modules/public/seo/public-pages.ts';
+import { addPublicPageHtml, clearPublicPageHtml, renderPublicSitemap } from './seo/public-page-html.mjs';
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = path.resolve(SCRIPT_DIR, '..');
-const DIST_DIR = path.join(PROJECT_ROOT, 'dist');
+const DIST_DIR = path.resolve(process.argv[2] || path.join(PROJECT_ROOT, 'dist'));
 const SOURCE_HTML_PATH = path.join(DIST_DIR, 'index.html');
 const OUTPUT_DIR = path.join(DIST_DIR, '_social-share');
-const SITE_URL = (process.env.SOCIAL_SHARE_BASE_URL || 'https://universocc.com.br').replace(/\/+$/, '');
+const SITE_URL = (process.env.SOCIAL_SHARE_BASE_URL || PUBLIC_SITE_URL).replace(/\/+$/, '');
 
 const publicRoute = (route, slug, title, description, options = {}) => ({
   route,
@@ -28,32 +30,15 @@ const privateRoute = (route, slug, title, description, options = {}) => ({
 });
 
 const ROUTES = [
-  publicRoute(
-    '/',
-    'home',
-    'Universo Cursos e Consultoria | Educação que transforma',
-    'Cursos técnicos, EAD, cursos livres, especializações e ensino superior com atendimento próximo e formação de qualidade.',
-    { imageSlug: 'home-v2' },
-  ),
-  publicRoute(
-    '/ead',
-    'ead',
-    'Cursos EAD | Universo Cursos e Consultoria',
-    'Estude onde estiver com cursos EAD acessíveis, flexíveis e voltados ao seu desenvolvimento profissional.',
-    { imageSlug: 'ead-v2' },
-  ),
+  ...PUBLIC_PAGES.map(page => publicRoute(page.path, page.imageSlug, page.title, page.description, {
+    canonicalPath: page.canonicalPath, publicPage: page,
+  })),
   publicRoute(
     '/ead',
     'ead',
     'Curso EAD | Universo Cursos e Consultoria',
     'Conheça esta formação EAD da Universo Cursos e estude onde estiver, com flexibilidade e foco profissional.',
     { outputFile: 'ead-detail.html', omitUrlMetadata: true, imageSlug: 'ead-v2' },
-  ),
-  publicRoute(
-    '/cursos-livres',
-    'cursos-livres',
-    'Cursos Livres | Universo Cursos e Consultoria',
-    'Capacitações práticas e de curta duração para desenvolver habilidades e abrir novas oportunidades profissionais.',
   ),
   publicRoute(
     '/cursos-livres',
@@ -65,12 +50,6 @@ const ROUTES = [
   publicRoute(
     '/cursos-tecnicos',
     'cursos-tecnicos',
-    'Cursos Técnicos | Universo Cursos e Consultoria',
-    'Formação técnica de qualidade para você conquistar novas oportunidades e avançar no mercado de trabalho.',
-  ),
-  publicRoute(
-    '/cursos-tecnicos',
-    'cursos-tecnicos',
     'Curso Técnico | Universo Cursos e Consultoria',
     'Conheça esta formação técnica da Universo Cursos, preparada para novas oportunidades no mercado de trabalho.',
     { outputFile: 'cursos-tecnicos-detail.html', omitUrlMetadata: true },
@@ -78,22 +57,9 @@ const ROUTES = [
   publicRoute(
     '/especializacao',
     'especializacao',
-    'Especializações | Universo Cursos e Consultoria',
-    'Aprofunde seus conhecimentos com especializações profissionais nas áreas de saúde, educação e gestão.',
-    { imageSlug: 'especializacao-v2' },
-  ),
-  publicRoute(
-    '/especializacao',
-    'especializacao',
     'Especialização Técnica | Universo Cursos e Consultoria',
     'Conheça esta especialização da Universo Cursos e aprofunde competências para avançar profissionalmente.',
     { outputFile: 'especializacao-detail.html', omitUrlMetadata: true, imageSlug: 'especializacao-v2' },
-  ),
-  publicRoute(
-    '/ensino-superior',
-    'ensino-superior',
-    'Ensino Superior | Universo Cursos e Consultoria',
-    'Graduações, licenciaturas e cursos superiores de tecnologia para transformar seu futuro profissional.',
   ),
   privateRoute(
     '/login',
@@ -156,30 +122,6 @@ const ROUTES = [
     { alunoPwa: true },
   ),
   publicRoute(
-    '/localizacao',
-    'localizacao',
-    'Onde estamos | Universo Cursos e Consultoria',
-    'Encontre a Universo Cursos e Consultoria e fale com a unidade mais próxima de você.',
-  ),
-  publicRoute(
-    '/contato',
-    'localizacao',
-    'Contato e localização | Universo Cursos e Consultoria',
-    'Entre em contato, consulte nossos endereços e conheça as opções de atendimento da Universo Cursos e Consultoria.',
-  ),
-  publicRoute(
-    '/polos',
-    'polos',
-    'Nossos polos | Universo Cursos e Consultoria',
-    'Conheça os polos da Universo Cursos e Consultoria em Japoatã, Aquidabã e Porto da Folha, Sergipe.',
-  ),
-  publicRoute(
-    '/links',
-    'links',
-    'Links oficiais | Universo Cursos e Consultoria',
-    'Acesse em um só lugar os cursos, canais de atendimento e páginas oficiais da Universo Cursos e Consultoria.',
-  ),
-  publicRoute(
     '/bio',
     'links',
     'Links oficiais | Universo Cursos e Consultoria',
@@ -214,26 +156,26 @@ const insertBeforeHeadEnd = (html, tag) => {
   if (!html.includes('</head>')) {
     throw new Error('O arquivo dist/index.html não possui a tag </head>.');
   }
-  return html.replace('</head>', `    ${tag}\n</head>`);
+  return html.replace('</head>', () => `    ${tag}\n</head>`);
 };
 
 const setTitle = (html, title) => {
   const tag = `<title>${escapeHtml(title)}</title>`;
   return /<title\b[^>]*>[\s\S]*?<\/title>/i.test(html)
-    ? html.replace(/<title\b[^>]*>[\s\S]*?<\/title>/i, tag)
+    ? html.replace(/<title\b[^>]*>[\s\S]*?<\/title>/i, () => tag)
     : insertBeforeHeadEnd(html, tag);
 };
 
 const setMeta = (html, attribute, key, content) => {
   const tag = `<meta ${attribute}="${escapeHtml(key)}" content="${escapeHtml(content)}">`;
   const pattern = new RegExp(`<meta\\b(?=[^>]*\\b${attribute}=["']${escapeRegExp(key)}["'])[^>]*>`, 'i');
-  return pattern.test(html) ? html.replace(pattern, tag) : insertBeforeHeadEnd(html, tag);
+  return pattern.test(html) ? html.replace(pattern, () => tag) : insertBeforeHeadEnd(html, tag);
 };
 
 const setCanonical = (html, canonicalUrl) => {
   const tag = `<link rel="canonical" href="${escapeHtml(canonicalUrl)}">`;
   const pattern = /<link\b(?=[^>]*\brel=["']canonical["'])[^>]*>/i;
-  return pattern.test(html) ? html.replace(pattern, tag) : insertBeforeHeadEnd(html, tag);
+  return pattern.test(html) ? html.replace(pattern, () => tag) : insertBeforeHeadEnd(html, tag);
 };
 
 const removeMeta = (html, attribute, key) => {
@@ -249,13 +191,13 @@ const removeCanonical = (html) => html.replace(
 const setManifest = (html, href) => {
   const tag = `<link rel="manifest" href="${escapeHtml(href)}">`;
   const pattern = /<link\b(?=[^>]*\brel=["']manifest["'])[^>]*>/i;
-  return pattern.test(html) ? html.replace(pattern, tag) : insertBeforeHeadEnd(html, tag);
+  return pattern.test(html) ? html.replace(pattern, () => tag) : insertBeforeHeadEnd(html, tag);
 };
 
 const setAppleTouchIcon = (html, href) => {
   const tag = `<link rel="apple-touch-icon" sizes="180x180" href="${escapeHtml(href)}">`;
   const pattern = /<link\b(?=[^>]*\brel=["']apple-touch-icon["'])[^>]*>/i;
-  return pattern.test(html) ? html.replace(pattern, tag) : insertBeforeHeadEnd(html, tag);
+  return pattern.test(html) ? html.replace(pattern, () => tag) : insertBeforeHeadEnd(html, tag);
 };
 
 const buildRouteHtml = (sourceHtml, metadata) => {
@@ -301,7 +243,8 @@ const buildRouteHtml = (sourceHtml, metadata) => {
   }
 
   html = setMeta(html, 'property', 'og:url', canonicalUrl);
-  return setCanonical(html, canonicalUrl);
+  html = setCanonical(html, canonicalUrl);
+  return metadata.publicPage ? addPublicPageHtml(html, metadata.publicPage) : html;
 };
 
 const assertImageExists = async (slug) => {
@@ -313,7 +256,7 @@ const assertImageExists = async (slug) => {
   }
 };
 
-const sourceHtml = await readFile(SOURCE_HTML_PATH, 'utf8');
+const sourceHtml = clearPublicPageHtml(await readFile(SOURCE_HTML_PATH, 'utf8'));
 await mkdir(OUTPUT_DIR, { recursive: true });
 
 for (const metadata of ROUTES) {
@@ -323,6 +266,16 @@ for (const metadata of ROUTES) {
   const outputPath = path.join(OUTPUT_DIR, filename);
   await writeFile(outputPath, buildRouteHtml(sourceHtml, metadata), 'utf8');
 }
+
+// Keep a neutral client shell for unknown/private routes, separate from the public home.
+const shell = removeMeta(removeCanonical(buildRouteHtml(sourceHtml, {
+  route: '/', slug: 'home-dona-v5', title: 'Universo Cursos e Consultoria',
+  description: 'Universo Cursos e Consultoria: educação profissional e atendimento.',
+  robots: 'noindex, follow',
+})), 'property', 'og:url');
+await writeFile(path.join(OUTPUT_DIR, 'app-shell.html'), shell, 'utf8');
+await writeFile(SOURCE_HTML_PATH, buildRouteHtml(sourceHtml, ROUTES.find(page => page.route === '/')), 'utf8');
+await writeFile(path.join(DIST_DIR, 'sitemap.xml'), renderPublicSitemap(SITE_URL), 'utf8');
 
 for (const imageSlug of new Set(ROUTES.map((metadata) => metadata.imageSlug || metadata.slug))) {
   await assertImageExists(imageSlug);

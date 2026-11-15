@@ -1,52 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <!-- Home Page -->
-  <url>
-    <loc>https://universocc.com.br/</loc>
-    <lastmod>2026-06-19</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>1.0</priority>
-  </url>
-  <!-- Cursos EAD Page -->
-  <url>
-    <loc>https://universocc.com.br/ead</loc>
-    <lastmod>2026-06-19</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.9</priority>
-  </url>
-  <!-- Ensino Superior Page -->
-  <url>
-    <loc>https://universocc.com.br/ensino-superior</loc>
-    <lastmod>2026-06-19</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.9</priority>
-  </url>
-  <!-- Cursos Técnicos Page -->
-  <url>
-    <loc>https://universocc.com.br/cursos-tecnicos</loc>
-    <lastmod>2026-06-19</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.9</priority>
-  </url>
-  <!-- Contato Page -->
-  <url>
-    <loc>https://universocc.com.br/contato</loc>
-    <lastmod>2026-06-19</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <!-- FAQ Page -->
-  <url>
-    <loc>https://universocc.com.br/faq</loc>
-    <lastmod>2026-06-19</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <!-- Login Page -->
-  <url>
-    <loc>https://universocc.com.br/login</loc>
-    <lastmod>2026-06-19</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
-  </url>
+  <url><loc>https://universocc.com.br/</loc></url>
+  <url><loc>https://universocc.com.br/cursos-tecnicos</loc></url>
+  <url><loc>https://universocc.com.br/ead</loc></url>
+  <url><loc>https://universocc.com.br/cursos-livres</loc></url>
+  <url><loc>https://universocc.com.br/especializacao</loc></url>
+  <url><loc>https://universocc.com.br/ensino-superior</loc></url>
+  <url><loc>https://universocc.com.br/contato</loc></url>
+  <url><loc>https://universocc.com.br/polos</loc></url>
+  <url><loc>https://universocc.com.br/faq</loc></url>
+  <url><loc>https://universocc.com.br/links</loc></url>
+  <url><loc>https://universocc.com.br/termos</loc></url>
+  <url><loc>https://universocc.com.br/privacidade</loc></url>
+  <url><loc>https://universocc.com.br/cookies</loc></url>
 </urlset>

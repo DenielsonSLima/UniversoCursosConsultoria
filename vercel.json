@@ -182,8 +182,24 @@
       "destination": "/_social-share/validador.html"
     },
     {
+      "source": "/faq",
+      "destination": "/_social-share/faq.html"
+    },
+    {
+      "source": "/termos",
+      "destination": "/_social-share/termos.html"
+    },
+    {
+      "source": "/privacidade",
+      "destination": "/_social-share/privacidade.html"
+    },
+    {
+      "source": "/cookies",
+      "destination": "/_social-share/cookies.html"
+    },
+    {
       "source": "/(.*)",
-      "destination": "/index.html"
+      "destination": "/_social-share/app-shell.html"
     }
   ]
 }

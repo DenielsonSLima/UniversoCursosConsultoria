@@ -26,7 +26,7 @@ const ContactPage: React.FC = () => {
         </div>
         <div className="container mx-auto px-6 relative z-10 text-center">
           <h1 className="text-4xl md:text-6xl font-black mb-4 uppercase tracking-tighter">
-            Fale <span className="text-blue-400">Conosco</span>
+            {pathname === '/polos' ? 'Nossos ' : 'Fale '}<span className="text-blue-400">{pathname === '/polos' ? 'Polos' : 'Conosco'}</span>
           </h1>
           <p className="text-blue-100 text-lg max-w-2xl mx-auto font-light">
             Encontre a unidade mais próxima e consulte os endereços e canais de atendimento cadastrados em cada polo.

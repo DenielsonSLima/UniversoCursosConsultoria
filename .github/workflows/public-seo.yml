@@ -1,0 +1,37 @@
+name: Navegação e SEO público
+
+on:
+  pull_request:
+    paths:
+      - 'modules/public/**'
+      - 'scripts/seo/**'
+      - 'scripts/public-seo.contract.test.mjs'
+      - 'scripts/generate-social-share-pages.mjs'
+      - 'public/sitemap.xml'
+      - 'index.html'
+      - 'vercel.json'
+      - '.github/workflows/public-seo.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  public-seo:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.22.1'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm install --prefix "$RUNNER_TEMP/public-seo-tests" --no-save --ignore-scripts jsdom@26.1.0
+      - name: Validar HTML, sitemap e navegação pública
+        run: |
+          export PUBLIC_NAVIGATION_JSDOM_PATH="$RUNNER_TEMP/public-seo-tests/node_modules/jsdom"
+          export FINANCIAL_PAYMENT_JSDOM_PATH="$PUBLIC_NAVIGATION_JSDOM_PATH"
+          node --test scripts/public-seo.contract.test.mjs modules/public/components/public-navigation.interaction.test.mjs
