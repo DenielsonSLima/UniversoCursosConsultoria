@@ -11,12 +11,14 @@ import {
   banesePaymentDate,
   sumBanesePaymentValues,
 } from "../gateways/api/banese-reconciliation-contract.ts";
+import { assertPortalPdfBankEvidence, isPortalPdfImport } from "./portal-pdf-evidence.ts";
 import { loadBaneseExpectedTransactions } from "../gateways/api/banese-reconciliation-persistence.ts";
 import { requireGatewayEnvironment } from "../gateways/api/environment.ts";
 import { readRequestBody } from "./request-guards.ts";
 import { json } from "./response.ts";
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const digits = (value: unknown) => String(value ?? "").replace(/\D/g, "");
 
 // Called only after worker-secret authentication. No reconciliation, maintenance,
 // queue RPC or persistence is available on this branch; OAuth remains internal.
@@ -51,7 +53,17 @@ export const diagnoseBaneseReceivable = async (
     .eq("provider_code", "banese_card").eq("environment", environment).maybeSingle();
   if (credentialError) throw new Error("CONFIGURATION_UNAVAILABLE");
   const metadata = credential?.metadata ?? {};
-  const legacy = transactions[0].is_legacy_import;
+  const portalPdf = isPortalPdfImport(transactions[0].raw_payload);
+  const legacy = transactions[0].is_legacy_import || portalPdf;
+  const agency = row.gateway_boleto_agencia || metadata.baneseAgencia;
+  const account = metadata.baneseConta || metadata.baneseContaDisplay;
+  if (portalPdf) {
+    assertPortalPdfBankEvidence(row, transactions[0], nossoNumero);
+    if (!/^\d{3}$/.test(digits(agency)) || digits(agency) === "000" ||
+      !/^\d{9}$/.test(digits(account)) || digits(account) === "000000000") {
+      throw new Error("PORTAL_BENEFICIARY_UNAVAILABLE");
+    }
+  }
   const controller = new globalThis.AbortController();
   const timeout = setTimeout(() => controller.abort(), 20_000);
   try {
@@ -67,8 +79,8 @@ export const diagnoseBaneseReceivable = async (
       expectedAmount: terms.nominalAmount,
       expectedDueDate: terms.dueDate,
       expectedPayerDocument: payerDocument,
-      expectedAgency: legacy ? undefined : row.gateway_boleto_agencia || metadata.baneseAgencia,
-      expectedAccount: legacy ? undefined : metadata.baneseConta || metadata.baneseContaDisplay,
+      expectedAgency: portalPdf || !legacy ? agency : undefined,
+      expectedAccount: portalPdf || !legacy ? account : undefined,
       expectedDocumentNumber: legacy ? undefined : receivableId.slice(0, 15),
       expectedCompanyTitleId: legacy ? undefined : receivableId.slice(0, 25),
       signal: controller.signal,
@@ -80,6 +92,11 @@ export const diagnoseBaneseReceivable = async (
     const dates = snapshot.payments.map(banesePaymentDate).sort();
     const paymentDate = dates.at(-1) ?? null;
     const range = paymentDate ? calculateBaneseSettlementRange(terms, paymentDate) : null;
+    const official = snapshot.raw as Record<string, unknown>;
+    const officialLine = digits(official.NumeroLinhaDigitavel ?? official.numeroLinhaDigitavel);
+    const officialBarcode = digits(official.NumeroCodigoBarras ?? official.numeroCodigoBarras);
+    const localLine = digits(row.gateway_boleto_linha_digitavel);
+    const localBarcode = digits(row.gateway_boleto_codigo_barras);
     return {
       success: true, action: "diagnose_receivable", readOnly: true,
       checkedAt: new Date().toISOString(), environment,
@@ -89,6 +106,15 @@ export const diagnoseBaneseReceivable = async (
       nominalAmount: terms.nominalAmount, financialTerms: terms,
       calculatedRange: range,
       withinCalculatedRange: range ? amount >= range.minimumAmount && amount <= range.maximumAmount : null,
+      bankNumberComparison: {
+        portalPdfEvidenceVerified: portalPdf,
+        officialLinePresent: officialLine.length === 47,
+        officialBarcodePresent: officialBarcode.length === 44,
+        localLinePresent: localLine.length === 47,
+        localBarcodePresent: localBarcode.length === 44,
+        localLineMatchesOfficial: Boolean(localLine) && localLine === officialLine,
+        localBarcodeMatchesOfficial: Boolean(localBarcode) && localBarcode === officialBarcode,
+      },
       payments: snapshot.payments.map((payment) => ({
         amount: Math.round(sumBanesePaymentValues([payment]) * 100) / 100,
         date: banesePaymentDate(payment),
