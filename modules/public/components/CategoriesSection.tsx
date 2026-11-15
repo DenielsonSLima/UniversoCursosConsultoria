@@ -2,7 +2,6 @@
 // File: modules/public/components/CategoriesSection.tsx
 
 import React from 'react';
-import { useNavigate } from 'react-router';
 import CursosLivresCard from '../categories/cursos-livres/CursosLivresCard';
 import CursosEadCard from '../categories/cursos-ead/CursosEadCard';
 import EspecializacaoTecnicaCard from '../categories/especializacao-tecnica/EspecializacaoTecnicaCard';
@@ -10,24 +9,6 @@ import CursosTecnicosCard from '../categories/cursos-tecnicos/CursosTecnicosCard
 import EnsinoSuperiorCard from '../categories/ensino-superior/EnsinoSuperiorCard';
 
 const CategoriesSection: React.FC = () => {
-  const navigate = useNavigate();
-
-  const handleOpenSuperior = () => {
-    navigate('/ensino-superior');
-  };
-
-  const handleOpenTecnicos = () => {
-    navigate('/cursos-tecnicos');
-  };
-
-  const handleOpenLivres = () => {
-    navigate('/cursos-livres');
-  };
-
-  const handleOpenEspecializacao = () => {
-    navigate('/especializacao');
-  };
-
   return (
     <section className="relative py-16 overflow-hidden">
       <style>{`
@@ -75,11 +56,11 @@ const CategoriesSection: React.FC = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 max-w-7xl mx-auto">
-          <CursosLivresCard onClick={handleOpenLivres} />
+          <CursosLivresCard />
           <CursosEadCard />
-          <EspecializacaoTecnicaCard onClick={handleOpenEspecializacao} />
-          <CursosTecnicosCard onClick={handleOpenTecnicos} />
-          <EnsinoSuperiorCard onClick={handleOpenSuperior} />
+          <EspecializacaoTecnicaCard />
+          <CursosTecnicosCard />
+          <EnsinoSuperiorCard />
         </div>
       </div>
 

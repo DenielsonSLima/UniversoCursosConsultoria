@@ -3,7 +3,7 @@
 
 import React from 'react';
 import { Facebook, Instagram, Phone, Mail, MapPin, ShieldCheck } from 'lucide-react';
-import { useNavigate } from 'react-router';
+import { Link, useNavigate } from 'react-router';
 import ArkhenSignature from '../../shared/components/ArkhenSignature';
 
 const Footer: React.FC = () => {
@@ -16,16 +16,15 @@ const Footer: React.FC = () => {
           
           {/* Logo e Sobre */}
           <div className="space-y-6">
-            <div 
+            <Link to="/" aria-label="Página inicial da Universo"
               className="inline-block bg-white p-3 rounded-2xl cursor-pointer max-w-[200px] shadow-lg transition-transform duration-300 hover:scale-105" 
-              onClick={() => navigate('/')}
             >
               <img 
                 src="/LogoUniverso.png" 
                 alt="Universo Cursos e Consultoria" 
                 className="h-10 w-auto object-contain"
               />
-            </div>
+            </Link>
             <p className="text-slate-400 text-sm leading-relaxed max-w-xs">
               Referência em ensino profissional (presencial e EAD) e consultoria estratégica com alcance nacional. Transformando vidas através da educação desde 2011.
             </p>
@@ -57,17 +56,19 @@ const Footer: React.FC = () => {
             <li><a href="/ead" className="hover:text-white transition-colors">Cursos EAD</a></li>
             <li><a href="/cursos-tecnicos" className="hover:text-white transition-colors">Cursos Técnicos</a></li>
             <li><a href="/ensino-superior" className="hover:text-white transition-colors">Ensino Superior</a></li>
+            <li><Link to="/cursos-livres" className="hover:text-white transition-colors">Cursos Livres</Link></li>
+            <li><Link to="/especializacao" className="hover:text-white transition-colors">Especializações</Link></li>
+            <li><Link to="/polos" className="hover:text-white transition-colors">Nossos polos</Link></li>
             <li><a href="/login" className="hover:text-white transition-colors">Login do Aluno</a></li>
             <li><a href="/contato" className="hover:text-white transition-colors">Fale Conosco</a></li>
             <li><a href="/faq" className="hover:text-white transition-colors">FAQ</a></li>
             <li>
-              <button
-                onClick={() => navigate('/validador')}
+              <Link to="/validador"
                 className="flex items-center gap-2 text-emerald-400 hover:text-emerald-300 transition-colors"
               >
                 <ShieldCheck size={14} />
                 Validador de Docs
-              </button>
+              </Link>
             </li>
           </ul>
         </div>

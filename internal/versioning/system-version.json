@@ -1,8 +1,8 @@
 {
-  "version": "4.8.345",
+  "version": "4.8.346",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 354,
+  "revision": 355,
   "releasedAt": "2026-11-15",
-  "summary": "Conciliação Banese revisada preserva encargos não discriminados"
+  "summary": "Páginas públicas com HTML inicial e navegação rastreável"
 }

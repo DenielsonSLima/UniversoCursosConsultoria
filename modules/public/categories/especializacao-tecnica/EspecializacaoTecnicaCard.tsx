@@ -1,16 +1,13 @@
 
 import React from 'react';
+import { Link } from 'react-router';
 import { Zap } from 'lucide-react';
 
-interface EspecializacaoTecnicaCardProps {
-  onClick?: () => void;
-}
-
-const EspecializacaoTecnicaCard: React.FC<EspecializacaoTecnicaCardProps> = ({ onClick }) => {
+const EspecializacaoTecnicaCard: React.FC = () => {
   return (
-    <div 
-      onClick={onClick}
-      className="group relative bg-white/10 backdrop-blur-md border border-white/20 p-6 rounded-2xl hover:bg-white/20 transition-all duration-500 cursor-pointer overflow-hidden shadow-xl min-h-[220px] flex flex-col justify-between"
+    <Link
+      to="/especializacao"
+      className="group relative bg-white/10 backdrop-blur-md border border-white/20 p-6 rounded-2xl hover:bg-white/20 transition-all duration-500 cursor-pointer overflow-hidden shadow-xl min-h-[220px] flex flex-col justify-between focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300"
     >
       <div className="absolute -right-4 -top-4 text-white/5 group-hover:text-white/10 transition-colors">
         <Zap size={100} />
@@ -27,7 +24,7 @@ const EspecializacaoTecnicaCard: React.FC<EspecializacaoTecnicaCardProps> = ({ o
       <div className="mt-4 flex items-center text-white font-bold text-[10px] uppercase tracking-widest group-hover:translate-x-2 transition-transform">
         Explorar <span className="ml-2">→</span>
       </div>
-    </div>
+    </Link>
   );
 };
 

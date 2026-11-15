@@ -1,7 +1,8 @@
 import React, { useEffect } from 'react';
 import { useLocation } from 'react-router';
+import { PUBLIC_PAGES, PUBLIC_SITE_URL } from '../seo/public-pages';
 
-const SITE_URL = 'https://universocc.com.br';
+const SITE_URL = PUBLIC_SITE_URL;
 
 const TECHNICAL_NURSING_METADATA: RouteMetadata = {
   title: 'Técnico em Enfermagem | Universo Cursos e Consultoria',
@@ -18,16 +19,10 @@ type RouteMetadata = {
 };
 
 const ROUTE_METADATA: Record<string, RouteMetadata> = {
-  '/': {
-    title: 'Universo Cursos e Consultoria | Educação que transforma',
-    description: 'Cursos técnicos, EAD, cursos livres, especializações e ensino superior com atendimento próximo e formação de qualidade.',
-    image: '/social-share/home-dona-v5.jpg',
-  },
-  '/ead': {
-    title: 'Cursos EAD | Universo Cursos e Consultoria',
-    description: 'Estude onde estiver com cursos EAD acessíveis, flexíveis e voltados ao seu desenvolvimento profissional.',
-    image: '/social-share/ead-v2.jpg',
-  },
+  ...Object.fromEntries(PUBLIC_PAGES.map(page => [page.path, {
+    title: page.title, description: page.description,
+    image: `/social-share/${page.imageSlug}.jpg`, canonicalPath: page.canonicalPath,
+  }])),
   '/login': {
     title: 'Portal do Aluno | Universo Cursos e Consultoria',
     description: 'Entre no Portal do Aluno para acessar seus cursos, matrículas, pagamentos e documentos acadêmicos.',
@@ -82,46 +77,6 @@ const ROUTE_METADATA: Record<string, RouteMetadata> = {
     image: '/social-share/login.jpg',
     robots: 'noindex, nofollow',
   },
-  '/ensino-superior': {
-    title: 'Ensino Superior | Universo Cursos e Consultoria',
-    description: 'Graduações, licenciaturas e cursos superiores de tecnologia para transformar seu futuro profissional.',
-    image: '/social-share/ensino-superior.jpg',
-  },
-  '/cursos-tecnicos': {
-    title: 'Cursos Técnicos | Universo Cursos e Consultoria',
-    description: 'Formação técnica de qualidade para você conquistar novas oportunidades e avançar no mercado de trabalho.',
-    image: '/social-share/cursos-tecnicos.jpg',
-  },
-  '/cursos-livres': {
-    title: 'Cursos Livres | Universo Cursos e Consultoria',
-    description: 'Capacitações práticas e de curta duração para desenvolver habilidades e abrir novas oportunidades profissionais.',
-    image: '/social-share/cursos-livres.jpg',
-  },
-  '/especializacao': {
-    title: 'Especializações | Universo Cursos e Consultoria',
-    description: 'Aprofunde seus conhecimentos com especializações profissionais nas áreas de saúde, educação e gestão.',
-    image: '/social-share/especializacao-v2.jpg',
-  },
-  '/contato': {
-    title: 'Contato e localização | Universo Cursos e Consultoria',
-    description: 'Entre em contato, consulte nossos endereços e conheça as opções de atendimento da Universo Cursos e Consultoria.',
-    image: '/social-share/localizacao.jpg',
-  },
-  '/localizacao': {
-    title: 'Onde estamos | Universo Cursos e Consultoria',
-    description: 'Encontre a Universo Cursos e Consultoria e fale com a unidade mais próxima de você.',
-    image: '/social-share/localizacao.jpg',
-  },
-  '/polos': {
-    title: 'Nossos polos | Universo Cursos e Consultoria',
-    description: 'Conheça os polos da Universo Cursos e Consultoria em Japoatã, Aquidabã e Porto da Folha, Sergipe.',
-    image: '/social-share/polos.jpg',
-  },
-  '/links': {
-    title: 'Links oficiais | Universo Cursos e Consultoria',
-    description: 'Acesse em um só lugar os cursos, canais de atendimento e páginas oficiais da Universo Cursos e Consultoria.',
-    image: '/social-share/links.jpg',
-  },
   '/bio': {
     title: 'Links oficiais | Universo Cursos e Consultoria',
     description: 'Acesse em um só lugar os cursos, canais de atendimento e páginas oficiais da Universo Cursos e Consultoria.',
@@ -136,31 +91,11 @@ const ROUTE_METADATA: Record<string, RouteMetadata> = {
     canonicalPath: '/links',
     robots: 'noindex, follow',
   },
-  '/faq': {
-    title: 'Perguntas Frequentes | Universo Cursos e Consultoria',
-    description: 'Encontre respostas sobre cursos, matrículas, documentos, certificados e atendimento.',
-    image: '/social-share/home-v2.jpg',
-  },
   '/validador': {
     title: 'Validador de documentos | Universo Cursos e Consultoria',
     description: 'Consulte a autenticidade de certificados e documentos acadêmicos emitidos pela Universo Cursos e Consultoria.',
     image: '/social-share/validador.jpg',
     robots: 'noindex, follow',
-  },
-  '/termos': {
-    title: 'Termos de Uso | Universo Cursos e Consultoria',
-    description: 'Consulte os termos e condições de uso dos serviços da Universo Cursos e Consultoria.',
-    image: '/social-share/home-v2.jpg',
-  },
-  '/privacidade': {
-    title: 'Política de Privacidade (LGPD) | Universo Cursos e Consultoria',
-    description: 'Saiba como a Universo Cursos e Consultoria trata e protege dados pessoais conforme a LGPD.',
-    image: '/social-share/home-v2.jpg',
-  },
-  '/cookies': {
-    title: 'Política de Cookies | Universo Cursos e Consultoria',
-    description: 'Entenda como os cookies são utilizados no site da Universo Cursos e Consultoria.',
-    image: '/social-share/home-v2.jpg',
   },
 };
 
