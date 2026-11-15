@@ -8,6 +8,8 @@ Histórico 4.8.276: [versão arquivada](./changelog/2026-11-09-versao-4-8-276.md
 
 Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente deve sempre corresponder ao arquivo `system-version.json`.
 
+Histórico 4.8.280: [09/11/2026](./changelog/2026-11-09-versao-4-8-280.md).
+
 Histórico 4.8.279: [09/11/2026](./changelog/2026-11-09-versao-4-8-279.md).
 
 Histórico 4.8.274: [08/11/2026](./changelog/2026-11-08-versao-4-8-274.md). Histórico 4.8.275: [08/11/2026](./changelog/2026-11-08-versao-4-8-275.md).
@@ -99,6 +101,11 @@ Histórico arquivado: [08/11/2026 — versões 4.8.270 a 4.8.271](./changelog/20
 Histórico arquivado: [08/11/2026 — versão 4.8.272](./changelog/2026-11-08-versao-4-8-272.md).
 
 Histórico arquivado: [08/11/2026 — versão 4.8.273](./changelog/2026-11-08-versao-4-8-273.md).
+
+## [4.8.347] - 2026-11-15
+
+- Menu Cursos preserva o clique na opção quando o Safari informa destino de foco nulo, permitindo concluir a navegação antes de fechar.
+- Regressão de interação cobre a perda de foco anterior ao clique, mantendo fechamento por destino externo, Escape e clique fora.
 
 ## [4.8.346] - 2026-11-15
 
@@ -489,9 +496,3 @@ Histórico arquivado: [08/11/2026 — versão 4.8.273](./changelog/2026-11-08-ve
 - Leitura PBES2 aceita senhas UTF-8 e mantém compatibilidade legada, sem enfraquecer a verificação do certificado.
 - Validade aparece após salvar e no painel; falhas de arquivo, senha, cadeia e acesso têm mensagens próprias sem expor credenciais.
 - Emissão fiscal permanece bloqueada, com validações de CNPJ, confiança e autorização preservadas.
-
-## [4.8.280] - 2026-11-09
-
-- Extras retroativas reconhecem vínculos de implantação legada quando há chamada individual anterior na mesma disciplina.
-- A data técnica de cadastro e sua ativação não substituem prova acadêmica; ingresso real, saídas, trancamentos e pendências continuam protegidos.
-- Preservados matrícula, faltas, notas, histórico documental e assinados anteriores, sem registros artificiais.
