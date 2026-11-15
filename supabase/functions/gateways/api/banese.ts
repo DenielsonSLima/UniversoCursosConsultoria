@@ -27,6 +27,7 @@ import {
   throwBanesePostSettlementPending,
 } from "./banese-post-settlement.ts";
 import { completeBanesePostSettlement } from "./banese-post-settlement-projection.ts";
+import { approveBaneseReviewedSettlement, type BanesePaymentVarianceReview, type BaneseReviewedSettlement } from "./banese-reviewed-settlement.ts";
 import {
   BANESE_DISCOUNT_REMOVAL_PENDING,
   repairMarkedBaneseReenrollmentDiscount,
@@ -44,6 +45,7 @@ type ReconcileBaneseDependencies = {
   persistReconciliation?: typeof persistBaneseReconciliationSnapshot;
   signal?: AbortSignal;
   repairDiscountRemoval?: typeof repairMarkedBaneseReenrollmentDiscount;
+  reviewedSettlement?: BaneseReviewedSettlement;
   syncFutureInstallments?: (
     matriculaId: string,
     environment: Environment,
@@ -266,7 +268,8 @@ export const reconcileBaneseReceivable = async (
       convenio,
       nossoNumero,
       recoverPix: !persistedPixPayload,
-      skipEffectivePaymentsWhenOfficiallyUnpaid: isLegacyImport,
+      skipEffectivePaymentsWhenOfficiallyUnpaid: isLegacyImport && !dependencies.reviewedSettlement,
+      strictEffectivePayments: Boolean(dependencies.reviewedSettlement),
       // Boletos de importação legada não possuem NumeroDocumento/IdTituloEmpresa
       // registrados no Banese. Desabilitamos a validação estrita de identidade de
       // título para eles; as demais travas (Nosso Número, Valor, Vencimento, CPF,
@@ -345,6 +348,7 @@ export const reconcileBaneseReceivable = async (
       "Banese informou boleto pago sem detalhe completo do pagamento; a baixa local foi preservada para conciliacao segura.",
     );
   }
+  let paymentVarianceReview: BanesePaymentVarianceReview | undefined;
   if (snapshot.paid) {
     const paymentRange = calculateBaneseSettlementRange(
       confirmedFinancialTerms,
@@ -354,9 +358,12 @@ export const reconcileBaneseReceivable = async (
     const minimumCents = Math.round(paymentRange.minimumAmount * 100);
     const maximumCents = Math.round(paymentRange.maximumAmount * 100);
     if (paymentCents < minimumCents || paymentCents > maximumCents) {
-      throw new Error(
-        "Valor pago no Banese diverge dos termos confirmados do titulo; a baixa automatica foi bloqueada para revisao.",
-      );
+      paymentVarianceReview = await approveBaneseReviewedSettlement(dependencies.reviewedSettlement, {
+        receivableId, environment, nossoNumero: snapshotNossoNumero,
+        amount: paymentCents / 100, paymentDate: paymentDates.at(-1)!,
+        financialTerms: confirmedFinancialTerms,
+        calculatedRange: { minimumAmount: minimumCents / 100, expectedAmount: paymentRange.expectedAmount, maximumAmount: maximumCents / 100 },
+      });
     }
   }
   const postSettlementRequired = snapshot.paid;
@@ -418,6 +425,7 @@ export const reconcileBaneseReceivable = async (
       shouldSettle,
       paymentTotal,
       paymentDate: paymentDates.at(-1) || null,
+      paymentVarianceReview,
       settlementMethod,
       pixPayload: candidatePixPayload,
       pixEncodedImage: candidatePixEncodedImage,

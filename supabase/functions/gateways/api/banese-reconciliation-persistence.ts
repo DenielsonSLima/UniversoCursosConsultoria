@@ -1,5 +1,6 @@
 import { onlyBaneseDigits } from "./banese-reconciliation-contract.ts";
 import { awaitBaneseRead } from "../../banese/core/adapter/utils.ts";
+import type { BanesePaymentVarianceReview } from "./banese-reviewed-settlement.ts";
 
 type BankNumbers = {
   digitableLine: string;
@@ -91,6 +92,7 @@ export const persistBaneseReconciliationSnapshot = async (
     shouldSettle: boolean;
     paymentTotal: number;
     paymentDate: string | null;
+    paymentVarianceReview?: BanesePaymentVarianceReview;
     settlementMethod: string;
     pixPayload: string;
     pixEncodedImage: string;
@@ -109,6 +111,7 @@ export const persistBaneseReconciliationSnapshot = async (
     financialTerms: input.financialTerms,
     settlementMethod: input.settlementMethod,
     pixRecovered: Boolean(snapshot.pixPayload),
+    ...(input.paymentVarianceReview ? { paymentVarianceReview: input.paymentVarianceReview } : {}),
   };
   const rpcRequest = admin.rpc(
     "persist_banese_reconciliation_snapshot",
