@@ -13,7 +13,7 @@ import {
   scheduledLaunchAt,
 } from "./pacing.ts";
 import { safeEqual } from "./request-guards.ts";
-import { handleDiagnosticRequest } from "./diagnostic.ts";
+import { handleWorkerActionRequest } from "./worker-action.ts";
 import { json, titleReplacementJson } from "./response.ts";
 import {
   createLazyAsyncValue,
@@ -137,7 +137,7 @@ export const handleBaneseReconciliationRequest = async (
     return json({ error: "Não autorizado." }, 401);
   }
 
-  const diagnostic = await handleDiagnosticRequest(req, admin);
+  const diagnostic = await handleWorkerActionRequest(req, admin);
   if (diagnostic) return diagnostic;
 
   const titleReplacement = await processOneBaneseEadTitleReplacement(admin, supabaseUrl);

@@ -107,11 +107,16 @@ const AttemptResult = ({ attempt }: { attempt: BanesePollingAttempt }) => (
 );
 
 const CurrentTitle = ({ attempt }: { attempt: BanesePollingAttempt }) => {
+  const queueState = String(attempt.recovery?.queueState || '').toUpperCase();
+  const requiresReview = queueState === 'QUARANTINED';
   return (
     <div>
+      {requiresReview ? (
+        <p className="mb-1 text-[10px] font-semibold text-amber-800">Estado local preservado para revisão</p>
+      ) : null}
       <StatusPill value={attempt.current_receivable_status} />
       <p className="mt-1.5 text-[10px] font-semibold leading-relaxed text-slate-500">
-        Gateway atual: {statusLabel(attempt.current_gateway_status)}
+        {requiresReview ? 'Gateway local' : 'Gateway atual'}: {statusLabel(attempt.current_gateway_status)}
       </p>
       <p className="mt-1 text-[10px] font-semibold text-slate-500">
         Vencimento {civilDate(attempt.due_date)} • {money(attempt.amount)}
@@ -129,7 +134,11 @@ const CurrentTitle = ({ attempt }: { attempt: BanesePollingAttempt }) => {
           {attempt.recovery.latestQueryAt ? <p>Última tentativa em {dateTime(attempt.recovery.latestQueryAt)}</p> : null}
           {attempt.recovery.latestQueryErrorClass ? <p className="text-red-700">{attempt.recovery.latestQueryErrorClass}</p> : null}
           <p>Fila: {attempt.recovery.queueLabel}</p>
-          {attempt.recovery.nextCheckAt ? <p>Próxima consulta em {dateTime(attempt.recovery.nextCheckAt)}</p> : null}
+          {requiresReview ? (
+            <p className="text-amber-800">Consultas automáticas suspensas até a revisão da divergência.</p>
+          ) : queueState === 'READY' && attempt.recovery.nextCheckAt ? (
+            <p>Próxima consulta em {dateTime(attempt.recovery.nextCheckAt)}</p>
+          ) : null}
         </div>
       ) : null}
     </div>
@@ -155,8 +164,8 @@ const BaneseAttemptsTable = ({
   isFetching,
 }: BaneseAttemptsTableProps) => (
   <section className="space-y-3" aria-label="Histórico de consultas de boletos Banese">
-    <div className="flex flex-wrap items-center justify-between gap-3">
-      <p className="min-w-0 flex-1 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-xs font-semibold leading-relaxed text-blue-950">
+    <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+      <p className="min-w-0 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-xs font-semibold leading-relaxed text-blue-950 sm:flex-1">
         {contextCopy[context]}
       </p>
       <div className="flex items-center gap-2">

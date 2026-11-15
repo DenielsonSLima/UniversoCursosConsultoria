@@ -108,6 +108,101 @@ Deno.test("diagnóstico consulta somente GETs, mostra divergência sem baixar e 
   });
 });
 
+const portalRow = {
+  ...row,
+  gateway_boleto_agencia: fixture.beneficiary.agency,
+  gateway_boleto_linha_digitavel: fixture.digitableLine,
+  gateway_boleto_codigo_barras: fixture.barcode,
+};
+const portalTransaction = {
+  ...transaction,
+  bank_slip_digitable_line: fixture.digitableLine,
+  bank_slip_barcode: fixture.barcode,
+  raw_payload: { importSource: "BANESE_PORTAL_LEGACY_PDF" },
+};
+const portalCredential = { metadata: {
+  baneseAgencia: fixture.beneficiary.agency,
+  baneseConta: fixture.beneficiary.account,
+} };
+const portalAdmin = (changes: Record<string, unknown> = {}) => fakeAdmin({
+  contas_receber: portalRow,
+  payment_gateway_transactions: [portalTransaction],
+  payment_gateway_credentials: portalCredential,
+  ...changes,
+});
+
+Deno.test("diagnóstico de PDF legado prova vínculo e beneficiário sem exigir IDs de POST inexistentes", async () => {
+  for (const raw_payload of [portalTransaction.raw_payload, JSON.stringify(portalTransaction.raw_payload)]) {
+    const { admin, calls } = portalAdmin({ payment_gateway_transactions: [{ ...portalTransaction, raw_payload }] });
+    await withOfficialQuery(bankTitle, async (query, requests) => {
+      const result = await diagnoseBaneseReceivable(admin, receivableId, (client, environment, input) => {
+        assert.equal(input.expectedDocumentNumber, undefined);
+        assert.equal(input.expectedCompanyTitleId, undefined);
+        assert.equal(input.expectedPayerDocument, fixture.payer.document);
+        assert.equal(input.expectedAgency, fixture.beneficiary.agency);
+        assert.equal(input.expectedAccount, fixture.beneficiary.account);
+        return query(client, environment, input);
+      });
+      assert.deepEqual(requests, ["GET title", "GET payments"]);
+      assert.equal(result.readOnly, true);
+      assert.deepEqual(result.bankNumberComparison, {
+        portalPdfEvidenceVerified: true,
+        officialLinePresent: true, officialBarcodePresent: true,
+        localLinePresent: true, localBarcodePresent: true,
+        localLineMatchesOfficial: true, localBarcodeMatchesOfficial: true,
+      });
+      assert.equal(calls.some((name) => /queue|attempt|run/.test(name)), false);
+      const serialized = JSON.stringify(result);
+      for (const secret of [fixture.ourNumber, fixture.payer.document, fixture.digitableLine,
+        fixture.barcode, "never-expose-this-token"]) assert.equal(serialized.includes(secret), false);
+    });
+  }
+});
+
+Deno.test("diagnóstico de PDF legado recusa prova local ou beneficiário incompletos antes da API", async () => {
+  let queried = false;
+  const query = (() => { queried = true; throw new Error("must not query"); }) as typeof queryBaneseBoleto;
+  for (const changes of [
+    { contas_receber: { ...portalRow, gateway_boleto_linha_digitavel: null } },
+    { contas_receber: { ...portalRow, gateway_boleto_codigo_barras: null } },
+    { payment_gateway_transactions: [{ ...portalTransaction, bank_slip_digitable_line: "1".repeat(47) }] },
+    { payment_gateway_transactions: [{ ...portalTransaction, bank_slip_barcode: "1".repeat(44) }] },
+    { payment_gateway_transactions: [{ ...portalTransaction, amount: fixture.amount + 1 }] },
+    { payment_gateway_credentials: { metadata: {} } },
+    { contas_receber: { ...portalRow, gateway_boleto_agencia: "000" } },
+    { payment_gateway_credentials: { metadata: { ...portalCredential.metadata, baneseConta: "000000000" } } },
+  ]) await assert.rejects(() => diagnoseBaneseReceivable(portalAdmin(changes).admin, receivableId, query));
+  assert.equal(queried, false);
+});
+
+Deno.test("origem diferente de PDF legado não dispensa a identidade do POST", async () => {
+  for (const raw_payload of [{ importSource: "BANESE_PORTAL_LEGACY" }, { importSource: "unknown" }, "bad-json"]) {
+    await withOfficialQuery(bankTitle, async (query, requests) => {
+      await assert.rejects(() => diagnoseBaneseReceivable(portalAdmin({
+        payment_gateway_transactions: [{ ...portalTransaction, raw_payload }],
+      }).admin, receivableId, query), /NumeroDocumento/);
+      assert.deepEqual(requests, ["GET title"]);
+    });
+  }
+});
+
+Deno.test("diagnóstico de PDF legado preserva validações oficiais de CPF, valor, vencimento e ASBACE", async () => {
+  for (const scenario of [
+    { title: { ...bankTitle, Pagador: undefined }, changes: {}, reason: /CPF/ },
+    { title: { ...bankTitle, ValorNominal: fixture.amount + 1 }, changes: {}, reason: /ValorNominal/ },
+    { title: { ...bankTitle, DataVencimento: "2026-08-16" }, changes: {}, reason: /DataVencimento/ },
+    { title: bankTitle, changes: { payment_gateway_credentials: { metadata: {
+      ...portalCredential.metadata, baneseConta: "999999999",
+    } } }, reason: /Conta.*ASBACE/ },
+    { title: bankTitle, changes: { contas_receber: { ...portalRow, gateway_boleto_agencia: "034" } }, reason: /Nosso Numero|Agencia.*ASBACE/ },
+  ]) {
+    await withOfficialQuery(scenario.title, async (query, requests) => {
+      await assert.rejects(() => diagnoseBaneseReceivable(portalAdmin(scenario.changes).admin, receivableId, query), scenario.reason);
+      assert.deepEqual(requests, ["GET title"]);
+    });
+  }
+});
+
 Deno.test("diagnóstico strict não infere não pago de 404 ou envelope bancário incompleto", async () => {
   for (const response of [{ status: 404, body: {} },
     { status: 200, body: { PagamentosEfetivados: [] , Erros: [{ CodigoErroProcessamento: "500" }] } },
@@ -177,7 +272,7 @@ Deno.test("diagnóstico inválido/erro nunca cai na manutenção ou conciliaçã
 Deno.test("entrada autentica antes do diagnóstico e retorna antes de toda manutenção", async () => {
   const source = await Deno.readTextFile(new URL("./handler.ts", import.meta.url));
   const auth = source.indexOf("if (!safeEqual(requestSecret, configuredSecret))");
-  const diagnostic = source.indexOf("const diagnostic = await handleDiagnosticRequest(req, admin)");
+  const diagnostic = source.indexOf("const diagnostic = await handleWorkerActionRequest(req, admin)");
   const earlyReturn = source.indexOf("if (diagnostic) return diagnostic");
   assert.ok(auth > 0 && auth < diagnostic && diagnostic < earlyReturn);
   for (const call of ["await processOneBaneseEadTitleReplacement", "await recoverEadAmbiguousTitlesOnce",

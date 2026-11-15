@@ -65,3 +65,28 @@ test('unresolved error and missing projection never infer recovery from receivab
   assert.doesNotMatch(html, /superado por consulta posterior/);
   assert.doesNotMatch(render({ ...attempt, current_receivable_status: 'PAGO', recovery: null }), /Consulta recuperada em/);
 });
+
+test('quarantined title preserves local state and audit without promising a residual schedule', () => {
+  const html = render({ ...attempt, error_class: 'REVIEW_REQUIRED', recovery: { ...recovery,
+    status: 'AWAITING_NEW_QUERY', label: 'Sem consulta posterior bem-sucedida registrada',
+    recoveredAt: null, latestQueryResult: 'ERROR', latestQueryErrorClass: 'REVIEW_REQUIRED',
+    currentQueryLabel: 'A última tentativa de consulta falhou',
+    queueState: 'QUARANTINED', queueLabel: 'Em revisão', nextCheckAt: '2026-09-10T18:00:00Z',
+  } });
+  assert.match(html, /Estado local preservado para revisão/);
+  assert.match(html, /Gateway local: Pendente/);
+  assert.match(html, /Consultas automáticas suspensas até a revisão da divergência/);
+  assert.match(html, /Fila: Em revisão/);
+  assert.match(html, /REVIEW_REQUIRED/);
+  assert.match(html, /Última tentativa em/);
+  assert.doesNotMatch(html, /Próxima consulta em|Gateway atual:|Consulta recuperada em/);
+});
+
+test('a completed or leased queue never advertises its stored next-check date as a future consultation', () => {
+  for (const queueState of ['DONE', 'LEASED', null]) {
+    const html = render({ ...attempt, recovery: { ...recovery, queueState } });
+    assert.doesNotMatch(html, /Próxima consulta em/);
+    assert.match(html, /Erro histórico superado por consulta posterior/);
+    assert.match(html, /Consulta recuperada em/);
+  }
+});

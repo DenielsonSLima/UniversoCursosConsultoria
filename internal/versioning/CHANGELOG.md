@@ -1,5 +1,9 @@
 # Histórico de alterações
 
+Histórico 4.8.277: [versão arquivada](./changelog/2026-11-09-versao-4-8-277.md).
+
+Histórico 4.8.276: [versão arquivada](./changelog/2026-11-09-versao-4-8-276.md).
+
 Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente deve sempre corresponder ao arquivo `system-version.json`.
 
 Histórico 4.8.274: [08/11/2026](./changelog/2026-11-08-versao-4-8-274.md). Histórico 4.8.275: [08/11/2026](./changelog/2026-11-08-versao-4-8-275.md).
@@ -91,6 +95,12 @@ Histórico arquivado: [08/11/2026 — versões 4.8.270 a 4.8.271](./changelog/20
 Histórico arquivado: [08/11/2026 — versão 4.8.272](./changelog/2026-11-08-versao-4-8-272.md).
 
 Histórico arquivado: [08/11/2026 — versão 4.8.273](./changelog/2026-11-08-versao-4-8-273.md).
+
+## [4.8.344] - 2026-11-15
+
+- Histórico Banese explicita consultas suspensas e estado local preservado em revisão; agenda aparece somente para fila pronta.
+- Aviso e contador do histórico se adaptam ao celular.
+- Diagnóstico e ação individual autenticados conferem boletos importados do portal, preservando identidade, valores, baixa atômica e auditoria.
 
 ## [4.8.343] - 2026-11-15
 
@@ -483,17 +493,3 @@ Histórico arquivado: [08/11/2026 — versão 4.8.273](./changelog/2026-11-08-ve
 - Atividades extra-classe publicadas e realizadas compõem a frequência individual, respeitando ingresso, trancamento e transferência na data acadêmica.
 - Diário, resultado de matrícula e projeção legada usam o crédito sem fabricar chamadas; histórico e aproveitamentos permanecem prioritários.
 - Conteúdo e PDF vetorial exibem as extras; novos diários assinados congelam a evidência e conservam os documentos anteriores.
-
-## [4.8.277] - 2026-11-09
-
-- Descrições de despesas são convertidas automaticamente em maiúsculas; lançamentos existentes recebem a mesma padronização.
-- Recibos exibem a turma vinculada, com nome e código, e assinatura do parceiro quando selecionado.
-- PDF reorganiza linhas e espaços sem omitir informações, preservando assinatura financeira, cabeçalho e marca institucional.
-- Replays de criação, valores, pagamentos, parcelas e permissões permanecem preservados.
-
-## [4.8.276] - 2026-11-09
-
-### Corrigido
-- Emissor NFS-e: prévia por nota e menu com download PDF/XML, sem importar arquivo.
-- Seleção da página para ZIPs de PDFs/XMLs, com progresso e cancelamento.
-- Emissão permanece bloqueada até concluir a integração e homologação fiscal.
