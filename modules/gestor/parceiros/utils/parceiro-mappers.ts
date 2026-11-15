@@ -152,6 +152,7 @@ export function toCamel(s: any) {
     instituicaoFormacao: s.instituicao_formacao,
     tipoVinculo: s.tipo_vinculo,
     chavePix: s.chave_pix,
+    tipoChavePix: s.tipo_chave_pix || '',
     banco: s.banco,
     agencia: s.agencia,
     conta: s.conta,
@@ -286,6 +287,9 @@ export function toSnake(c: any) {
     instituicao_formacao: source.instituicaoFormacao || null,
     tipo_vinculo: source.tipoVinculo || null,
     chave_pix: source.chavePix || null,
+    ...(Object.hasOwn(source, 'tipoChavePix') || Object.hasOwn(source, 'tipo_chave_pix')
+      ? { tipo_chave_pix: source.tipoChavePix || source.tipo_chave_pix || null }
+      : {}),
     banco: source.banco || null,
     agencia: source.agencia || null,
     conta: source.conta || null,

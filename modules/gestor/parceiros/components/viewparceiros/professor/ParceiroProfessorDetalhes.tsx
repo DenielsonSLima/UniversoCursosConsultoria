@@ -9,6 +9,9 @@ import ParceiroProfessorDados from './ParceiroProfessorDados';
 import ParceiroProfessorTurmas from './ParceiroProfessorTurmas';
 import ParceiroProfessorFinanceiro from './ParceiroProfessorFinanceiro';
 import ParceiroProfessorDocumentos from './ParceiroProfessorDocumentos';
+import ProfessorPixEditor from './ProfessorPixEditor';
+import { saveProfessorPix } from './professor-pix.service';
+import type { PixKeyType } from '../../formularioparceiros/professor/professor-form.model';
 import type { FinanceiroTabId } from '../../../../access-control';
 import { parceirosService } from '../../../parceiros.service';
 import ToastNotification, { useToast } from '../../shared/ToastNotification';
@@ -22,9 +25,10 @@ interface ParceiroProfessorDetalhesProps {
   financeCacheScope?: string;
   financialPoloId?: string | null;
   allowedFinancialTabs?: readonly FinanceiroTabId[];
+  canEditPix?: boolean;
 }
 
-const ParceiroProfessorDetalhes: React.FC<ParceiroProfessorDetalhesProps> = ({ professorInicial, onBack, poloId, financialPoloId, financeCacheScope, allowedFinancialTabs = [] }) => {
+const ParceiroProfessorDetalhes: React.FC<ParceiroProfessorDetalhesProps> = ({ professorInicial, onBack, poloId, financialPoloId, financeCacheScope, allowedFinancialTabs = [], canEditPix = false }) => {
   const queryClient = useQueryClient();
   const { toasts, removeToast, toast } = useToast();
   const [activeTab, setActiveTab] = useState<'dados' | 'turmas' | 'docs' | 'financeiro' | 'acesso'>('dados');
@@ -36,6 +40,18 @@ const ParceiroProfessorDetalhes: React.FC<ParceiroProfessorDetalhesProps> = ({ p
     placeholderData: professorInicial,
   });
   const professorData = profileQuery.data || professorInicial;
+
+  const pixMutation = useMutation({
+    mutationFn: (pix: { tipoChavePix: PixKeyType; chavePix: string }) => {
+      if (!canEditPix) throw new Error('Você não tem permissão para editar o cadastro do professor.');
+      return saveProfessorPix(professorData.id, pix);
+    },
+    onSuccess: (updated) => {
+      queryClient.setQueryData(profileKey, (current: any) => current ? { ...current, ...updated } : current);
+      void queryClient.invalidateQueries({ queryKey: ['parceiro', professorData.id] });
+      void queryClient.invalidateQueries({ queryKey: ['parceiros', 'cadastros'] });
+    },
+  });
 
   const updateMutation = useMutation({
     mutationFn: (newData: any) => parceirosService.update(professorData.id, newData),
@@ -195,8 +211,12 @@ const ParceiroProfessorDetalhes: React.FC<ParceiroProfessorDetalhesProps> = ({ p
               onPhotoUploaded={handlePhotoUploaded} onPhotoUploadError={handlePhotoUploadError} />}
             {activeTab === 'turmas' && <ParceiroProfessorTurmas professorId={professorData.id} poloId={poloId} cacheScope={financeCacheScope} />}
             {activeTab === 'docs' && <ParceiroProfessorDocumentos key={`${professorData.id}:${financeCacheScope}`} professorId={professorData.id} cacheScope={financeCacheScope} toast={toast} />}
-            {activeTab === 'financeiro' && <ParceiroProfessorFinanceiro professorId={professorData.id} poloId={financialPoloId || poloId}
-              cacheScope={financeCacheScope} allowedFinancialTabs={allowedFinancialTabs} />}
+            {activeTab === 'financeiro' && <>
+              <ProfessorPixEditor key={professorData.id} professor={professorData} canEdit={canEditPix}
+                onSave={async (pix) => { await pixMutation.mutateAsync(pix); }} />
+              <ParceiroProfessorFinanceiro professorId={professorData.id} poloId={financialPoloId || poloId}
+                cacheScope={financeCacheScope} allowedFinancialTabs={allowedFinancialTabs} />
+            </>}
             {activeTab === 'acesso' && <ParceiroAcesso parceiroId={professorData.id} tipo="Professor" email={professorData.email || null} toast={toast} />}
           </>}
       </div>

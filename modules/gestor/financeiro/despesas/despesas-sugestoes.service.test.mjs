@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { Buffer } from 'node:buffer';
 import { build } from 'esbuild';
 import { fileURLToPath } from 'node:url';
 
@@ -13,11 +14,11 @@ const built = await build({
     }));
   } }],
 });
-const { getUltimaDespesaDoCredor } = await import(`data:text/javascript;base64,${Buffer.from(built.outputFiles[0].text).toString('base64')}`);
+const { getUltimaDespesaDoCredor, getUltimaTurmaDoProfessor } = await import(`data:text/javascript;base64,${Buffer.from(built.outputFiles[0].text).toString('base64')}`);
 
 function fakeClient(result) {
   const calls = [];
-  const query = Object.fromEntries(['select', 'eq', 'is', 'neq', 'order', 'limit'].map((name) => [
+  const query = Object.fromEntries(['select', 'eq', 'in', 'is', 'not', 'neq', 'order', 'limit'].map((name) => [
     name, (...args) => { calls.push([name, ...args]); return query; },
   ]));
   query.maybeSingle = async () => result;
@@ -59,6 +60,34 @@ test('histórico vazio e falha de leitura são distintos, permitindo preenchimen
   const error = new Error('Consulta indisponível');
   fakeClient({ data: null, error });
   await assert.rejects(getUltimaDespesaDoCredor('polo', 'DESPESA_VARIAVEL', 'a'), error);
+});
+
+test('última turma do professor usa despesa vinculada dos dois tipos, somente no polo autenticado', async () => {
+  const calls = fakeClient({ data: { turma_id: 'turma-anterior' }, error: null });
+  assert.equal(await getUltimaTurmaDoProfessor('polo-a', 'professor-a'), 'turma-anterior');
+  assert.deepEqual(calls, [
+    ['from', 'despesas_lancamentos'], ['select', 'turma_id'],
+    ['eq', 'polo_id', 'polo-a'], ['eq', 'fornecedor_id', 'professor-a'],
+    ['in', 'tipo', ['DESPESA_FIXA', 'DESPESA_VARIAVEL']],
+    ['is', 'excluido_em', null], ['neq', 'status', 'CANCELADO'], ['not', 'turma_id', 'is', null],
+    ['order', 'created_at', { ascending: false }], ['order', 'id', { ascending: false }], ['limit', 1],
+  ]);
+});
+
+test('sugestão de turma não consulta polo global nem identificadores vazios', async () => {
+  const calls = fakeClient({ data: null, error: null });
+  for (const [polo, professor] of [['todos', 'professor'], ['', 'professor'], ['polo', '']]) {
+    assert.equal(await getUltimaTurmaDoProfessor(polo, professor), null);
+  }
+  assert.equal(calls.length, 0);
+});
+
+test('sugestão de turma distingue histórico vazio de erro sem criar dados', async () => {
+  fakeClient({ data: null, error: null });
+  assert.equal(await getUltimaTurmaDoProfessor('polo', 'professor'), null);
+  const error = new Error('Histórico de turmas indisponível');
+  fakeClient({ data: null, error });
+  await assert.rejects(getUltimaTurmaDoProfessor('polo', 'professor'), error);
 });
 
 test.after(() => { delete globalThis.__despesaSuggestionClient; });

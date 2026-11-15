@@ -193,6 +193,7 @@ const GestorModuleContentView: React.FC<GestorModuleContentProps> = ({
       <ParceirosPage
         financeCacheScope={JSON.stringify([profile.id, profile.contextId, currentPoloId, permissions])}
         allowedFinancialTabs={canOpenModule('financeiro') ? getEffectiveFinanceiroTabs(permissions) : []}
+        canEditProfessorPix={canOpenModule('parceiros')}
         financialPoloId={currentPoloId}
         initialForm={initialForm}
         poloId={scopedPoloId}
@@ -209,6 +210,7 @@ const GestorModuleContentView: React.FC<GestorModuleContentProps> = ({
       <ParceirosPage
         financeCacheScope={JSON.stringify([profile.id, profile.contextId, currentPoloId, permissions])}
         allowedFinancialTabs={canOpenModule('financeiro') ? getEffectiveFinanceiroTabs(permissions) : []}
+        canEditProfessorPix={canOpenModule('parceiros')}
         financialPoloId={currentPoloId}
         poloId={scopedPoloId}
         includeGlobal={isGlobal}

@@ -1,8 +1,8 @@
 {
-  "version": "4.8.342",
+  "version": "4.8.343",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 351,
+  "revision": 352,
   "releasedAt": "2026-11-15",
-  "summary": "Seletor de contas preserva rolagem e mostra saldo ao lado do nome"
+  "summary": "Professor sugere última turma nas despesas e permite Pix opcional"
 }

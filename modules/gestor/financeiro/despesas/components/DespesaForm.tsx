@@ -16,6 +16,7 @@ import {
 import { despesasQueryKeys, type DespesaTipo } from '../despesas.queryKeys';
 import { useCategoriasFinanceirasQuery } from '../hooks/useCategoriasFinanceirasQuery';
 import { useDespesaSugestao } from '../hooks/useDespesaSugestao';
+import { useDespesaProfessorTurma } from '../hooks/useDespesaProfessorTurma';
 import type { DespesaCredorTipo } from './DespesaCredorPicker';
 import DespesaFormAssociations from './DespesaFormAssociations';
 import DespesaFormNotes from './DespesaFormNotes';
@@ -31,7 +32,6 @@ import {
   type LancamentoMode,
   type RateioPolo,
   type RateioSelection,
-  type TurmaModalidade,
 } from './despesa-form.utils';
 
 interface DespesaFormProps {
@@ -73,8 +73,9 @@ const DespesaForm: React.FC<DespesaFormProps> = ({
   const [descontoValor, setDescontoValor] = useState(cloneDraft?.descontoValor || '');
   const [anexo, setAnexo] = useState<File | null>(null);
   const [anexoErro, setAnexoErro] = useState('');
-  const [turmaModalidade, setTurmaModalidade] = useState<TurmaModalidade | ''>('');
-  const [turmaId, setTurmaId] = useState('');
+  const professorTurma = useDespesaProfessorTurma(poloId, fornecedorId,
+    tipo !== 'OUTRO_DEBITO' && credores.some((credor) => credor.id === fornecedorId && credor.tipo === 'Professor'), turmas);
+  const { turmaEnabled, setTurmaEnabled, turmaId, setTurmaId, turmaModalidade, setTurmaModalidade } = professorTurma;
   const [observacao, setObservacao] = useState('');
   const [totalParcelas, setTotalParcelas] = useState(2);
   const [splitTotal, setSplitTotal] = useState(false);
@@ -173,10 +174,6 @@ const DespesaForm: React.FC<DespesaFormProps> = ({
   });
 
   useEffect(() => {
-    if (turmaId && !filteredTurmas.some((turma) => turma.id === turmaId)) setTurmaId('');
-  }, [filteredTurmas, turmaId]);
-
-  useEffect(() => {
     if (contaBancariaId && !activeContas.some((conta) => conta.id === contaBancariaId)) {
       setContaBancariaId('');
     }
@@ -244,10 +241,10 @@ const DespesaForm: React.FC<DespesaFormProps> = ({
         <DespesaFormAssociations {...{
           mode, convenioMesId, convenios, isPoloMatriz, rateioSelection, polosRateio,
           polosSelecionados, togglePoloRateio, rateioSelecionadosInvalido, turmaModalidade,
-          setTurmaModalidade, turmaId, setTurmaId, filteredTurmas,
+          setTurmaModalidade, turmaId, setTurmaId, filteredTurmas, turmaEnabled, setTurmaEnabled,
         }} setConvenioMesId={setConvenioMesId} setRateioSelection={setRateioSelection}
           conveniosLoading={conveniosQuery.isPending}
-          conveniosError={conveniosQuery.isError && !conveniosQuery.data} />
+          conveniosError={conveniosQuery.isError && !conveniosQuery.data} turmaSuggestion={professorTurma.message} />
         {cloneDraft && mode === 'baixa' && <div className="md:col-span-2">
           <label htmlFor="clone-data-pagamento" className="mb-1 block text-xs font-semibold text-slate-500">Data do pagamento *</label>
           <input id="clone-data-pagamento" type="date" required value={dataPagamento} onChange={(event) => setDataPagamento(event.target.value)}
