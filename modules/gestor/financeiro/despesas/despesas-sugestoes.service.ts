@@ -36,3 +36,24 @@ export const getUltimaDespesaDoCredor = async (
     categoriaId: data.categoria_financeira_id || '',
   };
 };
+
+export const getUltimaTurmaDoProfessor = async (
+  poloId: string,
+  professorId: string,
+): Promise<string | null> => {
+  if (!poloId || poloId === 'todos' || !professorId) return null;
+  const { data, error } = await supabase.from('despesas_lancamentos')
+    .select('turma_id')
+    .eq('polo_id', poloId)
+    .eq('fornecedor_id', professorId)
+    .in('tipo', ['DESPESA_FIXA', 'DESPESA_VARIAVEL'])
+    .is('excluido_em', null)
+    .neq('status', 'CANCELADO')
+    .not('turma_id', 'is', null)
+    .order('created_at', { ascending: false })
+    .order('id', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  return data?.turma_id || null;
+};

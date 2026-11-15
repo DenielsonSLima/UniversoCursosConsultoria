@@ -30,7 +30,9 @@ interface Props {
   turmaId: string;
   setTurmaId: (value: string) => void;
   filteredTurmas: any[];
-
+  turmaEnabled: boolean;
+  setTurmaEnabled: (enabled: boolean) => void;
+  turmaSuggestion?: string;
 }
 
 const formatMoney = (value: number) => value.toLocaleString('pt-BR', {
@@ -59,9 +61,8 @@ const AssociationToggle = ({ label, enabled, controls, onChange }: {
 const DespesaFormAssociations: React.FC<Props> = (props) => {
   const sectionId = useId();
   const [convenioEnabled, setConvenioEnabled] = useState(Boolean(props.convenioMesId));
-  const [turmaEnabled, setTurmaEnabled] = useState(Boolean(props.turmaId || props.turmaModalidade));
   const showConvenio = convenioEnabled || Boolean(props.convenioMesId);
-  const showTurma = turmaEnabled || Boolean(props.turmaId || props.turmaModalidade);
+  const showTurma = props.turmaEnabled || Boolean(props.turmaId || props.turmaModalidade);
   const convenioBlockedByMode = props.mode === 'parcelado';
   const convenioBlockedByRateio = props.rateioSelection !== 'DESLIGADO';
 
@@ -145,11 +146,12 @@ const DespesaFormAssociations: React.FC<Props> = (props) => {
         <p className="text-xs font-black uppercase tracking-wide text-[#001a33]">Vincular a uma turma</p>
         <AssociationToggle label="Vincular a uma turma" enabled={showTurma} controls={`${sectionId}-turma`}
           onChange={(enabled) => {
-            setTurmaEnabled(enabled);
+            props.setTurmaEnabled(enabled);
             if (!enabled) { props.setTurmaId(''); props.setTurmaModalidade(''); }
           }} />
       </div>
       <div id={`${sectionId}-turma`}>
+        {showTurma && props.turmaSuggestion && <p role="status" className="mt-2 text-xs text-slate-500">{props.turmaSuggestion}</p>}
         {showTurma && (
           <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
             <div>

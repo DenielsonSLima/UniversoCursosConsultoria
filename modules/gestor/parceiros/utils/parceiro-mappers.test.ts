@@ -2,6 +2,18 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { normalizePartnerAccountType, toCamel, toSnake } from './parceiro-mappers.ts';
 
+test('preserva o tipo explícito de Pix e mantém os dados opcionais e legados', () => {
+  const professor = toCamel({ tipo: 'Professor', chave_pix: 'pix@example.com', tipo_chave_pix: 'EMAIL' });
+  assert.equal(professor.tipoChavePix, 'EMAIL');
+  const payload = toSnake(professor);
+  assert.equal(payload.tipo_chave_pix, 'EMAIL');
+  assert.equal(payload.chave_pix, 'pix@example.com');
+  assert.equal(toSnake({ tipo: 'Professor', tipoChavePix: '', chavePix: '' }).tipo_chave_pix, null);
+  assert.equal(toSnake({ tipo: 'Professor', tipoChavePix: '', chavePix: '' }).chave_pix, null);
+  assert.equal(toCamel({ tipo: 'Professor', chave_pix: '11987654321' }).tipoChavePix, '');
+  assert.equal(Object.hasOwn(toSnake({ tipo: 'Professor', chavePix: '11987654321' }), 'tipo_chave_pix'), false);
+});
+
 test('transporta a prova de senha e os fences sem concluir flags desconhecidas', () => {
   const aluno = toCamel({
     tipo: 'Aluno',

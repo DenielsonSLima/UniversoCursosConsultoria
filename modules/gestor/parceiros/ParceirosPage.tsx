@@ -46,6 +46,7 @@ const RESPONSAVEL_CREATE_UNAVAILABLE_REASON =
 interface ParceirosPageProps {
   financeCacheScope?: string;
   allowedFinancialTabs?: readonly FinanceiroTabId[];
+  canEditProfessorPix?: boolean;
   financialPoloId?: string | null;
   activeTabInicial?: ParceirosTabType;
   initialForm?: ParceiroFormType;
@@ -70,6 +71,7 @@ const tabs = [
 const ParceirosPage: React.FC<ParceirosPageProps> = ({
   financeCacheScope,
   allowedFinancialTabs = [],
+  canEditProfessorPix = false,
   financialPoloId,
   activeTabInicial = 'todos',
   initialForm,
@@ -235,6 +237,7 @@ const ParceirosPage: React.FC<ParceirosPageProps> = ({
         onBack={handleBackFromDetails} onRequestScrollTop={onRequestScrollTop} financeCacheScope={financeCacheScope} />
     ) : selectedParceiro.tipo === 'Professor' ? (
       <ParceiroProfessorDetalhes key={selectedParceiro.id} professorInicial={selectedParceiro}
+        canEditPix={canEditProfessorPix}
         onBack={handleBackFromDetails} poloId={poloId} financialPoloId={financialPoloId} financeCacheScope={financeCacheScope} allowedFinancialTabs={allowedFinancialTabs} />
     ) : selectedParceiro.tipo === 'PJ' ? (
       <ParceiroPJDetalhes key={selectedParceiro.id} pjInicial={selectedParceiro} canManagePolos={includeGlobal}
