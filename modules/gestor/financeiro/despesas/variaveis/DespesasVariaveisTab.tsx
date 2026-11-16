@@ -22,7 +22,7 @@ import DespesaForm from '../components/DespesaForm';
 import DespesaCloneChoice from '../components/DespesaCloneChoice';
 import { buildDespesaCloneDraft, type DespesaCloneDraft } from '../components/despesa-clone.model';
 import DespesaViewControls, { type DespesaAgrupamentoSelection } from '../components/DespesaViewControls';
-import DespesaPeriodControls from '../components/DespesaPeriodControls';
+import DespesaPeriodControls, { DespesaPeriodCaption } from '../components/DespesaPeriodControls';
 import { getDespesaSituacaoEfetiva } from '../components/despesa-periodo-apresentacao';
 import { useDespesasReport } from '../hooks/useDespesasReport';
 import DespesaTable from '../components/DespesaTable';
@@ -255,7 +255,7 @@ const DespesasVariaveisTab: React.FC<{ poloId?: string | null; actionsContainer?
       )}
 
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-        <div className="min-w-[280px] flex-1">
+        <div className="min-w-0 flex-[1_1_320px] [&_[role=tablist]]:min-w-0 [&_[role=tablist]]:flex-wrap">
           <FinancialUnderlineTabs
             compact
             items={tabs}
@@ -266,13 +266,14 @@ const DespesasVariaveisTab: React.FC<{ poloId?: string | null; actionsContainer?
             activeIconClassName="text-rose-600"
           />
         </div>
+        <DespesaPeriodControls {...{ statusScope, situacao, ordem }}
+          onSituacaoChange={setSituacao} onOrdemChange={setOrdem} />
         <DespesaViewControls viewMode={viewMode} onViewModeChange={setViewMode}
           agrupamento={agrupamento} onAgrupamentoChange={setAgrupamento} />
       </div>
 
       <div className="space-y-3">
-        <DespesaPeriodControls {...{ statusScope, situacao, ordem, dataInicio, dataFim }}
-          onSituacaoChange={setSituacao} onOrdemChange={setOrdem} />
+        <DespesaPeriodCaption {...{ statusScope, situacao, dataInicio, dataFim }} />
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-12">
           <div className="relative sm:col-span-2 xl:col-span-4">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
