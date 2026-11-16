@@ -1,13 +1,13 @@
 # Cupom EAD: retomada gratuita após compra opcional expirada
 
-Status: proposta de correção em PR; não aplicada ao banco nem publicada.
+Status: backend aplicado e verificado em 16/11/2026; frontend 4.8.356 em publicação autorizada. Proprietário autorizou publicar ciente do smoke Safari indisponível e de que o aluno precisará confirmar o fluxo.
 Escopo: cupons de 100% em matrícula única PENDENTE da mesma turma, com todas as tentativas opcionais EXPIRED e cancelamento bancário comprovado. Cupons de 50% mantêm bloqueio de compra anterior.
 
 ## Manifesto
-- `supabase/migrations/20261116172600_ead_coupon_resume_guards.sql`
-- `supabase/migrations/20261116172601_ead_coupon_resume_late_payment.sql`
-- `supabase/migrations/20261116172602_ead_coupon_resume_quote.sql`
-- `supabase/migrations/20261116172603_ead_coupon_resume_free.sql`
+- `supabase/migrations/20261116180208_ead_coupon_resume_guards.sql`
+- `supabase/migrations/20261116180213_ead_coupon_resume_late_payment.sql`
+- `supabase/migrations/20261116180219_ead_coupon_resume_quote.sql`
+- `supabase/migrations/20261116180226_ead_coupon_resume_free.sql`
 - `supabase/tests/fixtures/ead-coupons.harness.mjs`
 - `supabase/tests/ead_coupons.resume.isolated.test.mjs`
 - `.github/workflows/ead-cupons.yml`
@@ -29,7 +29,10 @@ Pagamento bancário tardio é preservado e encaminhado à revisão financeira ex
 - Nenhum teste criou matrícula/cobrança real, chamou provedor bancário ou alterou produção.
 
 ## Limitações e publicação
-PGlite em uma conexão não valida duas transações simultâneas. Antes de produção, validar concorrência com callback/baixa em ambiente isolado de PostgreSQL completo, além de smoke autenticado Safari. Não houve smoke Safari nesta revisão. A aplicação depende de autorização explícita, migrations remotas conferidas, revisão de CI e aceite do lote; metadados de versão propostos não significam publicação; nenhum merge está incluído nesta proposta. Alterações paralelas foram preservadas.
+PGlite em uma conexão não valida concorrência; por isso o CI executou e aprovou quatro cenários em sessões PostgreSQL 17.6 independentes (5 testes incluindo suíte). Smoke autenticado Safari foi dispensado pelo proprietário, que fará a conferência. Não houve smoke Safari nesta revisão. A aplicação depende de autorização explícita, migrations remotas conferidas, revisão de CI e aceite do lote; metadados de versão propostos não significam publicação; nenhum merge está incluído nesta proposta. Alterações paralelas foram preservadas.
 
 ## Validação concorrente
-Job isolado de PostgreSQL 17.6 adicionado à PR para testar sessões reais: replay simultâneo, requests diferentes, pagamento primeiro e gratuidade primeiro. O teste consulta pg_stat_activity e exige espera por lock nos cenários de disputa. Resultado ainda deve ser confirmado no CI; não usa banco ou provedor real.
+Job isolado de PostgreSQL 17.6 adicionado à PR para testar sessões reais: replay simultâneo, requests diferentes, pagamento primeiro e gratuidade primeiro. O teste consulta pg_stat_activity e exige espera por lock nos cenários de disputa. Resultado confirmado: 5/5 incluindo suíte, sem skips. Os 17 checks do commit a52d515 foram aprovados. Não usa banco ou provedor real.
+
+## Aplicação e conferência
+Quatro migrations aplicadas via MCP e nomes locais alinhados aos timestamps remotos, sem mudar o SQL revisado. Helpers privados sem EXECUTE para anon/authenticated; RPCs públicas somente autenticadas. Trigger de pagamento tardio ativo. Probe read-only confirmou elegibilidade do caso reportado, sem executar resgate/matrícula. Advisors de segurança comparados antes/depois.
