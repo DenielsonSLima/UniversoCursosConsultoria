@@ -20,6 +20,7 @@ interface ReceberTabProps {
 const ReceberTab: React.FC<ReceberTabProps> = ({ poloId, isMatriz }) => {
   const [activeCourseTab, setActiveCourseTab] = useState<CourseType>('tecnico');
   const [actionsContainer, setActionsContainer] = useState<HTMLDivElement | null>(null);
+  const [servicesVisited, setServicesVisited] = useState(false);
 
   useEffect(() => {
     if (!isMatriz && activeCourseTab === 'ead') {
@@ -46,7 +47,7 @@ const ReceberTab: React.FC<ReceberTabProps> = ({ poloId, isMatriz }) => {
       case 'tecnico':
         return <TecnicoReceberTab poloId={poloId} />;
       case 'servicos':
-        return <ServicosReceberTab poloId={poloId} />;
+        return null;
       default:
         return null;
     }
@@ -61,7 +62,10 @@ const ReceberTab: React.FC<ReceberTabProps> = ({ poloId, isMatriz }) => {
               compact
               items={subtabs}
               value={activeCourseTab}
-              onChange={setActiveCourseTab}
+              onChange={(tab) => {
+                if (tab === 'servicos') setServicesVisited(true);
+                setActiveCourseTab(tab);
+              }}
               ariaLabel="Modalidades das contas a receber"
               indicatorClassName="bg-emerald-600"
               activeIconClassName="text-emerald-600"
@@ -72,6 +76,13 @@ const ReceberTab: React.FC<ReceberTabProps> = ({ poloId, isMatriz }) => {
 
         <div>
           {renderSubTab()}
+          {servicesVisited ? (
+            <ServicosReceberTab
+              key={poloId || 'todos'}
+              poloId={poloId}
+              active={activeCourseTab === 'servicos'}
+            />
+          ) : null}
         </div>
       </div>
     </ReceberActionsContext.Provider>

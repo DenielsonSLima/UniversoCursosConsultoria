@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../../../../lib/supabase';
+import { applicationReadCachePolicy } from '../../../../../lib/query-cache-policy';
 import { financeiroQueryKeys } from '../../financeiro.queryKeys';
 import { useFinanceiroSharedQueries } from '../../hooks/useFinanceiroSharedQueries';
 import { confirmFinancialPayment, type FinancialPaymentConfirmation } from '../../settlements/financial-payment.service';
@@ -16,7 +17,7 @@ const GROUP_ITEMS_PAGE_SIZE = 25;
 export interface ServiceGroupItemsState {
   rows: ServiceReceivable[]; isLoading: boolean; isError: boolean; isPaused: boolean; isFetching: boolean; onRetry: () => void;
 }
-export function useServicosReceber(poloId?: string | null) {
+export function useServicosReceber(poloId?: string | null, active = true) {
   const [search, setSearch] = useState(''), [debouncedSearch, setDebouncedSearch] = useState('');
   const [period, setPeriod] = useState<ReceivablesPeriod>(() => getReceivablesPeriod());
   const { start: dueStart, end: dueEnd } = period;
@@ -32,20 +33,22 @@ export function useServicosReceber(poloId?: string | null) {
   const summaryFilters = useMemo(() => ({ poloId, search: debouncedSearch, dueStart, dueEnd, statusScope: 'ALL' as const }), [poloId, debouncedSearch, dueStart, dueEnd]);
   const upcomingFilters = useMemo(() => ({ ...summaryFilters, statusScope: 'UPCOMING' as const }), [summaryFilters]);
   const periodError = validateReceivablesPeriod(period);
-  const list = useQuery({ ...receivablesReadQueryOptions, queryKey: serviceReceivablesKeys.groups(filters, page, PAGE_SIZE),
-    queryFn: ({ signal }) => serviceReceivablesService.groups(filters, page, PAGE_SIZE, signal), enabled: !periodError,
-    staleTime: 15_000, refetchOnWindowFocus: true });
-  const summary = useQuery({ ...receivablesReadQueryOptions, queryKey: serviceReceivablesKeys.summary(summaryFilters),
-    queryFn: ({ signal }) => serviceReceivablesService.summary(summaryFilters, signal), enabled: !periodError, staleTime: 15_000 });
-  const upcoming = useQuery({ ...receivablesReadQueryOptions, queryKey: serviceReceivablesKeys.summary(upcomingFilters),
-    queryFn: ({ signal }) => serviceReceivablesService.summary(upcomingFilters, signal), enabled: !periodError, staleTime: 15_000 });
+  const list = useQuery({ ...receivablesReadQueryOptions, ...applicationReadCachePolicy,
+    queryKey: serviceReceivablesKeys.groups(filters, page, PAGE_SIZE),
+    queryFn: ({ signal }) => serviceReceivablesService.groups(filters, page, PAGE_SIZE, signal), enabled: active && !periodError });
+  const summary = useQuery({ ...receivablesReadQueryOptions, ...applicationReadCachePolicy,
+    queryKey: serviceReceivablesKeys.summary(summaryFilters),
+    queryFn: ({ signal }) => serviceReceivablesService.summary(summaryFilters, signal), enabled: active && !periodError });
+  const upcoming = useQuery({ ...receivablesReadQueryOptions, ...applicationReadCachePolicy,
+    queryKey: serviceReceivablesKeys.summary(upcomingFilters),
+    queryFn: ({ signal }) => serviceReceivablesService.summary(upcomingFilters, signal), enabled: active && !periodError });
   const groups = list.data?.groups || [];
   const groupQueries = useQueries({ queries: groups.map(group => {
     const detailPage = groupPages[group.key] || 1;
-    return { ...receivablesReadQueryOptions,
+    return { ...receivablesReadQueryOptions, ...applicationReadCachePolicy,
       queryKey: serviceReceivablesKeys.groupItems(filters, group.key, detailPage, GROUP_ITEMS_PAGE_SIZE),
       queryFn: ({ signal }: { signal: AbortSignal }) => serviceReceivablesService.groupItems(filters, group.key, detailPage, GROUP_ITEMS_PAGE_SIZE, signal),
-      enabled: !periodError && expandedGroups.has(group.key), staleTime: 15_000 };
+      enabled: active && !periodError && expandedGroups.has(group.key) };
   }) });
   const groupItemsByKey = new Map<string, ServiceGroupItemsState>();
   groups.forEach((group, index) => {
@@ -54,7 +57,10 @@ export function useServicosReceber(poloId?: string | null) {
       isError: Boolean(query?.isError), isPaused: query?.fetchStatus === 'paused', isFetching: Boolean(query?.isFetching),
       onRetry: () => { void query?.refetch(); } });
   });
-  const { accountsQuery } = useFinanceiroSharedQueries({ poloId, accounts: true, polos: false, partners: false });
+  const { accountsQuery } = useFinanceiroSharedQueries({ poloId, accounts: active, polos: false, partners: false });
+  useEffect(() => {
+    if (!active) { setSelected(null); setBolepixId(null); }
+  }, [active]);
   useEffect(() => { setPage(1); setSelected(null); setBolepixId(null); }, [poloId, debouncedSearch, dueStart, dueEnd, statusScope]);
   useEffect(() => { setExpandedGroups(new Set()); setGroupPages({}); }, [poloId, debouncedSearch, dueStart, dueEnd, statusScope, page]);
   useEffect(() => {
@@ -90,9 +96,9 @@ export function useServicosReceber(poloId?: string | null) {
       timer = setTimeout(() => {
         timer = undefined; if (disposed) return;
         const queryKey = serviceReceivablesKeys.scope(poloId), fetching = client.isFetching({ queryKey }) > 0;
-        void client.invalidateQueries({ queryKey }).then(() => {
+        void client.invalidateQueries({ queryKey }, { cancelRefetch: false }).then(() => {
           // An event arriving during the initial read may be newer than its snapshot.
-          if (!disposed && fetching) void client.invalidateQueries({ queryKey });
+          if (!disposed && fetching) void client.invalidateQueries({ queryKey }, { cancelRefetch: false });
         });
       }, 150);
     };
@@ -108,7 +114,6 @@ export function useServicosReceber(poloId?: string | null) {
     return () => { disposed = true; if (timer) clearTimeout(timer); document.removeEventListener('visibilitychange', visible); void supabase.removeChannel(channel); };
   }, [client, poloId]);
   const invalidate = () => Promise.all([
-    client.invalidateQueries({ queryKey: serviceReceivablesKeys.scope(poloId) }),
     client.invalidateQueries({ queryKey: financeiroQueryKeys.receivablesRoot }),
     client.invalidateQueries({ queryKey: financeiroQueryKeys.resumoKpis }),
     client.invalidateQueries({ queryKey: financeiroQueryKeys.contasBancariasSaldos }),

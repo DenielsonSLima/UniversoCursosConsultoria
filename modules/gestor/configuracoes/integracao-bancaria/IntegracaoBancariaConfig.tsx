@@ -1,5 +1,6 @@
 import { useIntegracaoBancariaRealtime } from './useIntegracaoBancariaRealtime';
 import IntegracaoBancariaState from './IntegracaoBancariaState';
+import { bankingRouteBlockedReason } from './integracao-bancaria.policy';
 import React, { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import ToastNotification, { useToast } from '../../components/ToastNotification';
@@ -78,13 +79,10 @@ const IntegracaoBancariaConfig: React.FC = () => {
   const editCredential = getCredential(credentialProviderCode, keysEnvironment);
   const routedProvider = providers.find((item) => item.code === selectedRoute?.providerCode);
   const selectedProviderSupportsMethod = supportsMethod(routeProvider, paymentMethod);
-  const selectedRouteBlockedReason = routeProviderCode === 'banese_card'
-      && routeEnvironment === 'sandbox'
-      && paymentMethod === 'PIX'
-    ? 'O Pix Banese permanece indisponível em homologação e só será liberado na produção.'
-    : routeProvider?.metadata?.checkout_blocked === true
+  const selectedRouteBlockedReason = bankingRouteBlockedReason(modalidade, paymentMethod, routeProviderCode, routeEnvironment)
+    || (routeProvider?.metadata?.checkout_blocked === true
       ? String(routeProvider.metadata.checkout_block_reason || 'Rota bloqueada até concluir a homologação segura deste provedor.')
-      : null;
+      : null);
   const selectedProviderCheckoutBlocked = Boolean(selectedRouteBlockedReason);
   const selectedRouteCredentialReady = !selectedProviderCheckoutBlocked
     && credentialReadyForRoute(routeProviderCode, routeCredential, paymentMethod);
