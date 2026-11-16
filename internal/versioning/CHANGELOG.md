@@ -106,6 +106,11 @@ Histórico arquivado: [08/11/2026 — versão 4.8.273](./changelog/2026-11-08-ve
 
 Histórico arquivado: [10–11/11/2026 — versões 4.8.282 a 4.8.290](./changelog/2026-11-10-a-11-versoes-4-8-282-a-4-8-290.md).
 
+## [4.8.355] - 2026-11-16
+
+- Botões de baixa das despesas exibem Baixar na tabela e nos cards, com nome acessível correspondente.
+- Pagamentos parciais conservam Pagar saldo; callbacks, permissões e regras financeiras permanecem inalterados.
+
 ## [4.8.354] - 2026-11-16
 
 - Secretaria administra cupons EAD de gratuidade ou 50%, por polo, com validade, quantidade e limite de cursos por aluno.

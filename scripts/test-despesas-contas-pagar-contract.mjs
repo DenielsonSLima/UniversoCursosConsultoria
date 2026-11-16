@@ -108,7 +108,7 @@ test('tabela, cards e agrupamento exibem o contrato financeiro e ações correta
     'table-fixed',
     'index % 2 === 0',
     'break-words',
-    'Dar baixa',
+    'Baixar',
     'Editar lançamento',
     'Excluir',
     'Estornar',
@@ -121,6 +121,7 @@ test('tabela, cards e agrupamento exibem o contrato financeiro e ações correta
   assert.equal(table.includes('Edit2'), false, 'Ícone de editar não pode acionar impressão.');
 
   for (const fragment of [
+    'Baixar',
     'Data de lançamento',
     'getDespesaFornecedorRotulo(item)',
     'Valor pago:',

@@ -212,9 +212,9 @@ const DespesaCard: React.FC<DespesaCardProps> = ({
                 type="button"
                 onClick={() => onPagar(item)}
                 className={`${actionClass} bg-emerald-600 text-white hover:bg-emerald-700 focus-visible:ring-emerald-500`}
-                aria-label={`Dar baixa em ${item.descricao}`}
+                aria-label={`Baixar ${item.descricao}`}
               >
-                <CheckCircle2 size={13} /> {hasPartialPayment(item.paymentSummary) ? 'Pagar saldo' : 'Dar baixa'}
+                <CheckCircle2 size={13} /> {hasPartialPayment(item.paymentSummary) ? 'Pagar saldo' : 'Baixar'}
               </button>
             )}
             {item.paymentSummary?.hasEvents && onPagar && <button type="button" onClick={() => onPagar(item)} className={`${actionClass} border border-emerald-200 text-emerald-700`}>Histórico</button>}
