@@ -14,11 +14,10 @@ const extractFunction = (sql, name) => {
   return tail.slice(0, tail.indexOf(`${tag};`) + tag.length + 1);
 };
 
-export const createCouponHarness = async () => {
+export const createCouponHarness = async (providedDb) => {
   const packageUrl = process.env.PGLITE_MODULE_PATH
     ? pathToFileURL(resolve(process.env.PGLITE_MODULE_PATH)).href : '@electric-sql/pglite';
-  const { PGlite } = await import(packageUrl);
-  const db = new PGlite();
+  const db = providedDb || new (await import(packageUrl)).PGlite();
   const scalar = async (sql, args = []) => (await db.query(sql, args)).rows[0]?.value;
   const ids = {
     polo: '00000000-0000-0000-0000-000000000001',
@@ -97,7 +96,8 @@ export const createCouponHarness = async () => {
     for (const name of ['20261116095340_ead_coupons_schema.sql', '20261116095344_ead_coupons_management.sql',
       '20261116095348_ead_coupons_quote.sql', '20261116095351_ead_coupons_free_redemption.sql',
       '20261116095355_ead_coupons_paid_checkout.sql','20261116095358_ead_coupons_production_capability.sql',
-      '20261116095401_ead_coupons_authorized_checkout.sql','20261116095405_ead_coupons_payment_recovery.sql']) await db.exec(migration(name));
+      '20261116095401_ead_coupons_authorized_checkout.sql','20261116095405_ead_coupons_payment_recovery.sql',
+      '20261116180208_ead_coupon_resume_guards.sql','20261116180213_ead_coupon_resume_late_payment.sql','20261116180219_ead_coupon_resume_quote.sql','20261116180226_ead_coupon_resume_free.sql']) await db.exec(migration(name));
     // A production install remains disabled. Only this synthetic fixture enables it.
     await db.exec('update internal_contas.ead_coupon_runtime set enabled=true');
     for (const manager of [ids.manager, ids.otherManager]) {
@@ -162,3 +162,4 @@ export const createCouponHarness = async () => {
     throw error;
   }
 };
+

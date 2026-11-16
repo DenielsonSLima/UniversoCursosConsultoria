@@ -106,6 +106,11 @@ Histórico arquivado: [08/11/2026 — versão 4.8.273](./changelog/2026-11-08-ve
 
 Histórico arquivado: [10–11/11/2026 — versões 4.8.282 a 4.8.290](./changelog/2026-11-10-a-11-versoes-4-8-282-a-4-8-290.md).
 
+## [4.8.356] - 2026-11-16
+
+- Cupom gratuito pode retomar matrícula pendente após cancelamento bancário comprovado, sem duplicar matrícula ou cobrança.
+- Consulta e confirmação compartilham elegibilidade; histórico e idempotência preservados, com revisão de pagamentos tardios.
+
 ## [4.8.355] - 2026-11-16
 
 - Botões de baixa das despesas exibem Baixar na tabela e nos cards, com nome acessível correspondente.
@@ -471,5 +476,6 @@ Histórico arquivado: [10–11/11/2026 — versões 4.8.282 a 4.8.290](./changel
 - Produção pode indicar resposta recente da consulta nacional de uma nota própria, sem emitir ou alterar documentos fiscais.
 - Verde expira em um minuto; falha técnica comprovada é vermelha e ausência de verificação permanece neutra.
 - O indicador descreve o alcance da consulta, sem prometer aprovação de novas notas ou disponibilidade de todos os serviços.
+
 
 
