@@ -44,6 +44,8 @@ export function buildDespesaGroups(
       total: summary?.totalValue,
       pago: summary?.paidValue,
       count: summary?.itemCount,
+      estimatedValue: summary?.estimatedValue,
+      estimatedCount: summary?.estimatedCount,
     };
   }).sort((a, b) => by === 'mes'
     ? a.key.localeCompare(b.key)

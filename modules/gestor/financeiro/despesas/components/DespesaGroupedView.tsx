@@ -102,6 +102,9 @@ const DespesaGroupedView: React.FC<DespesaGroupedViewProps> = ({
                   <p className="font-black text-base text-[#001a33]">
                     {group.total === undefined ? '—' : formatCurrency(group.total)}
                   </p>
+                  {Boolean(group.estimatedCount) && <p className="mt-1 text-xs text-amber-800">
+                    Inclui {formatCurrency(group.estimatedValue ?? 0)} estimados
+                  </p>}
                 </div>
                 {group.pago !== undefined && group.pago > 0 && (
                   <div className="text-right">

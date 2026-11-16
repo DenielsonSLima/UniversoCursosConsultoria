@@ -30,6 +30,9 @@ interface Props {
   setDescricao: (value: string) => void;
   valor: string;
   setValor: (value: string) => void;
+  valorEstimado: boolean;
+  setValorEstimado: (value: boolean) => void;
+  estimativaIndisponivel?: string;
   parceiros: any[];
   fornecedorTipo: DespesaCredorTipo | '';
   setFornecedorTipo: (value: DespesaCredorTipo | '') => void;
@@ -129,13 +132,25 @@ const DespesaFormCoreFields: React.FC<Props> = (props) => {
     </div>
 
     <div>
-      <label className="mb-1.5 block text-[10px] font-black uppercase tracking-wider text-slate-400"><DollarSign size={11} className="mr-1 inline" />Valor *</label>
+      <label className="mb-1.5 block text-[10px] font-black uppercase tracking-wider text-slate-400"><DollarSign size={11} className="mr-1 inline" />{props.valorEstimado ? 'Valor estimado *' : 'Valor *'}</label>
       <div className="relative"><span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">R$</span>
         <input type="text" inputMode="decimal" placeholder="0,00" value={props.valor}
           onChange={(event) => props.setValor(formatCurrencyTyping(event.target.value, props.valor))}
           onBlur={(event) => props.setValor(formatCurrencyInput(event.target.value))} required
           className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-4 text-sm font-semibold outline-none placeholder:text-slate-300 focus:ring-2 focus:ring-rose-500" />
       </div>
+      {props.tipo !== 'OUTRO_DEBITO' && <div className="mt-2">
+        <label className={`flex items-center gap-2 text-xs font-semibold ${props.estimativaIndisponivel ? 'text-slate-400' : 'text-slate-600'}`}>
+          <input type="checkbox" aria-label="Valor estimado" checked={props.valorEstimado}
+            disabled={Boolean(props.estimativaIndisponivel)}
+            onChange={(event) => props.setValorEstimado(event.target.checked)}
+            className="h-4 w-4 rounded border-slate-300 text-rose-600 focus:ring-rose-500 disabled:opacity-50" />
+          Valor estimado
+        </label>
+        {(props.valorEstimado || props.estimativaIndisponivel) && <p className="mt-1 text-[11px] leading-4 text-slate-500">
+          {props.estimativaIndisponivel || 'Confirme o valor real da conta antes de pagar. A estimativa fica preservada no histórico.'}
+        </p>}
+      </div>}
     </div>
 
     <details ref={ajustesRef} className="financial-dialog-section group rounded-2xl border border-amber-100 bg-amber-50/70 md:col-span-2">
@@ -148,7 +163,9 @@ const DespesaFormCoreFields: React.FC<Props> = (props) => {
       </summary>
       <div className="px-4 pb-4">
         <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
-          <p className="text-[10px] font-medium text-amber-700/70">Valores opcionais por lançamento ou por parcela.</p>
+          <p className="text-[10px] font-medium text-amber-700/70">{props.valorEstimado
+            ? 'Informe juros, multa e desconto quando confirmar o pagamento.'
+            : 'Valores opcionais por lançamento ou por parcela.'}</p>
           <span className="rounded-lg border border-amber-200 bg-white px-2 py-1 text-[9px] font-black uppercase tracking-wider text-amber-700">Calculado automaticamente</span>
         </div>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -157,7 +174,7 @@ const DespesaFormCoreFields: React.FC<Props> = (props) => {
           { label: 'Desconto', value: props.descontoValor, setter: props.setDescontoValor }].map((field) => (
           <div key={field.label}><label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500">{field.label}</label>
             <div className="relative"><span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">R$</span>
-              <input type="text" inputMode="decimal" placeholder="0,00" value={field.value}
+              <input type="text" inputMode="decimal" placeholder="0,00" value={field.value} disabled={props.valorEstimado}
                 onChange={(event) => field.setter(formatCurrencyTyping(event.target.value, field.value))}
                 onBlur={(event) => field.setter(formatCurrencyInput(event.target.value))}
                 className="w-full rounded-xl border border-white bg-white py-2.5 pl-9 pr-3 text-sm font-bold outline-none focus:ring-2 focus:ring-amber-500" />

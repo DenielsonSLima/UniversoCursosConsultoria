@@ -24,7 +24,11 @@ const loadAttempt = (key: string, sourceId: string): FinancialPaymentConfirmatio
 
 export function useFinancialPaymentForm(sourceKind: FinancialPaymentSourceKind, sourceId: string, initialAccountId: string,
   onConfirm: (payload: FinancialPaymentConfirmation) => Promise<FinancialPaymentResult>, initialMethod: FinancialPaymentMethod = 'DINHEIRO',
-  readOnly = false, historyOnly = false) {
+  readOnly = false, historyOnly = false, options: {
+    inputExtras?: Record<string, unknown>;
+    previewPayment?: typeof previewFinancialPayment;
+    previewEnabled?: boolean;
+  } = {}) {
   const [draft, setDraft] = useState<FinancialPaymentInput>(() => ({ requestId: generateSafeUuid(), sourceId,
     paymentDate: todayInMaceio(), components: [{ accountId: initialAccountId, method: initialMethod, amount: '' }],
     interest: '', penalty: '', addition: '', discount: '', notes: '' }));
@@ -43,7 +47,14 @@ export function useFinancialPaymentForm(sourceKind: FinancialPaymentSourceKind, 
   const readOnlyRef = useRef(readOnly);
   const historyOnlyRef = useRef(historyOnly);
   useEffect(() => { readOnlyRef.current = readOnly; historyOnlyRef.current = historyOnly; }, [readOnly, historyOnly]);
-  const input = useMemo(() => normalizePaymentDraft(draft), [draft]);
+  const extrasKey = JSON.stringify(options.inputExtras || {});
+  const input = useMemo(() => {
+    const extras = Object.fromEntries(Object.entries(options.inputExtras || {}).filter(([key]) =>
+      !['requestId', 'sourceId', 'paymentDate', 'components', 'interest', 'penalty', 'addition', 'discount', 'notes'].includes(key)));
+    return normalizePaymentDraft(submitted ? draft : { ...draft, ...extras });
+  }, [draft, extrasKey, submitted]);
+  const previewEnabled = options.previewEnabled !== false;
+  const previewPayment = options.previewPayment || previewFinancialPayment;
   const automatic = automaticAmount && draft.components.length === 1;
   const inputKey = input ? JSON.stringify({ input, automatic }) : '';
   const disableAutomaticAmount = () => setAutomaticAmount(false);
@@ -71,13 +82,13 @@ export function useFinancialPaymentForm(sourceKind: FinancialPaymentSourceKind, 
   }, [sourceKind, sourceId]);
 
   useEffect(() => {
-    if (readOnly || historyOnly) { setPreview(null); setPreviewKey(''); setPreviewLoading(false); return; }
+    if (readOnly || historyOnly || !previewEnabled) { setPreview(null); setPreviewKey(''); setPreviewLoading(false); return; }
     if (loading || submitted || !input || !draft.paymentDate) { setPreviewLoading(false); return; }
     if (preview && previewKey === inputKey) { setPreviewLoading(false); return; }
     let active = true;
     setPreviewLoading(true);
     const timer = window.setTimeout(() => {
-      void previewFinancialPayment(sourceKind, input, automatic).then(result => {
+      void previewPayment(sourceKind, input, automatic).then(result => {
         if (!active) return;
         if (automatic) {
           const amount = result.components[0]?.amount;
@@ -91,10 +102,10 @@ export function useFinancialPaymentForm(sourceKind: FinancialPaymentSourceKind, 
         .finally(() => { if (active) setPreviewLoading(false); });
     }, 250);
     return () => { active = false; window.clearTimeout(timer); };
-  }, [inputKey, loading, sourceKind, submitted, readOnly, historyOnly]);
+  }, [inputKey, loading, sourceKind, submitted, readOnly, historyOnly, previewEnabled, previewPayment]);
 
   const canConfirm = !historyOnly && !loading && !pending && (Boolean(submitted)
-    || !readOnly && Boolean(input && preview && previewKey === inputKey && !previewLoading));
+    || !readOnly && previewEnabled && Boolean(input && preview && previewKey === inputKey && !previewLoading));
   const confirm = async () => {
     if (historyOnlyRef.current || readOnlyRef.current && !submitted || inFlight.current || !canConfirm || !storageKey.current) return;
     const payload = submitted || { input: input!, fingerprint: preview!.fingerprint };

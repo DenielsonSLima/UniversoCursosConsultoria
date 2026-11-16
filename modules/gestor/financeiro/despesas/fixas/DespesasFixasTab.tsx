@@ -23,6 +23,7 @@ import DespesaCloneChoice from '../components/DespesaCloneChoice';
 import { buildDespesaCloneDraft, type DespesaCloneDraft } from '../components/despesa-clone.model';
 import DespesaViewControls, { type DespesaAgrupamentoSelection } from '../components/DespesaViewControls';
 import DespesaListWorkspace from '../components/DespesaListWorkspace';
+import DespesasSummaryCards from '../components/DespesasSummaryCards';
 import DespesaBaixaModal from '../components/DespesaBaixaModal';
 import DespesaEditModal from '../components/DespesaEditModal';
 import DespesaCancelModal from '../components/DespesaCancelModal';
@@ -35,9 +36,6 @@ import { financeiroQueryKeys } from '../../financeiro.queryKeys';
 import { caixaQueryKeys } from '../../../caixa/caixa.service';
 import { textMatchesSearch } from '../../../../../lib/search';
 import { useDespesasFixasReport } from './useDespesasFixasReport';
-
-const formatCurrency = (v: number) =>
-  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0);
 
 const DespesasFixasTab: React.FC<{ poloId?: string | null; actionsContainer?: HTMLDivElement | null }> = ({ poloId: scopedPoloId, actionsContainer }) => {
   const queryClient = useQueryClient();
@@ -128,6 +126,9 @@ const DespesasFixasTab: React.FC<{ poloId?: string | null; actionsContainer?: HT
       paidValue: totals.pago,
       pendingValue: totals.pendente,
       vencidosCount: totals.vencidos,
+      estimatedValue: summaryQuery.data?.estimatedValue,
+      estimatedCount: summaryQuery.data?.estimatedCount,
+      confirmedPendingValue: summaryQuery.data?.confirmedPendingValue,
     },
     statusScope,
     search,
@@ -209,6 +210,7 @@ const DespesasFixasTab: React.FC<{ poloId?: string | null; actionsContainer?: HT
   const tabs: { id: DespesaStatusScope; label: string }[] = [
     { id: 'mes_atual', label: 'Mês atual' },
     { id: 'em_aberto', label: 'Em aberto' },
+    { id: 'vencidos', label: 'Vencidos' },
     { id: 'todos', label: 'Todos' },
   ];
 
@@ -228,7 +230,7 @@ const DespesasFixasTab: React.FC<{ poloId?: string | null; actionsContainer?: HT
         poloId={poloId}
         tone="rose"
         buttonLabel="Exportar PDF"
-        disabled={lancamentosQuery.isLoading || !summaryQuery.isSuccess}
+        disabled={!lancamentosQuery.isSuccess || !summaryQuery.isSuccess}
       />
       <button
         onClick={() => setShowForm(true)}
@@ -248,19 +250,8 @@ const DespesasFixasTab: React.FC<{ poloId?: string | null; actionsContainer?: HT
       {actionsContainer === undefined ? actions : actionsContainer ? createPortal(actions, actionsContainer) : null}
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {[
-          { label: 'Total Previsto', value: !poloId ? 'Selecione um polo' : summaryQuery.isPending ? 'Carregando...' : summaryQuery.isError ? 'Indisponível' : formatCurrency(totals.total), color: 'text-[#001a33]' },
-          { label: 'Pago', value: !poloId ? 'Selecione um polo' : summaryQuery.isPending ? 'Carregando...' : summaryQuery.isError ? 'Indisponível' : formatCurrency(totals.pago), color: 'text-emerald-600' },
-          { label: 'A Pagar', value: !poloId ? 'Selecione um polo' : summaryQuery.isPending ? 'Carregando...' : summaryQuery.isError ? 'Indisponível' : formatCurrency(totals.pendente), color: 'text-amber-600' },
-          { label: 'Vencidos', value: !poloId ? 'Selecione um polo' : summaryQuery.isPending ? 'Carregando...' : summaryQuery.isError ? 'Indisponível' : `${totals.vencidos}`, color: 'text-rose-600' },
-        ].map((kpi) => (
-          <div key={kpi.label} className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
-            <p className="text-[9px] font-black uppercase tracking-wider text-slate-400 mb-1">{kpi.label}</p>
-            <p className={`text-lg font-black ${kpi.color}`}>{kpi.value}</p>
-          </div>
-        ))}
-      </div>
+      <DespesasSummaryCards summary={summaryQuery.data} poloId={poloId}
+        pending={summaryQuery.isPending} failed={summaryQuery.isError} />
       {summaryQuery.isError && (
         <div className="rounded-2xl border border-rose-100 bg-rose-50 px-5 py-4 text-sm font-bold text-rose-700">
           Não foi possível carregar o resumo canônico das despesas.

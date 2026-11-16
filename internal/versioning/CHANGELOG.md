@@ -106,6 +106,15 @@ Histórico arquivado: [08/11/2026 — versão 4.8.273](./changelog/2026-11-08-ve
 
 Histórico arquivado: [10–11/11/2026 — versões 4.8.282 a 4.8.290](./changelog/2026-11-10-a-11-versoes-4-8-282-a-4-8-290.md).
 
+## [4.8.351] - 2026-11-16
+
+- Lançamentos pendentes e mensais aceitam valor estimado, com confirmação do principal real na mesma transação da primeira baixa.
+- Mês sem cobrança encerra somente a previsão escolhida, preserva histórico e não registra pagamento fictício.
+- Baixa única comprovada mostra data, forma e conta no mesmo padrão das despesas anteriores; múltiplos pagamentos conservam o histórico.
+- Aba Vencidos em despesas fixas e variáveis usa vencimento civil de Maceió, saldo confirmado e filtros canônicos.
+- Previsões da Consulta Serasa de dezembro/2026 e de 2027 são variáveis; pagamento histórico de novembro preservado.
+
+
 ## [4.8.350] - 2026-11-16
 
 - Caixa mostra a movimentação em largura total e mantém sua altura independente da quantidade de contas.

@@ -79,7 +79,8 @@ const DespesaForm: React.FC<DespesaFormProps> = ({
   const [observacao, setObservacao] = useState('');
   const [totalParcelas, setTotalParcelas] = useState(2);
   const [splitTotal, setSplitTotal] = useState(false);
-  const [intervaloDias, setIntervaloDias] = useState(30);
+  const [valorEstimado, setValorEstimado] = useState(false);
+  const [intervaloDias, setIntervaloDias] = useState(1);
   const [intervaloUnit, setIntervaloUnit] = useState<IntervaloUnit>('meses');
   const [contaBancariaId, setContaBancariaId] = useState(cloneDraft?.contaBancariaId || '');
   const [formaPagamento, setFormaPagamento] = useState(cloneDraft?.formaPagamento || 'PIX');
@@ -115,6 +116,25 @@ const DespesaForm: React.FC<DespesaFormProps> = ({
   ), [contas, poloId]);
   const rateioSelecionadosInvalido = rateioSelection === 'SELECIONADOS'
     && polosSelecionados.size === 0;
+  const estimativaIndisponivel = mode === 'baixa'
+    ? 'Para lançar pago, informe o valor real.'
+    : convenioMesId ? 'O valor de uma despesa vinculada a convênio deve estar confirmado.'
+      : mode === 'parcelado' && splitTotal ? 'Para estimar, use o valor de cada parcela.'
+        : [jurosValor, multaValor, descontoValor].some((value) => parseCurrencyInput(value) !== 0)
+          ? 'Para estimar, deixe juros, multa e desconto para a baixa.' : undefined;
+  const estimativaAtiva = valorEstimado && tipo !== 'OUTRO_DEBITO' && !estimativaIndisponivel;
+  const chooseMode = (next: LancamentoMode) => {
+    if (next === 'baixa') setValorEstimado(false);
+    setMode(next);
+  };
+  const chooseSplitTotal = (next: boolean) => {
+    if (next) setValorEstimado(false);
+    setSplitTotal(next);
+  };
+  const chooseConvenio = (next: string) => {
+    if (next) setValorEstimado(false);
+    setConvenioMesId(next);
+  };
 
   const createMutation = useMutation({
     mutationFn: () => despesasService.createDespesa({
@@ -123,6 +143,7 @@ const DespesaForm: React.FC<DespesaFormProps> = ({
       tipo,
       descricao: descricao.trim(),
       valor: parseCurrencyInput(valor),
+      valorEstimado: estimativaAtiva,
       jurosValor: parseCurrencyInput(jurosValor),
       multaValor: parseCurrencyInput(multaValor),
       descontoValor: parseCurrencyInput(descontoValor),
@@ -226,12 +247,14 @@ const DespesaForm: React.FC<DespesaFormProps> = ({
       </div>
       <form ref={formRef} onSubmit={handleSubmit} className="financial-dialog-body grid grid-cols-1 gap-4 px-8 py-6 md:grid-cols-2">
         <DespesaFormCoreFields {...{
-          mode, setMode, dataLancamento, setDataLancamento, dataVencimento, setDataVencimento,
+          mode, dataLancamento, setDataLancamento, dataVencimento, setDataVencimento,
           categoriaId, setCategoriaId, categorias, tipo, showCategoriaModal, setShowCategoriaModal,
           categoriaSelectRef, descricao, setDescricao, valor, setValor, fornecedorTipo,
           setFornecedorTipo, fornecedorId, setFornecedorId, jurosValor, setJurosValor, multaValor,
           setMultaValor, descontoValor, setDescontoValor,
-        }} parceiros={credores} sugestao={sugestao} onNovoCredor={() => setShowNovoCredor(true)}
+        }} setMode={chooseMode} valorEstimado={estimativaAtiva} setValorEstimado={setValorEstimado}
+          estimativaIndisponivel={estimativaIndisponivel}
+          parceiros={credores} sugestao={sugestao} onNovoCredor={() => setShowNovoCredor(true)}
           convenioVinculado={Boolean(convenioMesId)} />
         {categoriaCloneIndisponivel && <p role="status" className="text-xs text-amber-700 md:col-span-2">A categoria original está indisponível. Selecione outra ou deixe sem categoria.</p>}
         {conferirCategoria && <p role="status" className="text-xs text-slate-500 md:col-span-2">
@@ -242,7 +265,7 @@ const DespesaForm: React.FC<DespesaFormProps> = ({
           mode, convenioMesId, convenios, isPoloMatriz, rateioSelection, polosRateio,
           polosSelecionados, togglePoloRateio, rateioSelecionadosInvalido, turmaModalidade,
           setTurmaModalidade, turmaId, setTurmaId, filteredTurmas, turmaEnabled, setTurmaEnabled,
-        }} setConvenioMesId={setConvenioMesId} setRateioSelection={setRateioSelection}
+        }} setConvenioMesId={chooseConvenio} setRateioSelection={setRateioSelection}
           conveniosLoading={conveniosQuery.isPending}
           conveniosError={conveniosQuery.isError && !conveniosQuery.data} turmaSuggestion={professorTurma.message} />
         {cloneDraft && mode === 'baixa' && <div className="md:col-span-2">
@@ -252,9 +275,9 @@ const DespesaForm: React.FC<DespesaFormProps> = ({
         </div>}
         <DespesaFormSettlementFields {...{
           mode, totalParcelas, setTotalParcelas, intervaloDias, setIntervaloDias, intervaloUnit,
-          setIntervaloUnit, splitTotal, setSplitTotal, activeContas, contaBancariaId,
+          setIntervaloUnit, splitTotal, activeContas, contaBancariaId,
           setContaBancariaId, formaPagamento, setFormaPagamento,
-        }} />
+        }} setSplitTotal={chooseSplitTotal} />
         <DespesaFormNotes {...{ anexo, anexoErro, anexoInputRef, handleAnexo, observacao, setObservacao }}
           clearAnexo={() => { setAnexo(null); setAnexoErro(''); if (anexoInputRef.current) anexoInputRef.current.value = ''; }} />
         {createMutation.isError && <div className="rounded-xl border border-red-100 bg-red-50 p-3 text-xs font-medium text-red-600 md:col-span-2">

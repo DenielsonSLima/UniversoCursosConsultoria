@@ -3,6 +3,8 @@ import { confirmFinancialPayment } from '../settlements/financial-payment.servic
 import type { DespesasFilters } from './despesas.queryKeys';
 import { mapLancamento } from './despesas.mapper';
 import { enrichDespesasFornecedorFantasia } from './despesas-fornecedores';
+import { enrichDespesasEstimativas } from './despesas-estimativas-leitura.service';
+import { getDespesasVencidas } from './despesas-vencidas.service';
 import { validateConvenioExpenseMvp } from './despesas-convenios.model';
 import {
   cleanupDespesaAnexoIfRequestFailed,
@@ -48,6 +50,7 @@ const enrichLegacyRowsWithLaunchDate = async (rows: any[]) => {
 export const getDespesas = async (
   filters: DespesasFilters = {},
 ): Promise<DespesaLancamento[]> => {
+  if (filters.statusScope === 'vencidos') return (await getDespesasVencidas(filters)).items;
   const scopedPoloId = filters.poloId && filters.poloId !== 'todos' ? filters.poloId : null;
   if (scopedPoloId && filters.tipo) {
     const params = {
@@ -69,10 +72,15 @@ export const getDespesas = async (
     if (response.error) throw response.error;
     const rows = Array.isArray(response.data) ? response.data : [];
     const datedRows = legacy ? await enrichLegacyRowsWithLaunchDate(rows) : rows;
-    const enrichedRows = await enrichDespesasFornecedorFantasia(datedRows, async (ids) => (
-      supabase.from('parceiros').select('id,nome_fantasia').eq('tipo', 'PJ').in('id', ids)
-    ));
-    return enrichedRows.map(mapLancamento);
+    const [enrichedRows, estimateRows] = await Promise.all([
+      enrichDespesasFornecedorFantasia(datedRows, async (ids) => (
+        supabase.from('parceiros').select('id,nome_fantasia').eq('tipo', 'PJ').in('id', ids)
+      )),
+      filters.tipo === 'OUTRO_DEBITO' ? datedRows : enrichDespesasEstimativas(datedRows),
+    ]);
+    const estimates = new Map(estimateRows.map(row => [row.id, row]));
+    return enrichedRows.map(row => mapLancamento({ ...row, ...estimates.get(row.id),
+      fornecedor_nome_fantasia: row.fornecedor_nome_fantasia }));
   }
 
   let query = supabase.from('despesas_lancamentos').select(`
@@ -94,7 +102,8 @@ export const getDespesas = async (
   if (filters.dataFim) query = query.lte('data_vencimento', filters.dataFim);
   const { data, error } = await query.order('data_vencimento', { ascending: true });
   if (error) throw error;
-  return (data || []).map(mapLancamento);
+  const rows = filters.tipo === 'OUTRO_DEBITO' ? data || [] : await enrichDespesasEstimativas(data || []);
+  return rows.map(mapLancamento);
 };
 
 const fetchCreatedExpense = async (id: string) => {
@@ -111,6 +120,14 @@ export const createDespesa = async (
   input: CreateDespesaInput,
 ): Promise<DespesaLancamento[]> => {
   validateConvenioExpenseMvp(input);
+  if (input.valorEstimado && (input.tipo === 'OUTRO_DEBITO' || input.markAsPaid
+      || input.splitTotal || input.convenioMesId)) {
+    throw new Error('O valor estimado exige uma despesa pendente, sem convênio ou divisão de valor total.');
+  }
+  if (input.valorEstimado && [input.jurosValor, input.multaValor, input.descontoValor]
+    .some((value) => (value || 0) !== 0)) {
+    throw new Error('Na estimativa, informe juros, multa e desconto somente na baixa.');
+  }
 
   const uploaded = await uploadDespesaAnexo(input);
   const commonParams = {
@@ -137,7 +154,25 @@ export const createDespesa = async (
   };
 
   let request;
-  if (input.convenioMesId) {
+  if (input.valorEstimado) {
+    request = supabase.rpc('criar_despesa_estimada_secure', {
+      p_input: {
+        ...commonParams,
+        p_valor_base: input.valor,
+        p_juros_valor: 0,
+        p_multa_valor: 0,
+        p_desconto_valor: 0,
+        p_baixa_imediata: false,
+        p_forma_pagamento: null,
+        p_conta_bancaria_id: null,
+        ...(input.rateio ? {
+          p_rateio_modo: input.rateio.modo,
+          p_rateio_polo_ids: input.rateio.modo === 'SELECIONADOS' ? input.rateio.poloIds || [] : null,
+        } : {}),
+      },
+      p_rateada: Boolean(input.rateio),
+    });
+  } else if (input.convenioMesId) {
     request = supabase.rpc('criar_despesa_convenio_secure', {
       ...commonParams,
       p_convenio_mes_id: input.convenioMesId,

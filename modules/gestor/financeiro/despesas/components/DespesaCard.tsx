@@ -20,11 +20,17 @@ import {
   formatDespesaCurrency,
   formatDespesaDate,
   getDespesaContaLabel,
+  isDespesaEstimadaPendente,
+  isDespesaValorEstimado,
+  hasDespesaPagamentoDetalhado,
 } from './despesaPresentation';
+import DespesaEstimativaBadge from './DespesaEstimativaBadge';
 import DespesaConvenioBadge from './DespesaConvenioBadge';
 import { getDespesaFornecedorRotulo } from '../despesas-fornecedores';
 
 const statusConfig: Record<string, { label: string; bg: string; text: string; border: string; Icon: React.ElementType }> = {
+  ESTIMADO: { label: 'Fatura a confirmar', bg: 'bg-amber-50', text: 'text-amber-800', border: 'border-amber-200', Icon: Clock },
+  SEM_COBRANCA: { label: 'Sem cobrança', bg: 'bg-slate-50', text: 'text-slate-600', border: 'border-slate-200', Icon: CheckCircle2 },
   PAGO: { label: 'Pago', bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200', Icon: CheckCircle2 },
   PENDENTE: { label: 'Pendente', bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200', Icon: Clock },
   VENCIDO: { label: 'Vencido', bg: 'bg-rose-50', text: 'text-rose-700', border: 'border-rose-200', Icon: AlertCircle },
@@ -60,7 +66,9 @@ const DespesaCard: React.FC<DespesaCardProps> = ({
   selected = false,
   onSelectionChange,
 }) => {
-  const cfg = statusConfig[item.status] || statusConfig.PENDENTE;
+  const estimated = isDespesaEstimadaPendente(item);
+  const cfg = statusConfig[item.valorSemCobrancaEm ? 'SEM_COBRANCA' : estimated ? 'ESTIMADO' : item.status] || statusConfig.PENDENTE;
+  const paymentDetails = hasDespesaPagamentoDetalhado(item);
   const isPago = item.status === 'PAGO';
   const isCancelado = item.status === 'CANCELADO';
   const isAberto = item.status === 'PENDENTE' || item.status === 'VENCIDO';
@@ -70,7 +78,7 @@ const DespesaCard: React.FC<DespesaCardProps> = ({
 
   return (
     <article className={`financial-data-surface financial-data-card relative overflow-hidden rounded-3xl border bg-white shadow-sm transition-all duration-300 hover:shadow-lg ${selected ? 'ring-2 ring-rose-300' : ''} ${cfg.border}`}>
-      <div className={`h-1 w-full ${isPago ? 'bg-emerald-500' : item.status === 'VENCIDO' ? 'bg-rose-500' : isCancelado ? 'bg-slate-300' : 'bg-amber-400'}`} />
+      <div className={`h-1 w-full ${isPago ? 'bg-emerald-500' : !estimated && item.status === 'VENCIDO' ? 'bg-rose-500' : isCancelado ? 'bg-slate-300' : 'bg-amber-400'}`} />
 
       <div className="p-5">
         <div className="mb-3 flex items-start justify-between gap-3">
@@ -96,6 +104,7 @@ const DespesaCard: React.FC<DespesaCardProps> = ({
             <p className="mt-1 break-words text-[10px] font-medium leading-4 text-slate-500">{getDespesaFornecedorRotulo(item)}</p>
             <DespesaConvenioBadge item={item} />
             <DespesaRateioBadge item={item} />
+            <DespesaEstimativaBadge item={item} />
             </div>
           </div>
 
@@ -106,14 +115,14 @@ const DespesaCard: React.FC<DespesaCardProps> = ({
         </div>
 
         <div className="mb-4 rounded-2xl bg-slate-50 px-4 py-3">
-          <p className="text-[9px] font-black uppercase tracking-wider text-slate-400">Valor previsto</p>
-          <p className={`mt-0.5 text-2xl font-black ${isPago ? 'text-emerald-600' : item.status === 'VENCIDO' ? 'text-rose-600' : 'text-[#001a33]'}`}>
-            {formatDespesaCurrency(item.valor)}
+          <p className="text-[9px] font-black uppercase tracking-wider text-slate-400">{item.valorSemCobrancaEm ? 'Cobrança do mês' : isDespesaValorEstimado(item) ? 'Valor estimado' : item.valorEstimado ? 'Valor confirmado' : 'Valor previsto'}</p>
+          <p className={`mt-0.5 text-2xl font-black ${isPago ? 'text-emerald-600' : !estimated && item.status === 'VENCIDO' ? 'text-rose-600' : 'text-[#001a33]'}`}>
+            {formatDespesaCurrency(item.valorSemCobrancaEm ? 0 : item.valor)}
           </p>
-          {isPago && !item.paymentSummary?.hasEvents && (
+          {paymentDetails && (
             <p className="mt-0.5 text-xs font-bold text-emerald-700">Valor pago: {formatDespesaCurrency(item.valorPago ?? item.valor)}</p>
           )}
-          <FinancialPaymentBalance summary={item.paymentSummary} expense />
+          {!paymentDetails && <FinancialPaymentBalance summary={item.paymentSummary} expense />}
           {hasBaixaEstornada && (
             <p className="mt-0.5 text-xs font-bold text-slate-500">Baixa estornada: {formatDespesaCurrency(item.valorPago ?? item.valor)}</p>
           )}
@@ -149,7 +158,7 @@ const DespesaCard: React.FC<DespesaCardProps> = ({
               <dd className="mt-0.5 truncate font-bold text-indigo-600">{item.turmaNome}</dd>
             </div>
           )}
-          {isPago && !item.paymentSummary?.hasEvents && (
+          {paymentDetails && (
             <>
               <div>
                 <dt className="text-[9px] font-black uppercase tracking-wider text-slate-400">Pagamento</dt>
@@ -257,6 +266,10 @@ const DespesaCard: React.FC<DespesaCardProps> = ({
             Linha econômica de rateio: a correção é feita no lançamento físico da Matriz.
           </p>
         )}
+        {item.valorSemCobrancaEm && !item.isRateioDerived && onPagar && <button type="button"
+          onClick={() => onPagar(item)} className={`${actionClass} mt-4 border border-slate-200 text-slate-600`}>
+          Histórico
+        </button>}
       </div>
     </article>
   );

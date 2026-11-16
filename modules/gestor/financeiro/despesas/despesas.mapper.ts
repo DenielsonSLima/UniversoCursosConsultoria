@@ -16,6 +16,14 @@ export const normalizeCategoriaFinanceiraInput = (value?: string | null) => toUp
 
 export const mapLancamento = (row: any): DespesaLancamento => ({
   paymentSummary: parseFinancialPaymentSummary(row.payment_summary),
+  valorEstimado: Boolean(row.valor_estimado),
+  valorEstimadoOriginal: row.valor_estimado_original != null ? Number(row.valor_estimado_original) : undefined,
+  valorConfirmadoEm: row.valor_confirmado_em ?? undefined,
+  valorConfirmadoPor: row.valor_confirmado_por ?? undefined,
+  valorEstimadoVersao: Number(row.valor_estimado_versao ?? 0),
+  valorSemCobrancaEm: row.valor_sem_cobranca_em ?? undefined,
+  valorSemCobrancaPor: row.valor_sem_cobranca_por ?? undefined,
+  pagamentoUnico: row.pagamento_unico === true,
   id: row.id,
   despesaLancamentoId: row.despesa_lancamento_id ?? row.id,
   poloId: row.polo_id,

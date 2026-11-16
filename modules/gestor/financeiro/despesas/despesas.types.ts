@@ -22,6 +22,14 @@ export interface DespesaLancamento {
   multaValor: number;
   descontoValor: number;
   valor: number;
+  valorEstimado?: boolean;
+  valorEstimadoOriginal?: number;
+  valorConfirmadoEm?: string;
+  valorConfirmadoPor?: string;
+  valorEstimadoVersao?: number;
+  valorSemCobrancaEm?: string;
+  valorSemCobrancaPor?: string;
+  pagamentoUnico?: boolean;
   dataLancamento?: string;
   dataVencimento: string;
   dataPagamento?: string;
@@ -163,6 +171,7 @@ export interface CreateDespesaInput {
   tipo: DespesaTipo;
   descricao: string;
   valor: number;
+  valorEstimado?: boolean;
   jurosValor?: number;
   multaValor?: number;
   descontoValor?: number;
@@ -197,6 +206,9 @@ export interface DespesasSummary {
   paidValue: number;
   pendingValue: number;
   vencidosCount: number;
+  estimatedValue?: number;
+  estimatedCount?: number;
+  confirmedPendingValue?: number;
 }
 
 export interface DespesaGroupSummary {
@@ -207,6 +219,8 @@ export interface DespesaGroupSummary {
   totalValue: number;
   paidValue: number;
   itemCount: number;
+  estimatedValue?: number;
+  estimatedCount?: number;
 }
 
 

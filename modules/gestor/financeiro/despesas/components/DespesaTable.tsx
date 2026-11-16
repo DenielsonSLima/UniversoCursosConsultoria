@@ -7,12 +7,15 @@ import {
 } from 'lucide-react';
 import type { ContaBancaria } from '../../financeiro.service';
 import type { DespesaLancamento } from '../despesas.service';
-import { formatDespesaCurrency, formatDespesaDate, getDespesaContaLabel } from './despesaPresentation';
+import { formatDespesaCurrency, formatDespesaDate, getDespesaContaLabel, hasDespesaPagamentoDetalhado, isDespesaEstimadaPendente, isDespesaValorEstimado } from './despesaPresentation';
+import DespesaEstimativaBadge from './DespesaEstimativaBadge';
 import DespesaConvenioBadge from './DespesaConvenioBadge';
 import { getDespesaFornecedorRotulo } from '../despesas-fornecedores';
 
 const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
   const configs: Record<string, { label: string; className: string; Icon: React.ElementType }> = {
+    ESTIMADO: { label: 'Fatura a confirmar', className: 'border-amber-200 bg-amber-50 text-amber-800', Icon: Clock },
+    SEM_COBRANCA: { label: 'Sem cobrança', className: 'border-slate-200 bg-slate-100 text-slate-600', Icon: CheckCircle2 },
     PARCIAL: { label: 'Baixa parcial', className: 'border-amber-200 bg-amber-50 text-amber-700', Icon: Clock },
     PAGO: { label: 'Pago', className: 'border-emerald-200 bg-emerald-50 text-emerald-700', Icon: CheckCircle2 },
     PENDENTE: { label: 'Pendente', className: 'border-amber-200 bg-amber-50 text-amber-700', Icon: Clock },
@@ -66,6 +69,8 @@ const DespesaTable: React.FC<DespesaTableProps> = ({
             const isPago = item.status === 'PAGO';
             const isCancelado = item.status === 'CANCELADO';
             const isAberto = item.status === 'PENDENTE' || item.status === 'VENCIDO';
+            const estimated = isDespesaEstimadaPendente(item);
+            const paymentDetails = hasDespesaPagamentoDetalhado(item);
             const selectable = isAberto && !item.paymentSummary?.hasEvents && !item.isRateioDerived && Boolean(onSelectionChange);
             const selected = selectedIds?.has(item.id) || false;
             const contaLabel = getDespesaContaLabel(item, contas);
@@ -82,6 +87,7 @@ const DespesaTable: React.FC<DespesaTableProps> = ({
                     <p className="mt-1 break-words text-[10px] font-medium leading-4 text-slate-500">{getDespesaFornecedorRotulo(item)}</p>
                     <DespesaConvenioBadge item={item} />
                     <DespesaRateioBadge item={item} />
+                    <DespesaEstimativaBadge item={item} />
                   </div>
                 </div></td>
                 <td className="px-4 py-4 text-xs font-semibold leading-5 text-slate-700">
@@ -90,20 +96,21 @@ const DespesaTable: React.FC<DespesaTableProps> = ({
                   <p className="mt-1 text-[10px] font-bold text-slate-500">{item.totalParcelas > 1 ? `Parcela ${item.parcelaNumero}/${item.totalParcelas}` : 'Parcela única'}</p>
                 </td>
                 <td className="financial-data-money px-4 py-4 text-xs">
-                  <p className="text-[9px] font-black uppercase tracking-wide text-slate-400">Previsto</p><p className="mt-0.5 text-sm font-black text-slate-900">{formatDespesaCurrency(item.valor)}</p>
-                  {isPago && !item.paymentSummary?.hasEvents && <p className="mt-1 font-bold text-emerald-700">Pago: {formatDespesaCurrency(item.valorPago ?? item.valor)}</p>}
-                  <FinancialPaymentBalance summary={item.paymentSummary} expense />
+                  <p className="text-[9px] font-black uppercase tracking-wide text-slate-400">{item.valorSemCobrancaEm ? 'Cobrança do mês' : isDespesaValorEstimado(item) ? 'Estimado' : item.valorEstimado ? 'Confirmado' : 'Previsto'}</p><p className="mt-0.5 text-sm font-black text-slate-900">{formatDespesaCurrency(item.valorSemCobrancaEm ? 0 : item.valor)}</p>
+                  {paymentDetails && <p className="mt-1 font-bold text-emerald-700">Pago: {formatDespesaCurrency(item.valorPago ?? item.valor)}</p>}
+                  {!paymentDetails && <FinancialPaymentBalance summary={item.paymentSummary} expense />}
                   {hasBaixaEstornada && <p className="mt-1 font-bold text-slate-500">Estornado: {formatDespesaCurrency(item.valorPago ?? item.valor)}</p>}
                   {(item.jurosValor > 0 || item.multaValor > 0 || item.descontoValor > 0) && <p className="mt-1 text-[9px] font-semibold text-slate-400">Base {formatDespesaCurrency(item.valorBase)}</p>}
                 </td>
                 <td className="px-4 py-4 text-[10px] font-semibold leading-5 text-slate-600">
-                  {item.paymentSummary?.hasEvents ? <p className="font-black text-slate-700">Consulte as formas e contas no histórico de pagamentos.</p> : isPago ? <><p className="font-black text-slate-700">{contaLabel || 'Conta não localizada'}</p><p className="text-emerald-700">Pago em {formatDespesaDate(item.dataPagamento)}{item.formaPagamento ? ` · ${item.formaPagamento}` : ''}</p></>
+                  {item.valorSemCobrancaEm ? <p className="text-slate-600">Sem cobrança neste mês</p> : item.paymentSummary?.hasEvents && !paymentDetails ? <p className="font-black text-slate-700">Consulte as formas e contas no histórico de pagamentos.</p> : paymentDetails ? <><p className="font-black text-slate-700">{contaLabel || 'Conta não localizada'}</p><p className="text-emerald-700">Pago em {formatDespesaDate(item.dataPagamento)}{item.formaPagamento ? ` · ${item.formaPagamento}` : ''}</p></>
                     : hasBaixaEstornada ? <><p className="font-black text-slate-600">Baixa estornada</p><p>{contaLabel || 'Conta preservada no histórico'}</p></>
                     : <><p className="font-black text-slate-600">Ainda não baixada</p><p>{item.turmaNome ? `Turma: ${item.turmaNome}` : item.observacao || 'Sem observação adicional'}</p></>}
                 </td>
                 <td className="px-4 py-4"><div className="grid grid-cols-2 items-stretch gap-1.5">
-                  <StatusBadge status={hasPartialPayment(item.paymentSummary) ? 'PARCIAL' : item.status} />
+                  <StatusBadge status={item.valorSemCobrancaEm ? 'SEM_COBRANCA' : estimated ? 'ESTIMADO' : hasPartialPayment(item.paymentSummary) ? 'PARCIAL' : item.status} />
                   {item.isRateioDerived ? <p className="text-[10px] font-bold text-slate-400">Somente informativa</p> : <>
+                    {item.valorSemCobrancaEm && onPagar && <button type="button" onClick={() => onPagar(item)} className={`${actionClass} border-slate-200 text-slate-600`}>Histórico</button>}
                     {!isCancelado && onClonar && <button type="button" onClick={() => onClonar(item)} className={`${actionClass} border-slate-200 text-slate-600 hover:bg-slate-100 focus-visible:ring-slate-500`} aria-label={`Clonar lançamento ${item.descricao}`}><Copy size={13} /> Clonar</button>}
                     {isAberto && !item.paymentSummary?.hasEvents && onEditar && <button type="button" onClick={() => onEditar(item)} className={`${actionClass} border-blue-200 text-blue-700 hover:bg-blue-50 focus-visible:ring-blue-500`} aria-label={`Editar lançamento ${item.descricao}`}><Pencil size={13} /> Editar</button>}
                     {isAberto && onPagar && <button type="button" onClick={() => onPagar(item)} className={`${actionClass} border-emerald-200 text-emerald-700 hover:bg-emerald-50 focus-visible:ring-emerald-500`} aria-label={`Dar baixa em ${item.descricao}`}><CheckCircle2 size={13} /> {hasPartialPayment(item.paymentSummary) ? 'Pagar saldo' : 'Dar baixa'}</button>}
