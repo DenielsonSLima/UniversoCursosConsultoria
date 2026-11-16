@@ -106,6 +106,12 @@ Histórico arquivado: [08/11/2026 — versão 4.8.273](./changelog/2026-11-08-ve
 
 Histórico arquivado: [10–11/11/2026 — versões 4.8.282 a 4.8.290](./changelog/2026-11-10-a-11-versoes-4-8-282-a-4-8-290.md).
 
+## [4.8.353] - 2026-11-16
+
+- Situação e ordenação das despesas fixas e variáveis ficam compactas na mesma faixa das abas, com adaptação para telas pequenas.
+- Despesas recuperam alterações perdidas após reconexão e preservam filtros, com invalidação limitada ao polo aberto.
+- Revisão independente de três agentes conferiu previsões Serasa, baixas, estimativas, rateios, totais, grupos e PDFs.
+
 ## [4.8.352] - 2026-11-16
 
 - Despesas fixas e variáveis abrem em Mês atual, tabela sem agrupamento e vencimento crescente.

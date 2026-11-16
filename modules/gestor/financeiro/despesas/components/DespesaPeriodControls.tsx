@@ -7,30 +7,35 @@ interface Props {
   statusScope: DespesaStatusScope;
   situacao: DespesaSituacao;
   ordem: DespesaOrdem;
-  dataInicio: string;
-  dataFim: string;
   onSituacaoChange: (value: DespesaSituacao) => void;
   onOrdemChange: (value: DespesaOrdem) => void;
 }
 
-export default function DespesaPeriodControls({ statusScope, situacao, ordem, dataInicio, dataFim, onSituacaoChange, onOrdemChange }: Props) {
+export default function DespesaPeriodControls({ statusScope, situacao, ordem, onSituacaoChange, onOrdemChange }: Props) {
   const fixed = statusScope === 'em_aberto' || statusScope === 'vencidos';
-  return <div className="grid min-w-0 grid-cols-2 gap-3" role="group" aria-label="Situação e ordem das despesas">
+  const selectClass = '[&>.financial-select-search]:hidden [&>input]:!pl-3';
+  return <div className="flex min-w-0 max-w-full shrink-0 flex-wrap items-center gap-2" role="group" aria-label="Situação e ordem das despesas">
     <div className="min-w-0">
-      <p className="mb-1 text-xs font-medium text-slate-500">Situação{fixed ? ' da aba' : ''}</p>
+      <p className="sr-only">Situação{fixed ? ' da aba' : ''}</p>
       <FinancialSelect value={situacao} onValueChange={value => onSituacaoChange(value as DespesaSituacao)}
-        ariaLabel="Filtrar despesas por situação" disabled={fixed} className="w-full min-w-0"
+        ariaLabel="Filtrar despesas por situação" disabled={fixed} className={`w-32 ${selectClass}`}
         options={(Object.entries(despesaSituacaoLabels) as [DespesaSituacao, string][]).map(([value, label]) => ({ value, label }))} />
     </div>
     <div className="min-w-0">
-      <p className="mb-1 text-xs font-medium text-slate-500">Ordenar por vencimento</p>
+      <p className="sr-only">Ordenar por vencimento</p>
       <FinancialSelect value={ordem} onValueChange={value => onOrdemChange(value as DespesaOrdem)}
-        ariaLabel="Ordenar despesas por vencimento" className="w-full min-w-0"
+        ariaLabel="Ordenar despesas por vencimento" className={`w-48 ${selectClass}`}
         options={(Object.entries(despesaOrdemLabels) as [DespesaOrdem, string][]).map(([value, label]) => ({ value, label }))} />
     </div>
-    <p className="col-span-2 text-xs leading-5 text-slate-600">
-      {getDespesaPeriodoLabel(statusScope, dataInicio, dataFim)}
-      {fixed ? ` · ${despesaSituacaoLabels[situacao]}` : ''}
-    </p>
   </div>;
+}
+
+export function DespesaPeriodCaption({ statusScope, situacao, dataInicio, dataFim }: Pick<Props, 'statusScope' | 'situacao'> & {
+  dataInicio: string; dataFim: string;
+}) {
+  const fixed = statusScope === 'em_aberto' || statusScope === 'vencidos';
+  return <p className="text-xs leading-5 text-slate-500">
+    {getDespesaPeriodoLabel(statusScope, dataInicio, dataFim)}
+    {fixed ? ` · ${despesaSituacaoLabels[situacao]}` : ''}
+  </p>;
 }

@@ -16,13 +16,20 @@ export function useDespesasRealtime(poloId?: string | null) {
     let refreshTimer: number | undefined;
     let expensesChanged = false;
     let balancesChanged = false;
+    let disposed = false;
+    const expenseScope = (query: { queryKey: readonly unknown[] }) => {
+      if (!activePoloId) return true;
+      const filters = query.queryKey[query.queryKey[1] === 'lancamentos' ? 3 : 2];
+      return Boolean(filters && typeof filters === 'object' && 'poloId' in filters
+        && filters.poloId === activePoloId);
+    };
 
     const flush = () => {
       refreshTimer = undefined;
       if (expensesChanged) {
-        void queryClient.invalidateQueries({ queryKey: despesasQueryKeys.lancamentosRoot });
-        void queryClient.invalidateQueries({ queryKey: despesasQueryKeys.summaryRoot });
-        void queryClient.invalidateQueries({ queryKey: despesasQueryKeys.groupSummaryRoot });
+        void queryClient.invalidateQueries({ queryKey: despesasQueryKeys.lancamentosRoot, predicate: expenseScope });
+        void queryClient.invalidateQueries({ queryKey: despesasQueryKeys.summaryRoot, predicate: expenseScope });
+        void queryClient.invalidateQueries({ queryKey: despesasQueryKeys.groupSummaryRoot, predicate: expenseScope });
         void queryClient.invalidateQueries({
           queryKey: activePoloId
             ? conveniosQueryKeys.listForPolo(activePoloId)
@@ -55,6 +62,7 @@ export function useDespesasRealtime(poloId?: string | null) {
     };
 
     const invalidateExpenseAndBalances = () => {
+      if (disposed) return;
       expensesChanged = true;
       balancesChanged = true;
       schedule();
@@ -84,9 +92,13 @@ export function useDespesasRealtime(poloId?: string | null) {
         // mudam a lista e os totais de Contas a Pagar, não apenas o saldo.
         invalidateExpenseAndBalances,
       )
-      .subscribe();
+      .subscribe(status => {
+        // Reread after subscription and reconnection to recover missed events.
+        if (status === 'SUBSCRIBED') invalidateExpenseAndBalances();
+      });
 
     return () => {
+      disposed = true;
       if (refreshTimer !== undefined) window.clearTimeout(refreshTimer);
       supabase.removeChannel(channel);
     };

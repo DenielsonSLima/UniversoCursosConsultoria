@@ -1,8 +1,8 @@
 {
-  "version": "4.8.352",
+  "version": "4.8.353",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 361,
+  "revision": 362,
   "releasedAt": "2026-11-16",
-  "summary": "Despesas do mês por vencimento, sem agrupamento inicial, com situação e ordem canônicas"
+  "summary": "Filtros de despesas compactos junto às abas e recuperação automática após reconexão"
 }
