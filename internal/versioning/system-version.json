@@ -1,8 +1,8 @@
 {
-  "version": "4.8.347",
+  "version": "4.8.348",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 356,
+  "revision": 357,
   "releasedAt": "2026-11-15",
-  "summary": "Menu de cursos mantém o clique nas opções antes de fechar"
+  "summary": "Serviços preserva cache e filtros; integração bancária reflete a operação atual"
 }

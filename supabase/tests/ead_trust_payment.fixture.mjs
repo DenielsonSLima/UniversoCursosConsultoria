@@ -6,6 +6,8 @@ export const trustTurma='00000000-0000-0000-0000-000000000022';
 export const migration=name=>readFile(new URL('../migrations/'+name,import.meta.url),'utf8');
 export const value=async(db,sql,args=[])=>(await db.query(sql,args)).rows[0].value;
 export async function prepareTrustPayment(db){
+ // CURRENT_DATE nas evidências fictícias usa o mesmo dia civil do contrato financeiro.
+ await db.exec("SET TIME ZONE 'America/Maceio'");
  await loadEadExpirationTestSetup(db);
  // Extend only read dependencies missing from the existing financial harness.
  // Reservation, attempt projection, cancellation and recovery owners are real.

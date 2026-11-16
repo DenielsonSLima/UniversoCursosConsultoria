@@ -19,8 +19,8 @@ const serviceScope: Record<ReceivablesScope, ServiceStatusScope> = {
 
 export function ServiceReceivablesToolbar({ model: m }: { model: ReturnType<typeof useServicosReceber> }) {
   const pendingSearch = m.search.trim() !== m.debouncedSearch;
-  const summary = { data: m.summary.data, loading: m.summary.isPending || m.summary.isFetching || pendingSearch, error: m.summary.isError };
-  const upcoming = { data: m.upcoming.data, loading: m.upcoming.isPending || m.upcoming.isFetching || pendingSearch, error: m.upcoming.isError };
+  const summary = { data: m.summary.data, loading: m.summary.isPending || pendingSearch, error: m.summary.isError };
+  const upcoming = { data: m.upcoming.data, loading: m.upcoming.isPending || pendingSearch, error: m.upcoming.isError };
   const counts = m.summary.data, activeScope = uiScope[m.statusScope];
   const unavailable = summary.loading || summary.error || Boolean(m.periodError);
   const report = useServiceReceivablesReport({ poloId: m.poloId,

@@ -71,7 +71,7 @@ export const EnvironmentBanner = ({
             <Icon size={20} />
           </span>
           <div>
-            <p className="text-[11px] font-black uppercase tracking-widest">Ambiente ativo</p>
+            <p className="text-[11px] font-black uppercase tracking-widest">Ambiente em edição</p>
             <h4 className="mt-1 text-xl font-black uppercase tracking-tight">
               {config?.headline || environmentLabel(environment)}
             </h4>

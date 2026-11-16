@@ -12,13 +12,14 @@ import {
   isRateLimitExceeded,
   json,
 } from "../../_shared/http.ts";
-import { getPaymentIssuerOverview, savePaymentIssuer } from "./issuer.ts";
+import { savePaymentIssuer } from "./issuer.ts";
+import { getGatewayOverview } from "./overview.ts";
+import { saveBankingRuntimeConfiguration } from "./runtime.ts";
 import {
   assertHomologationStageRoute,
   assertProviderAdapterReady,
   assertProviderInFinancialScope,
   assertProviderMethodInFinancialScope,
-  CONFIGURABLE_PROVIDER_CODES,
   credentialWebhookUrlFor,
   enforceProviderFixedMetadata,
   extractSecretInput,
@@ -29,13 +30,10 @@ import {
   normalizeModalidade,
   normalizeProviderCode,
   pickMetadata,
-  providerOverviewRow,
   PROVIDERS,
-  webhookUrlFor,
 } from "./config.ts";
 import {
   getCredential,
-  getGatewaySecret,
   isCredentialConfiguredForProvider,
   isCredentialConfiguredForRoute,
   mergeAsaasLegacyCredential,
@@ -46,12 +44,11 @@ import {
 } from "./credentials.ts";
 import { reconcileBaneseReceivable } from "./banese.ts";
 import { syncRouteAwareFutureInstallments } from "../../asaas/api/route-aware-future-sync.ts";
-import {
-  getGatewayRuntimeConfig,
-  saveGatewayRuntimeConfig,
-} from "../runtime-config.ts";
 
-Deno.serve(async (req: Request) => {
+export const handlePaymentGatewayApi = async (
+  req: Request,
+  context?: { admin: any; supabaseUrl: string },
+) => {
   const corsHeadersForRequest = buildCorsHeaders(req);
   const respondJson = (body: unknown, status = 200) => json(body, status, req);
 
@@ -79,9 +76,8 @@ Deno.serve(async (req: Request) => {
     return respondJson({ error: "Metodo nao permitido." }, 405);
   }
 
-  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-  const admin = createClient(supabaseUrl, serviceRoleKey, {
+  const supabaseUrl = context?.supabaseUrl || Deno.env.get("SUPABASE_URL")!;
+  const admin = context?.admin || createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
@@ -101,129 +97,12 @@ Deno.serve(async (req: Request) => {
     }
 
     if (action === "get-overview") {
-      const [
-        providersResult,
-        credentialsResult,
-        routesResult,
-        runtimeConfig,
-        issuerOverview,
-      ] = await Promise.all([
-        admin.from("payment_gateway_providers").select("*")
-          .eq("active", true)
-          .in("code", [...CONFIGURABLE_PROVIDER_CODES])
-          .order("name", { ascending: true }),
-        admin.from("payment_gateway_credentials").select("*")
-          .in("provider_code", [...CONFIGURABLE_PROVIDER_CODES]).order(
-            "provider_code",
-            { ascending: true },
-          ).order("environment", { ascending: true }),
-        admin.from("payment_gateway_routes").select("*")
-          .in("provider_code", [...CONFIGURABLE_PROVIDER_CODES])
-          .order("modalidade", { ascending: true })
-          .order("payment_method", { ascending: true })
-          .order("environment", { ascending: true }),
-        getGatewayRuntimeConfig(admin),
-        getPaymentIssuerOverview(admin),
-      ]);
-      if (providersResult.error) throw providersResult.error;
-      if (credentialsResult.error) throw credentialsResult.error;
-      if (routesResult.error) throw routesResult.error;
-
-      const credentials = await Promise.all(
-        (credentialsResult.data || []).map(async (credential: any) => {
-          const mergedCredential = await mergeAsaasLegacyCredential(
-            admin,
-            credential,
-          );
-          const nextCredential = {
-            ...mergedCredential,
-            webhook_url: mergedCredential.provider_code === "banco_inter"
-              ? null
-              : mergedCredential.webhook_url ||
-                credentialWebhookUrlFor(
-                  supabaseUrl,
-                  mergedCredential.provider_code,
-                  mergedCredential.environment,
-                ),
-          };
-
-          if (nextCredential.provider_code !== "banese_card") {
-            return nextCredential;
-          }
-
-          const metadata = (nextCredential.metadata || {}) as Record<string, unknown>;
-          const crtAccessToken = await getGatewaySecret(
-            admin,
-            nextCredential.provider_code,
-            nextCredential.environment,
-            "crt_access_token",
-          ).catch(() => null);
-          const hasConfiguredCrtToken = Boolean(
-            crtAccessToken ||
-              metadata.baneseCrtAccessTokenConfigured === true ||
-              String(metadata.baneseCrtAccessTokenConfigured || "").toLowerCase() ===
-              "true" ||
-              metadata.crt_access_token_configured === true ||
-              String(metadata.crt_access_token_configured || "").toLowerCase() ===
-              "true",
-          );
-          const hasConvenioPix = Boolean(
-            metadata.banesePixConvenio ||
-              metadata.baneseConvenio,
-          );
-          const hasChavePix = Boolean(
-            metadata.banesePixChave ||
-              metadata.pixChave ||
-              metadata.chave,
-          );
-          const hasCrtToken = hasConfiguredCrtToken;
-          const hasPixHomologacao = metadata.banesePixHomologacaoDisponivel === true ||
-            String(metadata.banesePixHomologacaoDisponivel || "").toLowerCase() ===
-              "true" ||
-            (nextCredential.environment === "production"
-              ? hasConvenioPix && hasChavePix
-              : hasConvenioPix && hasChavePix && hasCrtToken);
-
-          return {
-            ...nextCredential,
-            metadata: {
-              ...metadata,
-              baneseCrtAccessTokenConfigured: hasCrtToken,
-              banesePixHomologacaoDisponivel: hasPixHomologacao,
-            },
-          };
-        }),
-      );
-
-      return respondJson({
-        providers: (providersResult.data || []).map(providerOverviewRow),
-        credentials,
-        routes: routesResult.data || [],
-        integrationEnabled: runtimeConfig.enabled,
-        activeEnvironment: runtimeConfig.activeEnvironment,
-        issuerConfig: issuerOverview.config,
-        issuerCandidates: issuerOverview.candidates,
-        activePolosCount: issuerOverview.active_polos_count,
-        webhookUrls: {
-          mercado_pago: webhookUrlFor(supabaseUrl, "mercado_pago"),
-          banese_card: webhookUrlFor(supabaseUrl, "banese_card"),
-        },
-      });
+      return respondJson(await getGatewayOverview(admin, supabaseUrl));
     }
 
     if (action === "save-runtime-config") {
       if (!gestor) throw new Error("Gestor nao identificado.");
-      const activeEnvironment = normalizeEnvironment(body.activeEnvironment);
-      if (activeEnvironment !== "sandbox") {
-        throw new Error(
-          "Producao permanece bloqueada nesta etapa. Mantenha o ambiente sandbox ate concluir a homologacao do boleto EAD.",
-        );
-      }
-      const runtimeConfig = await saveGatewayRuntimeConfig(admin, {
-        enabled: body.enabled === true,
-        activeEnvironment,
-        updatedBy: gestor.id,
-      });
+      const runtimeConfig = await saveBankingRuntimeConfiguration(admin, body, gestor.id);
       return respondJson({ success: true, runtimeConfig });
     }
 
@@ -546,4 +425,6 @@ Deno.serve(async (req: Request) => {
       error: message,
     }, authorizationErrorHttpStatus(message) || 400);
   }
-});
+};
+
+if (import.meta.main) Deno.serve((req: Request) => handlePaymentGatewayApi(req));

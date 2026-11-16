@@ -6,6 +6,8 @@ Histórico 4.8.277: [versão arquivada](./changelog/2026-11-09-versao-4-8-277.md
 
 Histórico 4.8.276: [versão arquivada](./changelog/2026-11-09-versao-4-8-276.md).
 
+Histórico 4.8.281: [10/11/2026](./changelog/2026-11-10-versao-4-8-281.md).
+
 Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente deve sempre corresponder ao arquivo `system-version.json`.
 
 Histórico 4.8.280: [09/11/2026](./changelog/2026-11-09-versao-4-8-280.md).
@@ -101,6 +103,12 @@ Histórico arquivado: [08/11/2026 — versões 4.8.270 a 4.8.271](./changelog/20
 Histórico arquivado: [08/11/2026 — versão 4.8.272](./changelog/2026-11-08-versao-4-8-272.md).
 
 Histórico arquivado: [08/11/2026 — versão 4.8.273](./changelog/2026-11-08-versao-4-8-273.md).
+
+## [4.8.348] - 2026-11-15
+
+- Serviços mantém filtros, apresentação e cache entre modalidades, com atualização automática sem apagar valores durante consultas em segundo plano.
+- Integração bancária apresenta o ambiente e as rotas efetivas, preserva BolePix no boleto e permite controles coerentes para as modalidades homologadas.
+- Novas tentativas de dependência respeitam a configuração vigente; títulos existentes e operação financeira permanecem preservados.
 
 ## [4.8.347] - 2026-11-15
 
@@ -489,10 +497,3 @@ Histórico arquivado: [08/11/2026 — versão 4.8.273](./changelog/2026-11-08-ve
 - Cadastro A1 verifica chave RSA, cadeia e impressão digital sem APIs X509 ausentes no runtime da Edge.
 - Preserva senha UTF-8, CNPJ, validade, confiança e bloqueio de emissão; interface e metadados continuam iguais.
 - CI passa a testar também Deno 2.1.4, mantendo a validação no Deno atual e casos de rejeição de certificados inválidos.
-
-## [4.8.281] - 2026-11-10
-
-- Cadastro A1 segue o novo padrão de modais de Configurações, com senha ampla, opção de mostrar e ocultar e preservação de espaços e acentos.
-- Leitura PBES2 aceita senhas UTF-8 e mantém compatibilidade legada, sem enfraquecer a verificação do certificado.
-- Validade aparece após salvar e no painel; falhas de arquivo, senha, cadeia e acesso têm mensagens próprias sem expor credenciais.
-- Emissão fiscal permanece bloqueada, com validações de CNPJ, confiança e autorização preservadas.

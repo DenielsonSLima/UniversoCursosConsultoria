@@ -230,7 +230,7 @@ const RotasBancariasPanel: React.FC<RotasBancariasPanelProps> = ({
             <div className="mb-4 flex gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3">
               <AlertTriangle className="mt-0.5 shrink-0 text-amber-600" size={18} />
               <p className="text-xs font-bold leading-relaxed text-amber-700">
-                O boleto Banese é emitido pela API e o PDF é montado pelo sistema. O Pix está bloqueado em homologação e depende de liberação formal em produção. Quando o retorno identificar BolePix no mesmo título, a conciliação preserva essa origem. Cartão não é suportado pelo Banese.
+                O boleto Banese é emitido pela API e o PDF é montado pelo sistema. Em produção, o QR Code Pix retornado pelo banco pertence ao mesmo boleto. Pix avulso permanece bloqueado; cartão não é suportado pelo Banese.
               </p>
             </div>
           )}

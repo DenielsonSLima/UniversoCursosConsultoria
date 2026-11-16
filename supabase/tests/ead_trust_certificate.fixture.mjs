@@ -26,6 +26,8 @@ const functionSource=(sql,name)=>{
 };
 export async function newTrustCertificateDatabase({database,activate=true}={}){
  const db=await revisionDatabase({database});
+ // Alinha somente a sessão de teste antes das seeds financeiras que usam CURRENT_DATE.
+ await db.exec("SET TIME ZONE 'America/Maceio'");
  await applyRevisions(db);
  await db.exec(await readFile(new URL('./fixtures/ead-trust-certificate-financial-schema.sql',import.meta.url),'utf8'));
  for(const name of ['20261112141935_ead_temporary_trust_access.sql',

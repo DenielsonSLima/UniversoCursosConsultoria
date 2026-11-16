@@ -1,4 +1,5 @@
 import InstitutionalSelect from '../../../shared/components/InstitutionalSelect';
+import { bankingCredentialStatus, bankingRouteBlockedReason } from './integracao-bancaria.policy';
 import React from 'react';
 import {
   AlertTriangle,
@@ -111,6 +112,7 @@ const ResumoBancarioPanel: React.FC<ResumoBancarioPanelProps> = ({
   const boletoCredential = getCredential('banese_card', routeEnvironment);
   const boletoReady = credentialReadyForRoute('banese_card', boletoCredential, 'BOLETO');
   const isSandbox = routeEnvironment === 'sandbox';
+  const boletoBlockedReason = bankingRouteBlockedReason(controlModalidade, 'BOLETO', 'banese_card', routeEnvironment);
 
   const methodCards = [
     {
@@ -120,18 +122,18 @@ const ResumoBancarioPanel: React.FC<ResumoBancarioPanelProps> = ({
       icon: FileText,
       route: boletoRoute,
       ready: boletoReady,
-      disabled: !isSandbox || !boletoReady,
+      disabled: Boolean(boletoBlockedReason) || !boletoReady,
       tone: 'border-sky-200 bg-sky-50/70',
       iconTone: 'bg-sky-100 text-sky-700',
       description: isSandbox
         ? 'A API registra o título e devolve linha digitável e código de barras. O PDF privado é montado pela Universo.'
-        : 'Produção permanece bloqueada nesta etapa. O BolePix será lido do mesmo retorno do boleto quando autorizado.',
-      status: boletoReady ? 'OAuth validado' : 'Credencial pendente',
+        : 'Cobrança real pelo Banese. O QR Code Pix, quando retornado pelo banco, pertence ao mesmo boleto.',
+      status: boletoBlockedReason || bankingCredentialStatus(boletoCredential, boletoReady),
     },
     {
       method: 'PIX' as const,
       provider: 'banese_card' as const,
-      title: 'Pix / BolePix',
+      title: 'Pix avulso',
       icon: QrCode,
       route: pixRoute,
       ready: false,
@@ -140,8 +142,8 @@ const ResumoBancarioPanel: React.FC<ResumoBancarioPanelProps> = ({
       iconTone: 'bg-amber-100 text-amber-700',
       description: isSandbox
         ? 'Indisponível no convênio de homologação 15528. Nenhum QR Code deve ser esperado ou gerado.'
-        : 'Em produção, o Banese acrescenta o QR Code automaticamente no retorno do próprio boleto.',
-      status: isSandbox ? 'Indisponível em homologação' : 'Liberação controlada',
+        : 'O BolePix continua disponível pela rota Boleto. Este controle representa somente uma cobrança Pix separada.',
+      status: 'Pix avulso indisponível',
     },
     {
       method: 'CREDIT_CARD' as const,
@@ -172,7 +174,7 @@ const ResumoBancarioPanel: React.FC<ResumoBancarioPanelProps> = ({
                 Operação bancária
               </h4>
               <p className="mt-1 max-w-2xl text-sm font-semibold leading-relaxed text-slate-300">
-                Este painel altera o ambiente usado pelo backend. O checkout nunca procura uma rota em outro ambiente.
+                Integração e ambiente são globais para todas as modalidades. Cada cobrança usa o ambiente definido aqui.
               </p>
             </div>
             <div className="flex items-center gap-3 rounded-lg border border-white/15 bg-white/10 p-3">
@@ -202,17 +204,17 @@ const ResumoBancarioPanel: React.FC<ResumoBancarioPanelProps> = ({
         <div className="grid gap-5 p-5 lg:grid-cols-[minmax(0,1fr)_minmax(300px,0.72fr)]">
           <div>
             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
-              Ambiente de cobrança
+              Ambiente global de cobrança
             </p>
             <div className="mt-3 grid grid-cols-2 gap-2 rounded-xl border border-slate-200 bg-slate-100 p-1.5">
               {ENVIRONMENTS.map((environment) => {
                 const active = routeEnvironment === environment.value;
-                const productionLocked = environment.value === 'production';
                 return (
                   <button
                     key={environment.value}
                     type="button"
-                    disabled={runtimeMutationPending || productionLocked}
+                    disabled={runtimeMutationPending}
+                    aria-pressed={active}
                     onClick={() => onChangeRuntime(integrationEnabled, environment.value)}
                     className={`min-h-[58px] rounded-lg border px-4 text-left transition ${
                       active
@@ -225,7 +227,7 @@ const ResumoBancarioPanel: React.FC<ResumoBancarioPanelProps> = ({
                       {environmentLabel(environment.value)}
                     </span>
                     <span className="mt-1 block text-[10px] font-bold">
-                      {productionLocked ? 'Bloqueado nesta etapa' : 'Convênio 15528 · boleto sem Pix'}
+                      {environment.value === 'production' ? 'Ambiente real · rotas habilitadas' : 'Convênio 15528 · boleto de teste'}
                     </span>
                   </button>
                 );
@@ -235,7 +237,7 @@ const ResumoBancarioPanel: React.FC<ResumoBancarioPanelProps> = ({
 
           <div>
             <label htmlFor="banking-control-modalidade" className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
-              Escopo que será configurado
+              Modalidade das rotas abaixo
             </label>
             <InstitutionalSelect
               id="banking-control-modalidade"
@@ -243,10 +245,10 @@ const ResumoBancarioPanel: React.FC<ResumoBancarioPanelProps> = ({
               onValueChange={(value) => onChangeControlModalidade(value as GatewayModalidade)}
               ariaLabel="Escopo que será configurado"
               className="mt-3 w-full"
-              options={MODALIDADES.filter((item) => item.value === 'EAD').map((item) => ({ value: item.value, label: item.label }))}
+              options={MODALIDADES.map((item) => ({ value: item.value, label: item.label }))}
             />
             <p className="mt-2 text-xs font-semibold text-slate-500">
-              Primeiro teste: Cursos EAD em sandbox, somente boleto Banese.
+              Ativar ou desativar um meio de pagamento altera somente esta modalidade no ambiente global acima.
             </p>
           </div>
         </div>
@@ -271,7 +273,7 @@ const ResumoBancarioPanel: React.FC<ResumoBancarioPanelProps> = ({
               {modalidadeLabel(controlModalidade)} · {environmentLabel(routeEnvironment)}
             </h4>
           </div>
-          <StatusPill active={isSandbox} label={isSandbox ? 'Homologação segura' : 'Produção bloqueada'} />
+          <StatusPill active={integrationEnabled} label={integrationEnabled ? `${environmentLabel(routeEnvironment)} ativa` : 'Integração inativa'} />
         </div>
 
         <div className="grid gap-4 xl:grid-cols-3">
@@ -334,10 +336,10 @@ const ResumoBancarioPanel: React.FC<ResumoBancarioPanelProps> = ({
           <CheckCircle2 className="mt-0.5 shrink-0 text-emerald-700" size={19} />
           <div>
             <p className="text-xs font-black uppercase tracking-widest text-emerald-800">
-              Critério do primeiro teste
+              Boleto e BolePix
             </p>
             <p className="mt-1 text-sm font-semibold leading-relaxed text-emerald-900">
-              O Banese deve retornar 44 dígitos do código de barras e 47 da linha digitável. O sistema monta e entrega o PDF por rota autenticada; não existe PDF fornecido pelo banco.
+              O banco retorna os dados oficiais do boleto. Quando há Pix vinculado, ele usa o mesmo título e recebedor. O PDF é montado pelo sistema e entregue por rota autenticada.
             </p>
           </div>
         </div>
