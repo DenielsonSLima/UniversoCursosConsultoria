@@ -1,5 +1,6 @@
 import type { PublicCheckoutResult } from './checkout-result';
 import { supabase } from '../../lib/supabase';
+import { assertEadCouponsEnvironment } from '../ead/cupons/coupons-environment';
 import {
   buildEnrollmentSyncPayload,
   type GatewayPaymentMethod,
@@ -236,15 +237,22 @@ export const asaasIntegrationService = {
     paymentSelection?: CheckoutPaymentSelection,
     receivableId?: string | null,
     requestId: string = crypto.randomUUID(),
+    couponCode?: string,
   ): Promise<PublicCheckoutResult> {
+    if (couponCode) assertEadCouponsEnvironment();
     const result = await invokeFunction<PublicCheckoutResult>('payment-checkout', {
-      courseId, alunoId, turmaId, receivableId, requestId,
+      courseId,
+      alunoId,
+      turmaId,
       method: paymentSelection?.method,
       paymentMethod: paymentSelection?.method,
       installments: paymentSelection?.installments,
       eadPaymentMethod: paymentSelection?.method,
       eadInstallments: paymentSelection?.installments,
       presentation: paymentSelection?.presentation,
+      receivableId,
+      requestId,
+      ...(couponCode ? { couponCode: couponCode.trim().toUpperCase() } : {}),
     });
     if (!result?.url) throw new Error('Resposta do checkout sem URL do pagamento.');
     return result;

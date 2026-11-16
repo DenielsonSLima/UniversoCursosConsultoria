@@ -1,0 +1,26 @@
+.ead-coupon-field { min-width: 0; padding: 12px; border: 1px solid #dbe3ed; border-radius: 12px; background: #fff; font-size: 13px; line-height: 1.5; }
+.ead-coupon-field label { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; color: #475569; font-size: 12px; font-weight: 500; }
+.ead-coupon-controls { display: flex; align-items: stretch; gap: 8px; min-width: 0; }
+.ead-coupon-input { flex: 1 1 0; width: 0; min-width: 0; min-height: 44px; padding: 8px 10px; border: 1px solid #dbe3ed; border-radius: 8px; background: #fff; color: #122b42; font-size: 16px; text-transform: uppercase; }
+.ead-coupon-apply, .ead-coupon-remove { display: inline-flex; justify-content: center; align-items: center; gap: 6px; min-height: 44px; border: 1px solid #dbe3ed; border-radius: 8px; background: #fff; font-size: 13px; font-weight: 500; cursor: pointer; }
+.ead-coupon-apply { padding: 8px 12px; color: #4169e1; white-space: nowrap; }
+.ead-coupon-remove { flex-shrink: 0; width: 44px; padding: 8px; border-color: transparent; color: #607286; }
+.ead-coupon-remove:hover:not(:disabled) { background: #f1f5f9; }
+.ead-coupon-field :is(input,button):focus-visible { outline: 2px solid #4169e1; outline-offset: 2px; }
+.ead-coupon-input:disabled { background: #f8fafc; }
+.ead-coupon-apply:disabled, .ead-coupon-remove:disabled { cursor: default; opacity: .55; }
+.ead-coupon-help, .ead-coupon-error { margin: 8px 0 0; font-size: 12px; overflow-wrap: anywhere; }
+.ead-coupon-help { color: #607286; }
+.ead-coupon-error { color: #b91c1c; }
+.ead-coupon-summary { margin-top: 12px; padding: 12px; border-radius: 8px; background: #ecfdf5; color: #065f46; }
+.ead-coupon-summary-title { display: flex; align-items: flex-start; gap: 8px; margin: 0; font-weight: 500; }
+.ead-coupon-summary-title svg { flex-shrink: 0; margin-top: 2px; }
+.ead-coupon-summary-title span { min-width: 0; overflow-wrap: anywhere; }
+.ead-coupon-summary dl { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 4px 12px; margin: 8px 0 0; font-size: 12px; }
+.ead-coupon-summary dd { margin: 0; text-align: right; overflow-wrap: anywhere; }
+.ead-coupon-total { font-weight: 600; }
+@media (min-width:768px) {
+  .ead-coupon-input, .ead-coupon-apply, .ead-coupon-remove { min-height: 38px; height: 38px; }
+  .ead-coupon-input { font-size: 13px; }
+  .ead-coupon-remove { width: 38px; }
+}

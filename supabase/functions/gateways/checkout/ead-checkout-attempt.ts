@@ -1,5 +1,6 @@
 import type { EadCheckoutContext } from "./types.ts";
 import { UUID_RE, publicBaseUrl } from "./utils.ts";
+import { couponCheckoutArguments } from "./ead-coupon-checkout.ts";
 
 export type EadCheckoutAttempt = {
   action: "CREATE" | "REUSE" | "AWAITING_CONFIRMATION" | "ALREADY_PAID" | "REVIEW";
@@ -47,7 +48,8 @@ export const prepareEadCheckoutAttempt = async (
 ) => {
   const requestId = String(context.body.requestId || crypto.randomUUID());
   if (!UUID_RE.test(requestId)) throw new Error("Identificador da compra inválido.");
-  const { data, error } = await context.admin.rpc("ead_prepare_checkout_attempt", {
+  const couponArguments = couponCheckoutArguments(context, requestId);
+  const { data, error } = await context.admin.rpc(couponArguments ? "ead_coupon_prepare_checkout" : "ead_prepare_checkout_attempt", couponArguments || {
     p_aluno_id: context.aluno.id,
     p_turma_id: context.turma.id,
     p_request_id: requestId,

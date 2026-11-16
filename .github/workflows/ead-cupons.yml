@@ -1,0 +1,45 @@
+name: Cupons EAD
+
+on:
+  pull_request:
+    paths:
+      - 'modules/ead/cupons/**'
+      - 'modules/gestor/secretaria/cupons-ead/**'
+      - 'modules/gestor/secretaria/SecretariaPage.tsx'
+      - 'modules/gestor/secretaria/components/SecretariaDashboard.tsx'
+      - 'modules/gestor/secretaria/cupons-navigation.interaction.test.mjs'
+      - 'modules/aluno/cursos/**'
+      - 'modules/asaas/asaas.service.ts'
+      - 'supabase/functions/gateways/checkout/**'
+      - 'supabase/migrations/*ead_coupons*'
+      - 'supabase/tests/ead_coupons*'
+      - 'supabase/tests/fixtures/ead-coupons*'
+      - 'scripts/test-ead-coupons-local.mjs'
+      - '.github/workflows/ead-cupons.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24.22.1'
+          cache: npm
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9.1
+      - run: npm ci
+      - name: Dependências dos testes fictícios
+        run: npm install --prefix "$RUNNER_TEMP/ead-cupons" --no-save --no-package-lock --ignore-scripts @electric-sql/pglite@0.5.13 jsdom@26.1.0
+      - name: Contratos SQL, interface e regressões do checkout
+        env:
+          PGLITE_MODULE_PATH: ${{ runner.temp }}/ead-cupons/node_modules/@electric-sql/pglite/dist/index.js
+          EAD_TEST_JSDOM_MODULE: ${{ runner.temp }}/ead-cupons/node_modules/jsdom/lib/api.js
+        run: npm run test:ead-coupons

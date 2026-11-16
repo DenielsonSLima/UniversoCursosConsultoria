@@ -21,15 +21,18 @@ import {
   FileSignature,
   FileStack,
   BookOpenCheck,
+  TicketPercent,
 } from 'lucide-react';
 
 interface SecretariaDashboardProps {
   onNavigate: (module: string) => void;
   onPreload?: (module: string) => void;
   allowedTabs?: string[];
+  showEadCoupons?: boolean;
 }
 
 const cards = [
+  { id: 'cupons-ead', title: 'Cupons EAD', desc: 'Gratuidades, descontos e histórico de utilização.', icon: TicketPercent, color: 'blue' },
   { id: 'alunos', title: 'Busca de Aluno 360º', desc: 'Dados acadêmicos, cadastrais e financeiros.', icon: Search, color: 'blue' },
   { id: 'declaracao-matricula', title: 'Declaração de Matrícula', desc: 'Comprovação individual ou por turma.', icon: FileBadge, color: 'emerald' },
   { id: 'declaracao-frequencia', title: 'Declaração de Frequência', desc: 'Frequência consolidada pelo serviço acadêmico.', icon: BadgeCheck, color: 'sky' },
@@ -62,7 +65,7 @@ const sections = [
     description: 'Consultas, solicitações e recebimentos',
     accent: 'bg-blue-600',
     badge: 'bg-blue-50 text-blue-700',
-    operations: ['alunos', 'solicitacoes', 'transferencia', 'dependencias-academicas', 'consulta-financeira', 'carnes-alunos', 'declaracao-irpf'],
+    operations: ['alunos', 'solicitacoes', 'transferencia', 'dependencias-academicas', 'consulta-financeira', 'carnes-alunos', 'declaracao-irpf', 'cupons-ead'],
   },
   {
     id: 'documentos',
@@ -82,11 +85,11 @@ const sections = [
   },
 ];
 
-const SecretariaDashboard: React.FC<SecretariaDashboardProps> = ({ onNavigate, onPreload, allowedTabs }) => {
+const SecretariaDashboard: React.FC<SecretariaDashboardProps> = ({ onNavigate, onPreload, allowedTabs, showEadCoupons = false }) => {
   const visibleCards = React.useMemo(() => {
-    if (!allowedTabs) return cards;
-    return cards.filter(card => allowedTabs.includes(card.id));
-  }, [allowedTabs]);
+    return cards.filter(card => (card.id !== 'cupons-ead' || showEadCoupons)
+      && (!allowedTabs || allowedTabs.includes(card.id)));
+  }, [allowedTabs, showEadCoupons]);
 
   return (
     <nav aria-label="Operações da Secretaria" className="secretaria-navigation grid grid-cols-1 items-start gap-4 xl:grid-cols-3">
