@@ -11,7 +11,7 @@ interface CaixaAccountsPanelProps {
 }
 
 export const CaixaAccountsPanel: React.FC<CaixaAccountsPanelProps> = ({ accounts }) => (
-  <aside aria-labelledby="caixa-accounts-panel-title" className="relative overflow-hidden rounded-[26px] border border-slate-200 bg-white p-5 shadow-sm lg:col-span-2 sm:p-6">
+  <aside aria-labelledby="caixa-accounts-panel-title" className="relative min-w-0 overflow-hidden rounded-[26px] border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
     <div className="pointer-events-none absolute -right-16 -top-20 h-44 w-44 rounded-full border-[28px] border-blue-50" />
     <div className="relative flex items-start justify-between gap-3">
       <div>
@@ -23,20 +23,20 @@ export const CaixaAccountsPanel: React.FC<CaixaAccountsPanelProps> = ({ accounts
     </div>
 
     {accounts.length > 0 ? (
-      <ol className="relative mt-5 space-y-2 before:absolute before:bottom-5 before:left-[19px] before:top-5 before:w-px before:bg-blue-100">
+      <ol className="relative mt-5 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
         {accounts.map((account, index) => (
-          <li key={account.id} className="relative rounded-2xl border border-slate-100 bg-slate-50/80 p-3 transition hover:border-blue-100 hover:bg-blue-50/40 motion-reduce:transition-none">
+          <li key={account.id} className="relative min-w-0 rounded-2xl border border-slate-100 bg-slate-50/80 p-3 transition hover:border-blue-100 hover:bg-blue-50/40 motion-reduce:transition-none">
             <div className="flex items-start gap-3">
               <span className="relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-blue-100 bg-white text-blue-600 shadow-sm">
                 {account.natureza === 'CAIXA_INTERNO' ? <WalletCards size={17} aria-hidden="true" /> : <Landmark size={17} aria-hidden="true" />}
               </span>
               <div className="min-w-0 flex-1">
-                <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
+                <div className="flex flex-col gap-2">
                   <div className="min-w-0">
                     <p className="break-words text-xs font-extrabold text-slate-900">{account.banco} · Ag. {account.agencia} · Conta {account.conta}</p>
                     <p className="mt-0.5 break-words text-[10px] text-slate-500">{account.titular} · {account.cidadeUf}</p>
                   </div>
-                  <p className={`shrink-0 text-base font-black ${account.valorExibido < 0 ? 'text-rose-700' : 'text-emerald-700'}`}>{formatCaixaCurrency(account.valorExibido)}</p>
+                  <p className={`break-words text-base font-black ${account.valorExibido < 0 ? 'text-rose-700' : 'text-emerald-700'}`}>{formatCaixaCurrency(account.valorExibido)}</p>
                 </div>
                 <div className="mt-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-[9px]">
                   <span className="font-bold text-blue-700">{account.tipoValorExibido === 'POSICAO_POLO' ? 'Posição deste polo' : account.compartilhada ? `Compartilhada com ${account.unidadesUso} unidades` : 'Saldo registrado'}</span>
@@ -77,7 +77,7 @@ export const CaixaMovementAndAccounts: React.FC<{
       <p className="max-w-lg text-xs leading-5 text-slate-500 sm:text-right">O movimento explica o período; as contas mostram onde a posição ficou registrada.</p>
     </header>
 
-    <div className="grid grid-cols-1 gap-3 lg:grid-cols-5">
+    <div className="grid min-w-0 grid-cols-1 gap-3">
       <CaixaMovimentacaoChart serieMensal={serieMensal} />
       <CaixaAccountsPanel accounts={accounts} />
     </div>
