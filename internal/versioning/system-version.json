@@ -1,8 +1,8 @@
 {
-  "version": "4.8.354",
+  "version": "4.8.355",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 363,
+  "revision": 364,
   "releasedAt": "2026-11-16",
-  "summary": "Cupons EAD com gratuidade ou 50%, limites por aluno, cursos participantes e histórico financeiro"
+  "summary": "Ação Baixar nas despesas, preservando pagamento parcial e comportamento financeiro"
 }
