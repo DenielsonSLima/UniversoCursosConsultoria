@@ -16,6 +16,7 @@ interface DespesaListWorkspaceProps {
   viewMode: 'tabela' | 'cards';
   agrupar: boolean;
   groupBy?: DespesaAgrupamento;
+  preserveSummaryOrder?: boolean;
   groupSummaryLoading?: boolean;
   groupSummaryError?: boolean;
   contas: ContaBancaria[];
@@ -37,6 +38,7 @@ const DespesaListWorkspace: React.FC<DespesaListWorkspaceProps> = ({
   viewMode,
   agrupar,
   groupBy = 'categoria',
+  preserveSummaryOrder = false,
   groupSummaryLoading = false,
   groupSummaryError = false,
   contas,
@@ -97,7 +99,8 @@ const DespesaListWorkspace: React.FC<DespesaListWorkspaceProps> = ({
           Não foi possível carregar os totais do agrupamento selecionado.
         </div>
       ) : agrupar ? (
-        <DespesaGroupedView key={groupBy} groupBy={groupBy} items={items} summaries={summaries} viewMode={viewMode} {...shared} />
+        <DespesaGroupedView key={groupBy} groupBy={groupBy} preserveSummaryOrder={preserveSummaryOrder}
+          items={items} summaries={summaries} viewMode={viewMode} {...shared} />
       ) : viewMode === 'tabela' ? (
         <DespesaTable items={items} {...shared} />
       ) : (

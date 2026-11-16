@@ -14,7 +14,7 @@ import {
   DespesaLancamento,
   UpdateDespesaInput,
 } from '../despesas.service';
-import { despesasQueryKeys, DespesaStatusScope, DespesaTipo } from '../despesas.queryKeys';
+import { despesasQueryKeys, DespesaStatusScope, DespesaTipo, type DespesaSituacao, type DespesaOrdem } from '../despesas.queryKeys';
 import { useDespesasQueries } from '../hooks/useDespesasQueries';
 import { useDespesasRealtime } from '../hooks/useDespesasRealtime';
 import { useCategoriasFinanceirasQuery } from '../hooks/useCategoriasFinanceirasQuery';
@@ -22,6 +22,8 @@ import DespesaForm from '../components/DespesaForm';
 import DespesaCloneChoice from '../components/DespesaCloneChoice';
 import { buildDespesaCloneDraft, type DespesaCloneDraft } from '../components/despesa-clone.model';
 import DespesaViewControls, { type DespesaAgrupamentoSelection } from '../components/DespesaViewControls';
+import DespesaPeriodControls from '../components/DespesaPeriodControls';
+import { getDespesaSituacaoEfetiva } from '../components/despesa-periodo-apresentacao';
 import DespesaListWorkspace from '../components/DespesaListWorkspace';
 import DespesasSummaryCards from '../components/DespesasSummaryCards';
 import DespesaBaixaModal from '../components/DespesaBaixaModal';
@@ -34,7 +36,6 @@ import FinancialReportExportButton from '../../components/FinancialReportPreview
 import FinancialUnderlineTabs from '../../components/FinancialUnderlineTabs';
 import { financeiroQueryKeys } from '../../financeiro.queryKeys';
 import { caixaQueryKeys } from '../../../caixa/caixa.service';
-import { textMatchesSearch } from '../../../../../lib/search';
 import { useDespesasFixasReport } from './useDespesasFixasReport';
 
 const DespesasFixasTab: React.FC<{ poloId?: string | null; actionsContainer?: HTMLDivElement | null }> = ({ poloId: scopedPoloId, actionsContainer }) => {
@@ -42,13 +43,16 @@ const DespesasFixasTab: React.FC<{ poloId?: string | null; actionsContainer?: HT
   const { toasts, removeToast, toast } = useToast();
 
   const [statusScope, setStatusScope] = useState<DespesaStatusScope>('mes_atual');
+  const [situacaoSelecionada, setSituacao] = useState<DespesaSituacao>('todas');
+  const [ordem, setOrdem] = useState<DespesaOrdem>('vencimento_asc');
+  const situacao = getDespesaSituacaoEfetiva(statusScope, situacaoSelecionada);
   const [search, setSearch] = useState('');
   const [dataInicio, setDataInicio] = useState('');
   const [dataFim, setDataFim] = useState('');
   const [categoriaId, setCategoriaId] = useState('');
   const [turmaId, setTurmaId] = useState('');
   const [viewMode, setViewMode] = useState<'tabela' | 'cards'>('tabela');
-  const [agrupamento, setAgrupamento] = useState<DespesaAgrupamentoSelection>('categoria');
+  const [agrupamento, setAgrupamento] = useState<DespesaAgrupamentoSelection>('nenhum');
   const agrupar = agrupamento !== 'nenhum';
   const groupBy = agrupamento === 'nenhum' ? 'mes' : agrupamento;
   const [showForm, setShowForm] = useState(false);
@@ -73,31 +77,23 @@ const DespesasFixasTab: React.FC<{ poloId?: string | null; actionsContainer?: HT
   const filters = useMemo(() => ({
     tipo: 'DESPESA_FIXA' as DespesaTipo,
     statusScope,
+    situacao,
+    ordem,
     dataInicio,
     dataFim,
     categoriaId,
     search,
     poloId,
     turmaId,
-  }), [statusScope, dataInicio, dataFim, categoriaId, search, poloId, turmaId]);
+  }), [statusScope, situacao, ordem, dataInicio, dataFim, categoriaId, search, poloId, turmaId]);
 
   const { lancamentosQuery, summaryQuery, groupSummaryQuery } = useDespesasQueries(filters, {
     groupSummary: agrupar, groupBy,
   });
   const categoriasQuery = useCategoriasFinanceirasQuery('DESPESA_FIXA');
 
-  const lancamentos = lancamentosQuery.data || [];
+  const filtered = lancamentosQuery.data || [];
   const categorias = categoriasQuery.data || [];
-
-  const filtered = useMemo(() => {
-    if (!search.trim()) return lancamentos;
-    return lancamentos.filter((item) => textMatchesSearch(search, [
-      item.descricao,
-      item.categoriaNome,
-      item.fornecedorNome,
-      item.poloNome,
-    ]));
-  }, [lancamentos, search]);
 
   const totals = useMemo(() => ({
     total: summaryQuery.data?.totalValue || 0,
@@ -131,6 +127,8 @@ const DespesasFixasTab: React.FC<{ poloId?: string | null; actionsContainer?: HT
       confirmedPendingValue: summaryQuery.data?.confirmedPendingValue,
     },
     statusScope,
+    situacao,
+    ordem,
     search,
     dataInicio,
     dataFim,
@@ -265,10 +263,7 @@ const DespesasFixasTab: React.FC<{ poloId?: string | null; actionsContainer?: HT
             compact
             items={tabs}
             value={statusScope}
-            onChange={(scope) => {
-              setStatusScope(scope);
-              setAgrupamento(scope === 'mes_atual' ? 'categoria' : 'mes');
-            }}
+            onChange={setStatusScope}
             ariaLabel="Período das despesas fixas"
             indicatorClassName="bg-rose-600"
             activeIconClassName="text-rose-600"
@@ -280,6 +275,8 @@ const DespesasFixasTab: React.FC<{ poloId?: string | null; actionsContainer?: HT
 
       {/* Filtros */}
       <div className="space-y-3">
+        <DespesaPeriodControls {...{ statusScope, situacao, ordem, dataInicio, dataFim }}
+          onSituacaoChange={setSituacao} onOrdemChange={setOrdem} />
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-12">
           <div className="relative sm:col-span-2 xl:col-span-4">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -339,6 +336,7 @@ const DespesasFixasTab: React.FC<{ poloId?: string | null; actionsContainer?: HT
         </div>
       ) : (
         <DespesaListWorkspace
+          preserveSummaryOrder
           items={filtered}
           summaries={groupSummaryQuery.data || []}
           viewMode={viewMode}

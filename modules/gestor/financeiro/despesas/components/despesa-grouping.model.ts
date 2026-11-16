@@ -22,7 +22,11 @@ export function getDespesaGroupIdentity(item: DespesaLancamento, by: DespesaAgru
 
 export function buildDespesaGroups(
   items: DespesaLancamento[], summaries: DespesaGroupSummary[], by: DespesaAgrupamento,
+  preserveSummaryOrder = false,
 ) {
+  const positions = new Map(summaries.map((summary, index) => [
+    summary.groupKey || summary.categoriaId || '__sem_categoria__', index,
+  ]));
   const summaryMap = new Map(summaries.map((summary) => [
     summary.groupKey || summary.categoriaId || '__sem_categoria__', summary,
   ]));
@@ -47,7 +51,13 @@ export function buildDespesaGroups(
       estimatedValue: summary?.estimatedValue,
       estimatedCount: summary?.estimatedCount,
     };
-  }).sort((a, b) => by === 'mes'
-    ? a.key.localeCompare(b.key)
-    : a.label.localeCompare(b.label, 'pt-BR', { sensitivity: 'base' }) || a.key.localeCompare(b.key));
+  }).sort((a, b) => {
+    if (preserveSummaryOrder) {
+      const position = (positions.get(a.key) ?? Number.MAX_SAFE_INTEGER)
+        - (positions.get(b.key) ?? Number.MAX_SAFE_INTEGER);
+      if (position) return position;
+    }
+    return by === 'mes' ? a.key.localeCompare(b.key)
+      : a.label.localeCompare(b.label, 'pt-BR', { sensitivity: 'base' }) || a.key.localeCompare(b.key);
+  });
 }

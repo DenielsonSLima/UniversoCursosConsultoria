@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { despesasService } from '../despesas.service';
 import { despesasQueryKeys, DespesasFilters, type DespesaAgrupamento } from '../despesas.queryKeys';
 import { getDespesasVencidas } from '../despesas-vencidas.service';
+import { getDespesasWorkspace } from '../despesas-workspace.service';
 
 interface UseDespesasQueriesOptions {
   groupSummary?: boolean;
@@ -14,37 +15,41 @@ export function useDespesasQueries(
   filters: DespesasFilters,
   options: UseDespesasQueriesOptions = {},
 ) {
-  const overdue = filters.statusScope === 'vencidos';
-  const overdueQuery = useQuery({
-    queryKey: [...despesasQueryKeys.lancamentosList(filters), 'workspace', options.groupBy],
-    queryFn: () => getDespesasVencidas(filters, options.groupBy),
-    enabled: overdue && Boolean(filters.poloId), staleTime: 15_000,
+  const workspace = filters.tipo === 'DESPESA_FIXA' || filters.tipo === 'DESPESA_VARIAVEL';
+  const bundled = workspace || filters.statusScope === 'vencidos';
+  const agrupamento = options.groupSummary ? options.groupBy || 'categoria' : 'nenhum';
+  const workspaceQuery = useQuery({
+    queryKey: [...despesasQueryKeys.lancamentosList(filters), 'workspace', agrupamento],
+    queryFn: () => workspace
+      ? getDespesasWorkspace(filters, agrupamento)
+      : getDespesasVencidas(filters, options.groupBy),
+    enabled: bundled && Boolean(filters.poloId), staleTime: 15_000,
   });
   const lancamentosQuery = useQuery({
     queryKey: despesasQueryKeys.lancamentosList(filters),
     queryFn: () => despesasService.getDespesas(filters),
     staleTime: 15_000,
-    enabled: !overdue && Boolean(filters.poloId),
+    enabled: !bundled && Boolean(filters.poloId),
   });
 
   const summaryQuery = useQuery({
     queryKey: despesasQueryKeys.summaryList(filters),
     queryFn: () => despesasService.getDespesasSummary(filters),
     staleTime: 15_000,
-    enabled: !overdue && Boolean(filters.poloId),
+    enabled: !bundled && Boolean(filters.poloId),
   });
 
   const groupSummaryQuery = useQuery({
     queryKey: despesasQueryKeys.groupSummaryList(filters, options.groupBy),
     queryFn: () => despesasService.getDespesasGroupSummary(filters, options.groupBy),
-    enabled: !overdue && options.groupSummary === true && Boolean(filters.poloId),
+    enabled: !bundled && options.groupSummary === true && Boolean(filters.poloId),
     staleTime: 15_000,
   });
 
-  if (overdue) return {
-    lancamentosQuery: { ...overdueQuery, data: overdueQuery.data?.items },
-    summaryQuery: { ...overdueQuery, data: overdueQuery.data?.summary },
-    groupSummaryQuery: { ...overdueQuery, data: overdueQuery.data?.groups },
+  if (bundled) return {
+    lancamentosQuery: { ...workspaceQuery, data: workspaceQuery.data?.items },
+    summaryQuery: { ...workspaceQuery, data: workspaceQuery.data?.summary },
+    groupSummaryQuery: { ...workspaceQuery, data: workspaceQuery.data?.groups },
   };
   return {
     lancamentosQuery,

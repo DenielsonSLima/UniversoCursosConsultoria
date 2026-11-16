@@ -5,6 +5,8 @@ export type DespesaAgrupamento = 'mes' | 'fornecedor' | 'categoria';
 export type DespesaTipo = 'DESPESA_FIXA' | 'DESPESA_VARIAVEL' | 'OUTRO_DEBITO';
 export type CategoriaFinanceiraTipo = DespesaTipo | 'OUTRO_CREDITO';
 export type DespesaStatusScope = 'mes_atual' | 'em_aberto' | 'vencidos' | 'todos';
+export type DespesaSituacao = 'todas' | 'pagas' | 'em_aberto' | 'vencidas';
+export type DespesaOrdem = 'vencimento_asc' | 'vencimento_desc';
 
 export interface DespesasFilters {
   tipo?: DespesaTipo;
@@ -13,6 +15,8 @@ export interface DespesasFilters {
   dataFim?: string;
   categoriaId?: string;
   statusScope?: DespesaStatusScope;
+  situacao?: DespesaSituacao;
+  ordem?: DespesaOrdem;
   search?: string;
   turmaId?: string;
 }

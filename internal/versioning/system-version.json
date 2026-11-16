@@ -1,8 +1,8 @@
 {
-  "version": "4.8.351",
+  "version": "4.8.352",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 360,
+  "revision": 361,
   "releasedAt": "2026-11-16",
-  "summary": "Despesas com valor estimado, mês sem cobrança, detalhes de baixa única e aba Vencidos"
+  "summary": "Despesas do mês por vencimento, sem agrupamento inicial, com situação e ordem canônicas"
 }
