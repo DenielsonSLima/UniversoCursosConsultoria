@@ -1,10 +1,10 @@
 # Lote ativo
 
-## Lote: 2026-11-15-financeiro-servicos-integracao-bancaria
-Objetivo: corrigir atualização de Serviços e coerência dos controles bancários, preservando a operação financeira atual.
-Status: duas etapas implementadas, testes fictícios e revisão independente aprovados; fechamento e publicação 4.8.348 explicitamente autorizados pelo usuário.
-Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-15-financeiro-servicos-integracao-bancaria.md`.
-Aceite: cache e filtros preservados entre modalidades e isolados por polo; Realtime/reconexão automáticos; controles refletem rotas homologadas; produção, recebedor e cobranças existentes preservados.
-Validação: testes locais fictícios, revisão cruzada de três agentes, lint focado, build/teto500, preview e smoke final proporcionais.
-Predecessor: `ai/operacao/registros/alteracoes/2026-11-15-site-publico-sitelinks-safari.md` (produção 4.8.347, PR #437).
-Lote local paralelo preservado: `ai/operacao/registros/alteracoes/2026-11-15-parceiro-pf-layout-polos.md` (não publicado).
+## Lote: 2026-11-16-caixa-grafico-contas-responsivo
+Objetivo: gráfico do Caixa em largura total, contas abaixo em grade responsiva com linhas automáticas.
+Status: validado localmente; publicação 4.8.350 autorizada pelo usuário e em execução.
+Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-16-caixa-grafico-contas-responsivo.md`.
+Aceite: três colunas no desktop, duas no tablet, uma no celular; todas as informações preservadas; gráfico não cresce com a quantidade de contas.
+Validação: 13 testes aprovados, prévia local 1320/900/390 px e revisão independente sem achados; build completo e teto aprovados; verificações remotas no fechamento.
+Predecessor: produção 4.8.348, PR #438.
+Trabalho paralelo: Despesas (4.8.349 local) e layout PF/polos preservados fora deste lote.

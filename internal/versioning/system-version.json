@@ -1,8 +1,8 @@
 {
-  "version": "4.8.348",
+  "version": "4.8.350",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 357,
-  "releasedAt": "2026-11-15",
-  "summary": "Serviços preserva cache e filtros; integração bancária reflete a operação atual"
+  "revision": 359,
+  "releasedAt": "2026-11-16",
+  "summary": "Caixa com gráfico em largura total e contas abaixo em grade responsiva"
 }

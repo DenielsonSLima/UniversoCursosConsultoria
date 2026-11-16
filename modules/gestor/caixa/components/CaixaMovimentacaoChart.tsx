@@ -21,7 +21,7 @@ export const CaixaMovimentacaoChart: React.FC<CaixaMovimentacaoChartProps> = ({ 
     .join(' ');
 
   return (
-    <article className="relative flex min-h-0 flex-col overflow-hidden rounded-[26px] bg-[#071b31] p-5 text-white shadow-xl shadow-slate-900/10 lg:col-span-3 sm:p-6">
+    <article className="relative flex min-h-0 min-w-0 flex-col overflow-hidden rounded-[26px] bg-[#071b31] p-5 text-white shadow-xl shadow-slate-900/10 sm:p-6">
       <div className="pointer-events-none absolute -right-20 -top-24 h-60 w-60 rounded-full border-[38px] border-blue-400/10" />
       <header className="relative flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
         <div>
@@ -48,7 +48,7 @@ export const CaixaMovimentacaoChart: React.FC<CaixaMovimentacaoChartProps> = ({ 
 
       {hasChartMovement ? (
         <div className="relative mt-5 rounded-2xl border border-white/10 bg-white/[0.04] px-3 pb-3 pt-5">
-          <div className="relative flex h-48 items-end border-b border-white/10">
+          <div className="relative flex h-48 items-end border-b border-white/10 sm:h-64">
             <svg className="pointer-events-none absolute inset-0 z-10 h-full w-full overflow-visible" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
               <line x1="0" y1={chartMonths[0]?.graficoZeroPosicaoPercentual ?? 100} x2="100" y2={chartMonths[0]?.graficoZeroPosicaoPercentual ?? 100} stroke="#64748b" strokeDasharray="3 4" vectorEffect="non-scaling-stroke" />
               <polyline points={chartResultPoints} fill="none" stroke="#60a5fa" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
