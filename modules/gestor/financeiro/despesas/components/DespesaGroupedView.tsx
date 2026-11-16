@@ -18,6 +18,7 @@ interface DespesaGroupedViewProps {
   summaries: DespesaGroupSummary[];
   viewMode: 'tabela' | 'cards';
   groupBy?: DespesaAgrupamento;
+  preserveSummaryOrder?: boolean;
   contas: ContaBancaria[];
   onPagar?: (item: DespesaLancamento) => void;
   onEditar?: (item: DespesaLancamento) => void;
@@ -35,6 +36,7 @@ const DespesaGroupedView: React.FC<DespesaGroupedViewProps> = ({
   summaries,
   viewMode,
   groupBy = 'categoria',
+  preserveSummaryOrder = false,
   contas,
   onPagar,
   onEditar,
@@ -48,7 +50,8 @@ const DespesaGroupedView: React.FC<DespesaGroupedViewProps> = ({
 }: DespesaGroupedViewProps) => {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
-  const groups = useMemo(() => buildDespesaGroups(items, summaries, groupBy), [items, summaries, groupBy]);
+  const groups = useMemo(() => buildDespesaGroups(items, summaries, groupBy, preserveSummaryOrder),
+    [items, summaries, groupBy, preserveSummaryOrder]);
   const GroupIcon = groupBy === 'mes' ? CalendarDays : groupBy === 'fornecedor' ? Building2 : Tag;
 
   const toggleGroup = (key: string) => {

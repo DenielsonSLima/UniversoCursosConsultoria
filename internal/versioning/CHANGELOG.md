@@ -106,6 +106,13 @@ Histórico arquivado: [08/11/2026 — versão 4.8.273](./changelog/2026-11-08-ve
 
 Histórico arquivado: [10–11/11/2026 — versões 4.8.282 a 4.8.290](./changelog/2026-11-10-a-11-versoes-4-8-282-a-4-8-290.md).
 
+## [4.8.352] - 2026-11-16
+
+- Despesas fixas e variáveis abrem em Mês atual, tabela sem agrupamento e vencimento crescente.
+- Situação Todas, Pagas, Em aberto ou Vencidas filtra o mesmo conjunto de lançamentos e totais; atalhos históricos preservam seu alcance.
+- Ordenação crescente ou decrescente vem do backend, com calendário de Maceió, grupos mensais e PDF coerentes com a lista.
+- Estimativas sem fatura permanecem a confirmar; meses sem cobrança conservam histórico com compromisso zero.
+
 ## [4.8.351] - 2026-11-16
 
 - Lançamentos pendentes e mensais aceitam valor estimado, com confirmação do principal real na mesma transação da primeira baixa.
@@ -446,3 +453,4 @@ Histórico arquivado: [10–11/11/2026 — versões 4.8.282 a 4.8.290](./changel
 - Produção pode indicar resposta recente da consulta nacional de uma nota própria, sem emitir ou alterar documentos fiscais.
 - Verde expira em um minuto; falha técnica comprovada é vermelha e ausência de verificação permanece neutra.
 - O indicador descreve o alcance da consulta, sem prometer aprovação de novas notas ou disponibilidade de todos os serviços.
+

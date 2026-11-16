@@ -14,7 +14,7 @@ import {
   DespesaLancamento,
   UpdateDespesaInput,
 } from '../despesas.service';
-import { despesasQueryKeys, DespesaStatusScope, DespesaTipo } from '../despesas.queryKeys';
+import { despesasQueryKeys, DespesaStatusScope, DespesaTipo, type DespesaSituacao, type DespesaOrdem } from '../despesas.queryKeys';
 import { useDespesasQueries } from '../hooks/useDespesasQueries';
 import { useDespesasRealtime } from '../hooks/useDespesasRealtime';
 import { useCategoriasFinanceirasQuery } from '../hooks/useCategoriasFinanceirasQuery';
@@ -22,54 +22,39 @@ import DespesaForm from '../components/DespesaForm';
 import DespesaCloneChoice from '../components/DespesaCloneChoice';
 import { buildDespesaCloneDraft, type DespesaCloneDraft } from '../components/despesa-clone.model';
 import DespesaViewControls, { type DespesaAgrupamentoSelection } from '../components/DespesaViewControls';
+import DespesaPeriodControls from '../components/DespesaPeriodControls';
+import { getDespesaSituacaoEfetiva } from '../components/despesa-periodo-apresentacao';
+import { useDespesasReport } from '../hooks/useDespesasReport';
 import DespesaTable from '../components/DespesaTable';
 import DespesaCard from '../components/DespesaCard';
 import DespesaGroupedView from '../components/DespesaGroupedView';
 import DespesasSummaryCards from '../components/DespesasSummaryCards';
-import { getDespesaEstimativaLabel, isDespesaEstimadaPendente } from '../components/despesaPresentation';
 import DespesaBaixaModal from '../components/DespesaBaixaModal';
 import DespesaEditModal from '../components/DespesaEditModal';
 import DespesaCancelModal from '../components/DespesaCancelModal';
 import DespesaReciboModal from '../components/DespesaReciboModal';
 import ToastNotification, { useToast } from '../../../components/ToastNotification';
 import { useFinanceiroSharedQueries } from '../../hooks/useFinanceiroSharedQueries';
-import FinancialReportExportButton, {
-  FinancialReportColumn,
-  FinancialReportFilter,
-  FinancialReportRow,
-  FinancialReportStatusBadge,
-  FinancialReportSummaryCard,
-} from '../../components/FinancialReportPreview';
+import FinancialReportExportButton from '../../components/FinancialReportPreview';
 import FinancialUnderlineTabs from '../../components/FinancialUnderlineTabs';
 import { financeiroQueryKeys } from '../../financeiro.queryKeys';
 import { caixaQueryKeys } from '../../../caixa/caixa.service';
-import { textMatchesSearch } from '../../../../../lib/search';
-
-const formatCurrency = (v: number) =>
-  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0);
-
-const formatDate = (value?: string) =>
-  value ? new Date(`${value}T00:00:00`).toLocaleDateString('pt-BR') : 'Sem limite';
-
-const statusScopeLabels: Record<DespesaStatusScope, string> = {
-  mes_atual: 'Mês atual',
-  em_aberto: 'Em aberto',
-  vencidos: 'Vencidos',
-  todos: 'Todos',
-};
 
 const DespesasVariaveisTab: React.FC<{ poloId?: string | null; actionsContainer?: HTMLDivElement | null }> = ({ poloId: scopedPoloId, actionsContainer }) => {
   const queryClient = useQueryClient();
   const { toasts, removeToast, toast } = useToast();
 
   const [statusScope, setStatusScope] = useState<DespesaStatusScope>('mes_atual');
+  const [situacaoSelecionada, setSituacao] = useState<DespesaSituacao>('todas');
+  const [ordem, setOrdem] = useState<DespesaOrdem>('vencimento_asc');
+  const situacao = getDespesaSituacaoEfetiva(statusScope, situacaoSelecionada);
   const [search, setSearch] = useState('');
   const [dataInicio, setDataInicio] = useState('');
   const [dataFim, setDataFim] = useState('');
   const [categoriaId, setCategoriaId] = useState('');
   const [turmaId, setTurmaId] = useState('');
   const [viewMode, setViewMode] = useState<'tabela' | 'cards'>('tabela');
-  const [agrupamento, setAgrupamento] = useState<DespesaAgrupamentoSelection>('categoria');
+  const [agrupamento, setAgrupamento] = useState<DespesaAgrupamentoSelection>('nenhum');
   const agrupar = agrupamento !== 'nenhum';
   const groupBy = agrupamento === 'nenhum' ? 'mes' : agrupamento;
   const [showForm, setShowForm] = useState(false);
@@ -94,31 +79,23 @@ const DespesasVariaveisTab: React.FC<{ poloId?: string | null; actionsContainer?
   const filters = useMemo(() => ({
     tipo: 'DESPESA_VARIAVEL' as DespesaTipo,
     statusScope,
+    situacao,
+    ordem,
     dataInicio,
     dataFim,
     categoriaId,
     search,
     poloId,
     turmaId,
-  }), [statusScope, dataInicio, dataFim, categoriaId, search, poloId, turmaId]);
+  }), [statusScope, situacao, ordem, dataInicio, dataFim, categoriaId, search, poloId, turmaId]);
 
   const { lancamentosQuery, summaryQuery, groupSummaryQuery } = useDespesasQueries(filters, {
     groupSummary: agrupar, groupBy,
   });
   const categoriasQuery = useCategoriasFinanceirasQuery('DESPESA_VARIAVEL');
 
-  const lancamentos = lancamentosQuery.data || [];
+  const filtered = lancamentosQuery.data || [];
   const categorias = categoriasQuery.data || [];
-
-  const filtered = useMemo(() => {
-    if (!search.trim()) return lancamentos;
-    return lancamentos.filter((item) => textMatchesSearch(search, [
-      item.descricao,
-      item.categoriaNome,
-      item.fornecedorNome,
-      item.poloNome,
-    ]));
-  }, [lancamentos, search]);
 
   const totals = useMemo(() => ({
     total: summaryQuery.data?.totalValue || 0,
@@ -140,57 +117,27 @@ const DespesasVariaveisTab: React.FC<{ poloId?: string | null; actionsContainer?
     [poloId, polos],
   );
 
-  const reportColumns = useMemo<FinancialReportColumn[]>(() => [
-    { label: 'Vencimento' },
-    { label: 'Descrição' },
-    { label: 'Categoria' },
-    { label: 'Fornecedor' },
-    { label: 'Valor', align: 'right' },
-    { label: 'Parcela', align: 'center' },
-    { label: 'Status', align: 'center' },
-  ], []);
-
-  const reportRows = useMemo<FinancialReportRow[]>(() => filtered.map((item) => ({
-    id: item.id,
-    cells: [
-      <span className="font-bold text-slate-700">{formatDate(item.dataVencimento)}</span>,
-      <div>
-        <p className="font-black text-[#001a33]">{item.descricao}</p>
-        {item.valorEstimado && <p className="text-amber-800">{getDespesaEstimativaLabel(item)}</p>}
-        {item.turmaNome && <p className="mt-0.5 font-bold text-indigo-600">Turma: {item.turmaNome}</p>}
-        {item.observacao && <p className="mt-0.5 text-slate-500">{item.observacao}</p>}
-        {item.dataPagamento && <p className="mt-0.5 font-bold text-emerald-700">Pago em {formatDate(item.dataPagamento)}</p>}
-      </div>,
-      item.categoriaNome || 'Sem categoria',
-      item.fornecedorNome || 'Não informado',
-      <div>
-        <p className="font-black text-[#001a33]">{formatCurrency(item.valorSemCobrancaEm ? 0 : item.valor)}</p>
-        {item.valorPago !== undefined && item.valorPago !== item.valor && (
-          <p className="text-[9px] font-bold text-emerald-700">Pago: {formatCurrency(item.valorPago)}</p>
-        )}
-      </div>,
-      item.totalParcelas > 1 ? `${item.parcelaNumero}/${item.totalParcelas}` : 'Única',
-      <FinancialReportStatusBadge status={isDespesaEstimadaPendente(item) ? 'PENDENTE' : item.status}
-        label={item.valorSemCobrancaEm ? 'Sem cobrança neste mês' : isDespesaEstimadaPendente(item) ? 'Fatura a confirmar' : undefined} />,
-    ],
-  })), [filtered]);
-
-  const reportFilters = useMemo<FinancialReportFilter[]>(() => [
-    { label: 'Escopo', value: statusScopeLabels[statusScope] },
-    { label: 'Busca', value: search.trim() || 'Todos os lançamentos' },
-    { label: 'Período', value: `${formatDate(dataInicio)} até ${formatDate(dataFim)}` },
-    { label: 'Categoria', value: selectedCategoriaLabel },
-    { label: 'Turma', value: selectedTurmaLabel },
-    { label: 'Polo', value: selectedPoloLabel },
-  ], [dataFim, dataInicio, search, selectedCategoriaLabel, selectedPoloLabel, selectedTurmaLabel, statusScope]);
-
-  const reportSummaryCards = useMemo<FinancialReportSummaryCard[]>(() => [
-    { label: 'Total previsto', value: formatCurrency(totals.total), tone: 'slate' },
-    { label: 'Pago', value: formatCurrency(totals.pago), tone: 'emerald' },
-    { label: 'A pagar confirmado', value: formatCurrency(summaryQuery.data?.confirmedPendingValue ?? totals.pendente), tone: 'amber' },
-    ...(summaryQuery.data?.estimatedCount ? [{ label: 'Estimado a confirmar', value: formatCurrency(summaryQuery.data.estimatedValue ?? 0), tone: 'amber' as const }] : []),
-    { label: 'Vencidos', value: totals.vencidos, tone: 'rose' },
-  ], [totals, summaryQuery.data]);
+  const report = useDespesasReport({
+    filtered,
+    totals: {
+      totalValue: totals.total,
+      paidValue: totals.pago,
+      pendingValue: totals.pendente,
+      vencidosCount: totals.vencidos,
+      estimatedValue: summaryQuery.data?.estimatedValue,
+      estimatedCount: summaryQuery.data?.estimatedCount,
+      confirmedPendingValue: summaryQuery.data?.confirmedPendingValue,
+    },
+    statusScope,
+    situacao,
+    ordem,
+    search,
+    dataInicio,
+    dataFim,
+    categoriaLabel: selectedCategoriaLabel,
+    turmaLabel: selectedTurmaLabel,
+    poloLabel: selectedPoloLabel,
+  });
 
   const invalidateExpenseData = async (includeBalances = false) => {
     const invalidations = [
@@ -273,10 +220,10 @@ const DespesasVariaveisTab: React.FC<{ poloId?: string | null; actionsContainer?
         rightTitle="Extrato de Despesas"
         rightType="Despesas variáveis"
         fileName={`extrato-despesas-variaveis-${new Date().toISOString().slice(0, 10)}`}
-        columns={reportColumns}
-        rows={reportRows}
-        filters={reportFilters}
-        summaryCards={reportSummaryCards}
+        columns={report.columns}
+        rows={report.rows}
+        filters={report.filters}
+        summaryCards={report.summaryCards}
         poloId={poloId}
         tone="rose"
         buttonLabel="Exportar PDF"
@@ -313,10 +260,7 @@ const DespesasVariaveisTab: React.FC<{ poloId?: string | null; actionsContainer?
             compact
             items={tabs}
             value={statusScope}
-            onChange={(scope) => {
-              setStatusScope(scope);
-              setAgrupamento(scope === 'mes_atual' ? 'categoria' : 'mes');
-            }}
+            onChange={setStatusScope}
             ariaLabel="Período das despesas variáveis"
             indicatorClassName="bg-rose-600"
             activeIconClassName="text-rose-600"
@@ -327,6 +271,8 @@ const DespesasVariaveisTab: React.FC<{ poloId?: string | null; actionsContainer?
       </div>
 
       <div className="space-y-3">
+        <DespesaPeriodControls {...{ statusScope, situacao, ordem, dataInicio, dataFim }}
+          onSituacaoChange={setSituacao} onOrdemChange={setOrdem} />
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-12">
           <div className="relative sm:col-span-2 xl:col-span-4">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -381,7 +327,7 @@ const DespesasVariaveisTab: React.FC<{ poloId?: string | null; actionsContainer?
           Não foi possível carregar os totais do agrupamento selecionado.
         </div>
       ) : agrupar ? (
-        <DespesaGroupedView key={groupBy} groupBy={groupBy}
+        <DespesaGroupedView key={groupBy} groupBy={groupBy} preserveSummaryOrder
           items={filtered}
           summaries={groupSummaryQuery.data || []}
           viewMode={viewMode}

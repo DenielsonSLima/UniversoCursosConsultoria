@@ -8,7 +8,9 @@ on:
       - 'supabase/migrations/*estimated_expense*'
       - 'supabase/migrations/*expense_estimate*'
       - 'supabase/migrations/*overdue_expenses*'
+      - 'supabase/migrations/*expense_workspace*'
       - 'supabase/tests/estimated_expense.*'
+      - 'supabase/tests/expense_workspace.*'
       - '.github/workflows/despesas-estimadas.yml'
 
 permissions:
@@ -35,4 +37,6 @@ jobs:
           FINANCIAL_PAYMENT_JSDOM_PATH: ${{ runner.temp }}/expense-estimates/node_modules/jsdom
         run: |
           node supabase/tests/estimated_expense.isolated.test.mjs
+          node supabase/tests/expense_workspace.isolated.test.mjs
+          node --test --test-force-exit modules/gestor/financeiro/despesas/despesas-workspace.test.mjs modules/gestor/financeiro/despesas/components/despesas-workspace.interaction.test.mjs modules/gestor/financeiro/despesas/components/despesa-periodo-apresentacao.test.ts
           node --test --test-force-exit modules/gestor/financeiro/despesas/components/despesa-estimada-criacao.interaction.test.mjs modules/gestor/financeiro/despesas/components/despesa-estimated-payment.interaction.test.mjs modules/gestor/financeiro/despesas/components/despesa-sem-cobranca.interaction.test.mjs modules/gestor/financeiro/despesas/despesas-estimativas-leitura.test.mjs modules/gestor/financeiro/despesas/components/despesa-grouping.model.test.ts

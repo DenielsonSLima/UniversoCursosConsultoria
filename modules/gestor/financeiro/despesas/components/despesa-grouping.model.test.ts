@@ -52,3 +52,14 @@ test('grupos sem fornecedor, sem data e categorias legadas continuam representá
   assert.equal(groups[0].total, 100);
   assert.equal(groups[0].label, 'Internet');
 });
+
+test('workspace respeita cabeçalhos e linhas na ordem recebida do backend', () => {
+  const items = [item('jan', '2027-01-05'), item('dez-final', '2026-12-20'), item('dez-inicial', '2026-12-05')];
+  const summaries = ['2027-01', '2026-12'].map(groupKey => ({
+    groupKey, categoriaNome: '', totalValue: 100, paidValue: 0, itemCount: 1,
+  }));
+  const groups = buildDespesaGroups(items, summaries, 'mes', true);
+  assert.deepEqual(groups.map(group => group.key), ['2027-01', '2026-12']);
+  assert.deepEqual(groups[1].items.map(row => row.id), ['dez-final', 'dez-inicial']);
+  assert.deepEqual(buildDespesaGroups(items, summaries, 'mes').map(group => group.key), ['2026-12', '2027-01']);
+});
