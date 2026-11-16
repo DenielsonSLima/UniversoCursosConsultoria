@@ -128,6 +128,20 @@ const buildRuntime = (
   },
 });
 
+Deno.test("cupom não usa fallback de gestor para comprar em nome de outro aluno", async () => {
+  const runtime: any = buildRuntime();
+  runtime.body.couponCode = "CUPOM50";
+  runtime.body.alunoId = "77777777-7777-4777-8777-777777777777";
+  let mutations = 0;
+  runtime.admin.rpc = async (name: string) => {
+    if (name === "portal_identidade_institucional_acesso_liberado") return { data: false, error: null };
+    mutations += 1;
+    throw new Error("Mutação inesperada");
+  };
+  await assert.rejects(() => buildEadCheckoutContext(runtime), /próprio aluno autenticado/);
+  assert.equal(mutations, 0);
+});
+
 Deno.test("checkout EAD usa a rota Banese de boleto explicitamente", async () => {
   const context = await buildEadCheckoutContext(buildRuntime() as any);
 

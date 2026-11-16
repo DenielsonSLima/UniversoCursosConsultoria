@@ -106,6 +106,13 @@ Histórico arquivado: [08/11/2026 — versão 4.8.273](./changelog/2026-11-08-ve
 
 Histórico arquivado: [10–11/11/2026 — versões 4.8.282 a 4.8.290](./changelog/2026-11-10-a-11-versoes-4-8-282-a-4-8-290.md).
 
+## [4.8.354] - 2026-11-16
+
+- Secretaria administra cupons EAD de gratuidade ou 50%, por polo, com validade, quantidade e limite de cursos por aluno.
+- Compra apresenta preço original, desconto e total; gratuidade libera sem dívida e desconto aguarda prova financeira canônica.
+- Reservas e respostas perdidas preservam o mesmo resgate e cobrança; pagamento tardio comprovado permanece em revisão.
+- Histórico separa benefício, cobrança e recebido; interface compacta e atualização automática por escopo.
+
 ## [4.8.353] - 2026-11-16
 
 - Situação e ordenação das despesas fixas e variáveis ficam compactas na mesma faixa das abas, com adaptação para telas pequenas.
@@ -459,4 +466,5 @@ Histórico arquivado: [10–11/11/2026 — versões 4.8.282 a 4.8.290](./changel
 - Produção pode indicar resposta recente da consulta nacional de uma nota própria, sem emitir ou alterar documentos fiscais.
 - Verde expira em um minuto; falha técnica comprovada é vermelha e ausência de verificação permanece neutra.
 - O indicador descreve o alcance da consulta, sem prometer aprovação de novas notas ou disponibilidade de todos os serviços.
+
 

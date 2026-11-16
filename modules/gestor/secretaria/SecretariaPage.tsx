@@ -9,9 +9,12 @@ import SecretariaDashboard from './components/SecretariaDashboard';
 import { secretariaDocumentoDefinitions } from './shared/secretaria-documentos.definitions';
 import { secretariaCarteirinhasWorkspaceQueryOptions } from './carteirinhas/secretaria-carteirinhas.service';
 import { SECRETARIA_ACCESS_OPTIONS } from './secretaria-access';
+import { useEadCouponsAvailability } from '../../ead/cupons/hooks/useEadCouponsAvailability';
+import { hasEadCouponManagementAccess } from '../../ead/cupons/coupons-access';
 import './secretaria-workspace.css';
 
 const moduleLoaders = {
+  'cupons-ead': () => import('./cupons-ead/CuponsEadPage'),
   alunos: () => import('./alunos/SecretariaAlunosPage'),
   boletim: () => import('./boletins/SecretariaBoletinsPage'),
   carteirinha: () => import('./carteirinhas/SecretariaCarteirinhasPage'),
@@ -60,8 +63,13 @@ const SecretariaPastaIdentificacaoPage = lazy(moduleLoaders['pasta-identificacao
 const SecretariaFichaMatriculaPage = lazy(moduleLoaders['ficha-matricula']);
 const SecretariaTransferenciaPage = lazy(moduleLoaders.transferencia);
 const SecretariaDocumentoEmissionPage = lazy(moduleLoaders.documento);
+const CuponsEadPage = lazy(moduleLoaders['cupons-ead']);
 
 const secretariaModuleHeaders: Record<string, { title: string; description: string }> = {
+  'cupons-ead': {
+    title: 'Cupons EAD',
+    description: 'Benefícios, disponibilidade e histórico de utilização dos cursos EAD.',
+  },
   alunos: {
     title: 'Busca de Aluno 360',
     description: 'Dados acadêmicos, cadastrais e financeiros em uma única consulta.',
@@ -170,6 +178,9 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({
   const pageRef = useRef<HTMLDivElement>(null);
   const [activeModule, setActiveModule] = useState<string>('dashboard');
   const queryClient = useQueryClient();
+  const hasCouponManagementAccess = hasEadCouponManagementAccess(gestorPermissions);
+  const couponsAvailable = useEadCouponsAvailability(gestorContextId, hasCouponManagementAccess);
+  const canManageCoupons = hasCouponManagementAccess && couponsAvailable;
 
   useLayoutEffect(() => {
     let scrollParent = pageRef.current?.parentElement || null;
@@ -202,10 +213,11 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({
 
   const allowedTabsList = useMemo(() => {
     if (!gestorPermissions) return null;
-    return SECRETARIA_ACCESS_OPTIONS
+    const operations = SECRETARIA_ACCESS_OPTIONS
       .map(option => option.id)
       .filter(id => canAccessTab(gestorPermissions, 'secretaria', id));
-  }, [gestorPermissions]);
+    return canManageCoupons ? [...operations, 'cupons-ead'] : operations;
+  }, [gestorPermissions, canManageCoupons]);
 
   useEffect(() => {
     if (activeModule !== 'dashboard' && allowedTabsList && !allowedTabsList.includes(activeModule)) {
@@ -226,6 +238,8 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({
 
   const renderContent = () => {
     switch (activeModule) {
+      case 'cupons-ead':
+        return <CuponsEadPage poloId={poloId} canManage={canManageCoupons} contextId={gestorContextId} showHeading={false} />;
       case 'alunos':
         return <SecretariaAlunosPage poloId={poloId} />;
       case 'declaracao-matricula':
@@ -278,6 +292,7 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({
             onNavigate={setActiveModule}
             onPreload={preloadModule}
             allowedTabs={allowedTabsList || undefined}
+            showEadCoupons={canManageCoupons}
           />
         );
     }

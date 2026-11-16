@@ -1,8 +1,8 @@
 {
-  "version": "4.8.353",
+  "version": "4.8.354",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 362,
+  "revision": 363,
   "releasedAt": "2026-11-16",
-  "summary": "Filtros de despesas compactos junto às abas e recuperação automática após reconexão"
+  "summary": "Cupons EAD com gratuidade ou 50%, limites por aluno, cursos participantes e histórico financeiro"
 }

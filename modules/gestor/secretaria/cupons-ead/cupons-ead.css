@@ -1,0 +1,67 @@
+.cupons-ead, .cupons-ead-overlay { color: #122b42; font-size: 13px; line-height: 1.5; }
+.cupons-ead h2, .cupons-ead-dialog h3 { margin: 0; line-height: 1.35; }
+.cupons-ead h2 { display: flex; align-items: center; gap: 8px; font-size: 22px; font-weight: 500; }
+.cupons-ead-dialog h3 { font-size: 18px; font-weight: 600; }
+.cupons-ead p, .cupons-ead-dialog p { margin: 4px 0 0; }
+.cupons-ead-header, .cupons-ead-toolbar, .cupons-item-title, .cupons-pagination { display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+.cupons-ead-header { margin-bottom: 16px; }
+.cupons-ead-header p, .cupons-ead-dialog header p, .cupom-help, .cupom-field small { color: #607286; font-size: 12px; }
+.cupons-ead-toolbar { margin-bottom: 12px; }
+.cupons-search { display: flex; align-items: center; gap: 8px; width: min(100%, 380px); border: 1px solid #dbe3ed; border-radius: 8px; padding: 0 12px; background: #fff; }
+.cupons-search input { width: 100%; min-width: 0; min-height: 38px; border: 0; background: transparent; outline: none; padding: 8px 0; }
+.cupons-search:focus-within { outline: 2px solid #4169e1; outline-offset: 1px; }
+.cupom-primary, .cupom-secondary, .cupom-icon-button { display: inline-flex; justify-content: center; align-items: center; gap: 6px; min-height: 38px; padding: 8px 12px; border-radius: 8px; font: inherit; font-weight: 500; cursor: pointer; border: 1px solid #dbe3ed; }
+.cupom-primary { background: #4169e1; border-color: #4169e1; color: #fff; }
+.cupom-secondary, .cupom-icon-button { background: #fff; color: #122b42; }
+.cupom-primary:disabled, .cupom-secondary:disabled, .cupom-icon-button:disabled { cursor: default; opacity: .55; }
+.cupom-primary:focus-visible, .cupom-secondary:focus-visible, .cupom-icon-button:focus-visible, .cupom-field input:focus-visible { outline: 2px solid #4169e1; outline-offset: 2px; }
+.cupom-icon-button { width: 38px; min-width: 38px; padding: 8px; flex-shrink: 0; }
+.cupons-list { display: grid; gap: 12px; }
+.cupons-list-item, .cupons-empty { border: 1px solid #e3e9ee; border-radius: 12px; background: #fff; padding: 16px; }
+.cupons-item-title strong { min-width: 0; max-width: 100%; overflow-wrap: anywhere; font-weight: 600; font-size: 14px; }
+.cupom-badge { padding: 3px 8px; border-radius: 6px; background: #f1f5f9; color: #607286; font-size: 12px; }
+.cupom-badge.is-active { color: #047857; background: #ecfdf5; }
+.cupom-badge.is-review { color: #92400e; background: #fffbeb; }
+.cupons-item-details { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 12px 0; }
+.cupons-item-details dt { color: #607286; font-size: 12px; }
+.cupons-item-details dd { margin: 0; overflow-wrap: anywhere; }
+.cupons-item-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.cupons-pagination { margin-top: 14px; font-size: 12px; color: #607286; }
+.cupons-pagination > div { display: flex; gap: 8px; }
+.cupons-ead-overlay { position: fixed; inset: 0; z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 20px; background: rgb(15 23 42 / .45); }
+.cupons-ead-dialog { width: min(100%, 780px); max-height: calc(100dvh - 40px); overflow: auto; border: 1px solid #e3e9ee; border-radius: 14px; background: #fff; box-shadow: 0 4px 24px rgb(18 43 66 / .12); }
+.cupons-ead-dialog header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 16px; border-bottom: 1px solid #e3e9ee; }
+.cupons-ead-dialog form { margin: 0; }
+.cupom-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 16px; padding: 16px; margin: 0; border: 0; min-width: 0; }
+.cupom-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.cupom-field label { font-size: 12px; font-weight: 500; }
+.cupom-field input { width: 100%; min-width: 0; min-height: 38px; border: 1px solid #dbe3ed; border-radius: 8px; padding: 8px 10px; background: #fff; color: #122b42; font: inherit; }
+.cupom-field input:disabled { background: #f8fafc; }
+.cupom-field-wide { grid-column: 1 / -1; }
+.cupons-ead-dialog footer { display: flex; gap: 8px; justify-content: flex-end; padding: 12px 16px; border-top: 1px solid #e3e9ee; }
+.cupom-error { padding: 12px; margin: 12px 16px; border: 1px solid #fecaca; border-radius: 8px; background: #fef2f2; color: #b91c1c; }
+.cupom-history-content { padding: 16px; }
+.cupom-history-item { padding: 12px 0; border-bottom: 1px solid #e3e9ee; }
+.cupom-history-status { display: flex; flex-wrap: wrap; gap: 6px; }
+.cupom-course-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.cupom-course-chip { display: inline-flex; align-items: center; gap: 6px; min-width: 0; max-width: 100%; padding: 4px 6px 4px 8px; border-radius: 8px; background: #eef3ff; overflow-wrap: anywhere; }
+.cupom-course-chip-label { min-width: 0; overflow-wrap: anywhere; }
+.cupom-course-chip button { display: flex; align-items: center; justify-content: center; flex-shrink: 0; min-width: 28px; min-height: 28px; padding: 4px; border: 0; border-radius: 6px; color: #4169e1; background: transparent; cursor: pointer; }
+.cupom-course-chip button:focus-visible { outline: 2px solid #4169e1; outline-offset: 1px; }
+@media (max-width: 639px) {
+  .cupons-ead-header { align-items: flex-start; }
+  .cupons-ead-header h2 { font-size: 20px; }
+  .cupons-item-details { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .cupons-ead-overlay { padding: 8px; }
+  .cupons-ead-dialog { max-height: calc(100dvh - 16px); }
+  .cupom-form-grid { grid-template-columns: minmax(0, 1fr); padding: 12px; }
+  .cupom-field input, .cupons-search input { min-height: 44px; font-size: 16px; }
+  .cupom-primary, .cupom-secondary, .cupom-icon-button { min-height: 44px; }
+  .cupom-icon-button { width: 44px; min-width: 44px; }
+  .cupom-course-chip button { min-width: 44px; min-height: 44px; }
+  .cupons-pagination { align-items: flex-start; }
+}
+@media (max-width: 379px) {
+  .cupons-item-details { grid-template-columns: minmax(0, 1fr); }
+  .cupons-item-actions { flex-wrap: wrap; justify-content: flex-start; }
+}

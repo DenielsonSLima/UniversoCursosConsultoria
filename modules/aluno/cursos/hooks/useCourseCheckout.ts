@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useMutation, type QueryClient } from '@tanstack/react-query';
 import type { CheckoutPaymentSelection } from '../../../asaas/asaas.service';
 import { paymentCheckoutService } from '../../../asaas/asaas.service';
@@ -15,6 +15,8 @@ import {
 } from '../../shared/paymentWindow';
 import { fetchBaneseBoletoDocument } from '../../shared/baneseBoletoDocument';
 import { getEadPurchaseUi } from '../eadPurchaseState';
+import { useEadCouponCheckout } from '../../../ead/cupons/hooks/useEadCouponCheckout';
+import { assertEadCouponsEnvironment } from '../../../ead/cupons/coupons-environment';
 
 interface UseCourseCheckoutInput {
   alunoId?: string;
@@ -42,6 +44,11 @@ export const useCourseCheckout = ({
   const [eadPaymentMethod, setEadPaymentMethod] = useState<EadCheckoutPaymentMethod>('PIX');
   const [eadInstallments, setEadInstallments] = useState(1);
   const [acceptedOnlineTerms, setAcceptedOnlineTerms] = useState(false);
+  const checkoutLock = useRef(false);
+  const couponRequestIds = useRef(new Map<string, string>());
+  const checkoutScope = `${alunoId || ''}:${eadCheckoutReview?.course?.id || ''}`;
+  const checkoutScopeRef = useRef(checkoutScope);
+  checkoutScopeRef.current = checkoutScope;
 
   useEffect(() => {
     if (!eadCheckoutReview) return;
@@ -59,6 +66,14 @@ export const useCourseCheckout = ({
     window.setTimeout(() => setEadPaymentConfirmation(''), 6500);
   }, [invalidateStudentCourseAccess]);
 
+  const eadCoupon = useEadCouponCheckout({
+    alunoId, courseId: eadCheckoutReview?.course?.id,
+    onFreeConfirmed: () => {
+      setEadCheckoutReview(null);
+      confirmEadPayment('Gratuidade por cupom confirmada. Curso liberado em Meus Cursos.');
+    },
+  });
+
   useEadPaymentConfirmationWatcher({
     alunoId,
     panel: eadPaymentPanel,
@@ -75,6 +90,9 @@ export const useCourseCheckout = ({
       sameTab,
       paymentSelection,
       requestId,
+      couponCode,
+      studentId,
+      scope,
     }: {
       course: any;
       turmaId?: string | null;
@@ -82,14 +100,18 @@ export const useCourseCheckout = ({
       sameTab?: boolean;
       paymentSelection?: CheckoutPaymentSelection;
       requestId: string;
+      couponCode?: string;
+      studentId?: string;
+      scope: string;
     }) => {
-      if (!alunoId) throw new Error('Aluno não identificado para iniciar a compra.');
-      const result = await paymentCheckoutService.getPublicCheckout(course.id, alunoId, turmaId, paymentSelection, null, requestId);
+      if (!studentId) throw new Error('Aluno não identificado para iniciar a compra.');
+      const result = await paymentCheckoutService.getPublicCheckout(course.id, studentId, turmaId, paymentSelection, null, requestId, couponCode);
       if (!result?.url || typeof result.url !== 'string') {
         throw new Error('A resposta do checkout não retornou um link válido.');
       }
       return {
         courseId: course.id,
+        scope,
         url: result.url,
         payment: result.payment,
         requestedPaymentMethod: String(paymentSelection?.method || '').toUpperCase(),
@@ -108,7 +130,12 @@ export const useCourseCheckout = ({
       };
     },
     onMutate: () => setCheckoutError(''),
-    onSuccess: async ({ url, payment, requestedPaymentMethod, requestedPresentation, returnedPresentation, presentationFallbackReason, matriculaId, receivableId, checkoutWindow, sameTab, alreadyPaid, alreadyPending, awaitingWebhook, awaitingConfirmation, paymentReviewRequired }) => {
+    onSettled: () => { checkoutLock.current = false; },
+    onSuccess: async ({ url, payment, requestedPaymentMethod, requestedPresentation, returnedPresentation, presentationFallbackReason, matriculaId, receivableId, checkoutWindow, sameTab, alreadyPaid, alreadyPending, awaitingWebhook, awaitingConfirmation, paymentReviewRequired }, variables) => {
+      if (variables.couponCode && variables.scope !== checkoutScopeRef.current) {
+        if (checkoutWindow && !checkoutWindow.closed) checkoutWindow.close();
+        return;
+      }
       setEadCheckoutReview(null);
       if (awaitingConfirmation || paymentReviewRequired) {
         if (checkoutWindow && !checkoutWindow.closed) checkoutWindow.close();
@@ -214,6 +241,10 @@ export const useCourseCheckout = ({
       invalidateStudentCourseAccess();
     },
     onError: (error: any, variables) => {
+      if (variables?.couponCode && variables.scope !== checkoutScopeRef.current) {
+        if (variables.checkoutWindow && !variables.checkoutWindow.closed) variables.checkoutWindow.close();
+        return;
+      }
       const message = error?.message || 'Não foi possível iniciar o pagamento deste curso.';
       renderPaymentWindowError(variables?.checkoutWindow || null, message);
       setCheckoutError(message);
@@ -221,7 +252,9 @@ export const useCourseCheckout = ({
     },
   });
 
-  const startCheckout = (course: any, turma?: any | null, paymentSelection?: CheckoutPaymentSelection) => {
+  const startCheckout = (course: any, turma?: any | null, paymentSelection?: CheckoutPaymentSelection, couponCode?: string, couponRequestId?: string) => {
+    if (checkoutLock.current) return;
+    if (couponCode) assertEadCouponsEnvironment();
     const isEadCheckout = String(course?.modalidade || '').toUpperCase() === 'EAD';
     if (isEadCheckout && getEadPurchaseUi(course.eadPurchase).disabled) {
       setEadCheckoutReview(null);
@@ -247,13 +280,23 @@ export const useCourseCheckout = ({
     const checkoutWindow = !isEadCheckout || opensBoletoInNewTab
       ? preparePaymentWindow()
       : null;
+    const couponKey = JSON.stringify([alunoId, course.id, turma?.id, couponCode, paymentSelection?.method, paymentSelection?.installments, paymentSelection?.presentation]);
+    let requestId = couponCode ? couponRequestId || couponRequestIds.current.get(couponKey) : undefined;
+    if (!requestId) {
+      requestId = crypto.randomUUID();
+      if (couponCode) couponRequestIds.current.set(couponKey, requestId);
+    }
+    checkoutLock.current = true;
     checkoutMutation.mutate({
       course,
       turmaId: turma?.id || (isEadCheckout ? course.eadPurchase?.turmaId || course.alunoMatricula?.turmaId : null) || null,
       checkoutWindow,
       sameTab: isEadCheckout && !opensBoletoInNewTab,
       paymentSelection,
-      requestId: crypto.randomUUID(),
+      requestId,
+      couponCode,
+      studentId: alunoId,
+      scope: checkoutScope,
     });
   };
 
@@ -289,6 +332,7 @@ export const useCourseCheckout = ({
     setTechnicalProfileGate,
     eadCheckoutReview,
     setEadCheckoutReview,
+    eadCoupon,
     eadPaymentPanel,
     setEadPaymentPanel,
     eadPaymentConfirmation,

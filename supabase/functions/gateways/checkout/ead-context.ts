@@ -410,6 +410,9 @@ export const buildEadCheckoutContext = async (
     if (authenticatedAlunoError) throw authenticatedAlunoError;
     aluno = authenticatedAluno;
     if (requestedAlunoId && requestedAlunoId !== authenticatedAluno?.id) {
+      if (body.couponCode) {
+        throw new Error("O cupom só pode ser usado na compra do próprio aluno autenticado.");
+      }
       gestor = gestor || await requireGestorAtivo(runtime.req, runtime.admin);
       if (!managerEnrollment) requireFinanceWriteAccess(gestor);
       const { data: requestedAluno, error: requestedAlunoError } = await runtime
