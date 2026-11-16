@@ -3,7 +3,8 @@ import { createPortal } from 'react-dom';
 import { AlertCircle, CheckCircle2, CircleDollarSign, Loader2, ShieldCheck, X } from 'lucide-react';
 import { isContaDisponivelNoPolo, type ContaBancaria } from '../financeiro.types';
 import type { FinancialPaymentConfirmation, FinancialPaymentResult, FinancialPaymentSourceKind } from './financial-payment.types';
-import { useFinancialPaymentForm } from './useFinancialPaymentForm';
+import { useFinancialPaymentForm, type FinancialPaymentForm } from './useFinancialPaymentForm';
+import type { previewFinancialPayment } from './financial-payment.service';
 import { FinancialPaymentEditor } from './FinancialPaymentEditor';
 import { FinancialPaymentHistory } from './FinancialPaymentHistory';
 import { FinancialPaymentSummary } from './FinancialPaymentSummary';
@@ -19,6 +20,10 @@ export interface FinancialPaymentModalProps {
   initialAccountId?: string;
   readOnly?: boolean;
   historyOnly?: boolean;
+  paymentInputExtras?: Record<string, unknown>;
+  previewPayment?: typeof previewFinancialPayment;
+  previewEnabled?: boolean;
+  beforeEditor?: (form: FinancialPaymentForm) => React.ReactNode;
   onClose: () => void;
   onReversed?: () => Promise<void>;
   onConfirm: (payload: FinancialPaymentConfirmation) => Promise<FinancialPaymentResult>;
@@ -29,7 +34,8 @@ export const FinancialPaymentModal: React.FC<FinancialPaymentModalProps> = (prop
   const initialAccountId = accounts.some(account => account.id === props.initialAccountId) ? props.initialAccountId : accounts[0]?.id || '';
   const initialMethod = defaultPaymentMethodForAccount(accounts.find(account => account.id === initialAccountId));
   const form = useFinancialPaymentForm(props.sourceKind, props.sourceId, initialAccountId, props.onConfirm, initialMethod,
-    Boolean(props.readOnly), Boolean(props.historyOnly));
+    Boolean(props.readOnly), Boolean(props.historyOnly), { inputExtras: props.paymentInputExtras,
+      previewPayment: props.previewPayment, previewEnabled: props.previewEnabled });
   const [reversing, setReversing] = useState(false);
   const busy = form.pending || reversing;
   const ref = useRef<HTMLDivElement>(null);
@@ -83,6 +89,7 @@ export const FinancialPaymentModal: React.FC<FinancialPaymentModalProps> = (prop
             <AlertCircle size={17} className="mt-0.5 shrink-0" />
             <span>O boleto atual será cancelado antes de registrar este recebimento. A baixa local só será consolidada após a confirmação bancária. Se houver saldo restante, ele continuará em aberto no sistema.</span>
           </div> : null}
+          {!readOnly ? props.beforeEditor?.(form) : null}
           <div className={`grid items-start gap-5 ${readOnly ? '' : 'lg:grid-cols-[minmax(0,1.45fr)_minmax(260px,0.75fr)]'}`}>
             {!readOnly ? <section aria-label={expense ? 'Dados do pagamento' : 'Dados do recebimento'} className="financial-dialog-section rounded-2xl border border-slate-200 bg-slate-50/60 p-4 sm:p-5">
               <FinancialPaymentEditor form={{ ...form, locked: form.locked || reversing }} accounts={accounts} expense={expense} />

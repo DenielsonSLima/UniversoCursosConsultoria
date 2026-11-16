@@ -25,6 +25,8 @@ import DespesaViewControls, { type DespesaAgrupamentoSelection } from '../compon
 import DespesaTable from '../components/DespesaTable';
 import DespesaCard from '../components/DespesaCard';
 import DespesaGroupedView from '../components/DespesaGroupedView';
+import DespesasSummaryCards from '../components/DespesasSummaryCards';
+import { getDespesaEstimativaLabel, isDespesaEstimadaPendente } from '../components/despesaPresentation';
 import DespesaBaixaModal from '../components/DespesaBaixaModal';
 import DespesaEditModal from '../components/DespesaEditModal';
 import DespesaCancelModal from '../components/DespesaCancelModal';
@@ -52,6 +54,7 @@ const formatDate = (value?: string) =>
 const statusScopeLabels: Record<DespesaStatusScope, string> = {
   mes_atual: 'Mês atual',
   em_aberto: 'Em aberto',
+  vencidos: 'Vencidos',
   todos: 'Todos',
 };
 
@@ -153,6 +156,7 @@ const DespesasVariaveisTab: React.FC<{ poloId?: string | null; actionsContainer?
       <span className="font-bold text-slate-700">{formatDate(item.dataVencimento)}</span>,
       <div>
         <p className="font-black text-[#001a33]">{item.descricao}</p>
+        {item.valorEstimado && <p className="text-amber-800">{getDespesaEstimativaLabel(item)}</p>}
         {item.turmaNome && <p className="mt-0.5 font-bold text-indigo-600">Turma: {item.turmaNome}</p>}
         {item.observacao && <p className="mt-0.5 text-slate-500">{item.observacao}</p>}
         {item.dataPagamento && <p className="mt-0.5 font-bold text-emerald-700">Pago em {formatDate(item.dataPagamento)}</p>}
@@ -160,13 +164,14 @@ const DespesasVariaveisTab: React.FC<{ poloId?: string | null; actionsContainer?
       item.categoriaNome || 'Sem categoria',
       item.fornecedorNome || 'Não informado',
       <div>
-        <p className="font-black text-[#001a33]">{formatCurrency(item.valor)}</p>
+        <p className="font-black text-[#001a33]">{formatCurrency(item.valorSemCobrancaEm ? 0 : item.valor)}</p>
         {item.valorPago !== undefined && item.valorPago !== item.valor && (
           <p className="text-[9px] font-bold text-emerald-700">Pago: {formatCurrency(item.valorPago)}</p>
         )}
       </div>,
       item.totalParcelas > 1 ? `${item.parcelaNumero}/${item.totalParcelas}` : 'Única',
-      <FinancialReportStatusBadge status={item.status} />,
+      <FinancialReportStatusBadge status={isDespesaEstimadaPendente(item) ? 'PENDENTE' : item.status}
+        label={item.valorSemCobrancaEm ? 'Sem cobrança neste mês' : isDespesaEstimadaPendente(item) ? 'Fatura a confirmar' : undefined} />,
     ],
   })), [filtered]);
 
@@ -182,9 +187,10 @@ const DespesasVariaveisTab: React.FC<{ poloId?: string | null; actionsContainer?
   const reportSummaryCards = useMemo<FinancialReportSummaryCard[]>(() => [
     { label: 'Total previsto', value: formatCurrency(totals.total), tone: 'slate' },
     { label: 'Pago', value: formatCurrency(totals.pago), tone: 'emerald' },
-    { label: 'A pagar', value: formatCurrency(totals.pendente), tone: 'amber' },
+    { label: 'A pagar confirmado', value: formatCurrency(summaryQuery.data?.confirmedPendingValue ?? totals.pendente), tone: 'amber' },
+    ...(summaryQuery.data?.estimatedCount ? [{ label: 'Estimado a confirmar', value: formatCurrency(summaryQuery.data.estimatedValue ?? 0), tone: 'amber' as const }] : []),
     { label: 'Vencidos', value: totals.vencidos, tone: 'rose' },
-  ], [totals]);
+  ], [totals, summaryQuery.data]);
 
   const invalidateExpenseData = async (includeBalances = false) => {
     const invalidations = [
@@ -254,6 +260,7 @@ const DespesasVariaveisTab: React.FC<{ poloId?: string | null; actionsContainer?
   const tabs: { id: DespesaStatusScope; label: string }[] = [
     { id: 'mes_atual', label: 'Mês atual' },
     { id: 'em_aberto', label: 'Em aberto' },
+    { id: 'vencidos', label: 'Vencidos' },
     { id: 'todos', label: 'Todos' },
   ];
 
@@ -273,7 +280,7 @@ const DespesasVariaveisTab: React.FC<{ poloId?: string | null; actionsContainer?
         poloId={poloId}
         tone="rose"
         buttonLabel="Exportar PDF"
-        disabled={lancamentosQuery.isLoading || !summaryQuery.isSuccess}
+        disabled={!lancamentosQuery.isSuccess || !summaryQuery.isSuccess}
       />
       <button
         onClick={() => setShowForm(true)}
@@ -292,19 +299,8 @@ const DespesasVariaveisTab: React.FC<{ poloId?: string | null; actionsContainer?
       {actionsContainer === undefined ? actions : actionsContainer ? createPortal(actions, actionsContainer) : null}
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {[
-          { label: 'Total Previsto', value: !poloId ? 'Selecione um polo' : summaryQuery.isPending ? 'Carregando...' : summaryQuery.isError ? 'Indisponível' : formatCurrency(totals.total), color: 'text-[#001a33]' },
-          { label: 'Pago', value: !poloId ? 'Selecione um polo' : summaryQuery.isPending ? 'Carregando...' : summaryQuery.isError ? 'Indisponível' : formatCurrency(totals.pago), color: 'text-emerald-600' },
-          { label: 'A Pagar', value: !poloId ? 'Selecione um polo' : summaryQuery.isPending ? 'Carregando...' : summaryQuery.isError ? 'Indisponível' : formatCurrency(totals.pendente), color: 'text-amber-600' },
-          { label: 'Vencidos', value: !poloId ? 'Selecione um polo' : summaryQuery.isPending ? 'Carregando...' : summaryQuery.isError ? 'Indisponível' : `${totals.vencidos}`, color: 'text-rose-600' },
-        ].map((kpi) => (
-          <div key={kpi.label} className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
-            <p className="text-[9px] font-black uppercase tracking-wider text-slate-400 mb-1">{kpi.label}</p>
-            <p className={`text-lg font-black ${kpi.color}`}>{kpi.value}</p>
-          </div>
-        ))}
-      </div>
+      <DespesasSummaryCards summary={summaryQuery.data} poloId={poloId}
+        pending={summaryQuery.isPending} failed={summaryQuery.isError} />
       {summaryQuery.isError && (
         <div className="rounded-2xl border border-rose-100 bg-rose-50 px-5 py-4 text-sm font-bold text-rose-700">
           Não foi possível carregar o resumo canônico das despesas.

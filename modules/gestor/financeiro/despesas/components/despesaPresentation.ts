@@ -40,3 +40,23 @@ export const getDescricaoSemSufixoDeParcela = (item: DespesaLancamento) => (
     ? item.descricao.replace(/ \(\d+\/\d+\)$/, '')
     : item.descricao
 );
+
+export const isDespesaValorEstimado = (item: DespesaLancamento) => Boolean(item.valorEstimado && !item.valorConfirmadoEm);
+
+export const isDespesaEstimadaPendente = (item: DespesaLancamento) => (
+  isDespesaValorEstimado(item) && item.status !== 'CANCELADO' && !item.valorSemCobrancaEm
+);
+
+export const getDespesaStatusLabel = (item: DespesaLancamento) => (
+  item.valorSemCobrancaEm ? 'Sem cobrança neste mês' : isDespesaEstimadaPendente(item) ? 'Fatura a confirmar' : item.status
+);
+
+export const getDespesaEstimativaLabel = (item: DespesaLancamento) => (
+  item.valorEstimado ? `${item.valorSemCobrancaEm ? 'Sem cobrança neste mês' : isDespesaValorEstimado(item) ? 'Valor estimado' : 'Valor confirmado'}${
+    item.valorEstimadoOriginal != null ? ` · ${item.isRateioDerived ? 'Cota estimada original' : 'Estimativa original'}: ${formatDespesaCurrency(item.valorEstimadoOriginal)}` : ''}` : ''
+);
+
+export const hasDespesaPagamentoDetalhado = (item: DespesaLancamento) => (
+  item.status === 'PAGO' && !item.isRateioDerived
+  && (!item.paymentSummary?.hasEvents || item.pagamentoUnico === true)
+);

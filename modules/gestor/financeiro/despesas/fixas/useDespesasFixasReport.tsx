@@ -8,6 +8,7 @@ import {
 } from '../../components/FinancialReportPreview';
 import type { DespesaLancamento, DespesasSummary } from '../despesas.service';
 import type { DespesaStatusScope } from '../despesas.queryKeys';
+import { getDespesaEstimativaLabel, isDespesaEstimadaPendente } from '../components/despesaPresentation';
 
 const formatCurrency = (value: number) => new Intl.NumberFormat('pt-BR', {
   style: 'currency',
@@ -21,12 +22,13 @@ const formatDate = (value?: string) => (
 const statusScopeLabels: Record<DespesaStatusScope, string> = {
   mes_atual: 'Mês atual',
   em_aberto: 'Em aberto',
+  vencidos: 'Vencidos',
   todos: 'Todos',
 };
 
 interface UseDespesasFixasReportParams {
   filtered: DespesaLancamento[];
-  totals: Pick<DespesasSummary, 'totalValue' | 'paidValue' | 'pendingValue' | 'vencidosCount'>;
+  totals: DespesasSummary;
   statusScope: DespesaStatusScope;
   search: string;
   dataInicio: string;
@@ -63,6 +65,7 @@ export const useDespesasFixasReport = ({
       <span className="font-bold text-slate-700">{formatDate(item.dataVencimento)}</span>,
       <div>
         <p className="font-black text-[#001a33]">{item.descricao}</p>
+        {item.valorEstimado && <p className="text-amber-800">{getDespesaEstimativaLabel(item)}</p>}
         {item.turmaNome && <p className="mt-0.5 font-bold text-indigo-600">Turma: {item.turmaNome}</p>}
         {item.observacao && <p className="mt-0.5 text-slate-500">{item.observacao}</p>}
         {item.dataPagamento && <p className="mt-0.5 font-bold text-emerald-700">Pago em {formatDate(item.dataPagamento)}</p>}
@@ -70,13 +73,14 @@ export const useDespesasFixasReport = ({
       item.categoriaNome || 'Sem categoria',
       item.fornecedorNome || 'Não informado',
       <div>
-        <p className="font-black text-[#001a33]">{formatCurrency(item.valor)}</p>
+        <p className="font-black text-[#001a33]">{formatCurrency(item.valorSemCobrancaEm ? 0 : item.valor)}</p>
         {item.valorPago !== undefined && item.valorPago !== item.valor && (
           <p className="text-[9px] font-bold text-emerald-700">Pago: {formatCurrency(item.valorPago)}</p>
         )}
       </div>,
       item.totalParcelas > 1 ? `${item.parcelaNumero}/${item.totalParcelas}` : 'Única',
-      <FinancialReportStatusBadge status={item.status} />,
+      <FinancialReportStatusBadge status={isDespesaEstimadaPendente(item) ? 'PENDENTE' : item.status}
+        label={item.valorSemCobrancaEm ? 'Sem cobrança neste mês' : isDespesaEstimadaPendente(item) ? 'Fatura a confirmar' : undefined} />,
     ],
   })), [filtered]);
 
@@ -92,7 +96,8 @@ export const useDespesasFixasReport = ({
   const summaryCards = useMemo<FinancialReportSummaryCard[]>(() => [
     { label: 'Total previsto', value: formatCurrency(totals.totalValue), tone: 'slate' },
     { label: 'Pago', value: formatCurrency(totals.paidValue), tone: 'emerald' },
-    { label: 'A pagar', value: formatCurrency(totals.pendingValue), tone: 'amber' },
+    { label: 'A pagar confirmado', value: formatCurrency(totals.confirmedPendingValue ?? totals.pendingValue), tone: 'amber' },
+    ...(totals.estimatedCount ? [{ label: 'Estimado a confirmar', value: formatCurrency(totals.estimatedValue ?? 0), tone: 'amber' as const }] : []),
     { label: 'Vencidos', value: totals.vencidosCount, tone: 'rose' },
   ], [totals]);
 

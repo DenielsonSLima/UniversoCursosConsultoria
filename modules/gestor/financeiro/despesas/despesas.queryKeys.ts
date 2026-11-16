@@ -4,7 +4,7 @@ export type DespesaAgrupamento = 'mes' | 'fornecedor' | 'categoria';
 
 export type DespesaTipo = 'DESPESA_FIXA' | 'DESPESA_VARIAVEL' | 'OUTRO_DEBITO';
 export type CategoriaFinanceiraTipo = DespesaTipo | 'OUTRO_CREDITO';
-export type DespesaStatusScope = 'mes_atual' | 'em_aberto' | 'todos';
+export type DespesaStatusScope = 'mes_atual' | 'em_aberto' | 'vencidos' | 'todos';
 
 export interface DespesasFilters {
   tipo?: DespesaTipo;
