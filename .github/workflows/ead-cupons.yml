@@ -43,3 +43,33 @@ jobs:
           PGLITE_MODULE_PATH: ${{ runner.temp }}/ead-cupons/node_modules/@electric-sql/pglite/dist/index.js
           EAD_TEST_JSDOM_MODULE: ${{ runner.temp }}/ead-cupons/node_modules/jsdom/lib/api.js
         run: npm run test:ead-coupons
+
+  resume-concurrency:
+    name: Coupon resumption independent-session PostgreSQL
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:17.6
+        env:
+          POSTGRES_PASSWORD: synthetic-test-only
+          POSTGRES_DB: ead_coupon_concurrency
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24.22.1'
+      - run: npm install --prefix "$RUNNER_TEMP/ead-coupon-pg" --no-save --package-lock=false --ignore-scripts pg@8.16.3
+      - run: node --test supabase/tests/ead_coupons.resume.postgres.test.mjs
+        env:
+          EAD_COUPON_PG_MODULE: ${{ runner.temp }}/ead-coupon-pg/node_modules/pg/lib/index.js
+          EAD_COUPON_TEST_DATABASE_URL: postgresql://postgres:synthetic-test-only@localhost:5432/ead_coupon_concurrency
+

@@ -14,11 +14,10 @@ const extractFunction = (sql, name) => {
   return tail.slice(0, tail.indexOf(`${tag};`) + tag.length + 1);
 };
 
-export const createCouponHarness = async () => {
+export const createCouponHarness = async (providedDb) => {
   const packageUrl = process.env.PGLITE_MODULE_PATH
     ? pathToFileURL(resolve(process.env.PGLITE_MODULE_PATH)).href : '@electric-sql/pglite';
-  const { PGlite } = await import(packageUrl);
-  const db = new PGlite();
+  const db = providedDb || new (await import(packageUrl)).PGlite();
   const scalar = async (sql, args = []) => (await db.query(sql, args)).rows[0]?.value;
   const ids = {
     polo: '00000000-0000-0000-0000-000000000001',

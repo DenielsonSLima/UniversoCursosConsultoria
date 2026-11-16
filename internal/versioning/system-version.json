@@ -1,8 +1,9 @@
 {
-  "version": "4.8.355",
+  "version": "4.8.356",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 364,
+  "revision": 365,
   "releasedAt": "2026-11-16",
-  "summary": "Ação Baixar nas despesas, preservando pagamento parcial e comportamento financeiro"
+  "summary": "Retomada segura de gratuidade EAD após compra opcional cancelada, com auditoria financeira"
 }
+

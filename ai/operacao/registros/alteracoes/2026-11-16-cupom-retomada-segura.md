@@ -10,6 +10,9 @@ Escopo: cupons de 100% em matrícula única PENDENTE da mesma turma, com todas a
 - `supabase/migrations/20261116172603_ead_coupon_resume_free.sql`
 - `supabase/tests/fixtures/ead-coupons.harness.mjs`
 - `supabase/tests/ead_coupons.resume.isolated.test.mjs`
+- `.github/workflows/ead-cupons.yml`
+- `supabase/tests/ead_coupons.resume.postgres.test.mjs`
+- `internal/versioning/system-version.json` e `internal/versioning/CHANGELOG.md` (versão proposta 4.8.356, sem publicação).
 - Este registro.
 
 ## Contrato
@@ -26,4 +29,7 @@ Pagamento bancário tardio é preservado e encaminhado à revisão financeira ex
 - Nenhum teste criou matrícula/cobrança real, chamou provedor bancário ou alterou produção.
 
 ## Limitações e publicação
-PGlite em uma conexão não valida duas transações simultâneas. Antes de produção, validar concorrência com callback/baixa em ambiente isolado de PostgreSQL completo, além de smoke autenticado Safari. Não houve smoke Safari nesta revisão. A aplicação depende de autorização explícita, migrations remotas conferidas, revisão de CI e aceite do lote; nenhum bump de versão ou merge está incluído nesta proposta. Alterações paralelas foram preservadas.
+PGlite em uma conexão não valida duas transações simultâneas. Antes de produção, validar concorrência com callback/baixa em ambiente isolado de PostgreSQL completo, além de smoke autenticado Safari. Não houve smoke Safari nesta revisão. A aplicação depende de autorização explícita, migrations remotas conferidas, revisão de CI e aceite do lote; metadados de versão propostos não significam publicação; nenhum merge está incluído nesta proposta. Alterações paralelas foram preservadas.
+
+## Validação concorrente
+Job isolado de PostgreSQL 17.6 adicionado à PR para testar sessões reais: replay simultâneo, requests diferentes, pagamento primeiro e gratuidade primeiro. O teste consulta pg_stat_activity e exige espera por lock nos cenários de disputa. Resultado ainda deve ser confirmado no CI; não usa banco ou provedor real.
