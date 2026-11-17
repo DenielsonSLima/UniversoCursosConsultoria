@@ -47,7 +47,7 @@ test('Secretaria e compra EAD atravessam serviços e SQL real com alunos e pagam
     functions: { async invoke(name, { body }) {
       assert.equal(name, 'payment-checkout');
       edgeCalls.push(body);
-      assert.equal(body.couponCode, 'LOCAL50');
+      assert.equal(body.couponCode, 'LOCAL375');
       assert.equal(body.alunoId, ids.student);
       assert.equal(body.amount, undefined);
       await h.asService();
@@ -60,7 +60,7 @@ test('Secretaria e compra EAD atravessam serviços e SQL real com alunos e pagam
       if (result.error) return result;
       return { error: null, data: { url: 'http://localhost/cobranca-ficticia', presentation: 'PIX',
         matriculaId: result.data.matriculaId, receivableId: result.data.receivableId,
-        payment: { provider: 'banese_card', method: 'BOLETO', value: 49.95,
+        payment: { provider: 'banese_card', method: 'BOLETO', value: Number(result.data.receivable.valor),
           pixQrCode: { payload: 'FICTICIO-NAO-PAGAVEL' } } } };
     } },
   };
@@ -97,22 +97,19 @@ test('Secretaria e compra EAD atravessam serviços e SQL real com alunos e pagam
       Object.getOwnPropertyDescriptor(dom.window.HTMLInputElement.prototype, 'value').set.call(element, value);
       element.dispatchEvent(new dom.window.Event('input', { bubbles: true }));
     });
-    const createCoupon = async (code, free) => {
+    const createCoupon = async (code, percent) => {
       await act(async () => button('Novo cupom').click());
       await input('#cupom-code', code);
-      if (free) {
-        await act(async () => document.getElementById('cupom-benefit').click());
-        await until(() => [...document.querySelectorAll('[role="option"]')].some(option => option.textContent.includes('Curso gratuito')), 'opção gratuita');
-        await act(async () => [...document.querySelectorAll('[role="option"]')].find(option => option.textContent.includes('Curso gratuito')).click());
-      }
+      assert.equal(document.getElementById('cupom-benefit').value, '', 'cadastro não presume percentual');
+      await input('#cupom-benefit', percent);
       await input('#cupom-student-limit', '2');
       await act(async () => document.querySelector('form').dispatchEvent(new dom.window.Event('submit', { bubbles: true, cancelable: true })));
       await until(() => !document.querySelector('[role="dialog"]') && document.body.textContent.includes(code), `cadastro ${code}`);
     };
     await render(React.createElement(CuponsEadPage, { poloId: ids.polo, canManage: true, contextId: 'ficticio' }));
     await until(() => rpcCalls.some(call => call.name === 'ead_coupons_list'), 'listagem');
-    await createCoupon('LOCALFREE', true);
-    await createCoupon('LOCAL50', false);
+    await createCoupon('LOCALFREE', '100');
+    await createCoupon('LOCAL375', '37,5');
     assert.equal(await scalar('select count(*)::int value from public.ead_coupons'), 2);
 
     await render(null); await client.cancelQueries(); client.clear(); await h.asStudent();
@@ -138,16 +135,17 @@ test('Secretaria e compra EAD atravessam serviços e SQL real com alunos e pagam
     assert.equal(await scalar('select count(*)::int value from public.contas_receber'), 0);
     assert.equal(await scalar('select status value from public.matriculas where aluno_id=$1 and turma_id=$2', [ids.student, ids.turma]), 'ATIVO');
 
-    await openCourse(ids.otherCourse, 'LOCAL50');
-    assert.equal(checkout.eadCoupon.quote.payableAmount, 49.95);
+    await openCourse(ids.otherCourse, 'LOCAL375');
+    assert.equal(checkout.eadCoupon.quote.discountPercent, 37.5);
+    assert.equal(checkout.eadCoupon.quote.payableAmount, 62.44);
     await act(async () => button('Pix').click());
-    await act(async () => { button('Pagar R$\u00a049,95').click(); button('Pagar R$\u00a049,95')?.click(); });
+    await act(async () => { button('Pagar R$\u00a062,44').click(); button('Pagar R$\u00a062,44')?.click(); });
     await until(() => Boolean(checkout.eadPaymentPanel), 'reserva com desconto');
     assert.equal(edgeCalls.length, 1);
     const receipt = (await db.query('select * from public.contas_receber')).rows[0];
-    assert.equal(Number(receipt.valor), 49.95);
+    assert.equal(Number(receipt.valor), 62.44);
     assert.equal(await scalar('select status value from public.matriculas where id=$1', [receipt.matricula_id]), 'PENDENTE');
-    await db.query("update public.contas_receber set status='PAGO',valor_pago=49.95,data_pagamento=current_date,gateway_status='PAID',origem_pagamento='BANESE' where id=$1", [receipt.id]);
+    await db.query("update public.contas_receber set status='PAGO',valor_pago=valor,data_pagamento=current_date,gateway_status='PAID',origem_pagamento='BANESE' where id=$1", [receipt.id]);
     await assert.rejects(() => db.query("update public.inscricoes_online set status='PAGO',pago_em=now() where receivable_id=$1", [receipt.id]));
     assert.equal(await scalar('select status value from public.matriculas where id=$1', [receipt.matricula_id]), 'PENDENTE', 'marcar situação paga sem prova não libera o curso');
     await h.recordSyntheticBankProof(receipt.id);
@@ -157,13 +155,13 @@ test('Secretaria e compra EAD atravessam serviços e SQL real com alunos e pagam
 
     await render(null); await client.cancelQueries(); client.clear(); await h.asManager();
     await render(React.createElement(CuponsEadPage, { poloId: ids.polo, canManage: true, contextId: 'ficticio' }));
-    await until(() => document.body.textContent.includes('LOCAL50'), 'histórico gestor');
-    const article = [...document.querySelectorAll('article')].find(element => element.textContent.includes('LOCAL50'));
+    await until(() => document.body.textContent.includes('LOCAL375'), 'histórico gestor');
+    const article = [...document.querySelectorAll('article')].find(element => element.textContent.includes('LOCAL375'));
     await act(async () => [...article.querySelectorAll('button')].find(element => element.textContent.includes('Histórico')).click());
     await until(() => document.querySelector('[role="dialog"]')?.textContent.includes('Aluno fictício 1'), 'histórico pago');
     assert(document.querySelector('[role="dialog"]').textContent.includes('Recebido'));
-    assert(document.querySelector('[role="dialog"]').textContent.includes('49,95'));
-    assert.equal(await scalar('select sum(payable_amount)::numeric value from public.ead_coupon_redemptions'), '49.95');
+    assert(document.querySelector('[role="dialog"]').textContent.includes('62,44'));
+    assert.equal(await scalar('select sum(payable_amount)::numeric value from public.ead_coupon_redemptions'), '62.44');
   } finally {
     if (root) await act(async () => root.unmount());
     client?.clear();

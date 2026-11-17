@@ -34,7 +34,7 @@ export default function EadCouponField({ coupon, disabled }: Props) {
         <p className="ead-coupon-summary-title"><CheckCircle2 size={15} aria-hidden="true" /><span>Cupom {coupon.quote.code} aplicado</span></p>
         <dl>
           <dt>Valor original</dt><dd>{formatEadCheckoutMoney(coupon.quote.originalAmount)}</dd>
-          <dt>Desconto ({coupon.quote.discountPercent}%)</dt><dd>{formatEadCheckoutMoney(coupon.quote.discountAmount)}</dd>
+          <dt>Desconto ({coupon.quote.discountPercent.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}%)</dt><dd>{formatEadCheckoutMoney(coupon.quote.discountAmount)}</dd>
           <dt className="ead-coupon-total">Total a pagar</dt><dd className="ead-coupon-total">{formatEadCheckoutMoney(coupon.quote.payableAmount)}</dd>
         </dl>
       </div>}

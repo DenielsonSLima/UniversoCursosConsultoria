@@ -30,7 +30,7 @@ const StudentPreview: React.FC<{ state: State; refresh: () => void }> = ({ state
     finally { setPending(''); }
   };
   return <section className="preview-student"><h2>Compra EAD · aluno fictício</h2>
-    <p>Use <strong>LOCALGRATIS</strong> ou <strong>LOCAL50</strong> na confirmação. Os valores vêm do banco em memória.</p>
+    <p>Use <strong>LOCALGRATIS</strong> ou <strong>LOCAL375</strong> (37,5%) na confirmação. Os valores vêm do banco em memória.</p>
     {view.eadPaymentConfirmation && <p role="status" className="preview-success">{view.eadPaymentConfirmation}</p>}
     {view.checkoutError && <p role="alert" className="preview-error">{view.checkoutError}</p>}
     <div className="preview-courses">{state.courses.map(course => {
@@ -64,12 +64,12 @@ function Preview() {
     return () => window.removeEventListener('local-coupons-changed', changed);
   }, [queryClient]);
   return <main className="preview-shell"><header className="preview-header"><h1>Cupons EAD · prévia local</h1>
-    <p>Todos os alunos, cursos, cupons e pagamentos são fictícios. O banco é descartado ao encerrar esta prévia.</p></header>
+    <p>Todos os dados são fictícios. Cupons EAD podem ser usados em todos os polos; somente a Matriz administra e ativa as campanhas. O banco é descartado ao encerrar esta prévia.</p></header>
     <nav className="preview-nav" aria-label="Perfil fictício">
       {(['manager', 'student-1', 'student-2', 'student-3', 'student-4'] as PreviewIdentity[]).map(value =>
         <button type="button" key={value} aria-pressed={identity === value} onClick={() => {
           setPreviewIdentity(value); setIdentity(value);
-        }}>{value === 'manager' ? 'Secretaria' : `Aluno fictício ${value.split('-')[1]}`}</button>)}
+        }}>{value === 'manager' ? 'Secretaria · Matriz' : `Aluno fictício ${value.split('-')[1]}`}</button>)}
     </nav>
     {query.isPending && <p role="status">Preparando dados fictícios…</p>}
     {query.error && <p role="alert" className="preview-error">{query.error.message}</p>}

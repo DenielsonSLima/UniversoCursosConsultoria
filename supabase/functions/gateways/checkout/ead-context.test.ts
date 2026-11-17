@@ -142,6 +142,24 @@ Deno.test("cupom não usa fallback de gestor para comprar em nome de outro aluno
   assert.equal(mutations, 0);
 });
 
+Deno.test("cupom fora de EAD é recusado antes de rotas, financeiro ou emissão", async () => {
+  for (const modalidade of ["LIVRE", "TECNICO", "ESPECIALIZACAO", "SUPERIOR", ""]) {
+    const runtime: any = buildRuntime();
+    runtime.body.couponCode = "MANUAL12";
+    const reads: string[] = [];
+    runtime.admin.from = (table: string) => {
+      reads.push(table);
+      assert.equal(table, "cursos", "Nenhuma rota ou configuração financeira deve ser consultada");
+      const query = createQuery(table);
+      query.maybeSingle = async () => ({ data: { ...queryResultFor(table), modalidade }, error: null });
+      return query;
+    };
+    runtime.admin.rpc = () => { throw new Error("Não deve haver mutação financeira"); };
+    await assert.rejects(() => buildEadCheckoutContext(runtime), /somente para cursos EAD/);
+    assert.deepEqual(reads, ["cursos"]);
+  }
+});
+
 Deno.test("checkout EAD usa a rota Banese de boleto explicitamente", async () => {
   const context = await buildEadCheckoutContext(buildRuntime() as any);
 

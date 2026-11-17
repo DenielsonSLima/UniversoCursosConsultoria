@@ -18,7 +18,7 @@ export function useCuponsEadRealtime(poloId: string, contextId: string, enabled:
     };
     const channel = supabase.channel(`ead_coupons_management:${contextId}:${poloId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'ead_coupons', filter: `polo_id=eq.${poloId}` }, invalidate)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'ead_coupon_redemptions', filter: `polo_id=eq.${poloId}` }, invalidate)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'ead_coupon_events', filter: `polo_id=eq.${poloId}` }, invalidate)
       .subscribe(status => {
         if (status !== 'SUBSCRIBED') return;
         if (subscribed) invalidate();

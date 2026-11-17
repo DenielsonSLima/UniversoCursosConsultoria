@@ -3,7 +3,7 @@ export interface EadCouponQuote {
   requestId?: string;
   turmaId: string;
   code: string;
-  discountPercent: 50 | 100;
+  discountPercent: number;
   originalAmount: number;
   discountAmount: number;
   payableAmount: number;
@@ -21,6 +21,7 @@ export interface EadCouponFreeRedemption {
 export interface EadCouponQuoteInput {
   code: string;
   courseId: string;
+  turmaId?: string | null;
 }
 
 export interface EadCouponFreeInput {

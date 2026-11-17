@@ -4,7 +4,7 @@ import { createCupomForm, cupomFormToDraft, toLocalDateTime, validateCupomForm }
 import type { EadCoupon } from '../../../../ead/cupons/coupons-management.types.ts';
 
 const now = new Date('2026-11-16T12:00:00.000Z');
-const validForm = () => ({ ...createCupomForm(null, now), code: 'EAD50' });
+const validForm = () => ({ ...createCupomForm(null, now), code: 'EAD50', discountPercent: '50' });
 
 test('cadastro preserva campos configuráveis e normaliza código sem calcular desconto no cliente', () => {
   const form = { ...validForm(), code: ' ead50 ', perStudentLimit: '3', totalLimit: '120' };
@@ -48,12 +48,23 @@ test('edição preserva versão do servidor e configuração com total ilimitado
   assert.deepEqual(draft.courseIds, coupon.courseIds);
 });
 
-test('rejeita código fora do contrato, benefício inesperado e curso selecionado vazio', () => {
+test('rejeita código fora do contrato e curso selecionado vazio', () => {
   for (const code of ['AB', '_ABC', '___', 'EAD 50', 'A'.repeat(41)]) {
     assert.match(validateCupomForm({ ...validForm(), code })!, /código/);
   }
-  assert.match(validateCupomForm({ ...validForm(), discountPercent: '25' as '50' })!, /benefício/);
   assert.match(validateCupomForm({ ...validForm(), allCourses: false, courseIds: [] })!, /Selecione ao menos/);
+});
+
+test('percentual é manual, sem padrão e aceita decimais em português ou com ponto', () => {
+  assert.equal(createCupomForm(null, now).discountPercent, '');
+  for (const [input, expected] of [['25', 25], ['37.5', 37.5], ['12,5', 12.5], ['100', 100], ['0,01', 0.01], ['100,00', 100]]) {
+    assert.equal(cupomFormToDraft({ ...validForm(), discountPercent: String(input) }).discountPercent, expected);
+  }
+  const coupon = { ...cupomFormToDraft(validForm()), discountPercent: 37.5 } as EadCoupon;
+  assert.equal(createCupomForm(coupon).discountPercent, '37,5');
+  for (const discountPercent of ['', '0', '-1', '101', '100.01', '12.345', '12,345', 'Infinity', 'NaN', '1e2', '1,2.3']) {
+    assert.match(validateCupomForm({ ...validForm(), discountPercent })!, /percentual/);
+  }
 });
 
 test('limites exigem inteiros positivos e não aceitam decimal, negativo ou infinito', () => {

@@ -16,8 +16,10 @@ export const parseEadCouponQuote = (data: unknown): EadCouponQuote => {
   if (!isRecord(data) || !hasMoney(data) || typeof data.couponId !== 'string' || !data.couponId
     || (data.requestId !== undefined && (typeof data.requestId !== 'string' || !data.requestId))
     || typeof data.turmaId !== 'string' || !data.turmaId || typeof data.code !== 'string' || !data.code
-    || typeof data.discountPercent !== 'number' || ![50, 100].includes(data.discountPercent)
-    || (data.discountPercent === 100 && data.payableAmount !== 0)) {
+    || typeof data.discountPercent !== 'number' || !Number.isFinite(data.discountPercent)
+    || data.discountPercent <= 0 || data.discountPercent > 100
+    || data.originalAmount === 0 || data.discountAmount === 0
+    || (data.discountPercent === 100 ? data.payableAmount !== 0 : data.payableAmount === 0)) {
     throw new Error('A consulta do cupom retornou dados inválidos.');
   }
   return data as unknown as EadCouponQuote;
@@ -36,13 +38,14 @@ export const eadCouponStudentService = {
   async quote(input: EadCouponQuoteInput, signal?: AbortSignal): Promise<EadCouponQuote> {
     assertEadCouponsEnvironment();
     let request = supabase.rpc('ead_coupon_quote', {
-      p_code: normalizeEadCouponCode(input.code), p_course_id: input.courseId,
+      p_code: normalizeEadCouponCode(input.code), p_course_id: input.courseId, p_turma_id: input.turmaId || null,
     });
     if (signal) request = request.abortSignal(signal);
     const { data, error } = await request;
     if (error) throw new Error(error.message || 'Não foi possível aplicar o cupom.');
     const quote = parseEadCouponQuote(data);
     if (quote.code !== normalizeEadCouponCode(input.code)) throw new Error('A consulta retornou outro cupom.');
+    if (input.turmaId && quote.turmaId !== input.turmaId) throw new Error('A cotação do cupom não corresponde à turma escolhida.');
     return quote;
   },
   async redeemFree(input: EadCouponFreeInput): Promise<EadCouponFreeRedemption> {

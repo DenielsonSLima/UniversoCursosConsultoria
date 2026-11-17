@@ -18,6 +18,9 @@ export const createCouponHarness = async (providedDb) => {
   const packageUrl = process.env.PGLITE_MODULE_PATH
     ? pathToFileURL(resolve(process.env.PGLITE_MODULE_PATH)).href : '@electric-sql/pglite';
   const db = providedDb || new (await import(packageUrl)).PGlite();
+  // Synthetic payment dates follow the product's business timezone even when
+  // UTC has already crossed midnight and America/Maceio has not.
+  await db.exec("set timezone='America/Maceio'");
   const scalar = async (sql, args = []) => (await db.query(sql, args)).rows[0]?.value;
   const ids = {
     polo: '00000000-0000-0000-0000-000000000001',
@@ -43,7 +46,12 @@ export const createCouponHarness = async (providedDb) => {
     // the existing manager checkout harness. No cancellation is fabricated.
     await db.exec(`create function internal_contas.ead_expiration_write_allowed(uuid)
       returns boolean language sql as $$select false$$`);
-    await db.exec(`alter table public.parceiros add column auth_user_id uuid;
+    await db.exec(`alter table public.polos add column company_id uuid,
+        add column is_matriz boolean not null default false,
+        add column status text not null default 'ATIVO';
+      update public.polos set company_id='${couponId(99000)}';
+      update public.polos set is_matriz=true where id='${ids.polo}';
+      alter table public.parceiros add column auth_user_id uuid,add column polo_id uuid,add column polo_ids uuid[];
       alter table public.turmas add column data_inicio_inscricao date,add column data_fim_inscricao date,
         add column bloquear_matriculas_apos_completar_vagas boolean default true;
       create table internal_academic.ead_trust_access_audit(matricula_id uuid primary key);
@@ -97,7 +105,10 @@ export const createCouponHarness = async (providedDb) => {
       '20261116095348_ead_coupons_quote.sql', '20261116095351_ead_coupons_free_redemption.sql',
       '20261116095355_ead_coupons_paid_checkout.sql','20261116095358_ead_coupons_production_capability.sql',
       '20261116095401_ead_coupons_authorized_checkout.sql','20261116095405_ead_coupons_payment_recovery.sql',
-      '20261116180208_ead_coupon_resume_guards.sql','20261116180213_ead_coupon_resume_late_payment.sql','20261116180219_ead_coupon_resume_quote.sql','20261116180226_ead_coupon_resume_free.sql']) await db.exec(migration(name));
+      '20261116180208_ead_coupon_resume_guards.sql','20261116180213_ead_coupon_resume_late_payment.sql',
+      '20261116180219_ead_coupon_resume_quote.sql','20261116180226_ead_coupon_resume_free.sql',
+      '20261117001402_ead_coupons_matrix_decimal_schema.sql','20261117001405_ead_coupons_matrix_decimal_management.sql',
+      '20261117001407_ead_coupons_decimal_checkout.sql']) await db.exec(migration(name));
     // A production install remains disabled. Only this synthetic fixture enables it.
     await db.exec('update internal_contas.ead_coupon_runtime set enabled=true');
     for (const manager of [ids.manager, ids.otherManager]) {
@@ -162,4 +173,3 @@ export const createCouponHarness = async (providedDb) => {
     throw error;
   }
 };
-

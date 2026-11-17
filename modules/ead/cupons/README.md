@@ -8,13 +8,19 @@ Gestão e compra compartilham os mesmos contratos, com autorização no servidor
 - `hooks/`: consulta, resgate e invalidação por eventos do aluno/cupom.
 - `coupons-environment.*`: destinos oficiais de produção/Preview ou ambiente local isolado.
 - `coupons-availability.*` e `hooks/useEadCouponsAvailability`: disponibilidade canônica do backend.
-- `coupons-access.*`: apresentação da gestão exige Secretaria e Financeiro.
+- `coupons-access.*`: apresentação da gestão exige Matriz, Secretaria e Financeiro.
 - `../../gestor/secretaria/cupons-ead/`: página, componentes, formulários e hooks de gestão.
 - `../../aluno/cursos/components/cupons/`: campo do cupom na confirmação da compra.
 
+O percentual é informado manualmente, maior que zero e até 100%, com até duas
+casas decimais. Cupom é opcional na compra; novos cadastros começam sem percentual.
+A gestão exige Matriz ativa (`polos.is_matriz`) e permissões no servidor.
+Alunos de todos os polos da instituição podem usar o cupom. O resgate e a
+cobrança preservam o polo real da turma; limites e histórico são da campanha.
 Valores e elegibilidade vêm do servidor. 100% confirma gratuidade sem recebível;
-50% reserva uma utilização, cobra o principal com desconto e só libera com prova
-financeira canônica. Respostas ambíguas retomam a reserva e request original.
+percentuais inferiores reservam uma utilização, cobram o principal com desconto
+e só liberam com prova financeira canônica. Respostas ambíguas retomam a reserva
+e request original. Somente cursos EAD aceitam cupons.
 
 As migrations de cupons permanecem versionadas em `supabase/migrations`. A instalação
 começa desligada; uma migration de lançamento separada registra a ativação autorizada.
@@ -41,6 +47,7 @@ reversão, expiração, recuperação e regressões do checkout. PGlite usa uma 
 as tentativas concorrentes são simuladas em fila; isso não comprova concorrência
 multissessão em PostgreSQL/Supabase real nem o transporte WebSocket do Realtime.
 
-Nova aplicação em curso com matrícula, cobrança ou tentativa histórica é recusada.
-A reserva própria pendente pode ser retomada. Substituição de boleto existente
-não faz parte desta etapa.
+Desconto parcial em compra anterior exige conferência. Gratuidade pode retomar
+matrícula pendente após cancelamento bancário comprovado, seguindo as guardas e
+a auditoria de retomada publicadas. A reserva própria preserva turma, request e
+valores originais. Não há substituição de boleto existente.

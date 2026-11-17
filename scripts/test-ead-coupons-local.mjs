@@ -9,6 +9,7 @@ const sources = folders.flatMap(folder => readdirSync(folder)
   .filter(name => /(?:coupon|cupom|cupon).*\.test\.(?:ts|mjs)$/.test(name))
   .map(name => `${folder}/${name}`));
 sources.push('modules/gestor/secretaria/cupons-navigation.interaction.test.mjs');
+sources.push('modules/gestor/secretaria/cupons-access.interaction.test.mjs');
 sources.push('supabase/functions/gateways/checkout/ead-coupon-checkout.test.ts');
 
 const run = (command, args) => {

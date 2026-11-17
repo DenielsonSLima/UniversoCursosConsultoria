@@ -11,13 +11,14 @@ interface CouponDraft { scope: string; code: string; applied: string }
 interface Input {
   alunoId?: string;
   courseId?: string;
+  turmaId?: string | null;
   onFreeConfirmed: () => void;
 }
 
-export const useEadCouponCheckout = ({ alunoId, courseId, onFreeConfirmed }: Input) => {
+export const useEadCouponCheckout = ({ alunoId, courseId, turmaId, onFreeConfirmed }: Input) => {
   const contextReady = isEadCouponsEnvironmentAllowed() && Boolean(alunoId && courseId);
   const enabled = useEadCouponsAvailability(alunoId ? `aluno:${alunoId}` : '', contextReady);
-  const scope = `${alunoId || ''}:${courseId || ''}`;
+  const scope = `${alunoId || ''}:${courseId || ''}:${turmaId || ''}`;
   const scopeRef = useRef(scope);
   scopeRef.current = scope;
   const [draft, setDraft] = useState<CouponDraft>({ scope: '', code: '', applied: '' });
@@ -26,9 +27,9 @@ export const useEadCouponCheckout = ({ alunoId, courseId, onFreeConfirmed }: Inp
   const freeLock = useRef(false);
   const queryClient = useQueryClient();
   const quoteQuery = useQuery({
-    queryKey: eadCouponStudentKeys.quote(alunoId || '', courseId || '', current.applied),
+    queryKey: eadCouponStudentKeys.quote(alunoId || '', courseId || '', current.applied, turmaId),
     enabled: enabled && Boolean(current.applied),
-    queryFn: ({ signal }) => eadCouponStudentService.quote({ code: current.applied, courseId: courseId! }, signal),
+    queryFn: ({ signal }) => eadCouponStudentService.quote({ code: current.applied, courseId: courseId!, turmaId }, signal),
     staleTime: 0,
     gcTime: 0,
     retry: 1,

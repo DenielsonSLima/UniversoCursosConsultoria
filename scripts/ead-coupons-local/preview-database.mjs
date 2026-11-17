@@ -22,7 +22,7 @@ export async function createPreviewDatabase() {
     from public.cursos c join public.turmas t on t.curso_id=c.id
     where t.polo_id=$1 and c.modalidade='EAD' order by c.nome`, [ids.polo])).rows;
   await h.asManager();
-  for (const [code, discountPercent] of [['LOCALGRATIS', 100], ['LOCAL50', 50]]) {
+  for (const [code, discountPercent] of [['LOCALGRATIS', 100], ['LOCAL375', 37.5]]) {
     const result = await rpc('ead_coupons_save', { p_polo_id: ids.polo, p_request_id: randomUUID(), p_coupon: {
       code, discountPercent, totalLimit: 20, perStudentLimit: 2, active: true, allCourses: true, courseIds: [],
       startsAt: new Date(Date.now() - 86_400_000).toISOString(), endsAt: new Date(Date.now() + 30 * 86_400_000).toISOString(),

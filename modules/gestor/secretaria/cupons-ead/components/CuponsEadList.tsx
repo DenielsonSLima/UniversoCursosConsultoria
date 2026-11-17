@@ -1,7 +1,7 @@
 import React from 'react';
 import { History, Pencil } from 'lucide-react';
 import type { EadCoupon } from '../../../../ead/cupons/coupons-management.types';
-import { formatCupomDate } from '../cupons-ead.formatters';
+import { formatCupomDate, formatCupomPercent } from '../cupons-ead.formatters';
 
 interface Props { items: EadCoupon[]; onEdit: (item: EadCoupon) => void; onHistory: (item: EadCoupon) => void }
 
@@ -10,7 +10,7 @@ export function CuponsEadList({ items, onEdit, onHistory }: Props) {
     <div className="cupons-item-title"><strong>{coupon.code}</strong><span className={`cupom-badge ${coupon.active ? 'is-active' : ''}`}>
       {coupon.active ? 'Ativo' : 'Desativado'}</span></div>
     <dl className="cupons-item-details">
-      <div><dt>Benefício</dt><dd>{coupon.discountPercent === 100 ? 'Curso gratuito' : '50% de desconto'}</dd></div>
+      <div><dt>Benefício</dt><dd>{coupon.discountPercent === 100 ? 'Curso gratuito' : `${formatCupomPercent(coupon.discountPercent)} de desconto`}</dd></div>
       <div><dt>Quantidade total</dt><dd>{coupon.totalLimit === null ? 'Ilimitada' : `${coupon.totalLimit} utilizações`}</dd></div>
       <div><dt>Cursos por aluno</dt><dd>{coupon.perStudentLimit}</dd></div>
       <div><dt>Cursos participantes</dt><dd>{coupon.allCourses ? 'Todos os cursos EAD' : `${coupon.courseIds.length} curso(s) selecionado(s)`}</dd></div>
