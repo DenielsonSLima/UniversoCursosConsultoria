@@ -1,3 +1,4 @@
+import { runNfseCommandWithQuotaRetry } from './nfse-command-quota-retry';
 import type { NfseScope } from '../types/nfse.types';
 import type { IndividualIssueResult, IndividualPreview, NfseIndividualService } from '../individual/nfse-individual.types';
 import { individualStorageKey, readIndividualAttempt } from '../individual/nfse-individual.attempt';
@@ -16,7 +17,7 @@ export const batchCanIssue = (item: NfseBatchItem, now = Date.now()) => Boolean(
   && (!item.result || item.result.state === 'PREVIEWED'));
 /** Browser orchestrates single durable operations. No money, model or person is reconstructed here. */
 export function createNfseBatchController(scope: NfseScope, input: readonly NfseBatchInput[], service: NfseIndividualService,
-  storage: Storage, options: { uuid?: () => string; onChanged?: () => void; onNotice?: (notice: NfseFiscalNotice) => void; confirmationDelays?: readonly number[]; requestTimeoutMs?: number; confirmationTimeoutMs?: number } = {}) {
+  storage: Storage, options: { uuid?: () => string; onChanged?: () => void; onNotice?: (notice: NfseFiscalNotice) => void; confirmationDelays?: readonly number[]; requestTimeoutMs?: number; confirmationTimeoutMs?: number; commandIntervalMs?: number; commandRestMs?: number } = {}) {
   if (!input.length || input.length > 100 || new Set(input.map(item => `${item.source.kind}:${item.source.id}`)).size !== input.length) throw new Error('Selecione preparações distintas para o lote.');
   const captured = { ...scope }, uuid = options.uuid || (() => crypto.randomUUID());
   let items: NfseBatchItem[] = input.map(item => {
@@ -26,6 +27,36 @@ export function createNfseBatchController(scope: NfseScope, input: readonly Nfse
   });
   let busy = false, phase: NfseBatchSnapshot['phase'] = 'IDLE', paused = false, stopped = false, disposed = false, sourceChanged = false;
   let explicitlyStopped = false;
+  let reviewAbort: AbortController | undefined;
+  let lastCommandAt: number | undefined, lastCommandEndedAt: number | undefined;
+  let activeCommand: Promise<void> | undefined;
+  // Track the physical request, not its UI timeout. OBSERVE remains read-only recovery.
+  const fiscalCommand = <T,>(task: () => Promise<T>): Promise<T> => {
+    lastCommandAt = Date.now();
+    let result: Promise<T>;
+    try { result = task(); } catch (error) { result = Promise.reject(error); }
+    const settled = result.then(() => {}, () => {}).finally(() => {
+      lastCommandEndedAt = Date.now(); if (activeCommand === settled) activeCommand = undefined;
+    });
+    activeCommand = settled; return result;
+  };
+  let cancelPacing: (() => void) | undefined;
+  const paceCommand = async (signal?: AbortSignal) => {
+    if (activeCommand) await new Promise<void>(resolve => {
+      const done = () => { if (cancelPacing === done) cancelPacing = undefined; resolve(); };
+      cancelPacing = done; void activeCommand!.then(done);
+    });
+    if (disposed || stopped || signal?.aborted) throw new globalThis.DOMException('Lote pausado.', 'AbortError');
+    const interval = options.commandIntervalMs ?? 8000;
+    const rest = options.commandRestMs ?? (options.commandIntervalMs === 0 ? 0 : 5000);
+    const delay = Math.max(0, (lastCommandAt ?? -Infinity) + interval - Date.now(),
+      (lastCommandEndedAt ?? -Infinity) + rest - Date.now());
+    if (delay) await new Promise<void>(resolve => {
+      const done = () => { clearTimeout(timer); if (cancelPacing === done) cancelPacing = undefined; resolve(); };
+      const timer = setTimeout(done, delay); cancelPacing = done;
+    });
+    if (disposed || stopped || signal?.aborted) throw new globalThis.DOMException('Lote pausado.', 'AbortError');
+  };
   let dispatchIntent: ReadonlyMap<number, string> | null = null;
   let retryAt: number | null = null, retryTimer: ReturnType<typeof setTimeout> | undefined;
   const clearRetry = () => { if (retryTimer) clearTimeout(retryTimer); retryTimer = undefined; retryAt = null; };
@@ -100,7 +131,8 @@ export function createNfseBatchController(scope: NfseScope, input: readonly Nfse
       // success/rejection exactly once; never start overlapping reads on a focus storm.
       const readState = observe ? service.observe : service.reconcile;
       if (!readState) throw new Error('A observação canônica desta operação está indisponível. Nenhuma consulta fiscal foi iniciada.');
-      pending = readState(captured, item.requestId, item.previewId)
+      pending = (observe ? readState(captured, item.requestId, item.previewId)
+        : fiscalCommand(() => readState(captured, item.requestId, item.previewId!)))
         .then(result => { accept(index, result); })
         .finally(() => { reads.delete(index); lastEventRead = Date.now(); flushSignals(); });
       reads.set(index, pending);
@@ -144,10 +176,14 @@ export function createNfseBatchController(scope: NfseScope, input: readonly Nfse
           notice({ type: 'error', title: 'Envio não iniciado', message }); break;
         }
         try {
+          await paceCommand();
+          if (disposed || stopped || dispatchIntent !== approved) break;
+          if (!batchCanIssue(items[index])) { dispatchIntent = null; paused = true; break; }
           phase = 'ISSUE';
           patch(index, { dispatched: true, result: undefined, error: undefined, preview: undefined });
-          await bounded(service.issue(captured, item.requestId, previewId).then(result => { accept(index, result); }));
+          await bounded(fiscalCommand(() => service.issue(captured, item.requestId, previewId)).then(result => { accept(index, result); }));
         } catch (error) {
+          if ((disposed || stopped) && !items[index].dispatched) break;
           const limited = error as { code?: string; status?: number; beforeDispatch?: boolean; retryAfterMs?: number };
           if (limited.code === 'RATE_LIMITED' && limited.status === 429 && limited.beforeDispatch === true && items[index].result?.state !== 'AUTHORIZED') {
             const delay = Math.max(60_000, Number.isFinite(limited.retryAfterMs) ? limited.retryAfterMs! : 0);
@@ -210,34 +246,65 @@ export function createNfseBatchController(scope: NfseScope, input: readonly Nfse
     getSnapshot: () => snapshot,
     subscribe(listener: () => void) { listeners.add(listener); return () => { listeners.delete(listener); }; },
     activate() { disposed = false; stopped = explicitlyStopped; emit(); },
-    dispose() { disposed = true; stopped = true; dispatchIntent = null; clearRetry(); clearSignals(); wake?.(); cancelRead?.(); },
-    stop() { stopped = true; explicitlyStopped = true; paused = true; dispatchIntent = null; clearRetry(); clearSignals(); wake?.(); cancelRead?.(); emit(); },
+    dispose() { reviewAbort?.abort(); disposed = true; cancelPacing?.(); stopped = true; dispatchIntent = null; clearRetry(); clearSignals(); wake?.(); cancelRead?.(); },
+    stop() { reviewAbort?.abort(); stopped = true; cancelPacing?.(); explicitlyStopped = true; paused = true; dispatchIntent = null; clearRetry(); clearSignals(); wake?.(); cancelRead?.(); emit(); },
     async review(competenceDate?: string) {
       if (busy || disposed) return;
       dispatchIntent = null; clearRetry();
-      await run('REVIEW', async () => {
-      for (let index = 0; index < items.length && !disposed && !stopped; index++) {
+      const abort = new AbortController(); reviewAbort = abort;
+      // Keep review pending while throttled: the modal must not ISSUE a partial batch.
+      // A dedicated abortable timer cannot be skipped by realtime/focus hints.
+      const reviewCommand = async <T,>(task: () => Promise<T>): Promise<T> => {
+        let limits = 0;
+        const response = await runNfseCommandWithQuotaRetry(async () => {
+          try { return await task(); }
+          catch (error) {
+            const detail = error as { code?: string; status?: number; beforeDispatch?: boolean };
+            if (detail?.code === 'RATE_LIMITED' && detail.status === 429 && detail.beforeDispatch === true && ++limits > 3) {
+              stopped = true; paused = true;
+              throw new Error('O limite do emissor persiste. A revisão foi pausada sem iniciar novas emissões.', { cause: error });
+            }
+            throw error;
+          }
+        }, { signal: abort.signal, attemptTimeoutMs: options.requestTimeoutMs,
+          beforeAttempt: async () => { await paceCommand(abort.signal); abort.signal.throwIfAborted(); },
+          onWaiting: waiting => { paused = waiting || stopped; if (!waiting) retryAt = null; emit(); },
+          wait: (delay, signal) => new Promise<void>((resolve, reject) => {
+            retryAt = Date.now() + delay; emit();
+            const finish = () => { clearTimeout(timer); signal.removeEventListener('abort', cancel); resolve(); };
+            const cancel = () => { clearTimeout(timer); signal.removeEventListener('abort', cancel); reject(new globalThis.DOMException('Revisão encerrada.', 'AbortError')); };
+            const timer = setTimeout(finish, delay);
+            signal.addEventListener('abort', cancel, { once: true });
+            if (signal.aborted) cancel();
+          }),
+        });
+        return response.result;
+      };
+      try { await run('REVIEW', async () => {
+      for (let index = 0; index < items.length && !disposed && !stopped && !abort.signal.aborted; index++) {
         const item = items[index];
         try {
           if (item.previewId) {
-            await read(index, undefined, false);
+            await reviewCommand(() => read(index, undefined, false));
             if (items[index].uncertain) await follow(index);
-            if (disposed || stopped) break;
+            if (disposed || stopped || abort.signal.aborted) break;
             const current = items[index];
             if (current.result?.state !== 'PREVIEWED' || current.uncertain || !current.preview ||
               (current.preview.capability.available && Date.parse(current.preview.expiresAt) > Date.now())) continue;
-            const refreshed = await service.previewSource(captured, item.requestId, item.source,
-              item.source.kind === 'PARTNER_SERVICE' ? current.preview.payload?.competenceDate : undefined);
+            const refreshed = await reviewCommand(() => fiscalCommand(() => service.previewSource(captured, item.requestId, item.source,
+              item.source.kind === 'PARTNER_SERVICE' ? current.preview.payload?.competenceDate : undefined)));
+            if (disposed || stopped || abort.signal.aborted) break;
             if (refreshed.previewId !== item.previewId) throw new Error('Atualização retornou outra operação fiscal. Consulte novamente.');
             patch(index, { preview: refreshed, error: undefined }); changed(); continue;
           }
-          const preview = await service.previewSource(captured, item.requestId, item.source, item.source.kind === 'PARTNER_SERVICE' ? competenceDate : undefined);
+          const preview = await reviewCommand(() => fiscalCommand(() => service.previewSource(captured, item.requestId, item.source, item.source.kind === 'PARTNER_SERVICE' ? competenceDate : undefined)));
+          if (disposed || stopped || abort.signal.aborted) break;
           changed();
           persist(item, preview.previewId);
           patch(index, { preview, previewId: preview.previewId, error: undefined, uncertain: false, dispatched: false }); changed();
-        } catch (error) { patch(index, { error: error instanceof Error ? error.message : 'Revisão não confirmada.' }); }
+        } catch (error) { if (disposed || abort.signal.aborted) break; if (activeCommand) { stopped = true; paused = true; } patch(index, { error: error instanceof Error ? error.message : 'Revisão não confirmada.' }); }
       }
-    }); },
+    }); } finally { if (reviewAbort === abort) reviewAbort = undefined; } },
     async consult(index: number) { await run('CONSULT', async () => {
       try { await read(index); if (items[index].uncertain) await follow(index); }
       catch (error) { patch(index, { error: error instanceof Error ? error.message : 'Consulta não confirmada.' }); }

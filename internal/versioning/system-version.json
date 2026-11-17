@@ -1,8 +1,8 @@
 {
-  "version": "4.8.360",
+  "version": "4.8.361",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 369,
+  "revision": 370,
   "releasedAt": "2026-11-17",
-  "summary": "Relatório NFS-e com resumo CBS/IBS em três colunas"
+  "summary": "Emissor NFS-e: estabilidade Realtime e cadência segura em lote"
 }

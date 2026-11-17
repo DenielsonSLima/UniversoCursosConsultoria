@@ -78,7 +78,8 @@ export default function NfseBatchEmissionModal({ scope, items, onClose, onChange
   const uncertain = view.items.some(item => item.uncertain);
   const authorized = view.items.filter(item => item.result?.state === 'AUTHORIZED').length;
   const progressMessage = view.busy
-    ? view.phase === 'CONFIRM' ? 'Acompanhando o retorno da mesma DPS…'
+    ? view.phase === 'REVIEW' && view.retryAt ? 'Revisão aguardando o limite do emissor. Nenhuma nova emissão foi iniciada; retomada automática após a espera.'
+      : view.phase === 'CONFIRM' ? 'Acompanhando o retorno da mesma DPS…'
       : view.phase === 'ISSUE' ? 'Enviando uma nota por vez…' : 'Validando dados…'
     : view.retryAt ? 'Envio aguardando o limite do serviço. O lote será retomado automaticamente.'
       : view.monitoringPaused ? 'Acompanhamento desta janela pausado. O retorno continua sendo registrado pelo sistema.'

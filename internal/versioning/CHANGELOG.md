@@ -106,6 +106,13 @@ Histórico arquivado: [08/11/2026 — versão 4.8.273](./changelog/2026-11-08-ve
 
 Histórico arquivado: [10–11/11/2026 — versões 4.8.282 a 4.8.290](./changelog/2026-11-10-a-11-versoes-4-8-282-a-4-8-290.md).
 
+Histórico 4.8.291: [11/11/2026](./changelog/2026-11-11-versao-4-8-291.md).
+
+## [4.8.361] - 2026-11-17
+- Emissor mantém saúde válida durante refetch e agrupa Realtime sem cancelar leituras em andamento.
+- Lote aguarda cinco segundos após cada resposta e no mínimo oito segundos entre inícios; mantém uma única chamada física.
+- Limite 429 antes do envio aguarda retryAfter sem perder a nota; resultados incertos não são reenviados.
+
 ## [4.8.360] - 2026-11-17
 - Relatório NFS-e sem coluna de tributação nacional e com resumo CBS/IBS ao lado de NBS e polos.
 - Tributos extraídos exclusivamente do XML autorizado, com cobertura explícita e sem estimativa nem soma parcial.
@@ -489,12 +496,3 @@ Histórico arquivado: [10–11/11/2026 — versões 4.8.282 a 4.8.290](./changel
 
 - Forma de pagamento sugerida automaticamente pela conta: caixa interno em Dinheiro, Banese e Caixa Econômica em Pix.
 - A seleção manual continua disponível; múltiplas formas e tentativas já enviadas mantêm seus dados.
-
-## [4.8.291] - 2026-11-11
-
-- Produção pode indicar resposta recente da consulta nacional de uma nota própria, sem emitir ou alterar documentos fiscais.
-- Verde expira em um minuto; falha técnica comprovada é vermelha e ausência de verificação permanece neutra.
-- O indicador descreve o alcance da consulta, sem prometer aprovação de novas notas ou disponibilidade de todos os serviços.
-
-
-

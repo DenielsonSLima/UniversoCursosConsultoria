@@ -1,9 +1,9 @@
 # Lote ativo
 
-## Lote: 2026-11-17-nfse-resumo-cbs-ibs
-Objetivo: substituir tributação nacional no relatório por resumo CBS/IBS informativo em terceira coluna.
-Status: prévia de três colunas aprovada; produção autorizada pelo proprietário; publicação isolada em preparação.
-Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-17-nfse-resumo-cbs-ibs.md`.
-Aceite: PDF selecionável; valores exclusivamente do XML autorizado; sem estimativa, soma parcial ou mutação fiscal; autorização por polo preservada.
-Validação: testes PDF, TypeScript, contratos SQL e PGlite; Preview/CI antes de merge. Smoke Safari autenticado depende de sessão disponível.
-Predecessor: 2026-11-17-capas-eja-interdisciplinar.
+## Lote: 2026-11-17-nfse-estabilidade-realtime
+Objetivo: corrigir oscilação Realtime e cadência do lote no emissor.
+Status: produção explicitamente autorizada para as duas correções; CI/Preview antes de merge.
+Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-17-nfse-estabilidade-realtime.md`.
+Aceite: saúde válida mantida, eventos sem cancelamento; 5 segundos após resposta e mínimo8 segundos entre inícios; single-flight e recuperação429 pré-envio sem duplicar nota.
+Validação: testes sintéticos, TypeScript, build, CI; smoke Safari multiusuário indisponível.
+Predecessor: 2026-11-17-nfse-resumo-cbs-ibs.

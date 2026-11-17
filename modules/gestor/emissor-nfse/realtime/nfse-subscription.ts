@@ -12,17 +12,35 @@ export function subscribeNfseChanges(supabase: Pick<SupabaseClient, 'channel' | 
   client: QueryClient, name: string, bindings: readonly Binding[], recovery: readonly (readonly unknown[])[]) {
   let disposed = false;
   let timer: ReturnType<typeof setTimeout> | undefined;
+  let refreshing = false;
   const pending = new Map<string, readonly unknown[]>();
+  const schedule = () => {
+    if (disposed || refreshing || !pending.size || timer) return;
+    timer = setTimeout(async () => {
+      timer = undefined;
+      if (disposed) return;
+      refreshing = true;
+      const keys = [...pending.values()]; pending.clear();
+      try {
+        await Promise.all(keys.map(async queryKey => {
+          // A read already in flight may predate this event. Let it finish without
+          // cancellation, then read once more so the latest event is not lost.
+          const alreadyFetching = client.isFetching({ queryKey }) > 0;
+          await client.invalidateQueries({ queryKey }, { cancelRefetch: false });
+          if (alreadyFetching && !disposed) {
+            await client.invalidateQueries({ queryKey }, { cancelRefetch: false });
+          }
+        }));
+      } finally {
+        refreshing = false;
+        schedule();
+      }
+    }, 150);
+  };
   const refresh = (keys: readonly (readonly unknown[])[]) => {
     if (disposed) return;
     keys.forEach(key => pending.set(JSON.stringify(key), key));
-    if (!pending.size || timer) return;
-    timer = setTimeout(() => {
-      timer = undefined;
-      if (disposed) return;
-      const keys = [...pending.values()]; pending.clear();
-      for (const queryKey of keys) void client.invalidateQueries({ queryKey });
-    }, 150);
+    schedule();
   };
   let channel = supabase.channel(name);
   for (const binding of bindings) channel = channel.on('postgres_changes', {

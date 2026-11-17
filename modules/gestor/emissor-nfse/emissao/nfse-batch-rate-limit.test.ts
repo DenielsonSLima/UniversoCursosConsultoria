@@ -24,7 +24,7 @@ function fixture(error: Error, validityMs = 600_000, limitedAttempts = 1) {
     reconcile: async () => { throw new Error('Fiscal reconciliation forbidden'); },
   } as unknown as NfseIndividualService;
   const controller = createNfseBatchController(scope, [id(3), id(4)].map(sourceId => ({ source: { kind: 'PARTNER_SERVICE', id: sourceId }, label: 'SINTÉTICO', amount: '1.00' })),
-    service, { getItem: () => null, setItem() {} }, { confirmationDelays: [], uuid: () => id(++serial) });
+    service, { getItem: () => null, setItem() {} }, { commandIntervalMs: 0, confirmationDelays: [], uuid: () => id(++serial) });
   return { controller, posts, service };
 }
 

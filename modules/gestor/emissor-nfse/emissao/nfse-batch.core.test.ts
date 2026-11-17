@@ -22,7 +22,7 @@ function fixture(overrides: Partial<NfseIndividualService> = {}, entries = input
     observe: async (...args: unknown[]) => { calls.push({ action: 'OBSERVE', args }); return result(String(args[2])); }, ...overrides,
   } as unknown as NfseIndividualService;
   const storage = { getItem: (key: string) => stored.get(key) || null, setItem: (key: string, value: string) => { stored.set(key, value); } };
-  const controller = createNfseBatchController(scope, entries, service, storage, { confirmationDelays, requestTimeoutMs, confirmationTimeoutMs, uuid: () => id(++serial), onNotice: notice => notices.push(notice) });
+  const controller = createNfseBatchController(scope, entries, service, storage, { commandIntervalMs: 0, confirmationDelays, requestTimeoutMs, confirmationTimeoutMs, uuid: () => id(++serial), onNotice: notice => notices.push(notice) });
   return { controller, calls, stored, storage, notices, service };
 }
 
@@ -34,7 +34,7 @@ test('batch requires canonical server preview, preserves only IDs and dispatches
   await f.controller.review(); assert.equal(f.calls.length, 2); assert(f.calls.every(call => call.args[3] === undefined));
   assert.equal(batchCanIssue(f.controller.getSnapshot().items[0]), true);
   assert.equal(sent.length, 0, 'Canonical review alone does not send a note');
-  const running = f.controller.issue(); await f.controller.issue(); assert.equal(sent.length, 1);
+  const running = f.controller.issue(); await f.controller.issue(); await flushMicrotasks(); assert.equal(sent.length, 1);
   resolveFirst(result(id(30))); await running;
   assert.equal(sent.length, 2); assert.deepEqual(sent.map(args => args[2]), [id(30), id(31)]);
   assert(f.controller.getSnapshot().items.every(item => item.result?.state === 'AUTHORIZED'));
@@ -61,7 +61,7 @@ test('dispose and explicit pause never dispatch the next note after the current 
     const sent: unknown[][] = [];
     const f = fixture({ issue: async (...args) => { sent.push(args); return await new Promise(resolve => { release = resolve; }); } });
     await f.controller.review();
-    const pending = f.controller.issue();
+    const pending = f.controller.issue(); await flushMicrotasks();
     if (dispose) f.controller.dispose(); else f.controller.stop();
     release(result(id(30))); await pending;
     assert.equal(sent.length, 1);
@@ -70,7 +70,7 @@ test('dispose and explicit pause never dispatch the next note after the current 
 
 test('reopening stored operations consults instead of creating a new preview or dispatching, including already authorized notes', async () => {
   const f = fixture(); await f.controller.review();
-  const reopened = createNfseBatchController(scope, inputs, f.service, f.storage);
+  const reopened = createNfseBatchController(scope, inputs, f.service, f.storage, { commandIntervalMs: 0 });
   await reopened.review();
   assert.equal(f.calls.filter(call => call.action === 'PREVIEW_QUEUE').length, 2);
   assert.equal(f.calls.filter(call => call.action === 'RECONCILE').length, 2);
@@ -80,7 +80,7 @@ test('reopening stored operations consults instead of creating a new preview or 
 
 test('failed ID persistence prevents fiscal dispatch and leaves financial source untouched', async () => {
   const f = fixture();
-  const controller = createNfseBatchController(scope, inputs, f.service, { getItem: () => null, setItem() { throw new Error('Storage unavailable'); } });
+  const controller = createNfseBatchController(scope, inputs, f.service, { getItem: () => null, setItem() { throw new Error('Storage unavailable'); } }, { commandIntervalMs: 0 });
   await controller.review(); await controller.issue();
   assert.equal(f.calls.filter(call => call.action === 'ISSUE').length, 0);
   assert(controller.getSnapshot().items.every(item => item.error));
@@ -104,7 +104,7 @@ test('blocked unsigned batch refreshes canonical data with the same identity and
     expiresAt: new Date(Date.now() + 60_000).toISOString(), capability: { available: false, reason: 'FISCAL_RECIPIENT_ADDRESS_NUMBER_REQUIRED' } }) });
   await f.controller.review();
   const original = f.calls.filter(row => row.action === 'PREVIEW_QUEUE').map(row => row.args);
-  const reopened = createNfseBatchController(scope, inputs, f.service, f.storage);
+  const reopened = createNfseBatchController(scope, inputs, f.service, f.storage, { commandIntervalMs: 0 });
   await reopened.review();
   const repeated = f.calls.filter(row => row.action === 'PREVIEW_QUEUE').slice(2).map(row => row.args);
   assert.deepEqual(repeated, original);
@@ -171,8 +171,10 @@ test('idle realtime recovers exhausted confirmation once, ignores feedback and n
 test('hanging ISSUE times out to uncertainty and bounded read-only recovery, no duplicate dispatch', async () => {
   let sent = 0;
   const f = fixture({ issue: async () => { sent++; return new Promise(() => {}); } }, inputs, [0], 5);
-  await f.controller.review(); await f.controller.issue();
-  assert.equal(sent, 2); assert.equal(f.controller.getSnapshot().busy, false);
+  await f.controller.review(); const running = f.controller.issue();
+  await new Promise(resolve => setTimeout(resolve, 25));
+  assert.equal(sent, 1, 'physical POST must settle before another limited command');
+  f.controller.stop(); await running; assert.equal(f.controller.getSnapshot().busy, false);
   assert.equal(f.controller.getSnapshot().items[0].result?.state, 'AUTHORIZED');
 });
 
@@ -180,7 +182,7 @@ test('explicit pause releases hanging request and disables automatic event recov
   let sent = 0, reads = 0;
   const f = fixture({ issue: async () => { sent++; return new Promise(() => {}); },
     observe: async (_s, _r, previewId) => { reads++; return result(previewId); } });
-  await f.controller.review(); const pending = f.controller.issue(); f.controller.stop(); await pending;
+  await f.controller.review(); const pending = f.controller.issue(); await flushMicrotasks(); f.controller.stop(); await pending;
   f.controller.signalChange(); await Promise.resolve();
   assert.equal(f.controller.getSnapshot().busy, false); assert.equal(sent, 1); assert.equal(reads, 0);
   assert.equal(f.controller.getSnapshot().items[0].uncertain, true);
@@ -341,7 +343,7 @@ test('explicit pause and disposal cancel the original dispatch intent even when 
   for (const dispose of [false, true]) {
     const sent: string[] = []; let finish!: (value: IndividualIssueResult) => void;
     const f = fixture({ issue: async (_s, _r, p) => { sent.push(p); return new Promise(resolve => { finish = resolve; }); } });
-    await f.controller.review(); const running = f.controller.issue();
+    await f.controller.review(); const running = f.controller.issue(); await flushMicrotasks();
     if (dispose) f.controller.dispose(); else f.controller.stop();
     finish(result(id(30))); await running;
     f.controller.activate(); f.controller.signalChange(true); await flushMicrotasks();
@@ -356,7 +358,7 @@ test('reopening or reviewing stored identities observes status without inheritin
   const f = fixture({ issue: async (_s, _r, p) => { sent++; return result(p, 'AWAITING_CONFIRMATION'); },
     reconcile: async (_s, _r, p) => p === id(30) ? result(p) : { ...result(p, 'PREVIEWED'), expiresAt: new Date(Date.now() + 60_000).toISOString(), capability: { available: true, reason: null } } });
   await f.controller.review(); await f.controller.issue(); f.controller.dispose();
-  const reopened = createNfseBatchController(scope, inputs, f.service, f.storage, { confirmationDelays: [] });
+  const reopened = createNfseBatchController(scope, inputs, f.service, f.storage, { commandIntervalMs: 0, confirmationDelays: [] });
   await reopened.review(); reopened.signalChange(true); await flushMicrotasks();
   assert.equal(sent, 1); assert.equal(batchCanIssue(reopened.getSnapshot().items[1]), true);
   reopened.dispose();
