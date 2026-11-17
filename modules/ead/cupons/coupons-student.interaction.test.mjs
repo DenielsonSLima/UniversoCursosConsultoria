@@ -88,6 +88,11 @@ test('checkout EAD usa cotação canônica, protege resgate, mantém idempotênc
     assert.throws(() => parseEadCouponQuote({ ...syntheticQuote, payableAmount: -1 }), /inválidos/);
     assert.throws(() => parseEadCouponQuote({ ...syntheticQuote, discountPercent: 100 }), /inválidos/);
     assert.throws(() => parseEadCouponFreeRedemption({ status: 'PENDING' }), /inválido/);
+    assert.equal(parseEadCouponQuote({ ...syntheticQuote, discountPercent: 12.5, originalAmount: 80, discountAmount: 10, payableAmount: 70 }).discountPercent, 12.5);
+    for (const discountPercent of [0, -1, 100.01, Infinity, NaN, '12.5']) {
+      assert.throws(() => parseEadCouponQuote({ ...syntheticQuote, discountPercent }), /inválidos/);
+    }
+
     const { createRoot } = await import('react-dom/client');
     const { QueryClient, QueryClientProvider } = await import('@tanstack/react-query');
     client = new QueryClient({ defaultOptions: { queries: { retry: false, retryDelay: 1, gcTime: 0 }, mutations: { retry: false, gcTime: 0 } } });
@@ -118,12 +123,21 @@ test('checkout EAD usa cotação canônica, protege resgate, mantém idempotênc
     assert.equal(view.eadCoupon.quote, null);
     await apply(' metade ');
     assert(rpcCalls.some(call => call.name === 'ead_coupons_available'));
-    assert.deepEqual(rpcCalls.find(call => call.name === 'ead_coupon_quote').body, { p_code: 'METADE', p_course_id: course.id });
+    assert.deepEqual(rpcCalls.find(call => call.name === 'ead_coupon_quote').body, { p_code: 'METADE', p_course_id: course.id, p_turma_id: null });
     assert.equal(view.eadCoupon.quote.payableAmount, 61.73, 'Server quotation replaces stale catalogue amount');
     assert.match(document.body.textContent, /61,73/);
     assert.match(document.body.textContent, /123,46/);
     assert(!document.body.textContent.includes('999,00'));
-    const studentChannel = channels.find(c => c.name.startsWith('ead-coupon-student'));
+    quoteResponse = { ...syntheticQuote, discountPercent: 12.5, discountAmount: 15.43, payableAmount: 108.03 };
+    await apply('METADE');
+    assert.equal(view.eadCoupon.quote.payableAmount, 108.03);
+    assert.match(document.body.textContent, /12,5%/);
+    assert([...document.querySelectorAll('button')].some(button => button.textContent.includes('Pagar R$\u00a0108,03')));
+    quoteResponse = syntheticQuote; await apply('METADE');
+    await act(async () => view.startCheckout({ ...course, modalidade: 'LIVRE' }, null, { method: 'BOLETO' }, 'METADE'));
+    assert.equal(edgeCalls.length, 0, 'A coupon never reaches checkout for another course modality');
+    assert.match(view.checkoutError, /somente para cursos EAD/);
+    const studentChannel = channels.findLast(c => c.name.startsWith('ead-coupon-student') && !c.removed);
     assert.deepEqual(studentChannel.handlers.map(h => h.filter.filter), ['coupon_id=eq.coupon-synthetic', 'aluno_id=eq.student-synthetic']);
     const beforeRefresh = rpcCalls.length;
     await act(async () => studentChannel.handlers[0].callback()); await settle(250); await settle();
@@ -229,6 +243,22 @@ test('checkout EAD usa cotação canônica, protege resgate, mantém idempotênc
       status: 'CONFIRMED', originalAmount: 123.46, discountAmount: 123.46, payableAmount: 0 }, error: null })); await settle();
     assert(view.eadCheckoutReview, 'An old identity free redemption cannot close the current review');
     assert.equal(view.eadCoupon.quote, null);
+
+    quoteResponse = { ...syntheticQuote, turmaId: 'turma-filial-ficticia' };
+    await act(async () => view.openEadCheckoutReview({ ...course, alunoMatricula: { turmaId: quoteResponse.turmaId } }));
+    assert.equal(view.eadCoupon.quote, null, 'Changing the current turma discards a quotation from another polo');
+    await apply('METADE');
+    const filialRead = rpcCalls.findLast(call => call.name === 'ead_coupon_quote');
+    assert.equal(filialRead.body.p_turma_id, 'turma-filial-ficticia');
+    assert.equal(view.eadCoupon.quote.turmaId, 'turma-filial-ficticia');
+    assert(client.getQueryCache().find({ queryKey: ['ead-cupons', 'student', 'fourth-student-synthetic', 'quote', course.id, 'turma-filial-ficticia', 'METADE'] }),
+      'The query cache includes the destination turma and does not reuse another polo quotation');
+    await assert.rejects(module.eadCouponStudentService.quote({ code: 'METADE', courseId: course.id, turmaId: 'outra-turma' }), /turma escolhida/);
+    quoteResponse = syntheticQuote;
+    await act(async () => view.openEadCheckoutReview({ ...course, eadPurchase: { turmaId: syntheticQuote.turmaId } }));
+    await apply('METADE');
+    assert.equal(rpcCalls.findLast(call => call.name === 'ead_coupon_quote').body.p_turma_id, syntheticQuote.turmaId,
+      'An existing EAD purchase is the canonical turma source before enrollment fallback');
 
     const production = await compile(temp, false);
     const beforeBlocked = rpcCalls.length, beforeBlockedEdge = edgeCalls.length;

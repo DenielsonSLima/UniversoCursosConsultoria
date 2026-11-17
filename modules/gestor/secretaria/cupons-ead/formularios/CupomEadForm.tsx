@@ -52,11 +52,12 @@ export const CupomEadForm: React.FC<Props> = (props) => {
           <div className="cupom-field"><label htmlFor="cupom-code">Código do cupom</label>
             <input id="cupom-code" value={form.code} autoComplete="off" maxLength={40} required readOnly={benefitLocked}
               onChange={event => change('code', event.target.value.toUpperCase())} placeholder="Ex.: EAD50" /></div>
-          <div className="cupom-field"><label htmlFor="cupom-benefit">Benefício</label>
-            <InstitutionalSelect id="cupom-benefit" ariaLabel="Benefício" value={form.discountPercent} required disabled={pending || benefitLocked}
-              options={[{ value: '50', label: '50% de desconto' }, { value: '100', label: 'Curso gratuito (100%)' }]}
-              onValueChange={value => change('discountPercent', value as '50' | '100')} />
-            {benefitLocked && <small>Código e benefício são preservados quando há utilizações reservadas ou confirmadas.</small>}</div>
+          <div className="cupom-field"><label htmlFor="cupom-benefit">Percentual de desconto (%)</label>
+            <input id="cupom-benefit" type="text" inputMode="decimal" value={form.discountPercent} required readOnly={benefitLocked}
+              autoComplete="off" maxLength={8} placeholder="Ex.: 25 ou 12,5" aria-describedby="cupom-benefit-help"
+              onChange={event => change('discountPercent', event.target.value)} />
+            <small id="cupom-benefit-help">Informe manualmente o percentual. Com 100%, o curso é gratuito.</small>
+            {benefitLocked && <small>Código e percentual são preservados quando há utilizações reservadas ou confirmadas.</small>}</div>
           <div className="cupom-field"><label htmlFor="cupom-start">Início da validade</label>
             <input id="cupom-start" type="datetime-local" value={form.startsAt} required onChange={event => change('startsAt', event.target.value)} /></div>
           <div className="cupom-field"><label htmlFor="cupom-end">Fim da validade</label>
@@ -73,7 +74,8 @@ export const CupomEadForm: React.FC<Props> = (props) => {
           <div className="cupom-field"><label htmlFor="cupom-course-mode">Aplicar aos cursos</label>
             <InstitutionalSelect id="cupom-course-mode" ariaLabel="Abrangência de cursos" value={form.allCourses ? 'all' : 'selected'} disabled={pending}
               options={[{ value: 'all', label: 'Todos os cursos EAD' }, { value: 'selected', label: 'Selecionar cursos EAD' }]}
-              onValueChange={value => change('allCourses', value === 'all')} /></div>
+              onValueChange={value => change('allCourses', value === 'all')} />
+            <small>O cupom vale em todos os polos, respeitando os cursos participantes.</small></div>
           <div className="cupom-field"><label htmlFor="cupom-active">Situação</label>
             <InstitutionalSelect id="cupom-active" ariaLabel="Situação do cupom" value={form.active ? 'active' : 'inactive'} disabled={pending}
               options={[{ value: 'active', label: 'Ativo' }, { value: 'inactive', label: 'Desativado' }]}

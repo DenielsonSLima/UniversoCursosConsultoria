@@ -46,7 +46,9 @@ export const useCourseCheckout = ({
   const [acceptedOnlineTerms, setAcceptedOnlineTerms] = useState(false);
   const checkoutLock = useRef(false);
   const couponRequestIds = useRef(new Map<string, string>());
-  const checkoutScope = `${alunoId || ''}:${eadCheckoutReview?.course?.id || ''}`;
+  const eadCheckoutTurmaId: string | null = eadCheckoutReview?.course?.eadPurchase?.turmaId
+    || eadCheckoutReview?.course?.alunoMatricula?.turmaId || null;
+  const checkoutScope = `${alunoId || ''}:${eadCheckoutReview?.course?.id || ''}:${eadCheckoutTurmaId || ''}`;
   const checkoutScopeRef = useRef(checkoutScope);
   checkoutScopeRef.current = checkoutScope;
 
@@ -67,7 +69,7 @@ export const useCourseCheckout = ({
   }, [invalidateStudentCourseAccess]);
 
   const eadCoupon = useEadCouponCheckout({
-    alunoId, courseId: eadCheckoutReview?.course?.id,
+    alunoId, courseId: eadCheckoutReview?.course?.id, turmaId: eadCheckoutTurmaId,
     onFreeConfirmed: () => {
       setEadCheckoutReview(null);
       confirmEadPayment('Gratuidade por cupom confirmada. Curso liberado em Meus Cursos.');
@@ -256,6 +258,10 @@ export const useCourseCheckout = ({
     if (checkoutLock.current) return;
     if (couponCode) assertEadCouponsEnvironment();
     const isEadCheckout = String(course?.modalidade || '').toUpperCase() === 'EAD';
+    if (couponCode && !isEadCheckout) {
+      setCheckoutError('Cupons estão disponíveis somente para cursos EAD.');
+      return;
+    }
     if (isEadCheckout && getEadPurchaseUi(course.eadPurchase).disabled) {
       setEadCheckoutReview(null);
       invalidateStudentCourseAccess();

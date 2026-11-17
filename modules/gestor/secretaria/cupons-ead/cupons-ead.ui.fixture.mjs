@@ -42,6 +42,14 @@ export const makeCoupon = (changes = {}) => ({
   createdAt: '2026-11-01T03:00:00.000Z', updatedAt: '2026-11-01T03:00:00.000Z', ...changes,
 });
 
+export const makeCouponHistoryItem = (changes = {}) => ({
+  id: 'redemption-a', studentId: 'student-a', studentName: 'Aluno fictício 1', courseId: 'course-a',
+  courseName: 'Curso EAD fictício', status: 'CONFIRMED', originalAmount: 99.90, discountAmount: 37.46,
+  payableAmount: 62.44, receivedAmount: 62.44, receivableId: 'receivable-a', matriculaId: 'enrollment-a',
+  createdAt: '2026-11-16T12:00:00.000Z', confirmedAt: '2026-11-16T12:05:00.000Z', reviewRequired: false,
+  ...changes,
+});
+
 export function createCuponsFixture() {
   const dom = new JSDOM('<div id="root"></div>', { url: 'http://localhost/', runScripts: 'outside-only', pretendToBeVisual: true });
   const { window } = dom;

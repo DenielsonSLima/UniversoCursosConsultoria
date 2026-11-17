@@ -343,6 +343,7 @@ export const buildEadCheckoutContext = async (
   if (!course) throw new Error("Curso nao localizado.");
 
   if (String(course.modalidade || "").toUpperCase() !== "EAD") {
+    if (body.couponCode) throw new Error("Os cupons estão disponíveis somente para cursos EAD.");
     if (managerEnrollment) throw new Error("A matrícula manual EAD exige um curso EAD.");
     await assertNonEadCheckoutRequestIsRoutable(
       runtime.admin,

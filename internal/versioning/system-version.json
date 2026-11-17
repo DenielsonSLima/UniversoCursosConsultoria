@@ -1,9 +1,8 @@
 {
-  "version": "4.8.356",
+  "version": "4.8.357",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 365,
+  "revision": 366,
   "releasedAt": "2026-11-16",
-  "summary": "Retomada segura de gratuidade EAD após compra opcional cancelada, com auditoria financeira"
+  "summary": "Cupons EAD com percentual manual e gestão exclusiva da Matriz"
 }
-

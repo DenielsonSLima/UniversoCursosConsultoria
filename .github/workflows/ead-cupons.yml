@@ -8,6 +8,8 @@ on:
       - 'modules/gestor/secretaria/SecretariaPage.tsx'
       - 'modules/gestor/secretaria/components/SecretariaDashboard.tsx'
       - 'modules/gestor/secretaria/cupons-navigation.interaction.test.mjs'
+      - 'modules/gestor/secretaria/cupons-access.interaction.test.mjs'
+      - 'modules/gestor/components/GestorModuleContent.tsx'
       - 'modules/aluno/cursos/**'
       - 'modules/asaas/asaas.service.ts'
       - 'supabase/functions/gateways/checkout/**'

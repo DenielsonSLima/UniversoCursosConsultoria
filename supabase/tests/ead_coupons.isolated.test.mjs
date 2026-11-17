@@ -63,7 +63,7 @@ test('cupons EAD: contratos reais em PostgreSQL isolado e dados fictícios', asy
     });
 
     await t.test('validação de formulário é repetida no servidor e edição tem controle de versão', async () => {
-      for (const invalid of [draft('__'), draft('BENEFICIO', { discountPercent: 10 }),
+      for (const invalid of [draft('__'), draft('BENEFICIO', { discountPercent: 100.01 }),
         draft('LIMITES', { totalLimit: 0 }), draft('ALUNOS', { perStudentLimit: 0 }),
         draft('DATAS', { endsAt: '2010-01-01T00:00:00Z' }), draft('SELECIONADO', { allCourses: false })]) {
         await rejected(() => save(invalid), '22023');
@@ -94,7 +94,7 @@ test('cupons EAD: contratos reais em PostgreSQL isolado e dados fictícios', asy
       for (const code of ['INATIVO', 'EXPIRADO', 'FUTURO', 'INEXISTENTE']) await rejected(() => quote(code), '22023');
       await rejected(() => quote('METADE', ids.otherCourse), '22023');
       await db.query('update public.turmas set polo_id=$2 where id=$1', [ids.turma, ids.otherPolo]);
-      await rejected(() => quote('METADE'), '22023');
+      assert.equal((await quote('METADE')).poloId,ids.otherPolo,'cupom da Matriz também atende filial da mesma instituição');
       await db.query('update public.turmas set polo_id=$2 where id=$1', [ids.turma, ids.polo]);
       await db.query('update public.cursos set publicar_site=false where id=$1', [ids.course]);
       await rejected(() => quote('METADE'), '22023');

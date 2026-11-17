@@ -168,17 +168,19 @@ interface SecretariaPageProps {
   poloId?: string | null;
   gestorContextId: string;
   gestorPermissions?: any;
+  isMatriz?: boolean;
 }
 
 const SecretariaPage: React.FC<SecretariaPageProps> = ({
   poloId,
   gestorContextId,
   gestorPermissions,
+  isMatriz = false,
 }) => {
   const pageRef = useRef<HTMLDivElement>(null);
   const [activeModule, setActiveModule] = useState<string>('dashboard');
   const queryClient = useQueryClient();
-  const hasCouponManagementAccess = hasEadCouponManagementAccess(gestorPermissions);
+  const hasCouponManagementAccess = Boolean(poloId) && hasEadCouponManagementAccess(gestorPermissions, isMatriz);
   const couponsAvailable = useEadCouponsAvailability(gestorContextId, hasCouponManagementAccess);
   const canManageCoupons = hasCouponManagementAccess && couponsAvailable;
 

@@ -2,7 +2,7 @@ export interface EadCoupon {
   id: string;
   poloId: string;
   code: string;
-  discountPercent: 50 | 100;
+  discountPercent: number;
   totalLimit: number | null;
   startsAt: string;
   endsAt: string;

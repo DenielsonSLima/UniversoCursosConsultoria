@@ -106,6 +106,12 @@ Histórico arquivado: [08/11/2026 — versão 4.8.273](./changelog/2026-11-08-ve
 
 Histórico arquivado: [10–11/11/2026 — versões 4.8.282 a 4.8.290](./changelog/2026-11-10-a-11-versoes-4-8-282-a-4-8-290.md).
 
+## [4.8.357] - 2026-11-16
+
+- Percentual de cupom digitado manualmente, sem valor fixo, com até duas casas decimais.
+- Criação e ativação exclusivas da Matriz, com autorização no servidor; uso em cursos EAD de todos os polos.
+- Valores e retomadas anteriores preservados; 100% mantém gratuidade sem cobrança.
+
 ## [4.8.356] - 2026-11-16
 
 - Cupom gratuito pode retomar matrícula pendente após cancelamento bancário comprovado, sem duplicar matrícula ou cobrança.

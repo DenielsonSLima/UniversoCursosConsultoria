@@ -104,7 +104,7 @@ const server = createServer(async (request, response) => {
 server.on('error', async error => { console.error(error.message); await database.close(); process.exitCode = 1; });
 server.listen(port, '127.0.0.1', () => {
   console.log(`Prévia fictícia disponível em ${origin}`);
-  console.log('Cupons LOCALGRATIS e LOCAL50. Banco descartável em memória. Ctrl+C encerra.');
+  console.log('Matriz fictícia: cupons LOCALGRATIS e LOCAL375 (37,5%). Banco descartável em memória. Ctrl+C encerra.');
 });
 for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, () => {
   for (const subscriber of subscribers) subscriber.end();

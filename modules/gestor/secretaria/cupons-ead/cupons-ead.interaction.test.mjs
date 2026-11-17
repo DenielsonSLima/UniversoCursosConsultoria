@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { createCuponsFixture, makeCoupon } from './cupons-ead.ui.fixture.mjs';
+import { createCuponsFixture, makeCoupon, makeCouponHistoryItem } from './cupons-ead.ui.fixture.mjs';
 
 test('acesso negado, polo ausente e gate desligado não consultam nem assinam Supabase', async () => {
   const fixture = createCuponsFixture();
@@ -40,8 +40,10 @@ test('lista, filtro e troca de polo mantêm consultas isoladas e limpam canal an
   const fixture = createCuponsFixture();
   const { window, document, setValue } = fixture;
   try {
+    window.coupons['polo-a'][0].discountPercent = 12.5;
     await window.mount(); await fixture.flush();
     assert.match(document.body.textContent, /FICTICIO50/);
+    assert.match(document.body.textContent, /12,5% de desconto/);
     await setValue(document.querySelector('input[type=search]'), 'inexistente');
     await fixture.flush(300); await fixture.flush();
     assert.match(document.body.textContent, /Nenhum cupom encontrado/);
@@ -64,24 +66,31 @@ test('cadastro real usa formulário e serviço, IDs de idempotência e invalida�
     await click(button('Novo cupom')); await fixture.flush();
     assert.equal(document.querySelectorAll('select,datalist').length, 0);
     assert.ok(document.querySelector('[role=dialog]'));
-    await setValue(document.getElementById('cupom-code'), 'novo50');
+    assert.equal(document.getElementById('cupom-benefit').value, '');
+    await setValue(document.getElementById('cupom-code'), 'novo25');
+    await setValue(document.getElementById('cupom-benefit'), '101');
+    await click(button('Salvar cupom')); await fixture.flush();
+    assert.match(document.querySelector('[role=alert]').textContent, /percentual/);
+    assert.equal(window.requests.filter(item => item.name === 'ead_coupons_save').length, 0);
+    await setValue(document.getElementById('cupom-benefit'), '25');
     await setValue(document.getElementById('cupom-student-limit'), '3');
     await click(button('Salvar cupom')); await fixture.flush();
     const saved = window.requests.find(item => item.name === 'ead_coupons_save');
-    assert.equal(saved.args.p_coupon.code, 'NOVO50');
+    assert.equal(saved.args.p_coupon.code, 'NOVO25');
     assert.equal(saved.args.p_coupon.perStudentLimit, 3);
-    assert.equal(saved.args.p_coupon.discountPercent, 50);
+    assert.equal(saved.args.p_coupon.discountPercent, 25);
     assert.equal(saved.args.p_coupon.totalLimit, 100);
     assert.equal(saved.args.p_coupon.allCourses, true);
     assert.match(saved.args.p_request_id, /^[\da-f-]{36}$/);
     assert.equal('payableAmount' in saved.args.p_coupon, false);
     assert.equal(document.querySelector('[role=dialog]'), null);
-    assert.match(document.body.textContent, /NOVO50/);
+    assert.match(document.body.textContent, /NOVO25/);
+    assert.match(document.body.textContent, /25% de desconto/);
     assert.ok(window.requests.filter(item => item.name === 'ead_coupons_list').length >= 2);
   } finally { await fixture.close(); }
 });
 
-test('combobox próprio seleciona gratuidade, ilimitado e curso específico pelo teclado', async () => {
+test('percentual manual de 100 libera gratuidade com quantidade e cursos configurados em combobox próprio', async () => {
   const fixture = createCuponsFixture();
   const { window, document, button, click, setValue } = fixture;
   const choose = async (label, value) => {
@@ -95,7 +104,7 @@ test('combobox próprio seleciona gratuidade, ilimitado e curso específico pelo
     await window.mount(); await fixture.flush();
     await click(button('Novo cupom')); await fixture.flush();
     await setValue(document.getElementById('cupom-code'), 'GRATIS');
-    await choose('Benefício', 'Curso gratuito');
+    await setValue(document.getElementById('cupom-benefit'), '100');
     await choose('Tipo de quantidade total', 'Ilimitada');
     await choose('Abrangência de cursos', 'Selecionar cursos');
     assert.equal(document.querySelector('input[aria-label="Total de utilizações"]'), null);
@@ -126,7 +135,7 @@ test('falha de edição mantém rascunho e request, e conflito orienta reabrir a
     await window.mount(); await fixture.flush();
     await click(button('Editar')); await fixture.flush();
     assert.equal(document.getElementById('cupom-code').readOnly, true);
-    assert.equal(document.querySelector('input[aria-label="Benefício"]').disabled, true);
+    assert.equal(document.getElementById('cupom-benefit').readOnly, true);
     window.saveErrors.push({ code: 'NETWORK', message: 'Falha simulada de conexão.' });
     await click(button('Salvar cupom')); await fixture.flush();
     assert.match(document.querySelector('[role=alert]').textContent, /Falha simulada/);
@@ -155,6 +164,7 @@ test('gravação pendente bloqueia campos, fechamento e segundo envio até o ret
     await window.mount(); await fixture.flush();
     await click(button('Novo cupom')); await fixture.flush();
     await setValue(document.getElementById('cupom-code'), 'PENDENTE');
+    await setValue(document.getElementById('cupom-benefit'), '37,5');
     window.saveDelay = new Promise(resolve => { finish = resolve; });
     await click(button('Salvar cupom'));
     assert.equal(document.querySelector('fieldset').disabled, true);
@@ -164,6 +174,7 @@ test('gravação pendente bloqueia campos, fechamento e segundo envio até o ret
     await click(button('Salvando'));
     assert.ok(document.querySelector('[role=dialog]'));
     assert.equal(window.requests.filter(item => item.name === 'ead_coupons_save').length, 1);
+    assert.equal(window.requests.find(item => item.name === 'ead_coupons_save').args.p_coupon.discountPercent, 37.5);
     await window.interact(() => finish()); await fixture.flush();
     assert.equal(document.querySelector('[role=dialog]'), null);
     assert.match(document.body.textContent, /PENDENTE/);
@@ -192,6 +203,43 @@ test('histórico apresenta recebido canônico separado do benefício e da cobran
   } finally { await fixture.close(); }
 });
 
+test('gestão da Matriz mostra uso da campanha em curso e aluno de outro polo', async () => {
+  const fixture = createCuponsFixture();
+  const { window, document, button, click } = fixture;
+  try {
+    const coupon = makeCoupon({ id: 'coupon-matriz', poloId: 'polo-matriz', code: 'MATRIZ375', discountPercent: 37.5 });
+    window.coupons['polo-matriz'] = [coupon];
+    window.histories[coupon.id] = [makeCouponHistoryItem({ id: 'redemption-filial', studentId: 'student-filial',
+      studentName: 'Aluno fictício da filial', courseId: 'course-filial', courseName: 'Curso EAD da filial',
+      status: 'RESERVED', receivedAmount: 0, confirmedAt: null })];
+    await window.mount({ poloId: 'polo-matriz' }); await fixture.flush();
+    await click(button('Histórico')); await fixture.flush();
+    const request = window.requests.find(item => item.name === 'ead_coupons_history');
+    assert.equal(request.args.p_polo_id, 'polo-matriz');
+    assert.equal(request.args.p_coupon_id, coupon.id);
+    const dialog = document.querySelector('[role=dialog]');
+    assert.match(dialog.textContent, /Aluno fictício da filial/);
+    assert.match(dialog.textContent, /Curso EAD da filial/);
+    assert.match(dialog.textContent, /62,44/);
+    assert.match(dialog.textContent, /Reservada/);
+    assert.equal(dialog.querySelectorAll('article').length, 1);
+    assert.ok(window.channelHandlers.every(item => item.spec.filter === 'polo_id=eq.polo-matriz'));
+    const handler = window.channelHandlers.find(item => item.spec.table === 'ead_coupon_events');
+    assert.deepEqual(JSON.parse(JSON.stringify(handler.spec)), { event: '*', schema: 'public', table: 'ead_coupon_events', filter: 'polo_id=eq.polo-matriz' });
+    const listCount = window.requests.filter(item => item.name === 'ead_coupons_list').length;
+    const historyCount = window.requests.filter(item => item.name === 'ead_coupons_history').length;
+    window.histories[coupon.id][0] = makeCouponHistoryItem({ ...window.histories[coupon.id][0], status: 'CONFIRMED',
+      receivedAmount: 62.44, confirmedAt: '2026-11-16T12:05:00.000Z' });
+    window.coupons['polo-matriz'][0] = { ...coupon, reservedCount: 0, confirmedCount: 1 };
+    await window.interact(() => handler.callback({ new: { polo_id: 'polo-matriz', coupon_id: coupon.id } }));
+    await fixture.flush(240); await fixture.flush();
+    assert.equal(window.requests.filter(item => item.name === 'ead_coupons_list').length, listCount + 1);
+    assert.equal(window.requests.filter(item => item.name === 'ead_coupons_history').length, historyCount + 1);
+    assert.match(document.querySelector('[role=dialog]').textContent, /Confirmada/);
+    assert.match(document.querySelector('.cupons-list').textContent, /0 reservadas · 1 confirmadas/);
+  } finally { await fixture.close(); }
+});
+
 test('paginação consulta página correta e Realtime/reconexão refazem somente polo ativo', async () => {
   const fixture = createCuponsFixture();
   const { window, document, click } = fixture;
@@ -202,7 +250,7 @@ test('paginação consulta página correta e Realtime/reconexão refazem somente
     assert.equal(window.requests.at(-1).args.p_page, 2);
     assert.match(document.body.textContent, /CUPOM20/);
     const before = window.requests.length;
-    await window.interact(() => window.channelHandlers.find(item => item.spec.table === 'ead_coupon_redemptions').callback({ new: {} }));
+    await window.interact(() => window.channelHandlers.find(item => item.spec.table === 'ead_coupon_events').callback({ new: {} }));
     await fixture.flush(240); await fixture.flush();
     assert.equal(window.requests.length, before + 1);
     assert.equal(window.requests.at(-1).args.p_polo_id, 'polo-a');

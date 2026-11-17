@@ -245,6 +245,7 @@ const GestorModuleContentView: React.FC<GestorModuleContentProps> = ({
         poloId={scopedPoloId}
         gestorContextId={profile.contextId || ''}
         gestorPermissions={permissions}
+        isMatriz={isMatrizSelected}
       />
     );
     case 'caixa': return <CaixaPage poloId={scopedPoloId} poloName={currentPoloName} isGlobal={isGlobal} isMatriz={isMatrizSelected} />;
