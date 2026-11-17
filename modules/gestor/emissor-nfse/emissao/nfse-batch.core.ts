@@ -46,7 +46,7 @@ export function createNfseBatchController(scope: NfseScope, input: readonly Nfse
       const done = () => { if (cancelPacing === done) cancelPacing = undefined; resolve(); };
       cancelPacing = done; void activeCommand!.then(done);
     });
-    if (disposed || stopped || signal?.aborted) throw new DOMException('Lote pausado.', 'AbortError');
+    if (disposed || stopped || signal?.aborted) throw new globalThis.DOMException('Lote pausado.', 'AbortError');
     const interval = options.commandIntervalMs ?? 8000;
     const rest = options.commandRestMs ?? (options.commandIntervalMs === 0 ? 0 : 5000);
     const delay = Math.max(0, (lastCommandAt ?? -Infinity) + interval - Date.now(),
@@ -55,7 +55,7 @@ export function createNfseBatchController(scope: NfseScope, input: readonly Nfse
       const done = () => { clearTimeout(timer); if (cancelPacing === done) cancelPacing = undefined; resolve(); };
       const timer = setTimeout(done, delay); cancelPacing = done;
     });
-    if (disposed || stopped || signal?.aborted) throw new DOMException('Lote pausado.', 'AbortError');
+    if (disposed || stopped || signal?.aborted) throw new globalThis.DOMException('Lote pausado.', 'AbortError');
   };
   let dispatchIntent: ReadonlyMap<number, string> | null = null;
   let retryAt: number | null = null, retryTimer: ReturnType<typeof setTimeout> | undefined;
@@ -262,7 +262,7 @@ export function createNfseBatchController(scope: NfseScope, input: readonly Nfse
             const detail = error as { code?: string; status?: number; beforeDispatch?: boolean };
             if (detail?.code === 'RATE_LIMITED' && detail.status === 429 && detail.beforeDispatch === true && ++limits > 3) {
               stopped = true; paused = true;
-              throw new Error('O limite do emissor persiste. A revisão foi pausada sem iniciar novas emissões.');
+              throw new Error('O limite do emissor persiste. A revisão foi pausada sem iniciar novas emissões.', { cause: error });
             }
             throw error;
           }
@@ -272,7 +272,7 @@ export function createNfseBatchController(scope: NfseScope, input: readonly Nfse
           wait: (delay, signal) => new Promise<void>((resolve, reject) => {
             retryAt = Date.now() + delay; emit();
             const finish = () => { clearTimeout(timer); signal.removeEventListener('abort', cancel); resolve(); };
-            const cancel = () => { clearTimeout(timer); signal.removeEventListener('abort', cancel); reject(new DOMException('Revisão encerrada.', 'AbortError')); };
+            const cancel = () => { clearTimeout(timer); signal.removeEventListener('abort', cancel); reject(new globalThis.DOMException('Revisão encerrada.', 'AbortError')); };
             const timer = setTimeout(finish, delay);
             signal.addEventListener('abort', cancel, { once: true });
             if (signal.aborted) cancel();
