@@ -106,6 +106,10 @@ Histórico arquivado: [08/11/2026 — versão 4.8.273](./changelog/2026-11-08-ve
 
 Histórico arquivado: [10–11/11/2026 — versões 4.8.282 a 4.8.290](./changelog/2026-11-10-a-11-versoes-4-8-282-a-4-8-290.md).
 
+## [4.8.359] - 2026-11-17
+- Capas ilustrativas autorais otimizadas para os cursos de avaliação na EJA e práticas interdisciplinares.
+- Somente assets estáticos; cadastro e liberação de cursos permanecem separados.
+
 ## [4.8.358] - 2026-11-17
 - Apresentação opt-in de cursos autoinstrucionais com materiais, autoavaliação e limites do certificado descritos sem promessas de vídeo ou tutoria.
 - Catálogo legado e regras financeiras preservados. Cursos novos permanecem ocultos durante revisão acadêmica; conferência visual do proprietário pendente.
