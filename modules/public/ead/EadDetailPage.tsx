@@ -426,7 +426,7 @@ const EadDetailPage: React.FC = () => {
                     <div className="p-5 bg-gradient-to-br from-emerald-50 to-emerald-100/30 border border-emerald-150 rounded-[1.5rem] flex items-center justify-between animate-fadeIn shadow-sm">
                       <div className="space-y-0.5">
                         <span className="text-[10px] font-black text-emerald-800 uppercase tracking-widest block">Valor do Curso</span>
-                        <span className="text-[11px] text-slate-500 font-bold block">A partir de</span>
+                        <span className="text-[11px] text-slate-500 font-bold block">{(pagina as { formato?: string })?.formato === 'autoinstrucional' ? 'Pagamento único' : 'A partir de'}</span>
                       </div>
                       <div className="text-right">
                         <span className="text-2xl font-black text-emerald-600 block">

@@ -22,3 +22,8 @@ test('public detail keeps publication and active-state filters', () => {
   assert.ok(detail.includes(".eq('publicar_site', true)"));
   assert.ok(detail.includes(".eq('status', 'ativo')"));
 });
+
+test('editing existing courses preserves presentation metadata', () => {
+  const source = readFileSync(new URL('../../gestor/cadastros/cursos-ead/components/useEadCourseWizardPersistence.ts', import.meta.url), 'utf8');
+  assert.ok(source.includes('...curso?.ead_config?.pagina'));
+});

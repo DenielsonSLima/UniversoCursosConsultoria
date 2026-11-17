@@ -14,16 +14,22 @@ Renderizar apresentação específica por `ead_config.pagina.formato=autoinstruc
 - `ai/operacao/registros/alteracoes/2026-11-17-ead-apresentacao-autoinstrucional.md`
 - `internal/versioning/system-version.json`
 - `internal/versioning/CHANGELOG.md`
-Total: 10 arquivos.
+- `modules/gestor/cadastros/cursos-ead/components/useEadCourseWizardPersistence.ts`
+- `public/course-covers/ead/historia-fontes-memoria.webp`
+- `public/course-covers/ead/geografia-cartografia.webp`
+Total: 13 arquivos.
 
 ## Reprodução e correção
 Página pública de História exibiu promessas fixas incompatíveis com os materiais e estudo mínimo0min. Os dois novos cursos foram ocultados. Extração de fatos pedagógicos e helper de opções de pagamento, sem mudar contratos financeiros. Nova configuração somente opt-in; legado preservado.
 
 ## Validação
-45 testes focados (3 novos,37 avaliação/progresso/compra,5 opções de checkout), SSR dos dois modos, TypeScript, lint e build aprovados. Checagem de linhas aprovada. Rotas públicas filtram ativo e publicar_site=true. Gabaritos dos novos cursos isolados no backend.
+46 testes focados (4 novos,37 avaliação/progresso/compra,5 opções de checkout), SSR dos dois modos, TypeScript, lint e build aprovados. Checagem de linhas aprovada. Rotas públicas filtram ativo e publicar_site=true. Gabaritos dos novos cursos isolados no backend.
 
 ## Limites e autorização
 Safari indisponível porque computadores conectados estão offline. O proprietário pediu explicitamente publicar em produção e informou que conferirá em outro computador após conclusão. Não afirmar smoke Safari, compra real ou emissão real de certificado. Cursos continuam ocultos até revisão acadêmica independente; deploy deste template não publica seus dados.
 
 ## Base e predecessor
 Base main b98db8c3cf8f19dc6da3654aca1dde583237f8ed, versão4.8.357. Predecessor preservado:2026-11-16-cupons-percentual-manual-matriz. Sem alterações em Auth,RLS,financeiro ou outros cursos.
+
+## Capas
+Capas autorais geradas para os dois temas, convertidas para WebP sem alterar dimensões (1672×941). Assets estáticos via GitHub MCP/Vercel; sem alterações em Storage.
