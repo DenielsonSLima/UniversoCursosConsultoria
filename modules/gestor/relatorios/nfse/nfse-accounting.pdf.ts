@@ -6,9 +6,9 @@ import { formatNfseIssuedReportAmount as money } from '../../emissor-nfse/export
 import { parseNfseAccountingReport, type NfseAccountingReport, type NfseAccountingRow } from './nfse-accounting.types';
 
 const LEFT = 20, WIDTH = 257;
-const widths = [25, 19, 80, 30, 30, 34, 39];
+const widths = [25, 19, 80, 60, 34, 39];
 const labels = [ ['DATA (E / R)', 'COMPETÊNCIA'], ['Nº NFS-e', 'ORIGEM'], ['PARCEIRO / TOMADOR', 'CHAVE DE ACESSO'],
-  ['DATA DO SERVIÇO', 'CPF/CNPJ'], ['TRIBUTAÇÃO NAC.', 'DOCUMENTO (CONT.)'], ['ITEM NBS', ''], ['VALOR DO SERVIÇO', 'ISS / RETENÇÃO'] ];
+  ['DATA DO SERVIÇO', 'CPF/CNPJ'], ['ITEM NBS', ''], ['VALOR DO SERVIÇO', 'ISS / RETENÇÃO'] ];
 const date = (value: string | null) => value ? value.slice(0, 10).split('-').reverse().join('/') : 'Não informada';
 const emission = (value: string) => new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Maceio' }).format(new Date(value));
 const document = (value: string | null) => {
@@ -69,7 +69,7 @@ export function createNfseAccountingPdf(report: NfseAccountingReport, assets: Nf
       let x = LEFT;
       labels.forEach((l, i) => { line(l[0], x + 2, y + 2, widths[i] - 4, { size: 6.1, bold: true, white: true });
         // CPF/CNPJ uses the combined service/code column on the second physical line.
-        if (i !== 4) line(l[1], x + 2, y + 7, (i === 3 ? widths[3] + widths[4] : widths[i]) - 4, { size: 5.8, white: true }); x += widths[i]; });
+        line(l[1], x + 2, y + 7, widths[i] - 4, { size: 5.8, white: true }); x += widths[i]; });
       y += 12;
     }
     return y;
@@ -78,9 +78,9 @@ export function createNfseAccountingPdf(report: NfseAccountingReport, assets: Nf
     pdf.setFillColor(...(index % 2 ? [239, 245, 250] : [255, 255, 255]) as [number, number, number]);
     pdf.rect(LEFT, y, WIDTH, 14.5, 'F');
     const values = [`${r.dateSource === 'CREATED' ? 'R' : 'E'}: ${emission(r.emittedAt)}`, r.number || 'Sem emissão', r.recipientName || 'Tomador não informado', date(r.serviceDate),
-      r.nationalServiceCode || 'Não informado', r.nbsCode || 'Não informado', money(r.amount)];
+      r.nbsCode || 'Não informado', money(r.amount)];
     let x = LEFT;
-    values.forEach((value, i) => { const right = i === 6;
+    values.forEach((value, i) => { const right = i === 5;
       line(value, right ? x + widths[i] - 2 : x + 2, y + 2, widths[i] - 4,
         { bold: true, size: 7.5, right, exact: i !== 2 }); x += widths[i]; });
     line(date(r.competenceDate), 22, y + 7, 21, { size: 6.3, gray: true });
@@ -115,11 +115,10 @@ export function createNfseAccountingPdf(report: NfseAccountingReport, assets: Nf
       { bold: true, size: 7 });
     y += 14;
     const definitions = [
-      { title: 'TRIBUTAÇÃO NACIONAL', key: 'code' as const, last: columns.codeLast, all: report.byCode },
       { title: 'ITEM NBS', key: 'nbs' as const, last: columns.nbsLast, all: report.byNbs },
       ...(report.mode === 'GERAL' ? [{ title: 'POR POLO', key: 'polo' as const, last: columns.poloLast, all: report.byPolo }] : []),
     ];
-    const gap = 5, columnWidth = (WIDTH - gap * (definitions.length - 1)) / definitions.length;
+    const gap = 5, columnWidth = (WIDTH - gap * definitions.length) / (definitions.length + 1);
     definitions.forEach((definition, columnIndex) => {
       const x = LEFT + columnIndex * (columnWidth + gap), items = columns[definition.key];
       pdf.setFillColor(24, 51, 75); pdf.roundedRect(x, y, columnWidth, 11, 1, 1, 'F');
@@ -131,14 +130,14 @@ export function createNfseAccountingPdf(report: NfseAccountingReport, assets: Nf
       let rowY = y + 11;
       items.forEach((item, rowIndex) => {
         pdf.setFillColor(...(rowIndex % 2 ? [239, 245, 250] : [248, 250, 252]) as [number, number, number]);
-        pdf.rect(x, rowY, columnWidth, 8, 'F');
+        pdf.rect(x, rowY, columnWidth, 7, 'F');
         const label = 'poloName' in item ? `${item.poloCity || item.poloName} / ${item.poloState || 'UF n/i'}` : item.code || 'Não informado';
         pdf.setFont('helvetica', 'normal'); pdf.setFontSize(6.8); pdf.setCharSpace(0);
         const wrapped = 'poloCnpj' in item ? [truncatePdfText(pdf, label, columnWidth - 43, 1)[0], document(item.poloCnpj)] : truncatePdfText(pdf, label, columnWidth - 43, 2);
         wrapped.forEach((text, n) => line(text, x + 2, rowY + 1.3 + n * 3, columnWidth - 43, { size: 'poloCnpj' in item ? 5.8 : 6.8, exact: 'poloCnpj' in item }));
         line(String(item.count), x + columnWidth - 29, rowY + 2, 9, { right: true, size: 6.8, exact: true });
         line(money(item.amount), x + columnWidth - 2, rowY + 2, 25, { right: true, bold: true, size: 6.8, exact: true });
-        rowY += 8;
+        rowY += 7;
       });
       if (!items.length) {
         line(index === 0 ? 'Sem registros neste agrupamento.' : 'Agrupamento concluído na página anterior.',
@@ -153,6 +152,30 @@ export function createNfseAccountingPdf(report: NfseAccountingReport, assets: Nf
         line('Continua na próxima página · total ao final.', x + 2, rowY + 4, columnWidth - 4, { gray: true, size: 6 });
       }
     });
+    const taxX = LEFT + definitions.length * (columnWidth + gap);
+    pdf.setFillColor(24, 51, 75); pdf.roundedRect(taxX, y, columnWidth, 11, 1, 1, 'F');
+    line('CBS / IBS', taxX + 2, y + 1.5, columnWidth - 4, { bold: true, white: true, size: 7 });
+    line('TRIBUTO', taxX + 2, y + 6.5, 20, { white: true, size: 5.8 });
+    line('VALOR NO XML', taxX + columnWidth - 2, y + 6.5, 45, { white: true, right: true, size: 5.8 });
+    if (index === 0) {
+      ['cbs', 'ibs'].forEach((key, i) => {
+        const prefix = key as 'cbs' | 'ibs', amount = report.taxSummary[`${prefix}Amount`];
+        const rowY = y + 11 + i * 14;
+        pdf.setFillColor(...(i ? [239, 245, 250] : [248, 250, 252]) as [number, number, number]);
+        pdf.rect(taxX, rowY, columnWidth, 14, 'F');
+        line(prefix.toUpperCase(), taxX + 2, rowY + 2, 16, { bold: true, size: 7.5 });
+        line(amount === null ? 'Não informado / incompleto' : money(amount), taxX + columnWidth - 2, rowY + 2, columnWidth - 22, { right: true, bold: true, size: 7, exact: true });
+        line(`${report.taxSummary[`${prefix}ReportedCount`]}/${report.validItems} notas com valor`, taxX + 2, rowY + 8, columnWidth - 4, { gray: true, size: 6.5 });
+      });
+      const notes = ['Somente notas válidas; valores do XML autorizado.',
+        'Ausência não significa isenção ou zero.',
+        'Não há estimativa nem soma parcial.',
+        'Resumo informativo, não é apuração tributária.',
+        'CBS/IBS não se somam ao valor bruto do serviço.'];
+      notes.forEach((text, i) => line(text, taxX + 2, y + 44 + i * 4.5, columnWidth - 4, { gray: true, size: 6.1, exact: true }));
+    } else {
+      line('Resumo tributário na primeira página de resumo.', taxX + 2, y + 15, columnWidth - 4, { gray: true, size: 6, exact: true });
+    }
     if (report.totalAmount === null) line('Há valores desconhecidos. Total indisponível; não foi calculada soma parcial.', LEFT, 187, WIDTH, { gray: true, size: 6.5 });
   });
   for (let p = 1; p <= pageCount; p++) {

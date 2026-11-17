@@ -21,7 +21,7 @@ export function accountingFixture(mode: 'POLO' | 'GERAL' = 'GERAL'): NfseAccount
     poloId: id(Number(polo)), poloName: String(poloName) === 'Propriá' ? 'UNIVERSO CURSOS - PROPRIÁ' : 'UNIVERSO CURSOS E CONSULTORIA', poloCnpj: `00000000000${String(polo).padStart(3,'0')}`, poloCity: String(poloName) === 'Matriz' ? 'Japoatã' : String(poloName), poloState: 'SE', recipientName: String(recipientName),
     recipientDocument: index === 0 || index === 3 ? '00000000000000' : '00000000000',
     serviceDate: '2026-10-31', competenceDate: '2026-10-31', nationalServiceCode: String(nationalServiceCode),
-    nbsCode: String(nbsCode), amount: String(amount), issAmount: index === 3 ? '50.00' : '0.00',
+    cbsAmount: null, ibsAmount: null, nbsCode: String(nbsCode), amount: String(amount), issAmount: index === 3 ? '50.00' : '0.00',
     issRetention: index === 3 ? '2' : '1', state: 'AUTHORIZED', validForTotals: true, dateSource: 'EMISSION', origin: index === 0 || index === 3 ? 'SERVICO' : 'ALUNO', xmlAvailable: true,
   }));
   const byCode = mode === 'GERAL' ? [{ code: '080201', count: 4, amount: '1180.00' }, { code: '170101', count: 1, amount: '2500.00' }]
@@ -35,7 +35,7 @@ export function accountingFixture(mode: 'POLO' | 'GERAL' = 'GERAL'): NfseAccount
   ] : [{ poloId: id(2), poloName: 'Propriá', count: 2, amount: '500.00' }];
   const poloMetadata = (p: {poloName:string;poloId:string}) => ({poloCnpj: `00000000000${p.poloId.slice(-3)}`,poloCity:p.poloName==='Matriz'?'Japoatã':p.poloName,poloState:'SE'});
   const units=byPolo.map(p=>({...p,...poloMetadata(p)}));
-  return { scope: { poloId: id(mode === 'GERAL' ? 1 : 2), contextKey: id(10), environment: 'HOMOLOGACAO', month: '2026-11' },
+  return { taxSummary: {cbsAmount: null, ibsAmount: null, cbsReportedCount: 0, ibsReportedCount: 0}, scope: { poloId: id(mode === 'GERAL' ? 1 : 2), contextKey: id(10), environment: 'HOMOLOGACAO', month: '2026-11' },
     mode, dateFrom: '2026-11-01', dateTo: '2026-11-30', generatedAt: '2026-11-12T14:00:00Z',
     pages: [mode === 'GERAL' ? rows : rows.filter(r => r.poloId === id(2))],
     totalItems: mode === 'GERAL' ? 5 : 2, validItems: mode === 'GERAL' ? 5 : 2, totalAmount: mode === 'GERAL' ? '3680.00' : '500.00',

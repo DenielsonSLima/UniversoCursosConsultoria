@@ -106,6 +106,11 @@ Histórico arquivado: [08/11/2026 — versão 4.8.273](./changelog/2026-11-08-ve
 
 Histórico arquivado: [10–11/11/2026 — versões 4.8.282 a 4.8.290](./changelog/2026-11-10-a-11-versoes-4-8-282-a-4-8-290.md).
 
+## [4.8.360] - 2026-11-17
+- Relatório NFS-e sem coluna de tributação nacional e com resumo CBS/IBS ao lado de NBS e polos.
+- Tributos extraídos exclusivamente do XML autorizado, com cobertura explícita e sem estimativa nem soma parcial.
+- Preservadas autorização por polo, identificação de canceladas e totais fiscais válidos; sem alteração de notas ou numeração.
+
 ## [4.8.359] - 2026-11-17
 - Capas ilustrativas autorais otimizadas para os cursos de avaliação na EJA e práticas interdisciplinares.
 - Somente assets estáticos; cadastro e liberação de cursos permanecem separados.
