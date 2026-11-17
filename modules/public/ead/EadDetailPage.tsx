@@ -6,14 +6,10 @@ import {
   BookOpen, 
   Laptop, 
   CreditCard,
-  FileText,
   Loader2, 
   CheckCircle2,
-  Sparkles,
-  ListChecks,
   Lock,
   UserPlus,
-  Zap
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import Header from '../components/Header';
@@ -22,7 +18,8 @@ import { Curso } from '../../gestor/cadastros/cadastros.types';
 import OnlineCheckoutButton from '../components/OnlineCheckoutButton';
 import { fetchPublicCourseById } from '../courseAvailability';
 import { buildEadCoursePath, EAD_SITE_URL } from './eadCourseLinks';
-import { resolveEadCheckoutOptions } from '../../aluno/cursos/eadCheckoutOptions';
+import EadLearningFacts from './EadLearningFacts';
+import { buildEadPaymentCards } from './eadPaymentCards';
 
 const setMetaContent = (selector: string, content: string) => {
   const element = document.head.querySelector<HTMLMetaElement>(selector);
@@ -75,40 +72,7 @@ const EadDetailPage: React.FC = () => {
   });
 
   const eadConfigPagePath = curso ? buildEadCoursePath(curso.id, curso.nome) : null;
-  const paymentMethodCards = React.useMemo(() => {
-    if (!curso) return [];
-    const options = resolveEadCheckoutOptions(curso);
-    return options.options.map((option) => {
-      if (option.method === 'PIX') {
-        return {
-          method: option.method,
-          label: 'Pix',
-          detail: 'Liberação rápida',
-          icon: Zap,
-          cardClass: 'border-emerald-100 bg-emerald-50 text-emerald-800',
-          iconClass: 'bg-emerald-600 text-white',
-        };
-      }
-      if (option.method === 'BOLETO') {
-        return {
-          method: option.method,
-          label: 'Boleto',
-          detail: 'Pagamento bancário',
-          icon: FileText,
-          cardClass: 'border-sky-100 bg-sky-50 text-sky-800',
-          iconClass: 'bg-sky-600 text-white',
-        };
-      }
-      return {
-        method: option.method,
-        label: 'Cartão',
-        detail: options.maxParcelas > 1 ? `Até ${options.maxParcelas}x` : 'À vista',
-        icon: CreditCard,
-        cardClass: 'border-blue-100 bg-blue-50 text-blue-800',
-        iconClass: 'bg-blue-600 text-white',
-      };
-    });
-  }, [curso]);
+  const paymentMethodCards = React.useMemo(() => buildEadPaymentCards(curso), [curso]);
 
   useEffect(() => {
     if (!curso || !eadConfigPagePath) return;
@@ -440,75 +404,7 @@ const EadDetailPage: React.FC = () => {
                 )}
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <div className="bg-white rounded-[2rem] border border-slate-100 p-6 shadow-sm">
-                  <h3 className="text-sm font-black text-[#001a33] uppercase tracking-tight flex items-center gap-2 mb-4">
-                    <ListChecks size={18} className="text-emerald-600" />
-                    Atividades
-                  </h3>
-                  <p className="text-xs text-slate-500 font-medium leading-relaxed">
-                    {atividades.length > 0
-                      ? `${atividades.length} atividade(s) de fixação antes da prova, vinculadas às etapas do curso.`
-                      : 'Atividades de fixação serão disponibilizadas conforme a organização pedagógica do curso.'}
-                  </p>
-                </div>
-                <div className="bg-white rounded-[2rem] border border-slate-100 p-6 shadow-sm">
-                  <h3 className="text-sm font-black text-[#001a33] uppercase tracking-tight flex items-center gap-2 mb-4">
-                    <Lock size={18} className="text-amber-600" />
-                    Liberação
-                  </h3>
-                  <p className="text-xs text-slate-500 font-medium leading-relaxed">
-                    Tempo mínimo de estudo: <strong>{regras?.tempoMinimoMinutos || 0} min</strong>. As etapas são liberadas progressivamente, com marcação de conclusão e atividades antes da avaliação final.
-                  </p>
-                </div>
-              </div>
-
-              {/* Diferenciais */}
-              <div className="bg-gradient-to-br from-[#001a33] to-[#003366] rounded-[2.5rem] p-8 text-white relative overflow-hidden border border-blue-950/20 shadow-xl">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl pointer-events-none"></div>
-                <h3 className="text-lg font-black uppercase tracking-tight mb-6 flex items-center gap-2">
-                  <Sparkles size={20} className="text-blue-400" />
-                  Diferenciais do Ensino EAD Universo
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="flex gap-3">
-                    <CheckCircle2 className="text-blue-400 shrink-0 mt-0.5" size={18} />
-                    <div>
-                      <h4 className="text-xs font-bold uppercase tracking-wider text-blue-300">Estude no seu Tempo</h4>
-                      <p className="text-[11px] text-slate-300 font-light mt-1 leading-normal">
-                        Acesso ilimitado 24 horas por dia, 7 dias por semana, adaptando-se completamente à sua rotina.
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex gap-3">
-                    <CheckCircle2 className="text-blue-400 shrink-0 mt-0.5" size={18} />
-                    <div>
-                      <h4 className="text-xs font-bold uppercase tracking-wider text-blue-300">Material Didático Completo</h4>
-                      <p className="text-[11px] text-slate-300 font-light mt-1 leading-normal">
-                        Videoaulas dinâmicas, apostilas digitais e atividades focadas no aprendizado contínuo.
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex gap-3">
-                    <CheckCircle2 className="text-blue-400 shrink-0 mt-0.5" size={18} />
-                    <div>
-                      <h4 className="text-xs font-bold uppercase tracking-wider text-blue-300">Tutoria e Suporte</h4>
-                      <p className="text-[11px] text-slate-300 font-light mt-1 leading-normal">
-                        Esclareça suas dúvidas e conte com apoio pedagógico durante toda a sua formação.
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex gap-3">
-                    <CheckCircle2 className="text-blue-400 shrink-0 mt-0.5" size={18} />
-                    <div>
-                      <h4 className="text-xs font-bold uppercase tracking-wider text-blue-300">Certificado Reconhecido</h4>
-                      <p className="text-[11px] text-slate-300 font-light mt-1 leading-normal">
-                        Validação nacional para turbinar seu currículo e apresentar em processos seletivos.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <EadLearningFacts atividades={atividades} regras={regras} pagina={pagina} />
 
             </div>
 
@@ -530,7 +426,7 @@ const EadDetailPage: React.FC = () => {
                     <div className="p-5 bg-gradient-to-br from-emerald-50 to-emerald-100/30 border border-emerald-150 rounded-[1.5rem] flex items-center justify-between animate-fadeIn shadow-sm">
                       <div className="space-y-0.5">
                         <span className="text-[10px] font-black text-emerald-800 uppercase tracking-widest block">Valor do Curso</span>
-                        <span className="text-[11px] text-slate-500 font-bold block">A partir de</span>
+                        <span className="text-[11px] text-slate-500 font-bold block">{(pagina as { formato?: string })?.formato === 'autoinstrucional' ? 'Pagamento único' : 'A partir de'}</span>
                       </div>
                       <div className="text-right">
                         <span className="text-2xl font-black text-emerald-600 block">

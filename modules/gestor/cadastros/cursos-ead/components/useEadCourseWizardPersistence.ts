@@ -128,6 +128,7 @@ export const useEadCourseWizardPersistence = ({
     const eadConfig: EadConfig = {
       videoUrl: normalizedVideoUrl || undefined,
       pagina: {
+        ...curso?.ead_config?.pagina,
         subtitulo: subtituloPagina.trim() || undefined,
         objetivos: objetivosPagina.split('\n').map(item => item.trim()).filter(Boolean),
         publicoAlvo: publicoAlvo.trim() || undefined,

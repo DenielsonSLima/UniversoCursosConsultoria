@@ -106,6 +106,10 @@ Histórico arquivado: [08/11/2026 — versão 4.8.273](./changelog/2026-11-08-ve
 
 Histórico arquivado: [10–11/11/2026 — versões 4.8.282 a 4.8.290](./changelog/2026-11-10-a-11-versoes-4-8-282-a-4-8-290.md).
 
+## [4.8.358] - 2026-11-17
+- Apresentação opt-in de cursos autoinstrucionais com materiais, autoavaliação e limites do certificado descritos sem promessas de vídeo ou tutoria.
+- Catálogo legado e regras financeiras preservados. Cursos novos permanecem ocultos durante revisão acadêmica; conferência visual do proprietário pendente.
+
 ## [4.8.357] - 2026-11-16
 
 - Percentual de cupom digitado manualmente, sem valor fixo, com até duas casas decimais.
