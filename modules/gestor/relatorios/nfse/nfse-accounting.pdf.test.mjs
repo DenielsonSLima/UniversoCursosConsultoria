@@ -30,7 +30,7 @@ test('paisagem selecionável, três linhas por nota, chave completa e total can�
   const result = createNfseAccountingPdf(report, accountingFixtureAssets); const pages = await inspect(result.blob);
   assert.equal(JSON.stringify(report), before); assert.equal(pages.length, 2);
   const allText = pages.map(p => p.text).join('\n');
-  for (const expected of ['CBS / IBS', 'ITEM NBS', 'DATA DO SERVIÇO', 'R$ 3.680,00',  'Aquidabã', 'COMPETÊNCIA']) assert(allText.includes(expected), expected);
+  for (const expected of ['SOCIAIS RETIDAS', 'ITEM NBS', 'DATA DO SERVIÇO', 'R$ 3.680,00',  'Aquidabã', 'COMPETÊNCIA']) assert(allText.includes(expected), expected);
   assert(pages[1].text.includes('TOTAL VÁLIDO DO PERÍODO'));
   assert(pages[0].text.includes('11:00:00'));assert(pages[0].text.includes('Homologação'));
   assert(pages[0].text.includes('CNPJ: 00.000.000/0000-01'));
@@ -74,15 +74,16 @@ test('CBS/IBS preservam zero explícito, rejeitam parcial e não exibem tributa�
   const r=accountingFixture('POLO');
   for(const row of r.pages.flat()){row.cbsAmount='0.00';row.ibsAmount='1.25';}
   r.taxSummary={cbsAmount:'0.00',ibsAmount:'2.50',cbsReportedCount:2,ibsReportedCount:2};
+  for(const t of r.taxIndicators)if(['CBS','IBS'].includes(t.key)){t.amount=t.key==='CBS'?'0.00':'2.50';t.informedCount=2;t.zeroCount=t.key==='CBS'?2:0;}
   const pages=await inspect(createNfseAccountingPdf(r,accountingFixtureAssets).blob);
   const text=pages.map(p=>p.text).join(' ');
-  assert.match(text,/CBS\s+R\$ 0,00/);assert.match(text,/IBS\s+R\$ 2,50/);
-  assert(!text.includes('TRIBUTAÇÃO NAC'));assert(text.includes('não é apuração tributária'));
+  assert(text.includes('R$ 2,50'));assert(text.includes('R$ 0,00'));
+  assert(!text.includes('TRIBUTAÇÃO NAC'));assert(text.includes('não apuração'));
   r.pages[0][0].cbsAmount=null;r.taxSummary.cbsReportedCount=1;
   assert.throws(()=>parseNfseAccountingReport(r,r.scope));
-  r.taxSummary.cbsAmount=null;
+  r.taxSummary.cbsAmount=null;const c=r.taxIndicators.find(t=>t.key==='CBS');c.amount=null;c.informedCount=1;c.zeroCount=1;
   const partial=(await inspect(createNfseAccountingPdf(r,accountingFixtureAssets).blob)).at(-1).text;
-  assert.match(partial,/CBS\s+Não informado \/ incompleto/);assert(partial.includes('1/2 notas com valor'));
+  assert(partial.includes('Não informado / incompleto'));assert(partial.includes('1/2 notas com valor'));
 });
 
 test('rejeita paginação parcial, duplicação, data inválida e resumos divergentes', () => {
@@ -100,7 +101,7 @@ test('páginas cheias, resumos cheios e relatório vazio preservam margens e rod
   r.summaryPages=[r.byCode.map(c=>({kind:'CODE',...c})),r.byPolo.map(p=>({kind:'POLO',...p}))];
   syncAccountingSummaryFixture(r);
   const pages=await inspect(createNfseAccountingPdf(r,accountingFixtureAssets).blob);
-  assert.equal(pages.length,3);
+  assert.equal(pages.length,4);
   for(const p of pages)for(const i of p.items.filter(i=>i.str.trim()))assert(i.transform[5]>20,i.str);
   const empty=accountingFixture('POLO');empty.pages=[];empty.totalItems=0;empty.validItems=0;empty.totalAmount='0.00';empty.byCode=[];empty.byNbs=[];empty.summaryPages=[];
   empty.byPolo=[{...empty.byPolo[0],count:0,amount:'0.00'}];
@@ -115,15 +116,15 @@ test('resumos paralelos mantêm NBS e polos, total ao fim de cada visão e conti
   r.byNbs=Array.from({length:9},(_,i)=>({code:String(990000000+i),count:1,amount:'1.00'}));
   syncAccountingSummaryFixture(r);
   const pages=await inspect(createNfseAccountingPdf(r,accountingFixtureAssets).blob);
-  assert.equal(pages.length,4);
+  assert.equal(pages.length,6);
   const summaries=pages.slice(1),text=summaries.map(p=>p.text).join(' ');
   assert.equal(text.split('TOTAL DESTA VISÃO').length-1,2);
   assert(text.includes('NÃO SOME')); assert(text.includes('Continua na próxima página'));
   for(const item of r.byNbs) assert.equal(text.split(item.code).length-1,1,item.code);
-  const full=structuredClone(r); full.byCode=[]; full.byNbs=full.byNbs.slice(0,8);syncAccountingSummaryFixture(full);
+  const full=structuredClone(r); full.byCode=[]; full.byNbs=full.byNbs.slice(0,4);syncAccountingSummaryFixture(full);
   const fullPages=await inspect(createNfseAccountingPdf(full,accountingFixtureAssets).blob);
   for(const p of fullPages.slice(1))for(const i of p.items.filter(i=>i.str.trim() && !i.str.startsWith('Relatório interno') && !i.str.startsWith('Página ')))assert(i.transform[5]>45,i.str);
-  const headers=['ITEM NBS','POR POLO','CBS / IBS'].map(t=>summaries[0].items.find(i=>i.str===t));
+  const headers=['ITEM NBS','POR POLO','SITUAÇÃO DAS NOTAS POR POLO'].map(t=>summaries[0].items.find(i=>i.str===t));
   assert(headers.every(Boolean));assert(headers[0].transform[4]<headers[1].transform[4]);assert(headers[1].transform[4]<headers[2].transform[4]);
   assert.equal(new Set(headers.map(i=>i.transform[5].toFixed(2))).size,1);
   for(const p of summaries)for(const i of p.items.filter(i=>i.str.trim() && !i.str.startsWith('Relatório interno') && !i.str.startsWith('Página ')))assert(i.transform[5]>45,i.str);
@@ -136,6 +137,17 @@ test('situações têm rótulos textuais legíveis sem cor e não entram no tota
   for(const label of ['Autorizada','Cancelada','Rejeitada','Em processamento','Aguardando confirmação','Fora do total','Sem emissão'])assert(text.includes(label),label);
   assert(text.includes('5 válida(s)'));assert(pages.at(-1).text.includes('R$ 3.680,00'));assert(!pages.at(-1).text.includes('R$ 4.580,00'));
   const invalid=structuredClone(r);invalid.pages.at(-1)[0].validForTotals=true;assert.throws(()=>parseNfseAccountingReport(invalid,invalid.scope));
+});
+
+test('faixa tributária e situações por polo rejeitam contagens divergentes e não duplicam tributos', async () => {
+  const r=accountingStatusFixture();
+  const pages=await inspect(createNfseAccountingPdf(r,accountingFixtureAssets).blob), summary=pages.at(-1).text;
+  for(const label of ['ISSQN','PIS','COFINS','SOCIAIS RETIDAS','IRRF RETIDO','PREVIDÊNCIA RETIDA','CBS','IBS TOTAL','SITUAÇÃO DAS NOTAS POR POLO']) assert(summary.includes(label),label);
+  assert(!summary.includes('VALOR NO XML'));assert(summary.includes('Contagens')||summary.includes('CONTAGENS'));
+  const p=r.byPoloStatus.find(s=>s.cancelled>0);assert(p);assert.equal(p.total,p.valid+p.cancelled+p.rejected+p.pending+p.other);
+  for(const change of [x=>x.byPoloStatus[0].valid++,x=>x.taxIndicators[0].informedCount=100,x=>x.taxIndicators[6].amount='999.00']){
+    const invalid=structuredClone(r);change(invalid);assert.throws(()=>parseNfseAccountingReport(invalid,invalid.scope));
+  }
 });
 
 test('prévia usa o mesmo compositor com logo isolada e dados explicitamente fictícios', async () => {
