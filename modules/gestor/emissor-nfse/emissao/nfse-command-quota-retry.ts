@@ -2,6 +2,7 @@ interface Options {
   signal: AbortSignal;
   onWaiting: (waiting: boolean) => void;
   attemptTimeoutMs?: number;
+  beforeAttempt?: () => Promise<void>;
   wait?: (milliseconds: number, signal: AbortSignal) => Promise<void>;
 }
 const abortError = () => new globalThis.DOMException('A intenção de envio foi encerrada.', 'AbortError');
@@ -31,6 +32,7 @@ export async function runNfseCommandWithQuotaRetry<T>(task: () => Promise<T>, op
   let quotaDeferred = false;
   for (;;) {
     try {
+      await options.beforeAttempt?.();
       const result = await boundedAttempt(task, options.signal, options.attemptTimeoutMs ?? 45_000);
       return { result, quotaDeferred };
     } catch (error) {

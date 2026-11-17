@@ -32,7 +32,8 @@ export function describeNfseEnvironmentStatus({ enabled, workspace, queue, healt
   if (queries.some(query => query.error instanceof Error && query.error.name === 'AbortError')) {
     return unknown('Consulta do emissor interrompida. Aguarde uma nova verificação.');
   }
-  if (queries.some(query => query.isPending || query.isFetching)) {
+  // Realtime background reads do not invalidate a still-fresh national observation.
+  if (queries.some(query => query.isPending)) {
     return unknown('Verificando as consultas do emissor. Disponibilidade do serviço fiscal nacional não verificada.');
   }
   if (health?.data && !health.error && isNfseHealthFresh(health.data, now)) {

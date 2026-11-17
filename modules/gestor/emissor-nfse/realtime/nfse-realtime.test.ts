@@ -50,7 +50,7 @@ function fixture() {
     subscribe(fn: typeof status) { status = fn; return channel; },
   };
   const supabase = { channel: () => channel, removeChannel: () => { removed++; return Promise.resolve('ok'); } };
-  const client = { invalidateQueries: async (input: typeof calls[number]) => { calls.push(input); } };
+  const client = { isFetching: () => 0, invalidateQueries: async (input: typeof calls[number]) => { calls.push(input); } };
   const cleanup = subscribeNfseChanges(supabase as unknown as SupabaseClient, client as unknown as QueryClient,
     'synthetic-channel', [{ table: 'nfse_change_events', filter: `polo_id=eq.${scope.poloId}`,
       targets: payload => nfseRealtimeTargets(payload, scope) }], nfseCacheTargets(scope, 'models'));

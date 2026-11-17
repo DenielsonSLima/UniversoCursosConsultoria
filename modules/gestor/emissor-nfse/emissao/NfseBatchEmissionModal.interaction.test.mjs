@@ -46,6 +46,8 @@ test('batch waits for an uncertain note, then automatically sends the remaining 
   try {
     await act(async () => root.render(React.createElement(React.StrictMode, null, React.createElement(App)))); await settle();
     assert(document.querySelector('[role="dialog"]').contains(document.activeElement), 'focus must enter the dialog even while close is disabled');
+    assert.equal(calls.filter(call => call.action === 'PREVIEW_QUEUE').length, 1, 'next preview waits for cadence');
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 8100)); }); await settle();
     assert.equal(calls.filter(call => call.action === 'PREVIEW_QUEUE').length, 2);
     assert.equal(calls.filter(call => call.action === 'ISSUE').length, 0, 'Opening a batch never dispatches');
     assert.equal(document.querySelectorAll('input[type="checkbox"]').length, 0);
@@ -57,6 +59,8 @@ test('batch waits for an uncertain note, then automatically sends the remaining 
     assert.equal(document.getElementById(expand.getAttribute('aria-controls')).hidden, false);
     await click(expand); assert.equal(expand.getAttribute('aria-expanded'), 'false');
     const send = button('Emitir notas'); await act(async () => { send.click(); send.click(); }); await settle();
+    assert.equal(calls.filter(call => call.action === 'ISSUE').length, 0, 'issue waits after preview');
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 8100)); }); await settle();
     assert.equal(calls.filter(call => call.action === 'ISSUE').length, 1); assert.equal(button('Emitir notas').disabled, true);
     assert(document.body.textContent.includes('Aguardando retorno fiscal'));
     const progress = document.querySelector('progress'); assert(progress); assert.equal(progress.value, 0);
@@ -66,6 +70,7 @@ test('batch waits for an uncertain note, then automatically sends the remaining 
     assert(region.textContent.includes('NFS-e nº 2 autorizada'));
     assert.equal(calls.filter(call => call.action === 'OBSERVE').length, 1);
     assert.equal(calls.filter(call => call.action === 'RECONCILE').length, 0);
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 6600)); }); await settle();
     assert.equal(progress.value, 2);
     assert(document.body.textContent.includes('NFS-e nº 2'));
     assert.equal(calls.filter(call => call.action === 'ISSUE').length, 2, 'The original click authorizes the remaining prepared note');
@@ -103,7 +108,9 @@ test('explicit service issuance validates and sends once under StrictMode, witho
     await act(async () => root.render(React.createElement(React.StrictMode, null, React.createElement(Modal, {
       scope, items: [{ source: { kind: 'PARTNER_SERVICE', id: id(10) }, label: 'Parceiro', amount: '10.00' }], service, issueRequested: true, onCancelOperation: item => { cancellationTarget = item; }, onClose() {}, onChanged() {},
     })))); await settle();
-    assert.equal(prepared, 1); assert.equal(sent, 1);
+    assert.equal(prepared, 1); assert.equal(sent, 0, 'validated preview respects pacing');
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 8100)); }); await settle();
+    assert.equal(sent, 1);
     assert(document.querySelector('progress'));
     assert(document.body.textContent.includes('Enviando'));
     const button = [...document.querySelectorAll('button')].find(b => b.textContent.includes('Emitir notas'));
