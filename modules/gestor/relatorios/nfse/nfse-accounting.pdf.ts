@@ -114,9 +114,24 @@ export function createNfseAccountingPdf(report: NfseAccountingReport, assets: Nf
     line('Mesmas notas, visões diferentes. NÃO SOME os totais das colunas entre si.', LEFT, y + 6, WIDTH,
       { bold: true, size: 7 });
     y += 14;
+    if (index === 0) {
+      const labels = {ISS:'ISSQN',PIS:'PIS',COFINS:'COFINS',SOCIAL:'SOCIAIS RETIDAS',IRRF:'IRRF RETIDO',CP:'PREVIDÊNCIA RETIDA',CBS:'CBS',IBS:'IBS TOTAL'};
+      const cardGap=3,cardWidth=(WIDTH-cardGap*3)/4;
+      report.taxIndicators.forEach((tax,i)=>{
+        const x=LEFT+(i%4)*(cardWidth+cardGap),cy=y+Math.floor(i/4)*19;
+        pdf.setFillColor(239,245,250);pdf.roundedRect(x,cy,cardWidth,17,1,1,'F');
+        line(labels[tax.key],x+2,cy+1.2,cardWidth-4,{bold:true,size:6.1});
+        line(tax.amount===null?'Não informado / incompleto':money(tax.amount),x+2,cy+5,cardWidth-4,{bold:true,size:7.8,exact:true});
+        line(`${tax.informedCount}/${report.validItems} notas com valor · ${tax.zeroCount} zero explícito`,x+2,cy+9.2,cardWidth-4,{gray:true,size:5.7,exact:true});
+        const detail=tax.key==='CBS'||tax.key==='IBS'?'Valores informados no XML':
+          `Ret.: ${tax.retainedCount} · Não ret.: ${tax.notRetainedCount} · N/i: ${tax.unknownRetentionCount}`;
+        line(detail,x+2,cy+12.7,cardWidth-4,{gray:true,size:5.5,exact:true});
+      });
+      y+=40;
+    }
     const definitions = [
       { title: 'ITEM NBS', key: 'nbs' as const, last: columns.nbsLast, all: report.byNbs },
-      ...(report.mode === 'GERAL' ? [{ title: 'POR POLO', key: 'polo' as const, last: columns.poloLast, all: report.byPolo }] : []),
+      { title: 'POR POLO', key: 'polo' as const, last: columns.poloLast, all: report.byPolo },
     ];
     const gap = 5, columnWidth = (WIDTH - gap * definitions.length) / (definitions.length + 1);
     definitions.forEach((definition, columnIndex) => {
@@ -152,31 +167,22 @@ export function createNfseAccountingPdf(report: NfseAccountingReport, assets: Nf
         line('Continua na próxima página · total ao final.', x + 2, rowY + 4, columnWidth - 4, { gray: true, size: 6 });
       }
     });
-    const taxX = LEFT + definitions.length * (columnWidth + gap);
-    pdf.setFillColor(24, 51, 75); pdf.roundedRect(taxX, y, columnWidth, 11, 1, 1, 'F');
-    line('CBS / IBS', taxX + 2, y + 1.5, columnWidth - 4, { bold: true, white: true, size: 7 });
-    line('TRIBUTO', taxX + 2, y + 6.5, 20, { white: true, size: 5.8 });
-    line('VALOR NO XML', taxX + columnWidth - 2, y + 6.5, 45, { white: true, right: true, size: 5.8 });
-    if (index === 0) {
-      ['cbs', 'ibs'].forEach((key, i) => {
-        const prefix = key as 'cbs' | 'ibs', amount = report.taxSummary[`${prefix}Amount`];
-        const rowY = y + 11 + i * 14;
-        pdf.setFillColor(...(i ? [239, 245, 250] : [248, 250, 252]) as [number, number, number]);
-        pdf.rect(taxX, rowY, columnWidth, 14, 'F');
-        line(prefix.toUpperCase(), taxX + 2, rowY + 2, 16, { bold: true, size: 7.5 });
-        line(amount === null ? 'Não informado / incompleto' : money(amount), taxX + columnWidth - 2, rowY + 2, columnWidth - 22, { right: true, bold: true, size: 7, exact: true });
-        line(`${report.taxSummary[`${prefix}ReportedCount`]}/${report.validItems} notas com valor`, taxX + 2, rowY + 8, columnWidth - 4, { gray: true, size: 6.5 });
-      });
-      const notes = ['Somente notas válidas; valores do XML autorizado.',
-        'Ausência não significa isenção ou zero.',
-        'Não há estimativa nem soma parcial.',
-        'Resumo informativo, não é apuração tributária.',
-        'CBS/IBS não se somam ao valor bruto do serviço.'];
-      notes.forEach((text, i) => line(text, taxX + 2, y + 44 + i * 4.5, columnWidth - 4, { gray: true, size: 6.1, exact: true }));
-    } else {
-      line('Resumo tributário na primeira página de resumo.', taxX + 2, y + 15, columnWidth - 4, { gray: true, size: 6, exact: true });
-    }
-    if (report.totalAmount === null) line('Há valores desconhecidos. Total indisponível; não foi calculada soma parcial.', LEFT, 187, WIDTH, { gray: true, size: 6.5 });
+    const statusX=LEFT+2*(columnWidth+gap);
+    pdf.setFillColor(24,51,75);pdf.roundedRect(statusX,y,columnWidth,11,1,1,'F');
+    line('SITUAÇÃO DAS NOTAS POR POLO',statusX+2,y+1.5,columnWidth-4,{bold:true,white:true,size:7});
+    line('CONTAGENS · SEM SOMA DE VALORES',statusX+2,y+6.5,columnWidth-4,{white:true,size:5.7});
+    columns.polo.forEach((p,i)=>{
+      const state=report.byPoloStatus.find(s=>s.poloId===p.poloId)!;
+      const sy=y+11+i*12;
+      pdf.setFillColor(...(i%2?[239,245,250]:[248,250,252]) as [number,number,number]);pdf.rect(statusX,sy,columnWidth,12,'F');
+      line(`${state.poloCity||state.poloName}/${state.poloState||'UF n/i'} · ${state.total} registro(s)`,statusX+2,sy+1,columnWidth-4,{bold:true,size:6.3});
+      line(`Válidas: ${state.valid} · Canceladas: ${state.cancelled}`,statusX+2,sy+4.8,columnWidth-4,{size:6.2,exact:true});
+      line(`Rej./bloq.: ${state.rejected} · Pendentes: ${state.pending} · Outras: ${state.other}`,statusX+2,sy+8.2,columnWidth-4,{gray:true,size:5.5,exact:true});
+    });
+    if(!columns.polo.length) line('Unidades concluídas na página anterior.',statusX+2,y+15,columnWidth-4,{gray:true,size:6});
+    line('Tributos informativos, não apuração. N/i não significa zero ou isenção. Sociais retidas: grupo combinado; não somar novamente PIS/COFINS retidos.',LEFT,188,WIDTH,{gray:true,size:5.7,exact:true});
+    line('Situações por polo: válidas incluem cancelamento não confirmado; canceladas somente com confirmação fiscal. Faixa tributária: apenas notas válidas.',LEFT,191,WIDTH,{gray:true,size:5.7,exact:true});
+    if (report.totalAmount === null) line('Há valores desconhecidos. Total indisponível; não foi calculada soma parcial.', LEFT, 184, WIDTH, { gray: true, size: 6.5 });
   });
   for (let p = 1; p <= pageCount; p++) {
     pdf.setPage(p); pdf.setDrawColor(218, 227, 235); pdf.line(LEFT, 194, LEFT + WIDTH, 194);

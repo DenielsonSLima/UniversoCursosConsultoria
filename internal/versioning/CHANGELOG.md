@@ -108,6 +108,11 @@ Histórico arquivado: [10–11/11/2026 — versões 4.8.282 a 4.8.290](./changel
 
 Histórico 4.8.291: [11/11/2026](./changelog/2026-11-11-versao-4-8-291.md).
 
+## [4.8.362] - 2026-11-17
+
+- Relatório NFS-e com oito indicadores do XML, ausência explícita e situação mutuamente exclusiva por polo. Sem apuração ou mutação de notas.
+- Histórico preservado em [arquivo](./changelog/2026-11-17-historico-relatorio-v4.md).
+
 ## [4.8.361] - 2026-11-17
 - Emissor mantém saúde válida durante refetch e agrupa Realtime sem cancelar leituras em andamento.
 - Lote aguarda cinco segundos após cada resposta e no mínimo oito segundos entre inícios; mantém uma única chamada física.
@@ -492,7 +497,3 @@ Histórico 4.8.291: [11/11/2026](./changelog/2026-11-11-versao-4-8-291.md).
 - Serviços deixa de repetir notas com cancelamento fiscal confirmado, preservando sua consulta na aba Canceladas.
 - Separação aplicada antes da paginação e dos totais, sem excluir registros ou alterar situação fiscal, XML ou contas.
 
-## [4.8.292] - 2026-11-11
-
-- Forma de pagamento sugerida automaticamente pela conta: caixa interno em Dinheiro, Banese e Caixa Econômica em Pix.
-- A seleção manual continua disponível; múltiplas formas e tentativas já enviadas mantêm seus dados.

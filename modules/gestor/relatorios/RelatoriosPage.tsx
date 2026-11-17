@@ -77,7 +77,7 @@ const RelatoriosPage: React.FC<RelatoriosPageProps> = ({ poloId, fiscalPoloId, c
 
   const menuItems: ReportMenuItem[] = [
     ...(canAccessNfse ? [{ id: 'nfse-emitidas' as const, label: 'NFS-e Emitidas',
-      description: 'Relatório contábil em paisagem, por polo ou consolidado da matriz, com resumo de CBS/IBS.',
+      description: 'Relatório contábil em paisagem, por polo ou consolidado da matriz, com indicadores tributários e situações por polo.',
       icon: <FileText size={22} />, category: 'financeiro' as const }] : []),
     {
       id: 'turmas',

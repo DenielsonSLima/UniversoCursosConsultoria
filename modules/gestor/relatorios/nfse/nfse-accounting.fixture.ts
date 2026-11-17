@@ -1,3 +1,4 @@
+import { taxKeys, statusCategory } from './nfse-accounting.indicators';
 import type { NfseAccountingReport, NfseAccountingRow } from './nfse-accounting.types';
 import type { NfseIssuedExportAssets } from '../../emissor-nfse/exportacao/interno/nfse-issued-export.types';
 const id = (n: number) => `00000000-0000-0000-0000-${String(n).padStart(12, '0')}`;
@@ -21,7 +22,7 @@ export function accountingFixture(mode: 'POLO' | 'GERAL' = 'GERAL'): NfseAccount
     poloId: id(Number(polo)), poloName: String(poloName) === 'Propriá' ? 'UNIVERSO CURSOS - PROPRIÁ' : 'UNIVERSO CURSOS E CONSULTORIA', poloCnpj: `00000000000${String(polo).padStart(3,'0')}`, poloCity: String(poloName) === 'Matriz' ? 'Japoatã' : String(poloName), poloState: 'SE', recipientName: String(recipientName),
     recipientDocument: index === 0 || index === 3 ? '00000000000000' : '00000000000',
     serviceDate: '2026-10-31', competenceDate: '2026-10-31', nationalServiceCode: String(nationalServiceCode),
-    cbsAmount: null, ibsAmount: null, nbsCode: String(nbsCode), amount: String(amount), issAmount: index === 3 ? '50.00' : '0.00',
+    cbsAmount: '1.00', ibsAmount: '0.20', nbsCode: String(nbsCode), amount: String(amount), issAmount: index === 3 ? '50.00' : '0.00',
     issRetention: index === 3 ? '2' : '1', state: 'AUTHORIZED', validForTotals: true, dateSource: 'EMISSION', origin: index === 0 || index === 3 ? 'SERVICO' : 'ALUNO', xmlAvailable: true,
   }));
   const byCode = mode === 'GERAL' ? [{ code: '080201', count: 4, amount: '1180.00' }, { code: '170101', count: 1, amount: '2500.00' }]
@@ -35,7 +36,7 @@ export function accountingFixture(mode: 'POLO' | 'GERAL' = 'GERAL'): NfseAccount
   ] : [{ poloId: id(2), poloName: 'Propriá', count: 2, amount: '500.00' }];
   const poloMetadata = (p: {poloName:string;poloId:string}) => ({poloCnpj: `00000000000${p.poloId.slice(-3)}`,poloCity:p.poloName==='Matriz'?'Japoatã':p.poloName,poloState:'SE'});
   const units=byPolo.map(p=>({...p,...poloMetadata(p)}));
-  return { taxSummary: {cbsAmount: null, ibsAmount: null, cbsReportedCount: 0, ibsReportedCount: 0}, scope: { poloId: id(mode === 'GERAL' ? 1 : 2), contextKey: id(10), environment: 'HOMOLOGACAO', month: '2026-11' },
+  const result: NfseAccountingReport = { taxIndicators: [], byPoloStatus: [], taxSummary: {cbsAmount: null, ibsAmount: null, cbsReportedCount: 0, ibsReportedCount: 0}, scope: { poloId: id(mode === 'GERAL' ? 1 : 2), contextKey: id(10), environment: 'HOMOLOGACAO', month: '2026-11' },
     mode, dateFrom: '2026-11-01', dateTo: '2026-11-30', generatedAt: '2026-11-12T14:00:00Z',
     pages: [mode === 'GERAL' ? rows : rows.filter(r => r.poloId === id(2))],
     totalItems: mode === 'GERAL' ? 5 : 2, validItems: mode === 'GERAL' ? 5 : 2, totalAmount: mode === 'GERAL' ? '3680.00' : '500.00',
@@ -43,19 +44,36 @@ export function accountingFixture(mode: 'POLO' | 'GERAL' = 'GERAL'): NfseAccount
     summaryColumnPages: [{ code: byCode, nbs: byNbs, polo: mode === 'GERAL' ? units : [], codeLast: true, nbsLast: true, poloLast: mode === 'GERAL' }],
     summaryPages: [[...byCode.map(c => ({ kind: 'CODE' as const, ...c })), ...byNbs.map(c => ({ kind: 'NBS' as const, ...c })), ...(mode === 'GERAL' ? units.map(p => ({ kind: 'POLO' as const, ...p })) : [])]],
   };
+  return syncAccountingSummaryFixture(result);
 }
 
 /** Test-only backend fixture; production pagination is supplied by the RPC. */
 export function syncAccountingSummaryFixture(report: NfseAccountingReport) {
+  report.byPolo=report.byPolo.map(p=>({...p,count:report.pages.flat().filter(r=>r.poloId===p.poloId && r.validForTotals).length}));
   const summary = [...report.byCode.map(c => ({kind:'CODE' as const,...c})), ...report.byNbs.map(c => ({kind:'NBS' as const,...c})),
-    ...(report.mode === 'GERAL' ? report.byPolo.map(p => ({kind:'POLO' as const,...p})) : [])];
+    ...report.byPolo.map(p => ({kind:'POLO' as const,...p}))];
   report.summaryPages = Array.from({length:Math.ceil(summary.length/12)},(_,i)=>summary.slice(i*12,i*12+12));
-  const count = Math.max(1,Math.ceil(report.byCode.length/8),Math.ceil(report.byNbs.length/8),report.mode==='GERAL'?Math.ceil(report.byPolo.length/8):1);
+  const count = Math.max(1,Math.ceil(report.byCode.length/4),Math.ceil(report.byNbs.length/4),Math.ceil(report.byPolo.length/4));
   report.summaryColumnPages = Array.from({length:count},(_,i)=>({
-    code:report.byCode.slice(i*8,i*8+8),nbs:report.byNbs.slice(i*8,i*8+8),polo:report.mode==='GERAL'?report.byPolo.slice(i*8,i*8+8):[],
-    codeLast:i===Math.max(0,Math.ceil(report.byCode.length/8)-1),nbsLast:i===Math.max(0,Math.ceil(report.byNbs.length/8)-1),
-    poloLast:report.mode==='GERAL'&&i===Math.max(0,Math.ceil(report.byPolo.length/8)-1),
+    code:report.byCode.slice(i*4,i*4+4),nbs:report.byNbs.slice(i*4,i*4+4),polo:report.byPolo.slice(i*4,i*4+4),
+    codeLast:i===Math.max(0,Math.ceil(report.byCode.length/4)-1),nbsLast:i===Math.max(0,Math.ceil(report.byNbs.length/4)-1),
+    poloLast:i===Math.max(0,Math.ceil(report.byPolo.length/4)-1),
   }));
+  const validRows=report.pages.flat().filter(r=>r.validForTotals);
+  const sum=(values:(string|null)[])=>values.length&&values.every(v=>v!==null)?values.reduce((n,v)=>n+Number(v),0).toFixed(2):null;
+  for(const prefix of ['cbs','ibs'] as const){report.taxSummary[`${prefix}Amount`]=sum(validRows.map(r=>r[`${prefix}Amount`]));report.taxSummary[`${prefix}ReportedCount`]=validRows.filter(r=>r[`${prefix}Amount`]!==null).length;}
+  report.taxIndicators=taxKeys.map(key=>{
+    const values=validRows.map(r=>key==='CBS'?r.cbsAmount:key==='IBS'?r.ibsAmount:key==='ISS'?r.issAmount:null);
+    const retainedCount=key==='ISS'?validRows.filter(r=>['2','3'].includes(r.issRetention||'')).length:0;
+    const notRetainedCount=key==='ISS'?validRows.filter(r=>r.issRetention==='1').length:0;
+    return {key,amount:sum(values),informedCount:values.filter(v=>v!==null).length,zeroCount:values.filter(v=>v!==null&&Number(v)===0).length,
+      retainedCount,notRetainedCount,unknownRetentionCount:validRows.length-retainedCount-notRetainedCount};
+  });
+  report.byPoloStatus=report.byPolo.map(p=>{
+    const rows=report.pages.flat().filter(r=>r.poloId===p.poloId);
+    const n=(category:string)=>rows.filter(r=>statusCategory(r)===category).length;
+    return {poloId:p.poloId,poloName:p.poloName,poloCity:p.poloCity,poloState:p.poloState,total:rows.length,valid:n('valid'),cancelled:n('cancelled'),rejected:n('rejected'),pending:n('pending'),other:n('other')};
+  });
   return report;
 }
 
@@ -74,5 +92,5 @@ export function accountingStatusFixture(mode: 'POLO' | 'GERAL' = 'GERAL') {
   const rows = [...report.pages.flat(), ...others];
   report.pages = Array.from({ length: Math.ceil(rows.length / 6) }, (_, i) => rows.slice(i * 6, i * 6 + 6));
   report.totalItems = rows.length;
-  return report;
+  return syncAccountingSummaryFixture(report);
 }

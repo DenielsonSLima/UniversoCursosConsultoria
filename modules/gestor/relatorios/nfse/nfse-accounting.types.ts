@@ -1,3 +1,4 @@
+import { parseIndicators, parsePoloStatuses, type NfseTaxIndicator, type NfsePoloStatus } from './nfse-accounting.indicators';
 import type { NfseScope } from '../../emissor-nfse/types/nfse.types';
 import { NfseContractError } from '../../emissor-nfse/services/nfse.errors';
 import { integer, money, record, string, nullableString, oneOf, boolean } from '../../emissor-nfse/services/nfse.validation';
@@ -20,6 +21,7 @@ export interface NfseAccountingColumnPage {
 }
 export interface NfseAccountingTaxSummary { cbsAmount: string | null; ibsAmount: string | null; cbsReportedCount: number; ibsReportedCount: number }
 export interface NfseAccountingReport {
+  taxIndicators: NfseTaxIndicator[]; byPoloStatus: NfsePoloStatus[];
   taxSummary: NfseAccountingTaxSummary;
   scope: NfseScope; mode: NfseAccountingMode; dateFrom: string; dateTo: string; generatedAt: string;
   pages: NfseAccountingRow[][]; totalItems: number; validItems: number; totalAmount: string | null;
@@ -80,23 +82,22 @@ export function parseNfseAccountingReport(value: unknown, scope: NfseScope): Nfs
     return page.map(value => {
       const row = record(value), kind = oneOf(row.kind, ['CODE', 'NBS', 'POLO'] as const);
       if (kind === 'CODE' || kind === 'NBS') return { kind, code: nullableString(row.code), count: integer(row.count), amount: money(row.amount) };
-      if (mode !== 'GERAL') throw new NfseContractError();
       return { kind, poloId: string(row.poloId), poloName: string(row.poloName),
         poloCnpj: nullableString(row.poloCnpj), poloCity: nullableString(row.poloCity), poloState: nullableString(row.poloState), count: integer(row.count), amount: money(row.amount) };
     });
   });
-  const expectedSummaries = [...byCode.map(c => ({ kind: 'CODE', ...c })), ...byNbs.map(c => ({ kind: 'NBS', ...c })), ...(mode === 'GERAL' ? byPolo.map(p => ({ kind: 'POLO', ...p })) : [])];
+  const expectedSummaries = [...byCode.map(c => ({ kind: 'CODE', ...c })), ...byNbs.map(c => ({ kind: 'NBS', ...c })), ...byPolo.map(p => ({ kind: 'POLO', ...p }))];
   if (JSON.stringify(summaryPages.flat()) !== JSON.stringify(expectedSummaries)) throw new NfseContractError();
   if (!Array.isArray(data.summaryColumnPages)) throw new NfseContractError();
-  const pageCount = Math.max(1, Math.ceil(byCode.length / 8), Math.ceil(byNbs.length / 8), mode === 'GERAL' ? Math.ceil(byPolo.length / 8) : 1);
+  const pageCount = Math.max(1, Math.ceil(byCode.length / 4), Math.ceil(byNbs.length / 4), Math.ceil(byPolo.length / 4));
   if (data.summaryColumnPages.length !== pageCount) throw new NfseContractError();
   const summaryColumnPages = data.summaryColumnPages.map((value, index) => {
     const page = record(value);
-    const expected = { code: byCode.slice(index * 8, index * 8 + 8), nbs: byNbs.slice(index * 8, index * 8 + 8),
-      polo: mode === 'GERAL' ? byPolo.slice(index * 8, index * 8 + 8) : [],
-      codeLast: index === Math.max(0, Math.ceil(byCode.length / 8) - 1),
-      nbsLast: index === Math.max(0, Math.ceil(byNbs.length / 8) - 1),
-      poloLast: mode === 'GERAL' && index === Math.max(0, Math.ceil(byPolo.length / 8) - 1) };
+    const expected = { code: byCode.slice(index * 4, index * 4 + 4), nbs: byNbs.slice(index * 4, index * 4 + 4),
+      polo: byPolo.slice(index * 4, index * 4 + 4),
+      codeLast: index === Math.max(0, Math.ceil(byCode.length / 4) - 1),
+      nbsLast: index === Math.max(0, Math.ceil(byNbs.length / 4) - 1),
+      poloLast: index === Math.max(0, Math.ceil(byPolo.length / 4) - 1) };
     for (const key of ['code', 'nbs', 'polo'] as const) {
       if (!Array.isArray(page[key]) || page[key].length !== expected[key].length) throw new NfseContractError();
       page[key].forEach((item, i) => {
@@ -116,6 +117,11 @@ export function parseNfseAccountingReport(value: unknown, scope: NfseScope): Nfs
       || (amount !== null && (count !== validItems || count === 0))
       || (count > 0 && count === validItems && amount === null)) throw new NfseContractError();
   }
-  return { taxSummary, scope, mode, dateFrom, dateTo, generatedAt: timestamp(data.generatedAt), pages, totalItems, validItems,
+  const taxIndicators=parseIndicators(data.taxIndicators,validItems), byPoloStatus=parsePoloStatuses(data.byPoloStatus,byPolo,rows);
+  for(const prefix of ['cbs','ibs'] as const){
+    const indicator=taxIndicators.find(t=>t.key===prefix.toUpperCase())!;
+    if(indicator.amount!==taxSummary[`${prefix}Amount`] || indicator.informedCount!==taxSummary[`${prefix}ReportedCount`]) throw new NfseContractError();
+  }
+  return { taxIndicators, byPoloStatus, taxSummary, scope, mode, dateFrom, dateTo, generatedAt: timestamp(data.generatedAt), pages, totalItems, validItems,
     totalAmount: money(data.totalAmount), summaryPages, summaryColumnPages, byCode, byNbs, byPolo, unitsDescription: string(data.unitsDescription) };
 }
