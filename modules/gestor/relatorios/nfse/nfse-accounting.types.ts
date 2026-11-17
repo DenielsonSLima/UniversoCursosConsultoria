@@ -8,7 +8,7 @@ export interface NfseAccountingRow {
   poloId: string; poloName: string; poloCnpj: string | null; poloCity: string | null; poloState: string | null; recipientName: string | null; recipientDocument: string | null;
   serviceDate: string | null; competenceDate: string | null;
   nationalServiceCode: string | null; nbsCode: string | null;
-  amount: string | null; issAmount: string | null; issRetention: string | null;
+  cbsAmount: string | null; ibsAmount: string | null; amount: string | null; issAmount: string | null; issRetention: string | null;
   state: string; origin: string | null; xmlAvailable: boolean;
 }
 export interface NfseAccountingCodeTotal { code: string | null; count: number; amount: string | null }
@@ -18,7 +18,9 @@ export interface NfseAccountingColumnPage {
   code: NfseAccountingCodeTotal[]; nbs: NfseAccountingCodeTotal[]; polo: NfseAccountingPoloTotal[];
   codeLast: boolean; nbsLast: boolean; poloLast: boolean;
 }
+export interface NfseAccountingTaxSummary { cbsAmount: string | null; ibsAmount: string | null; cbsReportedCount: number; ibsReportedCount: number }
 export interface NfseAccountingReport {
+  taxSummary: NfseAccountingTaxSummary;
   scope: NfseScope; mode: NfseAccountingMode; dateFrom: string; dateTo: string; generatedAt: string;
   pages: NfseAccountingRow[][]; totalItems: number; validItems: number; totalAmount: string | null;
   summaryPages: NfseAccountingSummary[][]; summaryColumnPages: NfseAccountingColumnPage[]; byCode: NfseAccountingCodeTotal[]; byNbs: NfseAccountingCodeTotal[]; byPolo: NfseAccountingPoloTotal[]; unitsDescription: string;
@@ -53,7 +55,7 @@ export function parseNfseAccountingReport(value: unknown, scope: NfseScope): Nfs
         recipientName: nullableString(row.recipientName), recipientDocument: nullableString(row.recipientDocument),
         serviceDate: dateOrNull(row.serviceDate), competenceDate: dateOrNull(row.competenceDate),
         nationalServiceCode: nullableString(row.nationalServiceCode), nbsCode: nullableString(row.nbsCode),
-        amount: money(row.amount), issAmount: money(row.issAmount), issRetention: nullableString(row.issRetention),
+        cbsAmount: money(row.cbsAmount), ibsAmount: money(row.ibsAmount), amount: money(row.amount), issAmount: money(row.issAmount), issRetention: nullableString(row.issRetention),
         origin: nullableString(row.origin), xmlAvailable: boolean(row.xmlAvailable) };
     });
   });
@@ -105,6 +107,15 @@ export function parseNfseAccountingReport(value: unknown, scope: NfseScope): Nfs
     for (const key of ['codeLast', 'nbsLast', 'poloLast'] as const) if (page[key] !== expected[key]) throw new NfseContractError();
     return expected;
   });
-  return { scope, mode, dateFrom, dateTo, generatedAt: timestamp(data.generatedAt), pages, totalItems, validItems,
+  const tax = record(data.taxSummary);
+  const taxSummary = { cbsAmount: money(tax.cbsAmount), ibsAmount: money(tax.ibsAmount),
+    cbsReportedCount: integer(tax.cbsReportedCount), ibsReportedCount: integer(tax.ibsReportedCount) };
+  for (const prefix of ['cbs', 'ibs'] as const) {
+    const count = taxSummary[`${prefix}ReportedCount`], amount = taxSummary[`${prefix}Amount`];
+    if (count !== rows.filter(r => r.validForTotals && r[`${prefix}Amount`] !== null).length
+      || (amount !== null && (count !== validItems || count === 0))
+      || (count > 0 && count === validItems && amount === null)) throw new NfseContractError();
+  }
+  return { taxSummary, scope, mode, dateFrom, dateTo, generatedAt: timestamp(data.generatedAt), pages, totalItems, validItems,
     totalAmount: money(data.totalAmount), summaryPages, summaryColumnPages, byCode, byNbs, byPolo, unitsDescription: string(data.unitsDescription) };
 }

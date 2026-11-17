@@ -45,15 +45,15 @@ export default function RelatorioNfse({ poloId, contextKey, isMatriz, canAccessN
         <button type="button" onClick={() => setMode('POLO')} aria-pressed={mode === 'POLO'}
           className={`rounded-xl border p-4 text-left ${mode === 'POLO' ? 'border-blue-500 bg-blue-50' : 'border-slate-200 bg-white'}`}>
           <FileText size={18} className="mb-2 text-blue-700" /><strong className="text-sm text-slate-800">Por polo</strong>
-          <p className="mt-1 text-xs text-slate-500">Notas da unidade selecionada e totais por código de tributação nacional.</p>
+          <p className="mt-1 text-xs text-slate-500">Notas da unidade selecionada e resumo de CBS/IBS informado no XML.</p>
         </button>
         {isMatriz && <button type="button" onClick={() => setMode('GERAL')} aria-pressed={mode === 'GERAL'}
           className={`rounded-xl border p-4 text-left ${mode === 'GERAL' ? 'border-blue-500 bg-blue-50' : 'border-slate-200 bg-white'}`}>
           <Building2 size={18} className="mb-2 text-blue-700" /><strong className="text-sm text-slate-800">Geral · Matriz</strong>
-          <p className="mt-1 text-xs text-slate-500">Polos ativos da mesma instituição, resumo por unidade e por tributação. Exige acesso a todos os polos incluídos.</p>
+          <p className="mt-1 text-xs text-slate-500">Polos ativos da mesma instituição, resumo por unidade, NBS e CBS/IBS. Exige acesso a todos os polos incluídos.</p>
         </button>}
       </div>
-      <p className="text-xs leading-relaxed text-slate-500">Registros compactos com emissão, competência, número, chave, parceiro, CPF/CNPJ, data do serviço, tributação nacional, NBS, valor bruto, ISS e identificação completa do polo. Canceladas e operações sem emissão são identificadas e não somam. Período pela emissão fiscal ou, se não emitida, pela criação do registro. Rascunhos não incluídos.</p>
+      <p className="text-xs leading-relaxed text-slate-500">Registros compactos com emissão, competência, número, chave, parceiro, CPF/CNPJ, data do serviço, NBS, valor bruto, ISS e identificação completa do polo. Resumo de CBS/IBS conforme XML, sem estimativa de valores ausentes. Canceladas e operações sem emissão são identificadas e não somam. Período pela emissão fiscal ou, se não emitida, pela criação do registro. Rascunhos não incluídos.</p>
       {!allowed && <p role="status" className="text-sm text-amber-700">Selecione um polo e confirme seu acesso ao Emissor NFS-e. O consolidado só pode ser aberto na matriz.</p>}
       {!validPeriod && <p role="alert" className="text-sm text-rose-700">Informe um período de emissão válido.</p>}
       <button type="button" disabled={!allowed || !validPeriod} onClick={() => setPreview(true)}

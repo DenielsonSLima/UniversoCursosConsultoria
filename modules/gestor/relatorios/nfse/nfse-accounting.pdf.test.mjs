@@ -30,7 +30,7 @@ test('paisagem selecionável, três linhas por nota, chave completa e total can�
   const result = createNfseAccountingPdf(report, accountingFixtureAssets); const pages = await inspect(result.blob);
   assert.equal(JSON.stringify(report), before); assert.equal(pages.length, 2);
   const allText = pages.map(p => p.text).join('\n');
-  for (const expected of ['TRIBUTAÇÃO NAC.', 'ITEM NBS', 'DATA DO SERVIÇO', 'R$ 3.680,00', '080201', 'Aquidabã', 'COMPETÊNCIA']) assert(allText.includes(expected), expected);
+  for (const expected of ['CBS / IBS', 'ITEM NBS', 'DATA DO SERVIÇO', 'R$ 3.680,00',  'Aquidabã', 'COMPETÊNCIA']) assert(allText.includes(expected), expected);
   assert(pages[1].text.includes('TOTAL VÁLIDO DO PERÍODO'));
   assert(pages[0].text.includes('11:00:00'));assert(pages[0].text.includes('Homologação'));
   assert(pages[0].text.includes('CNPJ: 00.000.000/0000-01'));
@@ -70,6 +70,21 @@ test('por polo não inclui outras unidades; desconhecidos não viram zero e canc
   assert.throws(() => createNfseAccountingPdf(cancelled, accountingFixtureAssets));
 });
 
+test('CBS/IBS preservam zero explícito, rejeitam parcial e não exibem tributação nacional', async () => {
+  const r=accountingFixture('POLO');
+  for(const row of r.pages.flat()){row.cbsAmount='0.00';row.ibsAmount='1.25';}
+  r.taxSummary={cbsAmount:'0.00',ibsAmount:'2.50',cbsReportedCount:2,ibsReportedCount:2};
+  const pages=await inspect(createNfseAccountingPdf(r,accountingFixtureAssets).blob);
+  const text=pages.map(p=>p.text).join(' ');
+  assert.match(text,/CBS\s+R\$ 0,00/);assert.match(text,/IBS\s+R\$ 2,50/);
+  assert(!text.includes('TRIBUTAÇÃO NAC'));assert(text.includes('não é apuração tributária'));
+  r.pages[0][0].cbsAmount=null;r.taxSummary.cbsReportedCount=1;
+  assert.throws(()=>parseNfseAccountingReport(r,r.scope));
+  r.taxSummary.cbsAmount=null;
+  const partial=(await inspect(createNfseAccountingPdf(r,accountingFixtureAssets).blob)).at(-1).text;
+  assert.match(partial,/CBS\s+Não informado \/ incompleto/);assert(partial.includes('1/2 notas com valor'));
+});
+
 test('rejeita paginação parcial, duplicação, data inválida e resumos divergentes', () => {
   for (const change of [r => r.totalItems++, r => r.pages[0].push(r.pages[0][0]), r => r.dateFrom='2026-02-30',
     r => r.summaryPages[0][0].amount='999.00', r => r.summaryColumnPages[0].codeLast=false, r => r.pages[0][0].amount='1,00']) {
@@ -94,7 +109,7 @@ test('páginas cheias, resumos cheios e relatório vazio preservam margens e rod
   assert(e[0].text.includes('Nenhuma NFS-e'));assert(e[1].text.includes('R$ 0,00'));
 });
 
-test('resumos paralelos mantêm três colunas, total ao fim de cada visão e continuação sem duplicar itens', async () => {
+test('resumos paralelos mantêm NBS e polos, total ao fim de cada visão e continuação sem duplicar itens', async () => {
   const r=accountingFixture();
   r.byCode=Array.from({length:18},(_,i)=>({code:String(880000+i),count:1,amount:'1.00'}));
   r.byNbs=Array.from({length:9},(_,i)=>({code:String(990000000+i),count:1,amount:'1.00'}));
@@ -102,13 +117,16 @@ test('resumos paralelos mantêm três colunas, total ao fim de cada visão e con
   const pages=await inspect(createNfseAccountingPdf(r,accountingFixtureAssets).blob);
   assert.equal(pages.length,4);
   const summaries=pages.slice(1),text=summaries.map(p=>p.text).join(' ');
-  assert.equal(text.split('TOTAL DESTA VISÃO').length-1,3);
+  assert.equal(text.split('TOTAL DESTA VISÃO').length-1,2);
   assert(text.includes('NÃO SOME')); assert(text.includes('Continua na próxima página'));
-  for(const item of [...r.byCode,...r.byNbs]) assert.equal(text.split(item.code).length-1,1,item.code);
-  const headers=['TRIBUTAÇÃO NACIONAL','ITEM NBS','POR POLO'].map(t=>summaries[0].items.find(i=>i.str===t));
+  for(const item of r.byNbs) assert.equal(text.split(item.code).length-1,1,item.code);
+  const full=structuredClone(r); full.byCode=[]; full.byNbs=full.byNbs.slice(0,8);syncAccountingSummaryFixture(full);
+  const fullPages=await inspect(createNfseAccountingPdf(full,accountingFixtureAssets).blob);
+  for(const p of fullPages.slice(1))for(const i of p.items.filter(i=>i.str.trim() && !i.str.startsWith('Relatório interno') && !i.str.startsWith('Página ')))assert(i.transform[5]>45,i.str);
+  const headers=['ITEM NBS','POR POLO','CBS / IBS'].map(t=>summaries[0].items.find(i=>i.str===t));
   assert(headers.every(Boolean));assert(headers[0].transform[4]<headers[1].transform[4]);assert(headers[1].transform[4]<headers[2].transform[4]);
   assert.equal(new Set(headers.map(i=>i.transform[5].toFixed(2))).size,1);
-  for(const p of summaries)for(const i of p.items.filter(i=>i.str.trim()))assert(i.transform[5]>20,i.str);
+  for(const p of summaries)for(const i of p.items.filter(i=>i.str.trim() && !i.str.startsWith('Relatório interno') && !i.str.startsWith('Página ')))assert(i.transform[5]>45,i.str);
   if(process.env.NFSE_ACCOUNTING_PREVIEW_DIR) await writeFile(join(process.env.NFSE_ACCOUNTING_PREVIEW_DIR,'previa-nfse-resumo-extenso.pdf'),new Uint8Array(await createNfseAccountingPdf(r,accountingFixtureAssets).blob.arrayBuffer()));
 });
 
