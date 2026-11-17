@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { mkdir, mkdtemp, writeFile, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, writeFile, readFile, rm } from 'node:fs/promises';
 import { setTimeout } from 'node:timers';
 import { resolve } from 'node:path';
 import { pathToFileURL, fileURLToPath } from 'node:url';
@@ -34,6 +34,11 @@ async function compile(temp) {
     export {NfseAccessError} from './modules/gestor/emissor-nfse/services/nfse.errors';`, resolveDir: base, loader: 'tsx' },
     bundle: true, write: false, format: 'esm', platform: 'node', packages: 'external', jsx: 'automatic', outfile: output,
     loader: { '.css': 'empty' }, plugins: [{ name: 'isolated-post-issue', setup(builder) {
+      // This suite tests post-authorization routing, not elapsed time. Real pacing
+      // is covered by NfseBatchEmissionModal.interaction and batch core tests.
+      builder.onLoad({ filter: /nfse-batch\.core\.ts$/ }, async args => ({ loader: 'ts',
+        contents: (await readFile(args.path, 'utf8')).replace('options.commandIntervalMs ?? 8000', 'options.commandIntervalMs ?? 0')
+          .replace('options.commandRestMs ?? (options.commandIntervalMs === 0 ? 0 : 5000)', 'options.commandRestMs ?? 0') }));
       const fixture = (filter, path) => builder.onResolve({ filter }, () => ({ path, namespace: 'fixture' }));
       fixture(/useNfseQueries$/, 'queries');
       fixture(/useNfseQueue$/, 'queue');

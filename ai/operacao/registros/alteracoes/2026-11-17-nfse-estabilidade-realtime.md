@@ -23,7 +23,9 @@ Produção explicitamente autorizada pelo proprietário ao responder Sim à perg
 - `ai/operacao/registros/alteracoes/2026-11-17-nfse-estabilidade-realtime.md`
 - `ai/operacao/qualidade/limite-linhas-manifestos.json`
 
-Total: 18 arquivos.
+- `modules/gestor/emissor-nfse/emissao/NfseServicePostIssue.interaction.test.mjs`
+
+Total: 19 arquivos.
 
 ## Segurança e aceite
 Sem operações fiscais reais, banco, numeração, configuração ou nova alteração no relatório. Testes sintéticos somente. Base fb32519f992664b7a5c3f5cf0f5ee430cd5b5518 preserva relatório4.8.360. Correção piscada revisada independentemente sem bloqueios. Correção lote revisada nos commits38238d9a/fad6ca92.
