@@ -43,7 +43,13 @@ try {
     if(local){assert.equal(await scope.count(),0);assert.equal(requests.at(-1).p_polo_id,'polo-a');await page.close();console.log('PASS gestor local mantém escopo e não vê opção global');continue;}
     await scope.waitFor();assert.equal(await scope.inputValue(),'CONTA');
     const button=page.getByRole('button',{name:'Gerar PDF',exact:true});
-    await button.scrollIntoViewIfNeeded();
+    const scroller = width >= 1024 ? page.locator('aside') : page.locator('#root > div');
+    assert.equal(await scroller.evaluate(el=>getComputedStyle(el).overflowY),'auto');
+    const initial=await button.boundingBox();
+    const region=await scroller.boundingBox();
+    await page.mouse.move(region.x+Math.min(region.width/2,150),region.y+80);
+    await page.mouse.wheel(0,Math.max(0,initial.y+initial.height-height+80));
+    await page.waitForTimeout(250);
     const box=await button.boundingBox();assert.ok(box && box.y>=0 && box.y+box.height<=height,`${width}: PDF deve ficar dentro do viewport`);
     if(process.env.EXTRATO_VIEWPORT_OUTPUT) await page.screenshot({path:`${process.env.EXTRATO_VIEWPORT_OUTPUT}-filters-${width}.png`});
     await button.click();
