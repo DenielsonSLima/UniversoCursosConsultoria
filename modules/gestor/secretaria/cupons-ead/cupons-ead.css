@@ -25,7 +25,7 @@
 .cupons-item-details { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 12px 0; }
 .cupons-item-details dt { color: #607286; font-size: 12px; }
 .cupons-item-details dd { margin: 0; overflow-wrap: anywhere; }
-.cupons-item-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.cupons-item-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
 .cupons-pagination { margin-top: 14px; font-size: 12px; color: #607286; }
 .cupons-pagination > div { display: flex; gap: 8px; }
 .cupons-ead-overlay { position: fixed; inset: 0; z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 20px; background: rgb(15 23 42 / .45); }
@@ -65,3 +65,6 @@
   .cupons-item-details { grid-template-columns: minmax(0, 1fr); }
   .cupons-item-actions { flex-wrap: wrap; justify-content: flex-start; }
 }
+
+.cupom-status-badges { display: flex; flex-wrap: wrap; gap: 6px; }
+.cupom-badge.is-expired { color: #b91c1c; background: #fef2f2; }

@@ -7,6 +7,7 @@ import type { EadCoupon, EadCouponDraft } from '../../../ead/cupons/coupons-mana
 import { CuponsEadList } from './components/CuponsEadList';
 import { CuponsPagination } from './components/CuponsPagination';
 import { CupomHistoryDialog } from './components/CupomHistoryDialog';
+import { CupomExtendDialog } from './formularios/CupomExtendDialog';
 import { CupomEadForm } from './formularios/CupomEadForm';
 import { useCuponsEadCourses, useCuponsEadHistory, useCuponsEadList } from './hooks/useCuponsEadQueries';
 import { useSaveCupomEad } from './hooks/useCuponsEadMutations';
@@ -25,6 +26,7 @@ const CuponsEadWorkspace: React.FC<{ poloId: string; contextId: string; showHead
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [form, setForm] = useState<{ coupon: EadCoupon | null } | null>(null);
+  const [extension, setExtension] = useState<EadCoupon | null>(null);
   const [history, setHistory] = useState<EadCoupon | null>(null);
   const [historyPage, setHistoryPage] = useState(1);
   const [courseSearch, setCourseSearch] = useState('');
@@ -49,12 +51,17 @@ const CuponsEadWorkspace: React.FC<{ poloId: string; contextId: string; showHead
     {list.error && <p role="alert" className="cupom-error">{list.error.message}</p>}
     {!list.isPending && !list.error && list.data?.items.length === 0 && <div className="cupons-empty">{search ? 'Nenhum cupom encontrado para esta busca.' : 'Nenhum cupom cadastrado neste polo.'}</div>}
     {!list.error && list.data && <>
-      <CuponsEadList items={list.data.items} onEdit={openForm} onHistory={coupon => { setHistory(coupon); setHistoryPage(1); }} />
+      <CuponsEadList items={list.data.items} onEdit={openForm} onExtend={coupon => { save.reset(); setExtension(coupon); }} onHistory={coupon => { setHistory(coupon); setHistoryPage(1); }} />
       <CuponsPagination page={list.data.page} pageSize={list.data.pageSize} total={list.data.total} pending={list.isFetching} onChange={setPage} />
     </>}
     {form && <CupomEadForm key={form.coupon?.id || 'new'} coupon={form.coupon} courses={courses.data || []} coursesLoading={courses.isFetching}
       coursesError={courses.error?.message} pending={save.isPending} error={save.error?.message} onCourseSearch={setCourseSearch}
       onClose={() => { if (!save.isPending) setForm(null); }} onSubmit={submit} />}
+    {extension && <CupomExtendDialog key={extension.id} coupon={extension} pending={save.isPending} error={save.error?.message}
+      onClose={() => { if (!save.isPending) setExtension(null); }}
+      onSubmit={(coupon, requestId) => save.mutate({ poloId, coupon, requestId }, {
+        onSuccess: () => { setExtension(null); toast.success('Validade prorrogada. Limites e utilizações preservados.'); },
+      })} />}
     {history && <CupomHistoryDialog coupon={history} data={usages.data} loading={usages.isFetching} error={usages.error?.message}
       onClose={() => setHistory(null)} onPage={setHistoryPage} />}
     <ToastNotification toasts={toasts} onRemove={removeToast} />
