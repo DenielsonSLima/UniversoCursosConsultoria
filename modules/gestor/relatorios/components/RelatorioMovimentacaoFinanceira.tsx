@@ -1,4 +1,4 @@
-import React, { useDeferredValue, useEffect, useMemo, useState } from 'react';
+import React, { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   AlertTriangle,
@@ -11,19 +11,13 @@ import {
 } from 'lucide-react';
 import FinancialReportExportButton, {
   FinancialReportStatusBadge,
-  type FinancialReportColumn,
-  type FinancialReportFilter,
   type FinancialReportRow,
-  type FinancialReportSummaryCard,
-  type FinancialReportTone,
 } from '../../financeiro/components/FinancialReportPreview';
 import {
   relatoriosService,
   type RelatorioMovimentacaoFinanceiraData,
   type RelatorioMovimentacaoFinanceiraFiltros,
-  type RelatorioMovimentacaoFinanceiraItem,
   type RelatorioMovimentacaoFinanceiraStatus,
-  type RelatorioMovimentacaoFinanceiraTipo,
 } from '../relatorios.service';
 import { relatoriosKeys } from '../relatorios.query-keys';
 import {
@@ -35,201 +29,19 @@ import {
   SummaryCard,
 } from './RelatorioShared';
 
-type RelatorioMovimentacaoFinanceiraDetalheTipo = Exclude<
-  RelatorioMovimentacaoFinanceiraTipo,
-  'CATEGORIAS'
->;
-
-interface RelatorioMovimentacaoFinanceiraProps {
-  company: any;
-  polo: any;
-  tipo: RelatorioMovimentacaoFinanceiraDetalheTipo;
-}
-
-interface ReportConfiguration {
-  title: string;
-  shortTitle: string;
-  description: string;
-  dateLabel: string;
-  tone: FinancialReportTone;
-  requiresAccount: boolean;
-  allowsAccountFilter: boolean;
-  showsStatus: boolean;
-  flow: boolean;
-  fileName: string;
-}
-
-const REPORT_CONFIG: Record<RelatorioMovimentacaoFinanceiraDetalheTipo, ReportConfiguration> = {
-  EXTRATO_CONTA: {
-    title: 'Extrato Financeiro por Conta',
-    shortTitle: 'Extrato por Conta',
-    description: 'Movimentos efetivos da conta selecionada, com saldo de abertura, entradas, saídas e saldo de fechamento no período.',
-    dateLabel: 'Data do movimento',
-    tone: 'blue',
-    requiresAccount: true,
-    allowsAccountFilter: true,
-    showsStatus: false,
-    flow: true,
-    fileName: 'extrato-financeiro-por-conta',
-  },
-  ENTRADAS: {
-    title: 'Relatório de Entradas',
-    shortTitle: 'Entradas de Caixa',
-    description: 'Recebimentos, créditos de financiamento e transferências físicas que ingressaram no caixa.',
-    dateLabel: 'Data da entrada',
-    tone: 'emerald',
-    requiresAccount: false,
-    allowsAccountFilter: true,
-    showsStatus: false,
-    flow: true,
-    fileName: 'relatorio-entradas',
-  },
-  SAIDAS: {
-    title: 'Relatório de Saídas',
-    shortTitle: 'Saídas de Caixa',
-    description: 'Pagamentos, amortizações de financiamento e transferências físicas que saíram do caixa.',
-    dateLabel: 'Data da saída',
-    tone: 'rose',
-    requiresAccount: false,
-    allowsAccountFilter: true,
-    showsStatus: false,
-    flow: true,
-    fileName: 'relatorio-saidas',
-  },
-  RECEITAS: {
-    title: 'Relatório de Receitas',
-    shortTitle: 'Receitas Operacionais',
-    description: 'Receitas operacionais de mensalidades, previstas e realizadas por vencimento. Créditos, adiantamentos e empréstimos ficam fora desta visão.',
-    dateLabel: 'Vencimento / competência',
-    tone: 'emerald',
-    requiresAccount: false,
-    allowsAccountFilter: false,
-    showsStatus: true,
-    flow: false,
-    fileName: 'relatorio-receitas',
-  },
-  DESPESAS: {
-    title: 'Relatório de Despesas',
-    shortTitle: 'Despesas Operacionais',
-    description: 'Despesas operacionais previstas e realizadas por vencimento, incluindo rateios econômicos. Principal de empréstimo fica fora desta visão.',
-    dateLabel: 'Vencimento / competência',
-    tone: 'rose',
-    requiresAccount: false,
-    allowsAccountFilter: false,
-    showsStatus: true,
-    flow: false,
-    fileName: 'relatorio-despesas',
-  },
-};
-
-const statusOptions: Array<{ value: RelatorioMovimentacaoFinanceiraStatus; label: string }> = [
-  { value: 'ATIVOS', label: 'Ativos (pago, aberto e vencido)' },
-  { value: 'TODOS', label: 'Todos os status' },
-  { value: 'PAGO', label: 'Somente pagos' },
-  { value: 'PENDENTE', label: 'Somente pendentes' },
-  { value: 'VENCIDO', label: 'Somente vencidos' },
-  { value: 'SUSPENSO', label: 'Somente suspensos' },
-  { value: 'CANCELADO', label: 'Somente cancelados' },
-  { value: 'ESTORNADO', label: 'Somente estornados' },
-  { value: 'DEVOLVIDO', label: 'Somente devolvidos' },
-];
-
-const toInputDate = (date: Date) => (
-  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
-);
-
-const initialPeriod = () => {
-  const current = new Date();
-  return {
-    start: toInputDate(new Date(current.getFullYear(), current.getMonth(), 1)),
-    end: toInputDate(current),
-  };
-};
-
-const statusTone = (status: string) => {
-  const normalized = status.toUpperCase();
-  if (normalized === 'PAGO' || normalized === 'RECEBIDO') return 'text-emerald-700 bg-emerald-50';
-  if (normalized === 'VENCIDO') return 'text-rose-700 bg-rose-50';
-  if (normalized === 'CANCELADO' || normalized === 'ESTORNADO' || normalized === 'DEVOLVIDO') return 'text-slate-500 bg-slate-100';
-  return 'text-amber-700 bg-amber-50';
-};
-
-const directionText = (item: RelatorioMovimentacaoFinanceiraItem) => {
-  if (item.direcao === 'ENTRADA') return 'Entrada';
-  if (item.direcao === 'SAIDA') return 'Saída';
-  return item.classificacao || 'Lançamento';
-};
-
-const directionClass = (item: RelatorioMovimentacaoFinanceiraItem) => (
-  item.direcao === 'ENTRADA'
-    ? 'text-emerald-700 bg-emerald-50'
-    : item.direcao === 'SAIDA'
-      ? 'text-rose-700 bg-rose-50'
-      : 'text-slate-600 bg-slate-100'
-);
-
-const reportFilters = (
-  data: RelatorioMovimentacaoFinanceiraData,
-  config: ReportConfiguration,
-  applied: {
-    categoria: string;
-    status: RelatorioMovimentacaoFinanceiraStatus;
-    busca: string;
-  },
-): FinancialReportFilter[] => {
-  const selectedCategory = data.categorias.find((item) => item.chave === applied.categoria);
-  const selectedStatus = statusOptions.find((item) => item.value === applied.status);
-
-  return [
-    { label: config.dateLabel, value: `${formatDate(data.meta.dataInicio)} a ${formatDate(data.meta.dataFim)}` },
-    { label: 'Escopo', value: data.meta.escopo },
-    ...(data.meta.contaSelecionada
-      ? [{ label: 'Conta', value: data.meta.contaSelecionada }]
-      : [{ label: 'Conta', value: 'Todas as contas' }]),
-    ...(selectedCategory ? [{ label: 'Categoria', value: selectedCategory.rotulo }] : []),
-    ...(config.showsStatus && selectedStatus ? [{ label: 'Situação', value: selectedStatus.label }] : []),
-    ...(applied.busca ? [{ label: 'Busca', value: applied.busca }] : []),
-  ];
-};
-
-const reportSummary = (
-  data: RelatorioMovimentacaoFinanceiraData,
-  config: ReportConfiguration,
-  hasStatementRowFilter = false,
-): FinancialReportSummaryCard[] => {
-  const { resumo } = data;
-
-  if (data.meta.tipo === 'EXTRATO_CONTA') {
-    return [
-      { label: 'Saldo de abertura', value: resumo.saldoDisponivel && resumo.saldoAbertura !== null ? formatCurrency(resumo.saldoAbertura) : 'Indisponível', tone: 'slate' },
-      { label: hasStatementRowFilter ? 'Entradas filtradas' : 'Entradas', value: formatCurrency(resumo.totalEntradas), tone: 'emerald' },
-      { label: hasStatementRowFilter ? 'Saídas filtradas' : 'Saídas', value: formatCurrency(resumo.totalSaidas), tone: 'rose' },
-      { label: 'Saldo de fechamento', value: resumo.saldoDisponivel && resumo.saldoFechamento !== null ? formatCurrency(resumo.saldoFechamento) : 'Indisponível', tone: 'blue' },
-    ];
-  }
-
-  if (config.flow) {
-    const isEntry = data.meta.tipo === 'ENTRADAS';
-    return [
-      { label: isEntry ? 'Total de entradas' : 'Total de saídas', value: formatCurrency(isEntry ? resumo.totalEntradas : resumo.totalSaidas), tone: isEntry ? 'emerald' : 'rose' },
-      { label: 'Lançamentos', value: resumo.totalLancamentos, tone: 'slate' },
-      { label: 'Valor realizado', value: formatCurrency(resumo.valorRealizado), tone: 'blue' },
-    ];
-  }
-
-  return [
-    { label: 'Total previsto', value: formatCurrency(resumo.valorPrevisto), tone: 'slate' },
-    { label: 'Total realizado', value: formatCurrency(resumo.valorRealizado), tone: config.tone === 'emerald' ? 'emerald' : 'rose' },
-    { label: 'Em aberto', value: formatCurrency(resumo.valorEmAberto), tone: 'amber' },
-    { label: 'Lançamentos', value: resumo.totalLancamentos, tone: 'blue' },
-  ];
-};
+import { REPORT_CONFIG, getExportColumns, initialPeriod, statusOptions, statusTone, directionText, directionClass, reportFilters, reportSummary, type RelatorioMovimentacaoFinanceiraProps } from './movimentacao-financeira.presentation';
+import ExtratoContaScope from './ExtratoContaScope';
+import { resolveExtratoPoloId, extratoScopeLabel } from '../extrato-conta-scope';
+import { getExtratoFinanceiroPdf } from '../extrato-financeiro-pdf.service';
 
 const RelatorioMovimentacaoFinanceira: React.FC<RelatorioMovimentacaoFinanceiraProps> = ({
   company,
+  isGlobal = false,
   polo,
   tipo,
 }) => {
+  const [wholeAccount, setWholeAccount] = useState(false);
+  const effectivePoloId = resolveExtratoPoloId(tipo, isGlobal, wholeAccount, polo?.id);
   const config = REPORT_CONFIG[tipo];
   const period = useMemo(initialPeriod, []);
   const [dataInicio, setDataInicio] = useState(period.start);
@@ -242,14 +54,14 @@ const RelatorioMovimentacaoFinanceira: React.FC<RelatorioMovimentacaoFinanceiraP
 
   const filters = useMemo<RelatorioMovimentacaoFinanceiraFiltros>(() => ({
     tipo,
-    poloId: polo?.id || null,
+    poloId: effectivePoloId,
     dataInicio,
     dataFim,
     contaBancariaId: config.allowsAccountFilter ? contaBancariaId || null : null,
     categoria: categoria || null,
     status: config.showsStatus ? status : 'ATIVOS',
     busca: deferredBusca || null,
-  }), [categoria, config.allowsAccountFilter, config.showsStatus, contaBancariaId, dataFim, dataInicio, deferredBusca, polo?.id, status, tipo]);
+  }), [categoria, config.allowsAccountFilter, config.showsStatus, contaBancariaId, dataFim, dataInicio, deferredBusca, effectivePoloId, status, tipo]);
 
   const reportQuery = useQuery({
     queryKey: relatoriosKeys.financeiro.report(filters),
@@ -260,15 +72,37 @@ const RelatorioMovimentacaoFinanceira: React.FC<RelatorioMovimentacaoFinanceiraP
   });
 
   const data = reportQuery.data;
+  const [pdfData, setPdfData] = useState<RelatorioMovimentacaoFinanceiraData | null>(null);
+  const [pdfError, setPdfError] = useState('');
+  const filterKey = JSON.stringify(filters);
+  const latestFilterKey = useRef(filterKey);
+  latestFilterKey.current = filterKey;
+  useEffect(() => { setPdfData(null); setPdfError(''); }, [filterKey]);
+  const exportData = tipo === 'EXTRATO_CONTA' ? pdfData : data;
+  const prepareExport = async () => {
+    if (tipo !== 'EXTRATO_CONTA') return;
+    setPdfError('');
+    try {
+      const snapshot = await getExtratoFinanceiroPdf(filters);
+      if (filterKey !== latestFilterKey.current) {
+        throw new Error('Os filtros mudaram. Gere o PDF novamente com o período desejado.');
+      }
+      setPdfData(snapshot);
+    } catch (error) {
+      setPdfError(error instanceof Error ? error.message : 'Não foi possível preparar o extrato.');
+      throw error;
+    }
+  };
   const accounts = data?.contas || [];
   const categories = data?.categorias || [];
   const requiresAccountSelection = config.requiresAccount && !contaBancariaId;
+  const scopeCaption = extratoScopeLabel(effectivePoloId);
   const hasStatementRowFilter = tipo === 'EXTRATO_CONTA' && Boolean(categoria || busca.trim());
 
   useEffect(() => {
-    if (!contaBancariaId || accounts.some((account) => account.id === contaBancariaId)) return;
+    if (!data || reportQuery.isFetching || !contaBancariaId || accounts.some((account) => account.id === contaBancariaId)) return;
     setContaBancariaId('');
-  }, [accounts, contaBancariaId]);
+  }, [accounts, contaBancariaId, data, reportQuery.isFetching]);
 
   const clearFilters = () => {
     const nextPeriod = initialPeriod();
@@ -280,42 +114,13 @@ const RelatorioMovimentacaoFinanceira: React.FC<RelatorioMovimentacaoFinanceiraP
     if (!config.requiresAccount) setContaBancariaId('');
   };
 
-  const exportColumns = useMemo<FinancialReportColumn[]>(() => {
-    if (tipo === 'EXTRATO_CONTA') {
-      return [
-        { label: 'Data' },
-        { label: 'Movimento' },
-        { label: 'Descrição / contraparte' },
-        { label: 'Categoria' },
-        { label: 'Entrada', align: 'right' },
-        { label: 'Saída', align: 'right' },
-        { label: 'Saldo da conta', align: 'right' },
-      ];
-    }
-    if (config.flow) {
-      return [
-        { label: 'Data' },
-        { label: 'Classificação' },
-        { label: 'Descrição / contraparte' },
-        { label: 'Conta' },
-        { label: 'Categoria' },
-        { label: 'Valor', align: 'right' },
-      ];
-    }
-    return [
-      { label: 'Vencimento' },
-      { label: 'Status', align: 'center' },
-      { label: 'Descrição / contraparte' },
-      { label: 'Categoria' },
-      { label: 'Previsto', align: 'right' },
-      { label: 'Realizado', align: 'right' },
-    ];
-  }, [config.flow, tipo]);
+  const exportColumns = useMemo(() => getExportColumns(tipo, config), [tipo, config]);
 
-  const exportRows = useMemo<FinancialReportRow[]>(() => (data?.movimentos || []).map((item) => {
+  const exportRows = useMemo<FinancialReportRow[]>(() => (exportData?.movimentos || []).map((item) => {
     const description = (
       <div>
         <p className="font-bold text-slate-800">{item.descricao}</p>
+        {tipo === 'EXTRATO_CONTA' && <p>{item.classificacao === 'TRANSFERENCIA' ? 'Polo relacionado' : 'Polo'}: {item.polo || 'Não identificado'}</p>}
         <p className="mt-0.5 text-[8px] font-medium text-slate-500">{item.contraparte}</p>
       </div>
     );
@@ -360,19 +165,19 @@ const RelatorioMovimentacaoFinanceira: React.FC<RelatorioMovimentacaoFinanceiraP
         item.valorRealizado > 0 ? formatCurrency(item.valorRealizado) : '—',
       ],
     };
-  }), [config.flow, data?.movimentos, tipo]);
+  }), [config.flow, exportData?.movimentos, tipo]);
 
   const exportSummary = useMemo(
-    () => data ? reportSummary(data, config, hasStatementRowFilter) : [],
-    [config, data, hasStatementRowFilter],
+    () => exportData ? reportSummary(exportData, config, hasStatementRowFilter) : [],
+    [config, exportData, hasStatementRowFilter],
   );
   const exportFilters = useMemo(
-    () => data ? reportFilters(data, config, {
+    () => exportData ? reportFilters(exportData, config, {
       categoria,
       status,
       busca: busca.trim(),
     }) : [],
-    [busca, categoria, config, data, status],
+    [busca, categoria, config, exportData, status],
   );
   const canExport = Boolean(
     data
@@ -435,6 +240,7 @@ const RelatorioMovimentacaoFinanceira: React.FC<RelatorioMovimentacaoFinanceiraP
               </FilterField>
             )}
 
+            <ExtratoContaScope enabled={tipo === 'EXTRATO_CONTA' && isGlobal && Boolean(polo?.id)} value={wholeAccount} onChange={setWholeAccount} />
             <FilterField label="Categoria">
               <FilterSelect value={categoria} onChange={(event) => setCategoria(event.target.value)}>
                 <option value="">Todas as categorias</option>
@@ -480,7 +286,7 @@ const RelatorioMovimentacaoFinanceira: React.FC<RelatorioMovimentacaoFinanceiraP
         <div className="mt-5 border-t border-slate-100 pt-5">
           <FinancialReportExportButton
             title={config.title}
-            subtitle={config.description}
+            subtitle={tipo === 'EXTRATO_CONTA' ? `${config.description} ${scopeCaption}.` : config.description}
             rightTitle="Relatórios Financeiros"
             rightType={config.shortTitle}
             fileName={`${config.fileName}-${dataInicio}-${dataFim}`}
@@ -489,14 +295,16 @@ const RelatorioMovimentacaoFinanceira: React.FC<RelatorioMovimentacaoFinanceiraP
             summaryCards={exportSummary}
             filters={exportFilters}
             footerNote="Valores e saldos são calculados pelo contrato financeiro canônico."
-            poloId={polo?.id}
-            polo={polo}
+            poloId={effectivePoloId}
+            polo={effectivePoloId ? polo : null}
             company={company}
             tone={config.tone}
             buttonLabel="Gerar PDF"
             buttonClassName="w-full"
             disabled={!canExport}
+            onBeforeOpen={prepareExport}
           />
+          {pdfError && <p role="alert" className="mt-2 text-xs text-red-700">{pdfError}</p>}
           {!canExport && !reportQuery.isLoading && (
             <p className="mt-2 text-center text-[10px] font-medium leading-relaxed text-slate-400">
               {requiresAccountSelection
@@ -600,10 +408,10 @@ const RelatorioMovimentacaoFinanceira: React.FC<RelatorioMovimentacaoFinanceiraP
                         <tr key={item.id} className="hover:bg-slate-50/70">
                           <td className="whitespace-nowrap px-4 py-3 font-semibold text-slate-600">{formatDate(item.data)}</td>
                           <td className="px-3 py-3"><span className={`inline-flex rounded-lg px-2 py-1 text-[9px] font-black uppercase tracking-wide ${directionClass(item)}`}>{directionText(item)}</span></td>
-                          <td className="px-3 py-3"><p className="font-bold text-slate-800">{item.descricao}</p><p className="mt-0.5 text-[10px] font-medium text-slate-400">{item.contraparte}</p></td>
+                          <td className="px-3 py-3"><p className="font-bold text-slate-800">{item.descricao}</p><p className="mt-0.5 text-[10px] font-medium text-slate-400">{item.contraparte}</p><p className="text-[10px] text-slate-500">{item.classificacao === 'TRANSFERENCIA' ? 'Polo relacionado' : 'Polo'}: {item.polo || 'Não identificado'}</p></td>
                           <td className="px-3 py-3 text-slate-600">{item.categoria}</td>
                           <td className="px-3 py-3 text-right font-black text-emerald-700">{item.direcao === 'ENTRADA' ? formatCurrency(item.valor) : '—'}</td>
-                          <td className="px-3 py-3 text-right font-black text-rose-700">{item.direcao === 'SAIDA' ? formatCurrency(item.valor) : '—'}</td>
+                          <td className="px-3 py-3 text-right font-black text-red-700">{item.direcao === 'SAIDA' ? formatCurrency(item.valor) : '—'}</td>
                           <td className="px-4 py-3 text-right font-black text-[#001a33]">{item.saldoApos === null ? '—' : formatCurrency(item.saldoApos)}</td>
                         </tr>
                       ))}

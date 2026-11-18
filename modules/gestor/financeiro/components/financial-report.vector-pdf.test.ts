@@ -232,3 +232,32 @@ test('congela a data de criação do PDF no issuedAt recebido', async () => {
   assert.ok(creationDate instanceof Date);
   assert.equal(creationDate.toISOString(), input.issuedAt.toISOString());
 });
+
+test('extrato mantém ordem canônica e aplica verde/vermelho somente aos valores das colunas', async () => {
+  const { getExportColumns, REPORT_CONFIG } = await import('../../relatorios/components/movimentacao-financeira.presentation');
+  const input = makeInput(0);
+  input.title = 'Extrato Financeiro por Conta';
+  input.subtitle = REPORT_CONFIG.EXTRATO_CONTA.description;
+  input.rightType = REPORT_CONFIG.EXTRATO_CONTA.shortTitle;
+  input.tone = 'blue';
+  input.columns = getExportColumns('EXTRATO_CONTA', REPORT_CONFIG.EXTRATO_CONTA);
+  input.filters = [{ label: 'Período', value: '01/11/2026 a 30/11/2026' }];
+  input.summaryCards = [];
+  input.rows = [
+    { id: 'a', cells: ['01/11/2026', 'Entrada', 'Movimento A', 'Categoria', 'R$ 100,00', '—', 'R$ 1.100,00'] },
+    { id: 'b', cells: ['01/11/2026', 'Saída', 'Movimento B', 'Categoria', '—', 'R$ 25,00', 'R$ 1.075,00'] },
+    { id: 'c', cells: ['30/11/2026', 'Saída', 'Movimento C', 'Categoria', '—', 'R$ 10,00', 'R$ 1.065,00'] },
+  ];
+  const original = JSON.stringify(input.rows);
+  const pdf = await createFinancialReportPdfDocument(input);
+  const source = pdf.output();
+  assert.equal(JSON.stringify(input.rows), original);
+  assert.ok(source.indexOf('Movimento A') < source.indexOf('Movimento B'));
+  assert.ok(source.indexOf('Movimento B') < source.indexOf('Movimento C'));
+  assert.match(source, /0\.016 0\.471 0\.341 rg[\s\S]*?\(R\$ 100,00\) Tj/);
+  assert.match(source, /0\.725 0\.11 0\.11 rg[\s\S]*?\(R\$ 25,00\) Tj/);
+  assert.match(source, /R\$ 1.065,00/);
+  if (process.env.EXTRATO_PDF_FIXTURE_OUTPUT) {
+    await writeFile(process.env.EXTRATO_PDF_FIXTURE_OUTPUT, new Uint8Array(pdf.output('arraybuffer')));
+  }
+});

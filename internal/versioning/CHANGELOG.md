@@ -1,3 +1,8 @@
+## [4.8.363] - 2026-11-18
+
+- Extrato cronológico em PDF com entradas verdes e saídas vermelhas.
+- Conta completa para gestor global, com identificação dos polos e saldos canônicos.
+
 # Histórico de alterações
 
 Histórico 4.8.278: [versão arquivada](./changelog/2026-11-09-versao-4-8-278.md).
@@ -491,9 +496,3 @@ Histórico 4.8.291: [11/11/2026](./changelog/2026-11-11-versao-4-8-291.md).
 - Exportar na linha das abas abre a pasta Modelo interno com prévia e download do mesmo PDF vetorial A4 retrato, duas linhas por nota e resumo de valores no topo.
 - Relatório inclui todas as notas filtradas em snapshot único, preservando permissões, unidade, ambiente e exclusão das canceladas confirmadas.
 - Exportação é somente leitura, com limite explícito de 10.000 notas e sem alterar documentos, XML, contas ou situação fiscal.
-
-## [4.8.293] - 2026-11-11
-
-- Serviços deixa de repetir notas com cancelamento fiscal confirmado, preservando sua consulta na aba Canceladas.
-- Separação aplicada antes da paginação e dos totais, sem excluir registros ou alterar situação fiscal, XML ou contas.
-

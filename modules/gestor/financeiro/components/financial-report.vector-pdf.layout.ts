@@ -381,7 +381,11 @@ export const drawFinancialReportTable = (
       const align = column.align || 'left';
       const textX = align === 'right' ? cellX + width - 1.5 : align === 'center' ? cellX + width / 2 : cellX + 1.5;
       const isOverdue = /vencid/i.test(cell) || (column.label.toLowerCase().includes('situa') && /vencid/i.test(cell));
-      if (isOverdue) {
+      if (column.valueColor && !/^[\s—–-]*$/.test(cell)) {
+        pdf.setFont('helvetica', 'bold');
+        const valueColor: Rgb = column.valueColor === 'green' ? COLORS.emerald : [185, 28, 28];
+        pdf.setTextColor(...valueColor);
+      } else if (isOverdue) {
         pdf.setFont('helvetica', 'bold');
         pdf.setTextColor(...COLORS.rose);
       } else {
