@@ -40,7 +40,7 @@ const RelatorioMovimentacaoFinanceira: React.FC<RelatorioMovimentacaoFinanceiraP
   polo,
   tipo,
 }) => {
-  const [wholeAccount, setWholeAccount] = useState(false);
+  const [wholeAccount, setWholeAccount] = useState(() => tipo === 'EXTRATO_CONTA' && isGlobal);
   const effectivePoloId = resolveExtratoPoloId(tipo, isGlobal, wholeAccount, polo?.id);
   const config = REPORT_CONFIG[tipo];
   const period = useMemo(initialPeriod, []);
@@ -188,8 +188,8 @@ const RelatorioMovimentacaoFinanceira: React.FC<RelatorioMovimentacaoFinanceiraP
   );
 
   return (
-    <div className="flex h-full w-full flex-col gap-6 lg:flex-row">
-      <aside className="w-full shrink-0 rounded-3xl border border-slate-100 bg-white p-5 shadow-sm lg:w-80">
+    <div className="flex h-full min-h-0 w-full flex-col gap-6 overflow-y-auto lg:flex-row lg:overflow-hidden">
+      <aside className="w-full shrink-0 rounded-3xl border border-slate-100 bg-white p-5 shadow-sm lg:h-full lg:w-80 lg:overflow-y-auto">
         <div className="space-y-5">
           <div>
             <div className="flex items-start gap-3">
@@ -317,7 +317,7 @@ const RelatorioMovimentacaoFinanceira: React.FC<RelatorioMovimentacaoFinanceiraP
         </div>
       </aside>
 
-      <section className="min-h-[70vh] min-w-0 flex-1 overflow-auto rounded-3xl bg-slate-100/70 p-4 custom-scrollbar sm:p-6">
+      <section className="min-h-[70vh] min-w-0 shrink-0 flex-1 overflow-auto lg:h-full lg:min-h-0 rounded-3xl bg-slate-100/70 p-4 custom-scrollbar sm:p-6">
         <div className="mx-auto min-h-full max-w-6xl rounded-3xl border border-slate-100 bg-white p-5 shadow-sm sm:p-6">
           <header className="border-b border-slate-100 pb-5">
             <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
@@ -327,6 +327,7 @@ const RelatorioMovimentacaoFinanceira: React.FC<RelatorioMovimentacaoFinanceiraP
                   Financeiro · {data?.meta.escopo || polo?.nome || 'Consolidado'}
                 </div>
                 <h3 className="text-lg font-black uppercase tracking-tight text-[#001a33]">{config.title}</h3>
+                {tipo === 'EXTRATO_CONTA' && <p className="mt-1 text-xs font-bold text-blue-700">{scopeCaption}</p>}
                 <p className="mt-1 max-w-3xl text-xs font-medium leading-relaxed text-slate-500">{config.description}</p>
               </div>
               <div className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-[10px] font-black uppercase tracking-wide text-slate-500">

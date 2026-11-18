@@ -42,3 +42,11 @@ test('explicit consolidated PDF scope cannot fall back to session polo', () => {
   const component = readFileSync(new URL('./components/RelatorioMovimentacaoFinanceira.tsx', import.meta.url), 'utf8');
   assert.match(component, /poloId=\{effectivePoloId\}/);
 });
+
+test('extrato global inicia na conta completa e filtros têm rolagem própria', () => {
+  const component = readFileSync(new URL('./components/RelatorioMovimentacaoFinanceira.tsx', import.meta.url), 'utf8');
+  assert.match(component, /useState\(\(\) => tipo === 'EXTRATO_CONTA' && isGlobal\)/);
+  assert.match(component, /lg:h-full lg:w-80 lg:overflow-y-auto/);
+  assert.match(component, /min-h-0 w-full flex-col gap-6 overflow-y-auto/);
+  assert.match(component, /lg:h-full lg:min-h-0/);
+});

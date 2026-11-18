@@ -1,0 +1,34 @@
+name: Extrato viewport e exportação
+on:
+  pull_request:
+    paths:
+      - 'modules/gestor/relatorios/components/RelatorioMovimentacaoFinanceira.tsx'
+      - 'modules/gestor/relatorios/extrato-conta-scope*'
+      - 'scripts/test-extrato-viewport.mjs'
+      - '.github/workflows/extrato-viewport.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  viewport:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - name: Preparar navegador isolado
+        run: |
+          npm install --prefix "$RUNNER_TEMP/extrato-browser" playwright-core@1.65.1 --ignore-scripts --no-audit --no-fund
+          node "$RUNNER_TEMP/extrato-browser/node_modules/playwright-core/cli.js" install --with-deps chromium
+      - name: Testar filtros e PDF com dados fictícios
+        run: |
+          PLAYWRIGHT_MODULE_PATH="$RUNNER_TEMP/extrato-browser/node_modules/playwright-core/index.mjs" EXTRATO_VIEWPORT_OUTPUT="$RUNNER_TEMP/extrato" node scripts/test-extrato-viewport.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: extrato-viewports
+          path: ${{ runner.temp }}/extrato*.png

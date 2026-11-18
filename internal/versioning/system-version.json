@@ -1,8 +1,8 @@
 {
-  "version": "4.8.363",
+  "version": "4.8.364",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 372,
+  "revision": 373,
   "releasedAt": "2026-11-18",
-  "summary": "Extrato por conta: PDF cronológico, cores e consolidação autorizada por polo"
+  "summary": "Extrato: filtros com rolagem, ordem cronológica na tela e conta completa para gestor global"
 }

@@ -1,3 +1,8 @@
+## [4.8.364] - 2026-11-18
+
+- Corrige rolagem dos filtros em telas baixas e móveis.
+- Extrato inicia na conta completa para gestor global e ordena a tela do primeiro ao último dia.
+
 ## [4.8.363] - 2026-11-18
 
 - Extrato cronológico em PDF com entradas verdes e saídas vermelhas.
@@ -489,10 +494,3 @@ Histórico 4.8.291: [11/11/2026](./changelog/2026-11-11-versao-4-8-291.md).
 - Menu de três pontos permite clonar para a unidade selecionada ou inativar modelos próprios com confirmação; o original herdado é gerenciado na matriz.
 - Clonagem preserva configurações e histórico, com auditoria, versão esperada e repetição segura sem duplicar solicitações.
 - Herança preserva isolamento entre empresas e ambientes, participantes autorizados e validações de preparo/revisão fiscal.
-
-## [4.8.294] - 2026-11-11
-
-- Emitidas abre com início e fim do mês atual e mostra o total emitido nos filtros aplicados, calculado no servidor antes da paginação.
-- Exportar na linha das abas abre a pasta Modelo interno com prévia e download do mesmo PDF vetorial A4 retrato, duas linhas por nota e resumo de valores no topo.
-- Relatório inclui todas as notas filtradas em snapshot único, preservando permissões, unidade, ambiente e exclusão das canceladas confirmadas.
-- Exportação é somente leitura, com limite explícito de 10.000 notas e sem alterar documentos, XML, contas ou situação fiscal.
