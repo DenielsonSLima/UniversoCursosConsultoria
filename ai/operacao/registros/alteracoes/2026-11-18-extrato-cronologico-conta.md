@@ -1,7 +1,7 @@
 # Extrato: ordem, cores e conta completa
 
 ## Escopo
-PDF cronológico, entrada azul e saída vermelha. Gestor global pode selecionar a conta completa com todos os polos; gestor local permanece restrito. Origem diferenciada por cidade/UF; transferência identifica polo relacionado. Nenhuma transação criada ou modificada.
+PDF cronológico, entrada verde e saída vermelha. Gestor global pode selecionar a conta completa com todos os polos; gestor local permanece restrito. Origem diferenciada por cidade/UF; transferência identifica polo relacionado. Nenhuma transação criada ou modificada.
 
 ## Aceite
 Ordem data/id ASC exclusivamente no PDF, saldos e autorização canônicos preservados. Migrações antes do frontend. Produção autorizada explicitamente pelo usuário em 18/11/2026.

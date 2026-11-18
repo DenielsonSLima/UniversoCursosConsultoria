@@ -201,7 +201,7 @@ export const getExportColumns = (tipo: RelatorioMovimentacaoFinanceiraTipo, conf
         { label: 'Movimento' },
         { label: 'Descrição / contraparte' },
         { label: 'Categoria' },
-        { label: 'Entrada', align: 'right', valueColor: 'blue' },
+        { label: 'Entrada', align: 'right', valueColor: 'green' },
         { label: 'Saída', align: 'right', valueColor: 'red' },
         { label: 'Saldo da conta', align: 'right' },
       ];

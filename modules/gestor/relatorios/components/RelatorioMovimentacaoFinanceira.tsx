@@ -11,19 +11,13 @@ import {
 } from 'lucide-react';
 import FinancialReportExportButton, {
   FinancialReportStatusBadge,
-  type FinancialReportColumn,
-  type FinancialReportFilter,
   type FinancialReportRow,
-  type FinancialReportSummaryCard,
-  type FinancialReportTone,
 } from '../../financeiro/components/FinancialReportPreview';
 import {
   relatoriosService,
   type RelatorioMovimentacaoFinanceiraData,
   type RelatorioMovimentacaoFinanceiraFiltros,
-  type RelatorioMovimentacaoFinanceiraItem,
   type RelatorioMovimentacaoFinanceiraStatus,
-  type RelatorioMovimentacaoFinanceiraTipo,
 } from '../relatorios.service';
 import { relatoriosKeys } from '../relatorios.query-keys';
 import {
@@ -416,7 +410,7 @@ const RelatorioMovimentacaoFinanceira: React.FC<RelatorioMovimentacaoFinanceiraP
                           <td className="px-3 py-3"><span className={`inline-flex rounded-lg px-2 py-1 text-[9px] font-black uppercase tracking-wide ${directionClass(item)}`}>{directionText(item)}</span></td>
                           <td className="px-3 py-3"><p className="font-bold text-slate-800">{item.descricao}</p><p className="mt-0.5 text-[10px] font-medium text-slate-400">{item.contraparte}</p><p className="text-[10px] text-slate-500">{item.classificacao === 'TRANSFERENCIA' ? 'Polo relacionado' : 'Polo'}: {item.polo || 'Não identificado'}</p></td>
                           <td className="px-3 py-3 text-slate-600">{item.categoria}</td>
-                          <td className="px-3 py-3 text-right font-black text-blue-700">{item.direcao === 'ENTRADA' ? formatCurrency(item.valor) : '—'}</td>
+                          <td className="px-3 py-3 text-right font-black text-emerald-700">{item.direcao === 'ENTRADA' ? formatCurrency(item.valor) : '—'}</td>
                           <td className="px-3 py-3 text-right font-black text-red-700">{item.direcao === 'SAIDA' ? formatCurrency(item.valor) : '—'}</td>
                           <td className="px-4 py-3 text-right font-black text-[#001a33]">{item.saldoApos === null ? '—' : formatCurrency(item.saldoApos)}</td>
                         </tr>

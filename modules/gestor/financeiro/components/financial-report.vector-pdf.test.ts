@@ -233,7 +233,7 @@ test('congela a data de criação do PDF no issuedAt recebido', async () => {
   assert.equal(creationDate.toISOString(), input.issuedAt.toISOString());
 });
 
-test('extrato mantém ordem canônica e aplica azul/vermelho somente aos valores das colunas', async () => {
+test('extrato mantém ordem canônica e aplica verde/vermelho somente aos valores das colunas', async () => {
   const { getExportColumns, REPORT_CONFIG } = await import('../../relatorios/components/movimentacao-financeira.presentation');
   const input = makeInput(0);
   input.title = 'Extrato Financeiro por Conta';
@@ -254,7 +254,7 @@ test('extrato mantém ordem canônica e aplica azul/vermelho somente aos valores
   assert.equal(JSON.stringify(input.rows), original);
   assert.ok(source.indexOf('Movimento A') < source.indexOf('Movimento B'));
   assert.ok(source.indexOf('Movimento B') < source.indexOf('Movimento C'));
-  assert.match(source, /0\.145 0\.388 0\.922 rg[\s\S]*?\(R\$ 100,00\) Tj/);
+  assert.match(source, /0\.016 0\.471 0\.341 rg[\s\S]*?\(R\$ 100,00\) Tj/);
   assert.match(source, /0\.725 0\.11 0\.11 rg[\s\S]*?\(R\$ 25,00\) Tj/);
   assert.match(source, /R\$ 1.065,00/);
   if (process.env.EXTRATO_PDF_FIXTURE_OUTPUT) {

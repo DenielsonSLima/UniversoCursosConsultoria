@@ -383,7 +383,7 @@ export const drawFinancialReportTable = (
       const isOverdue = /vencid/i.test(cell) || (column.label.toLowerCase().includes('situa') && /vencid/i.test(cell));
       if (column.valueColor && !/^[\s—–-]*$/.test(cell)) {
         pdf.setFont('helvetica', 'bold');
-        const valueColor: Rgb = column.valueColor === 'blue' ? COLORS.blue : [185, 28, 28];
+        const valueColor: Rgb = column.valueColor === 'green' ? COLORS.emerald : [185, 28, 28];
         pdf.setTextColor(...valueColor);
       } else if (isOverdue) {
         pdf.setFont('helvetica', 'bold');

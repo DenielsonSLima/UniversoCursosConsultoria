@@ -1,6 +1,6 @@
 ## [4.8.363] - 2026-11-18
 
-- Extrato cronológico em PDF com entradas azuis e saídas vermelhas.
+- Extrato cronológico em PDF com entradas verdes e saídas vermelhas.
 - Conta completa para gestor global, com identificação dos polos e saldos canônicos.
 
 # Histórico de alterações
