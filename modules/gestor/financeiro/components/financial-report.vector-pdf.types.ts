@@ -4,6 +4,7 @@ export type FinancialReportTone = 'emerald' | 'rose' | 'blue' | 'slate' | 'amber
 
 export interface FinancialReportColumn {
   label: string;
+  valueColor?: 'blue' | 'red';
   align?: 'left' | 'center' | 'right';
   className?: string;
 }

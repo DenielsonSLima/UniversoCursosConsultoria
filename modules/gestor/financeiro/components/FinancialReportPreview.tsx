@@ -79,7 +79,8 @@ const FinancialReportPreviewModal: React.FC<FinancialReportPreviewModalProps> = 
   const queryClient = useQueryClient();
   const reportInputRef = useRef(reportInput);
   reportInputRef.current = reportInput;
-  const resolvedPoloId = poloId || currentSessionPoloId();
+  // Explicit null means consolidated; only an omitted scope uses the current session.
+  const resolvedPoloId = poloId === undefined ? currentSessionPoloId() : poloId;
 
   const preparePdf = useCallback<ReportPdfFactory>(async (reportProgress) => {
     const input = reportInputRef.current;

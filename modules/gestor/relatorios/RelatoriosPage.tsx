@@ -33,10 +33,11 @@ interface RelatoriosPageProps {
   fiscalPoloId?: string | null;
   contextKey?: string;
   isMatriz?: boolean;
+  isGlobal?: boolean;
   canAccessNfse?: boolean;
 }
 
-const RelatoriosPage: React.FC<RelatoriosPageProps> = ({ poloId, fiscalPoloId, contextKey, isMatriz = false, canAccessNfse = false }) => {
+const RelatoriosPage: React.FC<RelatoriosPageProps> = ({ poloId, fiscalPoloId, contextKey, isMatriz = false, isGlobal = false, canAccessNfse = false }) => {
   const [activeReport, setActiveReport] = useState<ReportType | null>(null);
   useRelatoriosRealtime({
     enabled: activeReport === 'matriculas' || activeReport === 'matricula-inicial',
@@ -49,7 +50,7 @@ const RelatoriosPage: React.FC<RelatoriosPageProps> = ({ poloId, fiscalPoloId, c
       || activeReport === 'financeiro-resumo-entradas'
       || activeReport === 'financeiro-fluxo-caixa'
       || activeReport === 'inadimplencia',
-    poloId,
+    poloId: isGlobal && activeReport === 'extrato-financeiro-conta' ? null : poloId,
   });
 
   // 1. Fetch Company Principal Details
@@ -248,7 +249,7 @@ const RelatoriosPage: React.FC<RelatoriosPageProps> = ({ poloId, fiscalPoloId, c
       case 'cursos':
         return <RelatorioCursos company={company} polo={polo} />;
       case 'extrato-financeiro-conta':
-        return <RelatorioMovimentacaoFinanceira company={company} polo={polo} tipo="EXTRATO_CONTA" />;
+        return <RelatorioMovimentacaoFinanceira company={company} polo={polo} tipo="EXTRATO_CONTA" isGlobal={isGlobal} />;
       case 'financeiro-entradas':
         return <RelatorioMovimentacaoFinanceira company={company} polo={polo} tipo="ENTRADAS" />;
       case 'financeiro-saidas':

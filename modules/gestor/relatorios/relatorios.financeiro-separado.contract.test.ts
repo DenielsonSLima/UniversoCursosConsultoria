@@ -6,7 +6,8 @@ declare const Deno: {
 };
 
 const page = await Deno.readTextFile(new URL('./RelatoriosPage.tsx', import.meta.url));
-const component = await Deno.readTextFile(new URL('./components/RelatorioMovimentacaoFinanceira.tsx', import.meta.url));
+const component = (await Deno.readTextFile(new URL('./components/RelatorioMovimentacaoFinanceira.tsx', import.meta.url)))
+  + (await Deno.readTextFile(new URL('./components/movimentacao-financeira.presentation.ts', import.meta.url)));
 const service = await Deno.readTextFile(new URL('./relatorios.service.ts', import.meta.url));
 
 const separatedReports = [
