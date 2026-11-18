@@ -1,8 +1,8 @@
 {
-  "version": "4.8.364",
+  "version": "4.8.365",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 373,
+  "revision": 374,
   "releasedAt": "2026-11-18",
-  "summary": "Extrato: filtros com rolagem, ordem cronológica na tela e conta completa para gestor global"
+  "summary": "Extrato consolidado preserva papel timbrado e marca d’água da matriz"
 }
