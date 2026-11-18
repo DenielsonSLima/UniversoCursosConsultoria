@@ -1,3 +1,7 @@
+## [4.8.365] - 2026-11-18
+
+- Restaura papel timbrado da matriz no extrato consolidado, sem alterar lançamentos ou saldos.
+
 ## [4.8.364] - 2026-11-18
 
 - Corrige rolagem dos filtros em telas baixas e móveis.
