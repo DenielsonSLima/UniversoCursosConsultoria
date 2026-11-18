@@ -2,6 +2,20 @@ import assert from 'node:assert/strict';
 import { writeFile } from 'node:fs/promises';
 import test from 'node:test';
 import React from 'react';
+import { resolveFinancialReportMatrixBrand } from './financial-report.identity';
+
+test('consolidado usa marca da matriz sem herdar identidade ou filtro de outro polo', () => {
+  const brand = resolveFinancialReportMatrixBrand([
+    { is_matriz: false, watermark_url: 'outro-polo' },
+    { is_matriz: true, watermark_url: 'matriz', watermark_opacity: 0.17,
+      watermark_scale: 92, watermark_rotate: false },
+  ]);
+  assert.deepEqual(brand, { isMatriz: true, watermark_url: 'matriz',
+    watermark_opacity: 0.17, watermark_scale: 92, watermark_rotate: false });
+  assert.equal('id' in brand, false);
+  assert.equal('cnpj' in brand, false);
+  assert.equal(resolveFinancialReportMatrixBrand([]).watermark_url, undefined);
+});
 
 import {
   buildFinancialReportPdf,

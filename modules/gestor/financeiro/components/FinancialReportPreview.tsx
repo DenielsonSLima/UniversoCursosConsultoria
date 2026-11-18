@@ -4,6 +4,7 @@ import { FileText, Loader2 } from 'lucide-react';
 
 import { empresasService } from '../../configuracoes/empresas/empresas.service';
 import { polosService } from '../../configuracoes/polos/polos.service';
+import { resolveFinancialReportMatrixBrand } from './financial-report.identity';
 import ReportPdfPreviewModal, {
   reportPdfPreviewToneStyles,
   type ReportPdfFactory,
@@ -96,7 +97,14 @@ const FinancialReportPreviewModal: React.FC<FinancialReportPreviewModalProps> = 
           staleTime: 60_000,
           gcTime: 10 * 60_000,
         }),
-        reportPolo || (resolvedPoloId
+        resolvedPoloId === null
+          ? queryClient.fetchQuery({
+            queryKey: ['financeiro-report-matrix-brand'],
+            queryFn: async () => resolveFinancialReportMatrixBrand(await polosService.getAll()),
+            staleTime: 0,
+            gcTime: 10 * 60_000,
+          })
+          : reportPolo || (resolvedPoloId
           ? queryClient.fetchQuery({
             queryKey: ['financeiro-report-polo', resolvedPoloId],
             queryFn: () => polosService.getById(resolvedPoloId),
