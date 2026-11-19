@@ -1,8 +1,8 @@
 {
-  "version": "4.8.365",
+  "version": "4.8.366",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 374,
-  "releasedAt": "2026-11-18",
-  "summary": "Extrato consolidado preserva papel timbrado e marca d’água da matriz"
+  "revision": 375,
+  "releasedAt": "2026-11-19",
+  "summary": "Resumo PDF de notas fiscais emitidas com período e tributos ausentes identificados"
 }
