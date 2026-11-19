@@ -60,7 +60,7 @@ export function createNfseAccountingPdf(report: NfseAccountingReport, assets: Nf
     const header = drawCanonicalInstitutionalHeader(pdf, assets.institution, assets.logo, { orientation: 'landscape',
       alias: 'nfse-accounting-logo', metaAppearance: 'plain', meta: { title: 'Notas fiscais emitidas' } });
     let y = header.contentTop + 3;
-    line(`${date(report.dateFrom)} a ${date(report.dateTo)} · ${report.totalItems} registro(s) · ${report.validItems} válida(s)`, LEFT, y, 180, { bold: true, size: 8.2 });
+    line(`${summary ? '' : `${date(report.dateFrom)} a ${date(report.dateTo)} · `}${report.totalItems} registro(s) · ${report.validItems} válida(s)`, LEFT, y, 180, { bold: true, size: 8.2 });
     line(summary ? 'RESUMO CONTÁBIL' : 'NOTAS E OPERAÇÕES FISCAIS', LEFT + WIDTH, y, 70, { right: true, size: 7, gray: true });
     y += 6;
     if (!summary) {
@@ -109,11 +109,9 @@ export function createNfseAccountingPdf(report: NfseAccountingReport, assets: Nf
   });
   report.summaryColumnPages.forEach((columns, index) => {
     let y = page(true);
-    line('TOTAL VÁLIDO DO PERÍODO', LEFT, y, 150, { bold: true, size: 8.2 });
+    line(`TOTAL VÁLIDO DO PERÍODO · ${date(report.dateFrom)} a ${date(report.dateTo)}`, LEFT, y, 185, { bold: true, size: 8.2, exact: true });
     line(money(report.totalAmount), LEFT + WIDTH, y, 70, { right: true, bold: true, size: 10, exact: true });
-    line('Mesmas notas, visões diferentes. NÃO SOME os totais das colunas entre si.', LEFT, y + 6, WIDTH,
-      { bold: true, size: 7 });
-    y += 14;
+    y += 8;
     if (index === 0) {
       const labels = {ISS:'ISSQN',PIS:'PIS',COFINS:'COFINS',SOCIAL:'SOCIAIS RETIDAS',IRRF:'IRRF RETIDO',CP:'PREVIDÊNCIA RETIDA',CBS:'CBS',IBS:'IBS TOTAL'};
       const cardGap=3,cardWidth=(WIDTH-cardGap*3)/4;
@@ -121,7 +119,10 @@ export function createNfseAccountingPdf(report: NfseAccountingReport, assets: Nf
         const x=LEFT+(i%4)*(cardWidth+cardGap),cy=y+Math.floor(i/4)*19;
         pdf.setFillColor(239,245,250);pdf.roundedRect(x,cy,cardWidth,17,1,1,'F');
         line(labels[tax.key],x+2,cy+1.2,cardWidth-4,{bold:true,size:6.1});
-        line(tax.amount===null?'Não informado / incompleto':money(tax.amount),x+2,cy+5,cardWidth-4,{bold:true,size:7.8,exact:true});
+        const displayedAmount = tax.amount === null
+          ? tax.informedCount === 0 ? 'R$ 0,00*' : 'Total pendente*'
+          : money(tax.amount);
+        line(displayedAmount,x+2,cy+5,cardWidth-4,{bold:true,size:7.8,exact:true});
         line(`${tax.informedCount}/${report.validItems} notas com valor · ${tax.zeroCount} zero explícito`,x+2,cy+9.2,cardWidth-4,{gray:true,size:5.7,exact:true});
         const detail=tax.key==='CBS'||tax.key==='IBS'?'Valores informados no XML':
           `Ret.: ${tax.retainedCount} · Não ret.: ${tax.notRetainedCount} · N/i: ${tax.unknownRetentionCount}`;
@@ -180,6 +181,7 @@ export function createNfseAccountingPdf(report: NfseAccountingReport, assets: Nf
       line(`Rej./bloq.: ${state.rejected} · Pendentes: ${state.pending} · Outras: ${state.other}`,statusX+2,sy+8.2,columnWidth-4,{gray:true,size:5.5,exact:true});
     });
     if(!columns.polo.length) line('Unidades concluídas na página anterior.',statusX+2,y+15,columnWidth-4,{gray:true,size:6});
+    line('* R$ 0,00: nenhum valor informado no XML; não confirma tributo zero ou isenção. Total pendente: dados parciais, sem soma parcial.',LEFT,180,WIDTH,{gray:true,size:5.7,exact:true});
     line('Tributos informativos, não apuração. N/i não significa zero ou isenção. Sociais retidas: grupo combinado; não somar novamente PIS/COFINS retidos.',LEFT,188,WIDTH,{gray:true,size:5.7,exact:true});
     line('Situações por polo: válidas incluem cancelamento não confirmado; canceladas somente com confirmação fiscal. Faixa tributária: apenas notas válidas.',LEFT,191,WIDTH,{gray:true,size:5.7,exact:true});
     if (report.totalAmount === null) line('Há valores desconhecidos. Total indisponível; não foi calculada soma parcial.', LEFT, 184, WIDTH, { gray: true, size: 6.5 });
@@ -191,3 +193,4 @@ export function createNfseAccountingPdf(report: NfseAccountingReport, assets: Nf
   }
   return { blob: pdf.output('blob'), fileName: `nfse-contabil-${report.mode.toLowerCase()}-${report.dateFrom}-a-${report.dateTo}.pdf` };
 }
+

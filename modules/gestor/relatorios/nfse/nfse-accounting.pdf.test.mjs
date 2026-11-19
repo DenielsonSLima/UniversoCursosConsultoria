@@ -31,7 +31,13 @@ test('paisagem selecionável, três linhas por nota, chave completa e total can�
   assert.equal(JSON.stringify(report), before); assert.equal(pages.length, 2);
   const allText = pages.map(p => p.text).join('\n');
   for (const expected of ['SOCIAIS RETIDAS', 'ITEM NBS', 'DATA DO SERVIÇO', 'R$ 3.680,00',  'Aquidabã', 'COMPETÊNCIA']) assert(allText.includes(expected), expected);
-  assert(pages[1].text.includes('TOTAL VÁLIDO DO PERÍODO'));
+  const totalLine = pages[1].items.find(i => i.str.startsWith('TOTAL VÁLIDO DO PERÍODO'));
+  assert(totalLine.str.includes('01/11/2026 a 30/11/2026'));
+  assert.equal(pages[1].text.split('01/11/2026').length - 1, 1);
+  const totalValue = pages[1].items.find(i => i.str === 'R$ 3.680,00');
+  assert(Math.abs(totalLine.transform[5] - totalValue.transform[5]) < 2);
+  assert(totalLine.transform[4] + totalLine.width < totalValue.transform[4]);
+  assert(!pages[1].text.includes('Mesmas notas'));
   assert(pages[0].text.includes('11:00:00'));assert(pages[0].text.includes('Homologação'));
   assert(pages[0].text.includes('CNPJ: 00.000.000/0000-01'));
   const title=pages[0].items.find(i=>i.str==='NOTAS FISCAIS EMITIDAS');assert(title);assert(title.height>=11.9);
@@ -78,12 +84,19 @@ test('CBS/IBS preservam zero explícito, rejeitam parcial e não exibem tributa�
   const pages=await inspect(createNfseAccountingPdf(r,accountingFixtureAssets).blob);
   const text=pages.map(p=>p.text).join(' ');
   assert(text.includes('R$ 2,50'));assert(text.includes('R$ 0,00'));
+  const summary = pages.at(-1);
+  const cbsLabel = summary.items.find(i => i.str === 'CBS');
+  const cbsValue = summary.items.find(i => i.str === 'R$ 0,00' && Math.abs(i.transform[4] - cbsLabel.transform[4]) < 1 && i.transform[5] < cbsLabel.transform[5]);
+  assert(cbsValue, 'Zero explícito CBS sem asterisco');
+  assert(summary.items.some(i => i.str === 'R$ 0,00*'), 'Ausência completa sinalizada');
+  assert(text.includes('nenhum valor informado no XML; não confirma tributo zero ou isenção'));
+  assert(text.includes('dados parciais, sem soma parcial'));
   assert(!text.includes('TRIBUTAÇÃO NAC'));assert(text.includes('não apuração'));
   r.pages[0][0].cbsAmount=null;r.taxSummary.cbsReportedCount=1;
   assert.throws(()=>parseNfseAccountingReport(r,r.scope));
   r.taxSummary.cbsAmount=null;const c=r.taxIndicators.find(t=>t.key==='CBS');c.amount=null;c.informedCount=1;c.zeroCount=1;
   const partial=(await inspect(createNfseAccountingPdf(r,accountingFixtureAssets).blob)).at(-1).text;
-  assert(partial.includes('Não informado / incompleto'));assert(partial.includes('1/2 notas com valor'));
+  assert(partial.includes('Total pendente*'));assert(!partial.includes('Não informado / incompleto')); assert(partial.includes('1/2 notas com valor'));
 });
 
 test('rejeita paginação parcial, duplicação, data inválida e resumos divergentes', () => {
@@ -119,7 +132,7 @@ test('resumos paralelos mantêm NBS e polos, total ao fim de cada visão e conti
   assert.equal(pages.length,6);
   const summaries=pages.slice(1),text=summaries.map(p=>p.text).join(' ');
   assert.equal(text.split('TOTAL DESTA VISÃO').length-1,2);
-  assert(text.includes('NÃO SOME')); assert(text.includes('Continua na próxima página'));
+  assert(!text.includes('NÃO SOME'));assert(!text.includes('Mesmas notas'));  assert(text.includes('Continua na próxima página'));
   for(const item of r.byNbs) assert.equal(text.split(item.code).length-1,1,item.code);
   const full=structuredClone(r); full.byCode=[]; full.byNbs=full.byNbs.slice(0,4);syncAccountingSummaryFixture(full);
   const fullPages=await inspect(createNfseAccountingPdf(full,accountingFixtureAssets).blob);
@@ -165,6 +178,13 @@ test('prévia usa o mesmo compositor com logo isolada e dados explicitamente fic
   }
 });
 
+test('marca d’água configurada é preservada em todas as páginas', async () => {
+  const assets = structuredClone(accountingFixtureAssets);
+  assets.watermark = { enabled: true, label: 'MARCA TESTE', imageUrl: null, opacity: 0.12, scale: 75, rotate: 25 };
+  const pages = await inspect(createNfseAccountingPdf(accountingFixture(), assets).blob);
+  assert(pages.every(p => p.text.includes('MARCA TESTE')));
+});
+
 test('mantém compositor institucional canônico e não rasteriza tabelas ou página', async () => {
   const source = await readFile(new URL('nfse-accounting.pdf.ts',import.meta.url),'utf8');
   assert.match(source,/drawCanonicalInstitutionalHeader/); assert.match(source,/drawCanonicalPdfWatermark/);
@@ -172,3 +192,4 @@ test('mantém compositor institucional canônico e não rasteriza tabelas ou pá
 });
 
 test.after(async()=>{await rm(dir,{recursive:true,force:true});});
+
