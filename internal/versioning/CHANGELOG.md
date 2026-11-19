@@ -1,3 +1,9 @@
+Histórico 4.8.295–4.8.296: [arquivo preservado](./changelog/2026-11-11-versoes-4-8-295-a-296.md).
+
+## [4.8.366] - 2026-11-19
+
+- PDF de notas fiscais emitidas alinha total e período e diferencia tributos ausentes, parciais e zeros explícitos, sem alterar valores ou emissão.
+
 ## [4.8.365] - 2026-11-18
 
 - Restaura papel timbrado da matriz no extrato consolidado, sem alterar lançamentos ou saldos.
@@ -485,16 +491,3 @@ Histórico 4.8.291: [11/11/2026](./changelog/2026-11-11-versao-4-8-291.md).
 - Disponibilidade acadêmica considera unidade e ambiente no TanStack Query/Realtime; validação informa quando falta identificar a parcela no financeiro.
 - Descrição acadêmica permite ausência real de numeração da parcela com matrícula e data do pagamento, sem inventar dados nem alterar o modelo.
 
-## [4.8.296] - 2026-11-11
-
-- Revisão reaproveita o pré-modelo, recolhe detalhes e formata CPF/CNPJ. A fila mantém somente Revisar por linha, com emissão pela seleção.
-- Alunos usam a data do último pagamento reservado no mês, sem edição manual; Serviços mantém suas datas informadas pelo usuário.
-- Revisões anteriores divergentes pedem nova confirmação sem alterar histórico, recebimentos ou notas emitidas; herança da Matriz preservada.
-- Aviso de cancelamento em até 24 horas como referência interna, sem criar bloqueio após o prazo nem reduzir validações fiscais.
-
-## [4.8.295] - 2026-11-11
-
-- Modelos de emissão da matriz ficam disponíveis nas filiais ativas da mesma empresa, sem recadastro e com identificação da origem.
-- Menu de três pontos permite clonar para a unidade selecionada ou inativar modelos próprios com confirmação; o original herdado é gerenciado na matriz.
-- Clonagem preserva configurações e histórico, com auditoria, versão esperada e repetição segura sem duplicar solicitações.
-- Herança preserva isolamento entre empresas e ambientes, participantes autorizados e validações de preparo/revisão fiscal.
