@@ -112,7 +112,9 @@ export function parseIndividualCancelResult(value: unknown): IndividualCancelRes
 }
 const reasonMessages: Record<string, string> = {
   PRODUCTION_EVENT_JSON_CONTRACT_UNVERIFIED: 'O serviço fiscal ainda não confirmou o formato de envio e retorno do evento de cancelamento.',
-  PRODUCTION_MTLS_SPEC_UNVERIFIED: 'Não foi possível confirmar a conexão autenticada e o contrato do serviço fiscal. Consulte novamente esta operação.',
+  PRODUCTION_MTLS_SPEC_UNVERIFIED: 'Não foi possível validar a conexão com o Emissor Nacional. O envio desta operação não foi iniciado.',
+  PRODUCTION_RELAY_UNAVAILABLE: 'A comunicação com o Emissor Nacional está indisponível. O envio desta operação não foi iniciado.',
+  PRODUCTION_UNAVAILABLE: 'O emissor está indisponível nesta etapa. O envio desta operação não foi iniciado.',
   PRODUCTION_SPECIFICATION_UNVERIFIED: 'O contrato publicado pelo serviço fiscal ainda precisa ser validado para esta operação.',
   PRODUCTION_JSON_ENVELOPE_UNVERIFIED: 'O formato de envio e retorno da NFS-e ainda não foi confirmado pelo serviço fiscal.',
   PRODUCTION_PREVIEW_EXPIRED: 'A revisão desta operação expirou. Renove a conferência antes do envio.',

@@ -1,3 +1,7 @@
+## [4.8.367] - 2026-11-19
+
+- Mostra o progresso real da emissão de NFS-e e explica bloqueios antes do envio. A conciliação volta a aceitar o relay ativo.
+
 Histórico 4.8.295–4.8.296: [arquivo preservado](./changelog/2026-11-11-versoes-4-8-295-a-296.md).
 
 ## [4.8.366] - 2026-11-19

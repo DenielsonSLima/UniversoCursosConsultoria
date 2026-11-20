@@ -1,6 +1,6 @@
 import { useContext, useEffect, useId, useRef, useState, useSyncExternalStore, type ComponentRef } from 'react';
 import { createPortal } from 'react-dom';
-import { X } from 'lucide-react';
+import { Loader2, X } from 'lucide-react';
 import type { NfseScope } from '../types/nfse.types';
 import { useNfseStudentsDialog } from '../preparar/useNfseStudentsDialog';
 import { nfseIndividualService } from '../individual/nfse-individual.service';
@@ -75,31 +75,50 @@ export default function NfseBatchEmissionModal({ scope, items, onClose, onChange
   const close = () => { if (!view.busy) onClose(); };
   const { overlayRef, dialogRef, initialFocusRef } = useNfseStudentsDialog<ComponentRef<'button'>>(close);
   const available = view.items.filter(item => batchCanIssue(item)).length;
-  const uncertain = view.items.some(item => item.uncertain);
   const authorized = view.items.filter(item => item.result?.state === 'AUTHORIZED').length;
-  const progressMessage = view.busy
-    ? view.phase === 'REVIEW' && view.retryAt ? 'Revisão aguardando o limite do emissor. Nenhuma nova emissão foi iniciada; retomada automática após a espera.'
-      : view.phase === 'CONFIRM' ? 'Acompanhando o retorno da mesma DPS…'
-      : view.phase === 'ISSUE' ? 'Enviando uma nota por vez…' : 'Validando dados…'
-    : view.retryAt ? 'Envio aguardando o limite do serviço. O lote será retomado automaticamente.'
-      : view.monitoringPaused ? 'Acompanhamento desta janela pausado. O retorno continua sendo registrado pelo sistema.'
-      : uncertain ? 'Acompanhando automaticamente o retorno das notas enviadas.'
-        : authorized === items.length ? 'Todas as notas foram autorizadas.'
-          : view.paused ? 'Envio interrompido. Confira os impedimentos das notas restantes.'
-            : 'Os dados são conferidos no servidor. Clique em Emitir para enviar as notas disponíveis.';
+  const blocked = view.items.filter(item => item.result?.state === 'REJECTED' || item.result?.state === 'BLOCKED').length;
+  const awaiting = view.items.filter(item => item.uncertain).length;
+  const finished = authorized + blocked;
+  const single = items.length === 1;
+  const active = !view.monitoringPaused && finished < items.length && (view.busy || Boolean(view.retryAt) || awaiting > 0);
+  const indeterminate = active && finished === 0;
+  const sending = view.items.some(item => item.dispatched && !item.result && !item.uncertain);
+  let progressMessage = available ? 'Clique em Emitir para enviar as notas disponíveis.' : 'Nenhuma nota está disponível para envio.';
+  if (finished === items.length) {
+    progressMessage = blocked ? 'A emissão foi concluída com impedimentos. Confira o resultado de cada nota.' : 'Todas as notas foram autorizadas.';
+  } else if (view.monitoringPaused) {
+    progressMessage = 'Acompanhamento desta janela pausado. O retorno continua sendo registrado pelo sistema.';
+  } else if (view.retryAt) {
+    progressMessage = view.phase === 'REVIEW'
+      ? 'Revisão aguardando o limite do emissor. A revisão será retomada automaticamente.'
+      : 'Envio aguardando o limite do serviço. O lote será retomado automaticamente.';
+  } else if (view.busy) {
+    if (view.phase === 'CONFIRM') progressMessage = 'Acompanhando o retorno da mesma DPS…';
+    else if (view.phase === 'CONSULT') progressMessage = 'Consultando o resultado fiscal…';
+    else if (view.phase === 'ISSUE') progressMessage = sending ? 'Enviando uma nota por vez…' : 'Aguardando o intervalo entre envios…';
+    else progressMessage = single ? 'Preparando nota…' : 'Preparando notas…';
+  } else if (awaiting > 0) {
+    progressMessage = 'Acompanhando automaticamente o retorno das notas enviadas.';
+  } else if (view.paused) {
+    progressMessage = 'Envio interrompido. Confira os resultados do lote.';
+  }
   if (typeof document === 'undefined') return null;
   return createPortal(<div ref={overlayRef} className="nfse-portal nfse-fiscal-review-overlay" role="presentation" onMouseDown={event => { if (event.currentTarget === event.target) close(); }}>
-    <div ref={dialogRef} className="nfse-fiscal-review-dialog" role="dialog" aria-modal="true" aria-labelledby={id} tabIndex={-1} aria-busy={view.busy}>
-      <header className="nfse-section-heading"><div><h2 id={id}>Emitir notas</h2><p>{items.length} nota(s) selecionada(s) · {scope.environment === 'PRODUCAO' ? 'Produção' : 'Homologação'}</p></div>
+    <div ref={dialogRef} className="nfse-fiscal-review-dialog" role="dialog" aria-modal="true" aria-labelledby={id} tabIndex={-1}>
+      <header className="nfse-section-heading"><div><h2 id={id}>{single ? 'Emitir NFS-e' : 'Emitir notas'}</h2><p>{items.length} {single ? 'nota selecionada' : 'notas selecionadas'} · {scope.environment === 'PRODUCAO' ? 'Produção' : 'Homologação'}</p></div>
         <button ref={initialFocusRef} type="button" className="nfse-button nfse-button-secondary" disabled={view.busy} aria-label="Fechar lote" onClick={close}><X size={17} /></button></header>
       <div className="nfse-fiscal-review-body nfse-individual-content">
         {scope.environment !== 'PRODUCAO' && <p role="status">O executor deste ambiente ainda não está disponível. As preparações foram preservadas.</p>}
-        <p role="status">{authorized} de {items.length} nota(s) autorizada(s). {progressMessage}</p>
-        <div aria-label="Andamento da emissão" role="status">
-          <progress aria-label="Notas com resultado definitivo" max={items.length} value={view.items.filter(item => ['AUTHORIZED', 'REJECTED', 'BLOCKED'].includes(item.result?.state || '')).length} style={{ width: '100%', height: 12 }} />
-          <small>{authorized} autorizada(s) · {view.items.filter(item => item.result?.state === 'REJECTED' || item.result?.state === 'BLOCKED').length} com impedimento · {view.items.filter(item => item.uncertain).length} aguardando retorno</small>
+        <p className="nfse-batch-progress-label" role="status">
+          {active && !indeterminate && <Loader2 size={14} className="nfse-batch-progress-spinner" aria-hidden="true" />}
+          <span>{progressMessage}</span>
+        </p>
+        <div>
+          <progress className="nfse-emission-progress" aria-label={indeterminate ? 'Andamento da emissão' : 'Notas com resultado definitivo'}
+            max={items.length} value={indeterminate ? undefined : finished} />
+          <small className="nfse-batch-progress-summary">{authorized} de {items.length} {single ? 'nota autorizada' : 'notas autorizadas'} · {blocked} com impedimento · {awaiting} aguardando retorno</small>
         </div>
-        {uncertain && <p role="status">Aguardando retorno fiscal da mesma DPS. Nenhuma nota será reenviada automaticamente.</p>}
+        {awaiting > 0 && <p role="status">Aguardando retorno fiscal da mesma DPS. Nenhuma nota será reenviada automaticamente.</p>}
         {view.items.map((item, index) => {
           const payload = item.result?.payload || item.preview?.payload;
           const expired = item.preview && Date.parse(item.preview.expiresAt) <= Date.now();
@@ -119,7 +138,8 @@ export default function NfseBatchEmissionModal({ scope, items, onClose, onChange
             {(state === 'REJECTED' || state === 'BLOCKED') && item.result?.message && <p className="nfse-download-error" role="alert">{item.result.codes?.length ? `${item.result.codes.join(', ')}: ` : ''}{item.result.message}</p>}
             {item.error && <p className="nfse-download-error" role="alert">{item.error}</p>}
             {item.preview && !item.preview.capability.available && <p role="alert">{individualReason(item.preview.capability.reason)}</p>}
-            {expired && <p>Atualizando os dados da mesma operação…</p>}
+            {expired && <p>{view.phase === 'REVIEW' && !view.monitoringPaused && !view.retryAt && !view.paused
+              ? 'Atualizando os dados da mesma operação…' : 'A prévia expirou e precisa ser validada novamente.'}</p>}
             <div id={detailsId} hidden={!expanded.has(index)} className="nfse-batch-details">
               {item.result?.message && state !== 'PREVIEWED' && <p>{item.result.message}</p>}
               {Boolean(item.result?.codes?.length) && <p>Código(s): {item.result!.codes!.join(', ')}</p>}
@@ -129,9 +149,9 @@ export default function NfseBatchEmissionModal({ scope, items, onClose, onChange
         })}
       </div>
       <footer className="nfse-footer"><span>{available} nota(s) conferida(s) e disponível(is) para envio.</span><div className="nfse-queue-actions">
-        {view.busy && <button type="button" className="nfse-button nfse-button-secondary" onClick={() => controller.stop()}>Pausar acompanhamento</button>}
+        {view.busy && !view.monitoringPaused && <button type="button" className="nfse-button nfse-button-secondary" onClick={() => controller.stop()}>Pausar acompanhamento</button>}
         <button type="button" className="nfse-button nfse-button-secondary" disabled={view.busy} onClick={close}>Fechar</button>
-        <button type="button" className="nfse-button nfse-button-primary" disabled={view.busy || Boolean(view.retryAt) || !available || uncertain || scope.environment !== 'PRODUCAO'} onClick={() => void controller.issue()}>Emitir notas ({available})</button>
+        <button type="button" className="nfse-button nfse-button-primary" disabled={view.busy || Boolean(view.retryAt) || !available || awaiting > 0 || scope.environment !== 'PRODUCAO'} onClick={() => void controller.issue()}>Emitir notas ({available})</button>
       </div></footer>
     </div>
   </div>, document.body);

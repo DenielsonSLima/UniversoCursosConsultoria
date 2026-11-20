@@ -1,8 +1,8 @@
 {
-  "version": "4.8.366",
+  "version": "4.8.367",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 375,
+  "revision": 376,
   "releasedAt": "2026-11-19",
-  "summary": "Resumo PDF de notas fiscais emitidas com período e tributos ausentes identificados"
+  "summary": "Andamento da emissão de NFS-e e recuperação pelo relay ativo"
 }

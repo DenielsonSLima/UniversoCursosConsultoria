@@ -27,6 +27,12 @@ test('unsupported official model branches remain explicit executor limitations i
   assert.match(individualReason('FISCAL_SERVICE_DATE_COMPETENCE_MISMATCH'), /prestação.*datas iguais.*sem envio/);
   assert.match(individualReason('UNKNOWN_FUTURE_REASON'), /ainda não liberou/);
 });
+test('unavailable production connection explains that no send was started', () => {
+  for (const reason of ['PRODUCTION_MTLS_SPEC_UNVERIFIED', 'PRODUCTION_RELAY_UNAVAILABLE', 'PRODUCTION_UNAVAILABLE']) {
+    assert.match(individualReason(reason), /envio desta operação não foi iniciado/i);
+    assert.doesNotMatch(individualReason(reason), /consult[ae]/i);
+  }
+});
 const envelope = (data: unknown, echo = scope) => ({ version: 1, scope: echo, data });
 
 test('production intent fixes R$1, real dates and canonical model/partner references before network', async () => {

@@ -173,6 +173,8 @@ test('service authorization opens Issued and the last canonical preview only whe
       ['mixed', ['PARTNER_SERVICE', 'ACADEMIC_QUEUE'], {}],
       ['missing identity', ['PARTNER_SERVICE'], { accessKey: null }],
       ['rejected service', ['PARTNER_SERVICE'], { state: 'REJECTED', number: null, accessKey: null }],
+      ['refused before dispatch', ['PARTNER_SERVICE'], { state: 'PREVIEWED', number: null, accessKey: null,
+        capability: { available: false, reason: 'PRODUCTION_MTLS_SPEC_UNVERIFIED' } }],
       ['uncertain service', ['PARTNER_SERVICE'], { state: 'AWAITING_CONFIRMATION', number: null, accessKey: null }],
       ['known cancelled service', ['PARTNER_SERVICE'], {}, { state: 'CANCELLED', cancelPreviewId: id(99) }],
       ['cancellation discovered in result', ['PARTNER_SERVICE'], { cancelPreviewId: id(99) }],
@@ -188,9 +190,14 @@ test('service authorization opens Issued and the last canonical preview only whe
           service: isolated, issueRequested: true, onClose() {}, onChanged() {} }))))); await settle();
       assert.equal(callbacks.length, 0, `${label} must keep the existing issuance flow`);
       assert(document.querySelector('[aria-label="Fechar lote"]'), `${label} must remain in the issuance modal`);
-      assert(document.body.textContent.includes(override.state === 'REJECTED' ? 'com impedimento'
+      assert(document.body.textContent.includes(override.state === 'REJECTED' ? '1 com impedimento'
+        : override.state === 'PREVIEWED' ? 'Não foi possível validar a conexão com o Emissor Nacional. O envio desta operação não foi iniciado.'
         : override.state === 'AWAITING_CONFIRMATION' ? 'Aguardando retorno fiscal'
-          : `${kinds.length} de ${kinds.length} nota(s) autorizada(s)`));
+          : `${kinds.length} de ${kinds.length} ${kinds.length === 1 ? 'nota autorizada' : 'notas autorizadas'}`));
+      if (override.state === 'PREVIEWED') {
+        assert.equal(document.querySelector('progress').position, 0);
+        assert(!document.body.textContent.includes('Consulte novamente esta operação'));
+      }
     }
   } finally {
     await act(async () => root.unmount()); client.clear(); dom.window.close(); delete globalThis.__postIssue;
