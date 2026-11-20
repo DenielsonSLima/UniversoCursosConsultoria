@@ -1,3 +1,7 @@
+## [4.8.368] - 2026-11-20
+
+- Corrige o menu de três pontos na aba Erros do Emissor NFS-e. As ações ficam disponíveis ao entrar direto nessa aba.
+
 ## [4.8.367] - 2026-11-19
 
 - Mostra o progresso real da emissão de NFS-e e explica bloqueios antes do envio. A conciliação volta a aceitar o relay ativo.
@@ -494,4 +498,3 @@ Histórico 4.8.291: [11/11/2026](./changelog/2026-11-11-versao-4-8-291.md).
 - Cancelamento acadêmico confirmado libera os recebimentos para nova preparação, preservando nota, XML, reservas e numeração anteriores.
 - Disponibilidade acadêmica considera unidade e ambiente no TanStack Query/Realtime; validação informa quando falta identificar a parcela no financeiro.
 - Descrição acadêmica permite ausência real de numeração da parcela com matrícula e data do pagamento, sem inventar dados nem alterar o modelo.
-

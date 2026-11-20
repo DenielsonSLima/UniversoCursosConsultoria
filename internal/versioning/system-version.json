@@ -1,8 +1,8 @@
 {
-  "version": "4.8.367",
+  "version": "4.8.368",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 376,
-  "releasedAt": "2026-11-19",
-  "summary": "Andamento da emissão de NFS-e e recuperação pelo relay ativo"
+  "revision": 377,
+  "releasedAt": "2026-11-20",
+  "summary": "Corrige a abertura do menu de ações no Emissor NFS-e"
 }

@@ -47,15 +47,19 @@ test('error archiving is scoped, confirmed, reversible and retry-safe; blocked o
   };
   const output = resolve(temp, 'test.mjs');
   const compiled = await build({ stdin: { resolveDir: base, loader: 'tsx', contents: `
+    import './modules/gestor/emissor-nfse/nfse.css';
     export {default as Errors} from './modules/gestor/emissor-nfse/erros/ErrosNfseTab';
     export {NfseTabContext} from './modules/gestor/emissor-nfse/components/NfseTabContext';` },
-    bundle: true, write: false, format: 'esm', platform: 'node', packages: 'external', jsx: 'automatic', outfile: output, loader: { '.css': 'empty' },
+    bundle: true, write: false, format: 'esm', platform: 'node', packages: 'external', jsx: 'automatic', outfile: output,
     plugins: [{ name: 'scoped-rpc-fixture', setup(builder) {
       builder.onResolve({ filter: /lib\/supabase$/ }, () => ({ path: 'rpc', namespace: 'fixture' }));
       builder.onLoad({ filter: /.*/, namespace: 'fixture' }, () => ({ loader: 'js', contents:
         'export const supabase={rpc:(...args)=>{const pending=globalThis.__errorsRpc(...args);pending.abortSignal=()=>pending;return pending;}};' }));
     } }] });
-  await writeFile(output, compiled.outputFiles[0].contents);
+  await writeFile(output, compiled.outputFiles.find(file => file.path === output).contents);
+  const styles = document.createElement('style');
+  styles.textContent = compiled.outputFiles.find(file => file.path.endsWith('.css')).text;
+  document.head.append(styles);
   const { Errors, NfseTabContext } = await import(pathToFileURL(output).href);
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 }, mutations: { retry: false, gcTime: 0 } } });
   const root = createRoot(document.getElementById('root'));
@@ -69,6 +73,11 @@ test('error archiving is scoped, confirmed, reversible and retry-safe; blocked o
     await click([...document.querySelectorAll('[role="option"]')].find(item => item.textContent === value)); };
   try {
     await act(async () => render()); await settle();
+    await click(document.querySelector('tbody button[aria-haspopup="menu"]'));
+    const menu = document.querySelector('[role="menu"]');
+    assert.equal(window.getComputedStyle(menu).position, 'fixed', 'Erros positions its menu before Emitidas is loaded');
+    await act(async () => menu.querySelector('[role="menuitem"]').dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true })));
+    assert.equal(document.querySelector('[role="menu"]'), null);
     assert.equal(document.querySelector('input[aria-label="Selecionar erro de PESSOA SINTÉTICA 2"]').disabled, true);
     await click(pageSelection()); assert.equal(document.querySelectorAll('tbody input:checked').length, 2);
     await click(button('Remover da lista (2)')); await click(button('Voltar')); assert.equal(requests.length, 0);
@@ -85,7 +94,7 @@ test('error archiving is scoped, confirmed, reversible and retry-safe; blocked o
     await choose('Arquivados'); assert.equal(reads.at(-1).p_error_archive_mode, 'ARCHIVED'); assert.equal(reads.at(-1).p_page, 1);
     assert.equal(document.querySelectorAll('tbody tr').length, 2); assert(document.body.textContent.includes('histórico preservado'));
     await click(document.querySelector('tbody tr button[aria-haspopup="menu"]'));
-    assert.equal([...document.querySelectorAll('[role="menuitem"]')].some(item => item.textContent === 'Consultar'), false);
+    assert.equal([...document.querySelectorAll('[role="menuitem"]')].some(item => item.textContent === 'Detalhes'), false);
     await click([...document.querySelectorAll('[role="menuitem"]')].find(item => item.textContent === 'Restaurar'));
     await click(button('Restaurar')); assert.equal(requests.at(-1).p_action, 'RESTORE'); assert.deepEqual(requests.at(-1).p_operation_ids, [id(10)]);
     assert.equal(archived.size, 1);
