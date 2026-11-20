@@ -88,6 +88,35 @@
 .nfse-button-secondary:hover:not(:disabled) { background: #f8fafc; }
 .nfse-button:disabled { cursor: not-allowed; opacity: .48; }
 .nfse-button:focus-visible { outline: 2px solid #4169e1; outline-offset: 2px; }
+.nfse-operation-menu-trigger { width: 38px; padding: 8px; }
+.nfse-operation-menu {
+  position: fixed;
+  z-index: 1500;
+  width: 180px;
+  padding: 4px;
+  background: #fff;
+  border: 1px solid #dbe3ed;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgb(0 26 51 / 14%);
+  color: #18334b;
+  font-size: 13px;
+}
+.nfse-operation-menu button {
+  display: flex;
+  width: 100%;
+  min-height: 40px;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 5px;
+  background: #fff;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+.nfse-operation-menu button:hover:not(:disabled), .nfse-operation-menu button:focus-visible { background: #f1f5f9; outline: 2px solid #4169e1; outline-offset: -2px; }
+.nfse-operation-menu button:disabled { opacity: .5; cursor: not-allowed; }
 .nfse-queue-actions { align-items: center; display: flex; flex-wrap: wrap; gap: 8px; }
 .nfse-empty { align-items: center; color: #64748b; display: flex; flex-direction: column; gap: 9px; padding: 38px 20px; text-align: center; }
 .nfse-empty > svg { color: #8fa2ba; }
@@ -116,6 +145,8 @@
   .nfse-field, .nfse-field-month { flex-basis: 100%; }
   .nfse-field input:not([type="checkbox"]):not([role="combobox"]), .nfse-field textarea { font-size: 16px; min-height: 44px; }
   .nfse-button { min-height: 44px; }
+  .nfse-operation-menu-trigger { width: 44px; }
+  .nfse-operation-menu button { min-height: 44px; }
   .nfse-model-form { grid-template-columns: minmax(0, 1fr); }
   .nfse-footer > .nfse-button { width: 100%; }
 }
