@@ -1,9 +1,13 @@
 import type { IndividualCancelResult, IndividualIssueResult } from '../individual/nfse-individual.types';
+import { individualReason } from '../individual/nfse-individual.contract';
 export interface NfseFiscalNotice { type: 'success' | 'error' | 'info'; title: string; message: string }
 const detail = (result: { message: string; codes?: readonly string[] }) => [result.codes?.length ? `Código(s): ${result.codes.join(', ')}.` : '', result.message].filter(Boolean).join(' ');
 export function individualIssueNotice(result: IndividualIssueResult): NfseFiscalNotice {
   if (result.state === 'AUTHORIZED') return { type: 'success', title: `NFS-e nº ${result.number} autorizada`, message: result.message };
   if (result.state === 'REJECTED') return { type: 'error', title: 'Emissão rejeitada', message: detail(result) };
+  if (result.state === 'PREVIEWED' && result.capability?.available === false) {
+    return { type: 'info', title: 'NFS-e ainda não enviada', message: individualReason(result.capability.reason) };
+  }
   return { type: 'info', title: result.state === 'AWAITING_CONFIRMATION' ? 'Emissão aguardando confirmação'
     : result.state === 'PREVIEWED' ? 'NFS-e ainda não enviada' : 'Emissão pendente de revisão', message: detail(result) };
 }

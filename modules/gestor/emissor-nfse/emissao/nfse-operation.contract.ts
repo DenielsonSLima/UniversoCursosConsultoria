@@ -1,5 +1,6 @@
 import { NfseContractError } from '../services/nfse.errors';
 import { record, string } from '../services/nfse.validation';
+import type { IndividualIssueResult, IndividualPreview } from '../individual/nfse-individual.types';
 export interface NfseEmissionSource { kind: 'PARTNER_SERVICE' | 'ACADEMIC_QUEUE'; id: string }
 export interface NfseOperationReference {
   operationId?: string | null; requestId?: string | null; cancelPreviewId?: string | null; state?: string | null;
@@ -10,6 +11,13 @@ const uuid = (value: unknown) => { const id = string(value); if (!/^[0-9a-f]{8}-
 export function emissionSource(value: NfseEmissionSource): NfseEmissionSource {
   if (!['PARTNER_SERVICE', 'ACADEMIC_QUEUE'].includes(value.kind)) throw new NfseContractError();
   return { kind: value.kind, id: uuid(value.id) };
+}
+/** A direct ISSUE response may refuse the same preparation before claiming the DPS. */
+export function previewFromUnsentIssue(response: IndividualIssueResult, submitted: IndividualPreview, quotaDeferred = false): IndividualPreview | undefined {
+  if (response.state !== 'PREVIEWED' || response.previewId !== submitted.previewId
+    || !response.capability || response.capability.available && !quotaDeferred) return undefined;
+  return { previewId: response.previewId, state: 'PREVIEWED', payload: response.payload,
+    expiresAt: response.expiresAt ?? submitted.expiresAt, capability: response.capability };
 }
 export function operationReference(value: unknown): NfseOperationReference {
   const row = record(value), operationId = row.operationId == null ? null : uuid(row.operationId), requestId = row.requestId == null ? null : uuid(row.requestId);

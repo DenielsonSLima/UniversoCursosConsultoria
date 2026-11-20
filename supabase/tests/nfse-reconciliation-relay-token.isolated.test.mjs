@@ -6,6 +6,7 @@ test('protected relay material keeps its exact bounds without PostgreSQL regex-c
   const db=await fixture(process.argv[2]||process.env.NFSE_TEST_PGLITE_MODULE);
   const get=j=>db.query('SELECT public.get_nfse_reconciliation_material_internal($1,$2) value',[j.jobId,j.leaseToken]);
   const relay={url:relayUrl,key:'a'.repeat(64),protectionBypass:'synthetic-token._-ABC123'};
+  const stableRelay={...relay,url:'https://universo-cursos-consultoria-git-5420cb-denielson-limas-projects.vercel.app/api/nfse-production-relay'};
   const setRelay=value=>db.query("UPDATE vault.secrets SET decrypted_secret=$1 WHERE name='nfse_production_relay_config'",[JSON.stringify(value)]);
   try{
     await migration(db,'20261112220100_nfse_reconciliation_material.sql');
@@ -20,6 +21,14 @@ test('protected relay material keeps its exact bounds without PostgreSQL regex-c
     await migration(db,'20261112224000_nfse_reconciliation_relay_token_validation.sql');
     const material=(await get(job)).rows[0].value;
     assert.equal(material.targetKind,'ISSUE');assert.equal(material.relay.protectionBypass,relay.protectionBypass);
+    await setRelay(stableRelay);
+    await assert.rejects(get(job),error=>error.code==='42501');
+    await migration(db,'20261120002346_nfse_reconciliation_stable_relay_allowlist.sql');
+    assert.equal((await get(job)).rows[0].value.relay.url,stableRelay.url);
+    await assert.rejects(get({...job,leaseToken:uid(999)}),error=>error.code==='42501');
+    for(const url of ['https://example.invalid/relay',stableRelay.url+'?target=other',stableRelay.url.replace('/api/','/other/api/')]){
+      await setRelay({...stableRelay,url});await assert.rejects(get(job),error=>error.code==='42501');
+    }
     for(const protectionBypass of ['a','b'.repeat(255),'c'.repeat(256),'d'.repeat(4096)]){
       await setRelay({...relay,protectionBypass});
       assert.equal((await get(job)).rows[0].value.relay.protectionBypass.length,protectionBypass.length);

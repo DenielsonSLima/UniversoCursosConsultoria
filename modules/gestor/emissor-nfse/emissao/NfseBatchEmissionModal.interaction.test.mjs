@@ -47,6 +47,9 @@ test('batch waits for an uncertain note, then automatically sends the remaining 
     await act(async () => root.render(React.createElement(React.StrictMode, null, React.createElement(App)))); await settle();
     assert(document.querySelector('[role="dialog"]').contains(document.activeElement), 'focus must enter the dialog even while close is disabled');
     assert.equal(calls.filter(call => call.action === 'PREVIEW_QUEUE').length, 1, 'next preview waits for cadence');
+    const progress = document.querySelector('progress'); assert(progress);
+    assert.equal(progress.hasAttribute('value'), false, 'Preparation has no measurable percentage');
+    assert(document.body.textContent.includes('Preparando notas'));
     await act(async () => { await new Promise(resolve => setTimeout(resolve, 8100)); }); await settle();
     assert.equal(calls.filter(call => call.action === 'PREVIEW_QUEUE').length, 2);
     assert.equal(calls.filter(call => call.action === 'ISSUE').length, 0, 'Opening a batch never dispatches');
@@ -60,21 +63,25 @@ test('batch waits for an uncertain note, then automatically sends the remaining 
     await click(expand); assert.equal(expand.getAttribute('aria-expanded'), 'false');
     const send = button('Emitir notas'); await act(async () => { send.click(); send.click(); }); await settle();
     assert.equal(calls.filter(call => call.action === 'ISSUE').length, 0, 'issue waits after preview');
+    assert(document.body.textContent.includes('Aguardando o intervalo entre envios'));
     await act(async () => { await new Promise(resolve => setTimeout(resolve, 8100)); }); await settle();
     assert.equal(calls.filter(call => call.action === 'ISSUE').length, 1); assert.equal(button('Emitir notas').disabled, true);
     assert(document.body.textContent.includes('Aguardando retorno fiscal'));
-    const progress = document.querySelector('progress'); assert(progress); assert.equal(progress.value, 0);
+    assert.equal(progress.hasAttribute('value'), false, 'Waiting for the first fiscal result remains indeterminate');
     assert(document.body.textContent.includes('Acompanhando o retorno da mesma DPS'));
     await act(async () => { await new Promise(resolve => setTimeout(resolve, 1600)); }); await settle();
     const region = document.querySelector('[aria-label="Notificações"]'); assert(region); assert(region.className.includes('sm:right-6'));
     assert(region.textContent.includes('NFS-e nº 2 autorizada'));
     assert.equal(calls.filter(call => call.action === 'OBSERVE').length, 1);
     assert.equal(calls.filter(call => call.action === 'RECONCILE').length, 0);
+    assert.equal(progress.value, 1, 'The bar reports real progress once a result is confirmed');
+    assert(document.querySelector('.nfse-batch-progress-spinner'), 'Activity remains visible alongside the partial result');
     await act(async () => { await new Promise(resolve => setTimeout(resolve, 6600)); }); await settle();
     assert.equal(progress.value, 2);
+    assert.equal(document.querySelector('.nfse-batch-progress-spinner'), null);
     assert(document.body.textContent.includes('NFS-e nº 2'));
     assert.equal(calls.filter(call => call.action === 'ISSUE').length, 2, 'The original click authorizes the remaining prepared note');
-    assert(document.body.textContent.includes('2 de 2 nota(s) autorizada(s)'));
+    assert(document.body.textContent.includes('2 de 2 notas autorizadas'));
     assert(document.querySelector('[aria-label="Notificações"]').textContent.includes('NFS-e nº 3 autorizada'));
     for (let i = 0; i < window.sessionStorage.length; i++) assert.deepEqual(Object.keys(JSON.parse(window.sessionStorage.getItem(window.sessionStorage.key(i)))).sort(), ['previewId', 'requestId']);
   } finally { await act(async () => root.unmount()); dom.window.close(); await rm(temp, { recursive: true, force: true }); }

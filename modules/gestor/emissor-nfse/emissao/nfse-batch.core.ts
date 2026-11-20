@@ -2,7 +2,7 @@ import { runNfseCommandWithQuotaRetry } from './nfse-command-quota-retry';
 import type { NfseScope } from '../types/nfse.types';
 import type { IndividualIssueResult, IndividualPreview, NfseIndividualService } from '../individual/nfse-individual.types';
 import { individualStorageKey, readIndividualAttempt } from '../individual/nfse-individual.attempt';
-import { emissionSource, type NfseEmissionSource, type NfseOperationReference } from './nfse-operation.contract';
+import { emissionSource, previewFromUnsentIssue, type NfseEmissionSource, type NfseOperationReference } from './nfse-operation.contract';
 import { individualIssueNotice, type NfseFiscalNotice } from './nfse-fiscal-notice';
 export interface NfseBatchInput { source: NfseEmissionSource; label: string; amount: string; operation?: NfseOperationReference }
 export interface NfseBatchItem extends NfseBatchInput {
@@ -15,6 +15,7 @@ export const batchSourceStorageKey = (scope: NfseScope, source: NfseEmissionSour
 export const batchCanIssue = (item: NfseBatchItem, now = Date.now()) => Boolean(!item.dispatched && !item.uncertain && !item.error
   && item.preview?.capability.available && item.preview.payload && Date.parse(item.preview.expiresAt) > now
   && (!item.result || item.result.state === 'PREVIEWED'));
+const isDefinitive = (state?: IndividualIssueResult['state']) => state === 'AUTHORIZED' || state === 'REJECTED' || state === 'BLOCKED';
 /** Browser orchestrates single durable operations. No money, model or person is reconstructed here. */
 export function createNfseBatchController(scope: NfseScope, input: readonly NfseBatchInput[], service: NfseIndividualService,
   storage: Storage, options: { uuid?: () => string; onChanged?: () => void; onNotice?: (notice: NfseFiscalNotice) => void; confirmationDelays?: readonly number[]; requestTimeoutMs?: number; confirmationTimeoutMs?: number; commandIntervalMs?: number; commandRestMs?: number } = {}) {
@@ -105,15 +106,19 @@ export function createNfseBatchController(scope: NfseScope, input: readonly Nfse
   });
   const reads = new Map<number, Promise<void>>();
   let wakeRead: { index: number; done: () => void } | undefined;
-  const accept = (index: number, result: IndividualIssueResult) => {
-    // A delayed uncertain response must never downgrade an authorization already observed.
-    if (items[index].result?.state === 'AUTHORIZED' && result.state !== 'AUTHORIZED') return;
-    if (items[index].dispatched && result.state === 'PREVIEWED') return;
-    const preview = result.state === 'PREVIEWED' && result.expiresAt && result.capability ? { previewId: result.previewId, expiresAt: result.expiresAt,
-      state: 'PREVIEWED' as const, capability: result.capability, payload: result.payload } : undefined;
+  const accept = (index: number, result: IndividualIssueResult, submitted?: IndividualPreview) => {
+    const previous = items[index].result;
+    const definitive = isDefinitive(result.state);
+    // An earlier observation may finish after the definitive response to the fiscal command.
+    if (previous?.state === 'AUTHORIZED' && result.state !== 'AUTHORIZED' || isDefinitive(previous?.state) && !definitive) return;
+    const unsent = submitted && !previous ? previewFromUnsentIssue(result, submitted) : undefined;
+    if (items[index].dispatched && result.state === 'PREVIEWED' && !unsent) return;
+    if (unsent) { dispatchIntent = null; paused = true; }
+    const preview = unsent ?? (result.state === 'PREVIEWED' && result.expiresAt && result.capability ? { previewId: result.previewId, expiresAt: result.expiresAt,
+      state: 'PREVIEWED' as const, capability: result.capability, payload: result.payload } : undefined);
     patch(index, { result, preview, error: undefined, uncertain: result.state === 'AWAITING_CONFIRMATION', dispatched: result.state !== 'PREVIEWED' });
-    if (result.state === 'AUTHORIZED') {
-      // A late POST may confirm while GET is still physically pending. Release only
+    if (definitive || unsent) {
+      // A direct POST may resolve the attempt while GET is still physically pending. Release only
       // this item's local waiter, retaining the GET single-flight until settlement.
       if (wakeRead?.index === index) wakeRead.done();
       wake?.();
@@ -133,7 +138,11 @@ export function createNfseBatchController(scope: NfseScope, input: readonly Nfse
       if (!readState) throw new Error('A observação canônica desta operação está indisponível. Nenhuma consulta fiscal foi iniciada.');
       pending = (observe ? readState(captured, item.requestId, item.previewId)
         : fiscalCommand(() => readState(captured, item.requestId, item.previewId!)))
-        .then(result => { accept(index, result); })
+        .then(result => {
+          // A read started during dispatch can predate the direct ISSUE response.
+          if (item.dispatched && result.state === 'PREVIEWED') return;
+          accept(index, result);
+        })
         .finally(() => { reads.delete(index); lastEventRead = Date.now(); flushSignals(); });
       reads.set(index, pending);
     }
@@ -147,15 +156,21 @@ export function createNfseBatchController(scope: NfseScope, input: readonly Nfse
   };
   // Bounded GET-only recovery while the explicit batch action is active, never a second ISSUE.
   const follow = async (index: number) => {
+    const previousPhase = phase;
     phase = 'CONFIRM'; emit();
-    const deadline = Date.now() + (options.confirmationTimeoutMs ?? 32_000);
-    for (const delay of options.confirmationDelays || [1500, 2500, 4000, 6000, 8000, 10000]) {
-      if (disposed || stopped || !items[index].uncertain) return;
-      if (Date.now() >= deadline) return;
-      await wait(Math.min(delay, deadline - Date.now()));
-      if (disposed || stopped || !items[index].uncertain || Date.now() >= deadline) return;
-      try { await read(index, Math.min(options.requestTimeoutMs ?? 45_000, deadline - Date.now())); } catch { continue; }
-      if (!items[index].uncertain) return;
+    try {
+      const deadline = Date.now() + (options.confirmationTimeoutMs ?? 32_000);
+      for (const delay of options.confirmationDelays || [1500, 2500, 4000, 6000, 8000, 10000]) {
+        if (disposed || stopped || !items[index].uncertain) return;
+        if (Date.now() >= deadline) return;
+        await wait(Math.min(delay, deadline - Date.now()));
+        if (disposed || stopped || !items[index].uncertain || Date.now() >= deadline) return;
+        try { await read(index, Math.min(options.requestTimeoutMs ?? 45_000, deadline - Date.now())); } catch { continue; }
+        if (!items[index].uncertain) return;
+      }
+    } finally {
+      phase = previousPhase;
+      emit();
     }
   };
   const dispatchApproved = async (automatic = false) => {
@@ -181,7 +196,7 @@ export function createNfseBatchController(scope: NfseScope, input: readonly Nfse
           if (!batchCanIssue(items[index])) { dispatchIntent = null; paused = true; break; }
           phase = 'ISSUE';
           patch(index, { dispatched: true, result: undefined, error: undefined, preview: undefined });
-          await bounded(fiscalCommand(() => service.issue(captured, item.requestId, previewId)).then(result => { accept(index, result); }));
+          await bounded(fiscalCommand(() => service.issue(captured, item.requestId, previewId)).then(result => { accept(index, result, item.preview); }));
         } catch (error) {
           if ((disposed || stopped) && !items[index].dispatched) break;
           const limited = error as { code?: string; status?: number; beforeDispatch?: boolean; retryAfterMs?: number };

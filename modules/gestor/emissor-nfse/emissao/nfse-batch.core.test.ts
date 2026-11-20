@@ -124,6 +124,24 @@ test('awaiting response is reconciled automatically with same DPS before advanci
   await f.controller.issue(); assert.equal(sent.length, 2);
 });
 
+test('review restores the preparation phase after confirming a saved note', async () => {
+  const saved = { ...inputs[0], operation: { requestId: id(101), operationId: id(30) } };
+  const f = fixture({ reconcile: async (_scope, _requestId, previewId) => result(previewId, 'AWAITING_CONFIRMATION') },
+    [saved, inputs[1]], [0]);
+  const previewSource = f.service.previewSource;
+  let preparationPhase: string | undefined;
+  f.service.previewSource = (...args) => {
+    preparationPhase = f.controller.getSnapshot().phase;
+    return previewSource(...args);
+  };
+
+  await f.controller.review();
+
+  assert.equal(f.controller.getSnapshot().items[0].result?.state, 'AUTHORIZED');
+  assert.deepEqual(f.calls.map(call => call.action), ['OBSERVE', 'PREVIEW_QUEUE']);
+  assert.equal(preparationPhase, 'REVIEW');
+});
+
 test('confirmation exhaustion stays uncertain and never claims success or sends another note', async () => {
   let sent = 0, reads = 0;
   const f = fixture({ issue: async (_s, _r, previewId) => { sent++; return result(previewId, 'AWAITING_CONFIRMATION'); },
@@ -203,17 +221,29 @@ test('confirmation wall clock includes slow requests and reuses unresolved physi
   assert.equal(f.controller.getSnapshot().items[0].result?.state, 'AUTHORIZED');
 });
 
-test('late ISSUE authorization is retained and stale GET cannot downgrade or enable resend', async () => {
-  let sent = 0, releaseIssue!: (value: IndividualIssueResult) => void;
-  let releaseRead!: (value: IndividualIssueResult) => void;
-  const f = fixture({ issue: async () => { sent++; return new Promise(resolve => { releaseIssue = resolve; }); },
-    observe: async () => new Promise(resolve => { releaseRead = resolve; }) }, [inputs[0]], [0], 5, 15);
-  await f.controller.review(); await f.controller.issue();
-  releaseIssue(result(id(30))); await new Promise(resolve => setTimeout(resolve, 0));
-  releaseRead(result(id(30), 'AWAITING_CONFIRMATION')); await new Promise(resolve => setTimeout(resolve, 0));
-  assert.equal(f.controller.getSnapshot().items[0].result?.state, 'AUTHORIZED');
-  await f.controller.issue(); assert.equal(sent, 1);
-});
+for (const terminalState of ['AUTHORIZED', 'REJECTED', 'BLOCKED'] as const) {
+  test(`late ISSUE ${terminalState} cannot be downgraded by an older observation`, async t => {
+    t.mock.timers.enable({ apis: ['setTimeout', 'Date'] });
+    let sent = 0, releaseIssue!: (value: IndividualIssueResult) => void;
+    let releaseRead!: (value: IndividualIssueResult) => void;
+    const f = fixture({ issue: async () => { sent++; return new Promise(resolve => { releaseIssue = resolve; }); },
+      observe: async () => new Promise(resolve => { releaseRead = resolve; }) }, [inputs[0]], [1], 100);
+    await f.controller.review();
+    const issuing = f.controller.issue(); await flushMicrotasks();
+    t.mock.timers.tick(100); await flushMicrotasks();
+    t.mock.timers.tick(1); await flushMicrotasks();
+    assert(releaseRead, 'Observation starts after the original send reaches its UI deadline');
+    releaseIssue(result(id(30), terminalState)); await flushMicrotasks();
+    const keptWaiting = f.controller.getSnapshot().busy;
+    releaseRead(result(id(30), 'AWAITING_CONFIRMATION')); await issuing; await flushMicrotasks();
+    const item = f.controller.getSnapshot().items[0];
+    assert.equal(item.result?.state, terminalState);
+    assert.equal(item.uncertain, false);
+    assert.equal(keptWaiting, false, 'A definitive response ends local monitoring without waiting for the stale read');
+    await f.controller.issue(); assert.equal(sent, 1);
+    f.controller.dispose();
+  });
+}
 
 test('PREVIEWED during lost POST never resets dispatched flag or authorizes resend', async () => {
   let sent = 0;
@@ -222,6 +252,50 @@ test('PREVIEWED during lost POST never resets dispatched flag or authorizes rese
   await f.controller.review(); await f.controller.issue(); await f.controller.issue();
   assert.equal(sent, 1); assert.equal(f.controller.getSnapshot().items[0].uncertain, true);
 });
+
+for (const late of [false, true]) {
+  test(`a ${late ? 'late' : 'direct'} ISSUE blocked before dispatch restores the blocked preview and stops the approved batch`, async t => {
+    t.mock.timers.enable({ apis: ['setTimeout', 'Date'], now: new Date('2026-11-12T18:00:00Z') });
+    const sent: string[] = [];
+    const blocked = { ...result(id(30), 'PREVIEWED'), message: 'O número do endereço precisa ser conferido.',
+      capability: { available: false, reason: 'FISCAL_RECIPIENT_ADDRESS_NUMBER_REQUIRED' } };
+    let releaseIssue!: (value: IndividualIssueResult) => void;
+    let releaseObservation!: (value: IndividualIssueResult) => void;
+    const f = fixture({ issue: async (_s, _r, p) => {
+      sent.push(p);
+      if (p !== id(30)) return result(p);
+      return late ? new Promise(resolve => { releaseIssue = resolve; }) : blocked;
+    }, observe: async () => new Promise(resolve => { releaseObservation = resolve; }) }, inputs, [1], 100);
+
+    await f.controller.review();
+    const expiresAt = f.controller.getSnapshot().items[0].preview!.expiresAt;
+    const issuing = f.controller.issue();
+    if (late) {
+      await flushMicrotasks();
+      t.mock.timers.tick(100); await flushMicrotasks();
+      t.mock.timers.tick(1); await flushMicrotasks();
+      assert(releaseObservation, 'The delayed read is already in flight');
+      releaseIssue(blocked); await flushMicrotasks();
+      const keptWaiting = f.controller.getSnapshot().busy;
+      releaseObservation({ ...result(id(30), 'PREVIEWED'), expiresAt, capability: { available: true, reason: null } });
+      assert.equal(keptWaiting, false, 'The blocked response ends local monitoring without waiting for the stale read');
+    }
+    await issuing;
+    f.controller.signalChange(true); await flushMicrotasks();
+
+    const { items, busy, paused } = f.controller.getSnapshot();
+    assert.equal(items[0].dispatched, false);
+    assert.equal(items[0].uncertain, false);
+    assert.equal(items[0].preview?.expiresAt, expiresAt);
+    assert.deepEqual(items[0].preview?.capability, blocked.capability);
+    assert.equal(batchCanIssue(items[0]), false);
+    assert.equal(items[1].dispatched, false);
+    assert.equal(busy, false);
+    assert.equal(paused, true);
+    assert.deepEqual(sent, [id(30)]);
+    f.controller.dispose();
+  });
+}
 
 test('dispose releases monitoring and consumes late rejection without callbacks or another request', async () => {
   let rejectRead!: (error: Error) => void, changed = 0, notifications = 0;

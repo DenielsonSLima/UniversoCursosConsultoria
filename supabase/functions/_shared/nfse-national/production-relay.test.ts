@@ -1,8 +1,12 @@
 import assert from 'node:assert/strict';
 import {TextDecoder} from 'node:util';
 import {createNationalProductionRelayTransport,assertProductionRelayConfig,APPROVED_PRODUCTION_RELAY_URLS} from './production-relay.ts';
-Deno.test('production relay pins only the two reviewed recovery previews',()=>{
-  assert.equal(APPROVED_PRODUCTION_RELAY_URLS.length,2);
+Deno.test('production relay permits only the configured recovery previews',()=>{
+  assert.deepEqual(APPROVED_PRODUCTION_RELAY_URLS,[
+    'https://universo-cursos-consultoria-git-5420cb-denielson-limas-projects.vercel.app/api/nfse-production-relay',
+    'https://universo-cursos-consultoria-6w67gc985-denielson-limas-projects.vercel.app/api/nfse-production-relay',
+    'https://universo-cursos-consultoria-qsnk8l1zn-denielson-limas-projects.vercel.app/api/nfse-production-relay',
+  ]);
   for(const url of APPROVED_PRODUCTION_RELAY_URLS)assert.doesNotThrow(()=>assertProductionRelayConfig({url,key:'11'.repeat(32)}));
   assert.throws(()=>assertProductionRelayConfig({url:'https://universo-cursos-consultoria-arbitrary.vercel.app/api/nfse-production-relay',key:'11'.repeat(32)}));
   assert.throws(()=>assertProductionRelayConfig({url:APPROVED_PRODUCTION_RELAY_URLS[1]+'?target=other',key:'11'.repeat(32)}));

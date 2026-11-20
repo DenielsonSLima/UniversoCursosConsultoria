@@ -83,14 +83,18 @@ test('saved source reviews canonical snapshot and recovers issue and cancellatio
     assert.equal(button('Emitir NFS-e').disabled, false, 'Canonical capability enables the explicit button without a second acceptance checkbox');
     const send = button('Emitir NFS-e'); await act(async () => { send.click(); send.click(); }); await settle();
     assert.equal(calls.filter(row => row.action === 'ISSUE').length, 1);
+    const progress = document.querySelector('progress'); assert(progress);
+    assert.equal(progress.hasAttribute('value'), false, 'The issue response has no measurable percentage');
     await act(async () => issuePending.reject(new Error('Resposta de emissão não confirmada.'))); await settle();
     assert(document.querySelector('[role="alert"]').textContent.includes('Resposta de emissão não confirmada'));
+    assert(document.querySelector('progress'), 'An unconfirmed transmission is still observed');
     assert.equal(button('Emitir NFS-e'), undefined);
     const stored = JSON.parse(dom.window.sessionStorage.getItem(dom.window.sessionStorage.key(0)));
     assert.deepEqual(Object.keys(stored).sort(), ['previewId', 'requestId']);
     await act(async () => render({ key: 'reopened', operation: { operationId: id(5), requestId: stored.requestId } })); await settle();
     assert.equal(calls.filter(row => row.action === 'RECONCILE').length, 1);
     assert.equal(calls.filter(row => row.action === 'ISSUE').length, 1);
+    assert.equal(document.querySelector('progress'), null, 'The bar stops after a definitive return');
     assert.equal(document.querySelector('textarea'), null, 'Summary never exposes cancellation fields');
     assert(button('Cancelar NFS-e').classList.contains('nfse-button-danger'));
     assert.equal(button('Consultar resultado da emissão'), undefined, 'Authorized summary has no manual result query');
@@ -244,6 +248,61 @@ test('saved source reviews canonical snapshot and recovers issue and cancellatio
       assert.equal(button('Emitir NFS-e').disabled, false);
     } finally { dom.window.setTimeout = quotaNativeTimeout; }
 
+    const blockedIssueId = id(96);
+    const blockedIssuePreviews = [], blockedIssueCalls = [];
+    let resolveBlockedIssue;
+    const blockedIssueResult = { ...note, previewId: blockedIssueId, state: 'PREVIEWED', number: null, accessKey: null,
+      capability: { available: false, reason: 'PRODUCTION_REVIEW_CHANGED' }, message: 'Consulte esta mesma operação antes de qualquer nova tentativa.' };
+    const blockedIssueService = { ...service,
+      previewSource: async (...args) => {
+        blockedIssuePreviews.push(args);
+        return { previewId: blockedIssueId, state: 'PREVIEWED', expiresAt: expiry(), payload, capability: { available: true, reason: null } };
+      },
+      issue: async (...args) => {
+        blockedIssueCalls.push(args);
+        return new Promise(resolve => { resolveBlockedIssue = resolve; });
+      },
+      observe: async () => ({ ...blockedIssueResult, expiresAt: expiry(), capability: undefined }),
+    };
+    await act(async () => render({ key: 'issue-blocked-before-dispatch', service: blockedIssueService,
+      source: { kind: 'ACADEMIC_QUEUE', id: id(96) } })); await settle();
+    await click(button('Emitir NFS-e'));
+    assert.equal(blockedIssueCalls.length, 1);
+    assert.equal(blockedIssueCalls[0][2], blockedIssueId);
+    assert.equal(document.querySelector('progress')?.hasAttribute('value'), false);
+    await act(async () => resolveBlockedIssue(blockedIssueResult)); await settle();
+    assert.equal(document.querySelector('progress'), null, 'A definitive pre-dispatch refusal ends the loading state');
+    assert(document.body.textContent.includes('Os parâmetros fiscais mudaram desde a revisão'));
+    assert(!document.body.textContent.includes(blockedIssueResult.message));
+    assert.match(notices.at(-1).message, /Os parâmetros fiscais mudaram desde a revisão/);
+    assert.equal(button('Emitir NFS-e').disabled, true);
+    await click(button('Atualizar dados desta operação'));
+    assert.equal(blockedIssuePreviews.length, 2);
+    assert.equal(blockedIssuePreviews[1][1], blockedIssueCalls[0][1], 'Review preserves the blocked issue request');
+    assert.equal(blockedIssueCalls.length, 1, 'Review performs no fiscal dispatch');
+    assert.equal(button('Emitir NFS-e').disabled, false, 'A new canonical preview can be explicitly submitted');
+    assert(!document.body.textContent.includes('Os parâmetros fiscais mudaram desde a revisão'));
+
+    const nativeTimeout = globalThis.setTimeout;
+    let expireIssue;
+    globalThis.setTimeout = (callback, delay, ...args) => {
+      if (delay === 45_000 && !expireIssue) expireIssue = () => callback(...args);
+      return nativeTimeout(callback, delay, ...args);
+    };
+    try {
+      await act(async () => render({ key: 'late-blocked-issue', service: blockedIssueService,
+        source: { kind: 'ACADEMIC_QUEUE', id: id(97) } })); await settle();
+      expireIssue = undefined;
+      await click(button('Emitir NFS-e'));
+      assert(expireIssue); await act(async () => expireIssue()); await settle();
+      assert(document.querySelector('[role="alert"]').textContent.includes('não chegou no prazo'));
+      assert(document.querySelector('progress'), 'A timeout alone does not prove the note was not sent');
+      await act(async () => resolveBlockedIssue(blockedIssueResult)); await settle();
+      assert.equal(document.querySelector('progress'), null, 'A late definitive pre-dispatch refusal ends the loading state');
+      assert(document.body.textContent.includes('Os parâmetros fiscais mudaram desde a revisão'));
+      assert.equal(blockedIssueCalls.length, 2, 'A late refusal does not cause another fiscal dispatch');
+    } finally { globalThis.setTimeout = nativeTimeout; }
+
     let resolveLateIssue, lateIssueSends = 0;
     const lateIssueService = { ...service, observe: async () => note, reconcile: async () => assert.fail('Sent details cannot query the fiscal service'),
       issue: async () => { lateIssueSends++; return new Promise(resolve => { resolveLateIssue = resolve; }); } };
@@ -313,12 +372,17 @@ test('saved source reviews canonical snapshot and recovers issue and cancellatio
     assert(document.body.textContent.includes('executor de emissão deste ambiente ainda não está disponível'));
     assert.equal(calls.length, count + 1); assert.equal(button('Emitir NFS-e').disabled, true);
     const failedRequests = [];
+    let failPreview;
     const blockedService = { ...service, previewSource: async (...args) => {
-      failedRequests.push(args); if (failedRequests.length === 1) throw new Error('Validação indisponível.');
+      failedRequests.push(args);
+      if (failedRequests.length === 1) return new Promise((_resolve, reject) => { failPreview = reject; });
       return { previewId: id(70), state: 'PREVIEWED', expiresAt: expiry(), payload, capability: { available: false, reason: 'FISCAL_MODEL_REVIEW_REQUIRED' } };
     } };
     await act(async () => render({ key: 'preview-error', source: { kind: 'ACADEMIC_QUEUE', id: id(70) }, service: blockedService })); await settle();
+    assert.equal(document.querySelector('progress')?.getAttribute('aria-label'), 'Preparando nota');
+    await act(async () => failPreview(new Error('Validação indisponível.'))); await settle();
     assert.equal(failedRequests.length, 1); assert(document.querySelector('[role="alert"]').textContent.includes('Validação indisponível'));
+    assert.equal(document.querySelector('progress'), null, 'Failed preparation ends the loading state');
     assert.equal(button('Emitir NFS-e').disabled, true);
     await click(button('Atualizar dados para emissão'));
     assert.equal(failedRequests.length, 2); assert.equal(failedRequests[0][1], failedRequests[1][1], 'Explicit retry reuses the same preview request');

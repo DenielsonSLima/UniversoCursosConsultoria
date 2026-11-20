@@ -12,7 +12,7 @@ import NfseIndividualSnapshot from '../individual/NfseIndividualSnapshot';
 import NfseIndividualCancellation from '../individual/NfseIndividualCancellation';
 import { formatNfseFiscalDocument } from '../fila/fiscal-review/nfse-fiscal-document.presentation';
 import { formatNfseMoney, formatNfseDate } from '../components/nfse.presentation';
-import { operationLabel, type NfseEmissionSource, type NfseOperationReference } from './nfse-operation.contract';
+import { operationLabel, previewFromUnsentIssue, type NfseEmissionSource, type NfseOperationReference } from './nfse-operation.contract';
 import '../individual/nfse-individual.css';
 import '../fila/fiscal-review/nfse-fiscal-review.css';
 import { individualCancelNotice, individualIssueNotice, type NfseFiscalNotice } from './nfse-fiscal-notice';
@@ -44,6 +44,7 @@ export default function NfseSourceEmissionModal({ scope, source, label, amount, 
   const [error, setError] = useState<string>(), [busy, setBusy] = useState(false), [clock, setClock] = useState(Date.now);
   const [quotaWaiting, setQuotaWaiting] = useState(false);
   const runId = useRef(0);
+  const pendingIssue = useRef<symbol | null>(null);
   const quotaControl = useRef<{ controller: AbortController; onWaiting: (waiting: boolean) => void } | null>(null);
   const request = useRef<{ key: string; id: string } | null>(null), active = useRef(false), mounted = useRef(true), opened = useRef(false);
   const close = () => {
@@ -84,11 +85,11 @@ export default function NfseSourceEmissionModal({ scope, source, label, amount, 
     if (!control) throw new Error('Intenção de envio indisponível.');
     return runNfseCommandWithQuotaRetry(task, { signal: control.controller.signal, onWaiting: control.onWaiting });
   };
-  const acceptIssueResponse = (response: IndividualIssueResult, quotaDeferred: boolean) => {
-    if (quotaDeferred && response.state === 'PREVIEWED') {
-      observation.acceptUnsentIssue(response); setIssued(response);
-      setPreview(response.expiresAt && response.capability ? { ...response, state: 'PREVIEWED',
-        expiresAt: response.expiresAt, capability: response.capability } : undefined);
+  const acceptIssueResponse = (response: IndividualIssueResult, submitted: IndividualPreview, quotaDeferred: boolean) => {
+    const unsent = previewFromUnsentIssue(response, submitted, quotaDeferred);
+    if (unsent) {
+      const result = { ...response, expiresAt: unsent.expiresAt };
+      observation.acceptUnsentIssue(result); setIssued(result); setPreview(unsent);
     } else setIssued(previous => preserveNfseObservation(previous, response));
   };
   const acceptCancelResponse = (response: IndividualCancelResult, quotaDeferred: boolean) => {
@@ -128,6 +129,7 @@ export default function NfseSourceEmissionModal({ scope, source, label, amount, 
     }
   });
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; quotaControl.current?.controller.abort(); }; }, []);
+  useEffect(() => () => { pendingIssue.current = null; }, [storageKey]);
   useEffect(() => {
     if (opened.current) return;
     if (attempt) { opened.current = true; consult(attempt); }
@@ -165,15 +167,26 @@ export default function NfseSourceEmissionModal({ scope, source, label, amount, 
     if (!requestId) return;
     const saved = { requestId, previewId: preview.previewId };
     if (!remember(saved)) return;
+    const submission = Symbol();
+    pendingIssue.current = submission;
     // The effect will not consult the same request while its first dispatch is being started.
     opened.current = true;
     setPreview(undefined); setIssued({ ...preview, state: 'AWAITING_CONFIRMATION', number: null, accessKey: null,
       payload: preview.payload, message: 'Aguardando confirmação da emissão. O acompanhamento é automático.' });
+    const publish = (response: IndividualIssueResult, quotaDeferred: boolean) => {
+      pendingIssue.current = null;
+      setError(undefined);
+      acceptIssueResponse(response, preview, quotaDeferred); onChanged(); onNotice?.(individualIssueNotice(response));
+    };
     void run(async isCurrent => {
-      const { result: response, quotaDeferred } = await command(() => service.issue(scope, saved.requestId, saved.previewId));
-      if (mounted.current && isCurrent()) {
-        acceptIssueResponse(response, quotaDeferred); onChanged(); onNotice?.(individualIssueNotice(response));
-      }
+      const { result: response, quotaDeferred } = await command(() => service.issue(scope, saved.requestId, saved.previewId).then(result => {
+        // After the UI timeout, only definite proof of no dispatch can clear this pending submission.
+        if (mounted.current && !isCurrent() && pendingIssue.current === submission && previewFromUnsentIssue(result, preview)) {
+          publish(result, false);
+        }
+        return result;
+      }));
+      if (isCurrent()) publish(response, quotaDeferred);
     });
   };
   const prepareCancel = (submit = false) => {
@@ -237,6 +250,7 @@ export default function NfseSourceEmissionModal({ scope, source, label, amount, 
   }, []);
   const observation = useNfseIndividualObservation({ scope, attempt, service, paused: quotaWaiting || busy && issued?.state !== 'AWAITING_CONFIRMATION' && !['CANCELLATION_PENDING', 'AWAITING_ANALYSIS'].includes(cancellation?.state ?? ''), issue: issued, cancellation,
     onIssue: result => {
+      if (result.state !== 'PREVIEWED') pendingIssue.current = null;
       if (active.current && issued?.state === 'AWAITING_CONFIRMATION' && ['AUTHORIZED', 'REJECTED', 'BLOCKED'].includes(result.state)) { runId.current++; active.current = false; setBusy(false); quotaControl.current?.controller.abort(); }
       if (attempt) learnCancellationReference(attempt, result);
       setIssued(result); setError(undefined);
@@ -256,18 +270,28 @@ export default function NfseSourceEmissionModal({ scope, source, label, amount, 
       }
     } });
   const payload = issued?.payload || preview?.payload;
+  const awaitingIssue = issued?.state === 'AWAITING_CONFIRMATION';
+  const showIssueProgress = supported && !cancellationOpen && operation?.state !== 'CANCELLED'
+    && (awaitingIssue || busy && intent === 'ISSUE' && (!issued || issued.state === 'PREVIEWED'));
+  const issueProgressLabel = quotaWaiting ? 'Aguardando liberação para enviar'
+    : awaitingIssue ? 'Acompanhando o retorno da NFS-e'
+      : attempt && !issued ? 'Consultando a NFS-e' : 'Preparando nota';
   const canOpenCancellation = intent !== 'CONSULT' && issued?.state === 'AUTHORIZED'
     && operation?.state !== 'CANCELLED' && cancellation?.state !== 'CANCELLED';
   useEffect(() => { initialFocusRef.current?.focus(); }, [cancellationOpen]);
   if (typeof document === 'undefined') return null;
   return createPortal(<div ref={overlayRef} className="nfse-portal nfse-fiscal-review-overlay" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) close(); }}>
-    <div ref={dialogRef} className="nfse-fiscal-review-dialog" role="dialog" aria-modal="true" aria-labelledby={title} tabIndex={-1} aria-busy={busy}>
+    <div ref={dialogRef} className="nfse-fiscal-review-dialog" role="dialog" aria-modal="true" aria-labelledby={title} tabIndex={-1}>
       <header className="nfse-section-heading"><div><h2 id={title}>{cancellationOpen ? 'Cancelar NFS-e' : intent === 'CONSULT' || issued && issued.state !== 'PREVIEWED' ? 'Detalhes da NFS-e' : 'Emitir NFS-e'}</h2><p>{label} · {formatNfseMoney(payload?.amount || amount)} · {scope.environment === 'PRODUCAO' ? 'Produção' : 'Homologação'}</p>
         {payload && <p>{payload.modelName} · versão {payload.modelVersion}</p>}</div>
         <button ref={initialFocusRef} type="button" className="nfse-button nfse-button-secondary" aria-label={quotaWaiting ? "Fechar envio em espera" : cancellationOpen ? "Voltar ao resumo da nota" : "Fechar emissão"} disabled={busy && !quotaWaiting} onClick={close}><X size={17} /></button></header>
       <div className="nfse-fiscal-review-body nfse-individual-content">
         {!supported && <p role="status">O executor de emissão deste ambiente ainda não está disponível. Os dados preparados foram preservados.</p>}
         {quotaWaiting && <p role="status" aria-live="polite">O serviço limitou temporariamente os pedidos. Este envio ainda não foi aceito; o mesmo pedido será tentado após o prazo permitido. Fechar encerra essa intenção.</p>}
+        {showIssueProgress && <div>
+          {!quotaWaiting && busy && <p role="status">{issueProgressLabel}…</p>}
+          <progress className="nfse-emission-progress" aria-label={issueProgressLabel} />
+        </div>}
         {error && <p className="nfse-individual-state" role="alert">{error}</p>}
         {!cancellationOpen && intent === 'ISSUE' && !attempt && supported && <>
           <p>{source.kind === 'PARTNER_SERVICE' ? 'A competência seguirá a regra salva no pré-modelo. Confira as datas e a descrição final na prévia antes de emitir.'
@@ -295,11 +319,12 @@ export default function NfseSourceEmissionModal({ scope, source, label, amount, 
         {attempt?.cancelPreviewId && (!cancellation || ['CANCELLATION_PENDING', 'AWAITING_ANALYSIS'].includes(cancellation.state))
           && <p role="status" aria-live="polite">Acompanhando o cancelamento automaticamente, sem reenviar o pedido.</p>}
         {operation?.state === 'CANCELLED' && !cancellation && <p role="status"><strong>Cancelada</strong> · {operation.message || 'O cancelamento desta nota está registrado.'}</p>}
-        {!cancellationOpen && issued && <div className="nfse-individual-state" role="status"><strong>{operationLabel(issued.state)}</strong><p>{issued.message}</p>
+        {!cancellationOpen && issued && <div className="nfse-individual-state" role="status"><strong>{operationLabel(issued.state)}</strong>
+          {(issued.state !== 'PREVIEWED' || issued.capability?.available !== false) && <p>{issued.message}</p>}
           {cancellation?.state === 'CANCELLED' && <p>Autorização histórica preservada. O cancelamento confirmado está registrado no evento abaixo.</p>}
           {Boolean(issued.codes?.length) && <p>Código(s) retornado(s): {issued.codes!.join(', ')}</p>}
           {issued.state === 'REJECTED' && individualRejectionExplanation(issued.codes) && <p>Orientação para o código: {individualRejectionExplanation(issued.codes)}</p>}
-          {issued.capability?.available === false && <p>{individualReason(issued.capability.reason)}</p>}
+          {!preview && issued.capability?.available === false && <p>{individualReason(issued.capability.reason)}</p>}
           {issued.number && <p>NFS-e {issued.number} · Chave de acesso {issued.accessKey}</p>}</div>}
         {!cancellationOpen && cancellation && <NfseCancellationReadOnlyResult result={cancellation} />}
         {cancellationOpen && payload && <section className="nfse-individual-state" aria-label="Nota selecionada para cancelamento">

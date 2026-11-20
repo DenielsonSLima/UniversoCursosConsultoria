@@ -3,6 +3,7 @@ import type { NationalHttpResponse } from './mtls.ts';
 
 /** Fill only with the exact reviewed Preview URL returned by the Universo deployment. */
 export const APPROVED_PRODUCTION_RELAY_URLS: readonly string[] = Object.freeze([
+  'https://universo-cursos-consultoria-git-5420cb-denielson-limas-projects.vercel.app/api/nfse-production-relay',
   'https://universo-cursos-consultoria-6w67gc985-denielson-limas-projects.vercel.app/api/nfse-production-relay',
   'https://universo-cursos-consultoria-qsnk8l1zn-denielson-limas-projects.vercel.app/api/nfse-production-relay',
 ]);
