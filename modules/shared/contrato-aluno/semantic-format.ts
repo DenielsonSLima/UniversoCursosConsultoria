@@ -167,6 +167,47 @@ const markStructuralLabels = (text: string, marks: boolean[]) => {
   }
 };
 
+const markFinancialLabels = (
+  text: string,
+  boldMarks: boolean[],
+  accentMarks: boolean[],
+  snapshot: unknown,
+) => {
+  const plan = readPath(snapshot, ['financeiro', 'planoPagamentoExibicao']);
+  const conditions = readPath(snapshot, ['financeiro', 'condicoesExibicao']);
+  const hasFinancialBlocks = /^Ciclo \d+\n/u.test(plan) || /\n\n\d+ /u.test(conditions);
+  const hasTemplateFields = /\{\{financeiro\.(?:planoPagamento|condicoes)\}\}/u.test(text);
+  if (!hasFinancialBlocks && !hasTemplateFields) return;
+
+  for (const match of text.matchAll(/^(?:Plano de pagamento:|Ciclo \d+[ \t]*$)/gmu)) {
+    markRange(boldMarks, match.index, match[0].length);
+  }
+
+  const chargeLabels = [
+    /^I - Descontos de pontualidade e encargos por atraso/gmu,
+    /^\d+ (?:mensalidades?|rematrículas?|matrículas?) do(?: ciclo|s ciclos) \d+(?: e \d+)?[ \t]*$/gmu,
+    /^(?:Desconto de pontualidade de R\$ [\d.]+,\d{2}|Juros de [\d,.]+% ao mês|Multa única de [\d,.]+%|Sem (?:desconto de pontualidade|juros por atraso|multa por atraso))(?=[ \t,.]|$)/gmu,
+  ];
+  for (const pattern of chargeLabels) {
+    for (const match of text.matchAll(pattern)) {
+      markRange(boldMarks, match.index, match[0].length);
+      markRange(accentMarks, match.index, match[0].length);
+    }
+  }
+
+  for (const match of text.matchAll(/(?:Total das mensalidades: |Valor total do contrato[^:\n]*: )(R\$ [\d.]+,\d{2})/gu)) {
+    markRange(boldMarks, match.index + match[0].length - match[1].length, match[1].length);
+  }
+
+  const items = /^((?:\d+ )?(?:mensalidades?|rematrículas?|matrículas?) de R\$ [\d.]+,\d{2})[^\n]*/gimu;
+  for (const match of text.matchAll(items)) {
+    markRange(boldMarks, match.index, match[1].length);
+    for (const date of match[0].matchAll(/\b\d{2}\/\d{2}\/\d{4}\b/gu)) {
+      markRange(boldMarks, match.index + date.index, date[0].length);
+    }
+  }
+};
+
 const DYNAMIC_VALUE_PATHS = [
   ['curso', 'nome'],
   ['curso', 'modalidade'],
@@ -222,6 +263,7 @@ export const buildContractSemanticRuns = (
   const accentMarks = Array.from({ length: text.length }, () => false);
   const attentionMarks = Array.from({ length: text.length }, () => false);
   markStructuralLabels(text, boldMarks);
+  markFinancialLabels(text, boldMarks, accentMarks, options.snapshot);
 
   DYNAMIC_TEMPLATE_TOKENS.forEach((token) => {
     markExactOccurrences(text, accentMarks, token);

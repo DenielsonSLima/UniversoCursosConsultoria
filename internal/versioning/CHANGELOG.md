@@ -1,3 +1,9 @@
+## [4.8.369] - 2026-11-23
+
+- O Contrato do Aluno calcula os vencimentos da rematrícula e das mensalidades do segundo ciclo e organiza os encargos em linhas com destaques em vermelho e negrito.
+
+Histórico 4.8.297 preservado em [arquivo de versão](./changelog/2026-11-11-versao-4-8-297.md).
+
 ## [4.8.368] - 2026-11-20
 
 - Corrige o menu de três pontos na aba Erros do Emissor NFS-e. As ações ficam disponíveis ao entrar direto nessa aba.
@@ -490,11 +496,3 @@ Histórico 4.8.291: [11/11/2026](./changelog/2026-11-11-versao-4-8-291.md).
 ## [4.8.298] - 2026-11-12
 
 - Emissão valida os dados automaticamente, com revisão/edição opcional; descrições acadêmicas e datas dos pagamentos compatíveis com o executor, após emissão e cancelamento reais nas filiais.
-
-## [4.8.297] - 2026-11-11
-
-- Matriz gerencia os modelos de emissão; filiais usam e exportam o mesmo cadastro, sem criar cópias locais.
-- Emissão das filiais usa o A1 da matriz com validação da empresa, ambiente e CNPJ próprio do emitente; local 030101 acompanha o estabelecimento selecionado.
-- Cancelamento acadêmico confirmado libera os recebimentos para nova preparação, preservando nota, XML, reservas e numeração anteriores.
-- Disponibilidade acadêmica considera unidade e ambiente no TanStack Query/Realtime; validação informa quando falta identificar a parcela no financeiro.
-- Descrição acadêmica permite ausência real de numeração da parcela com matrícula e data do pagamento, sem inventar dados nem alterar o modelo.
