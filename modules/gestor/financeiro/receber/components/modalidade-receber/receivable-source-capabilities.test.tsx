@@ -2,10 +2,11 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { ReceivableActionButtons, ReceivableStatusBadge, type ReceivableActionsContext } from './ReceivableItemPresentation';
+import { ReceivableActionButtons, ReceivableCard, ReceivableRow, ReceivableStatusBadge, type ReceivableActionsContext } from './ReceivableItemPresentation';
+import { ReceivablesResultTotal, ReceivablesSummaryCards } from './ReceivablesSummaryCards';
 import { mapReceivableFinancialComposition } from '../../../financeiro.composition-presentation';
 import { parseBaneseCancellation, parseReceivableOperationCapabilities } from '../../../financeiro.operation-capabilities';
-import type { ContasReceber } from '../../../financeiro.types';
+import type { ContasReceber, ReceivablesSummary } from '../../../financeiro.types';
 
 const unexpected = () => assert.fail('A apresentação não executa operações');
 const actions: ReceivableActionsContext = {
@@ -116,4 +117,56 @@ test('pagamento confirmado prevalece sobre metadado de cancelamento defasado', (
   } });
   assert.match(renderToStaticMarkup(createElement(ReceivableStatusBadge, { item: row })), /PAGO/);
   assert.doesNotMatch(renderActions(row), /Cancelamento aguardando/);
+});
+
+test('compra EAD opcional vencida tem o mesmo rótulo na tabela e no cartão', () => {
+  const row = item({
+    cursoModalidade: 'EAD', optionalEadCheckoutStatus: 'AWAITING_BANK_VERIFICATION',
+    gatewayProvider: 'banese_card',
+    operationCapabilities: parseReceivableOperationCapabilities({
+      sourceSystem: 'BANESE', provenanceKind: 'BANESE_LEGACY_IMPORTED', canSettle: true, canOpenExisting: true,
+    }),
+  });
+  const tableRow = createElement('table', null, createElement('tbody', null, createElement(ReceivableRow, { item: row, index: 0, actions })));
+  for (const presentation of [tableRow, createElement(ReceivableCard, { item: row, actions })]) {
+    const html = renderToStaticMarkup(presentation);
+    assert.match(html, /Compra opcional/);
+    assert.match(html, /Aguardando conferência bancária/);
+    assert.match(html, /title="Confirmar recebimento manual"/);
+    assert.match(html, />Abrir</);
+    assert.doesNotMatch(html, /Compra expirada|Enviar ao banco/);
+  }
+});
+
+test('expiração exige estado canônico e preserva recebimento parcial, suspensão e pagamento confirmado', () => {
+  const renderBadge = (row: ContasReceber) => renderToStaticMarkup(createElement(ReceivableStatusBadge, { item: row }));
+  const expired = item({ status: 'CANCELADO', optionalEadCheckoutStatus: 'EXPIRED' });
+  assert.match(renderBadge(expired), /Compra expirada/);
+  assert.doesNotMatch(renderActions(expired), /<button/);
+  assert.match(renderBadge(item({ status: 'CANCELADO' })), /CANCELADO/);
+  assert.match(renderBadge(item({ status: 'PAGO', optionalEadCheckoutStatus: 'EXPIRED' })), /PAGO/);
+  assert.match(renderBadge(item({ status: 'SUSPENSO', optionalEadCheckoutStatus: 'PENDING' })), /Compra opcional.*Suspenso/);
+  const partial = item({
+    optionalEadCheckoutStatus: 'AWAITING_BANK_VERIFICATION',
+    paymentSummary: { originalAmount: '279.90', previouslyPaid: '10.00', remainingBefore: '269.90', status: 'PENDENTE', hasEvents: true },
+  });
+  assert.match(renderBadge(partial), /Compra opcional.*Baixa parcial/);
+  assert.match(renderActions(partial), /Histórico de pagamentos/);
+});
+
+test('total e cartão A vencer descrevem a parte opcional sem misturar outros escopos', () => {
+  const data: ReceivablesSummary = {
+    pendingCount: 2, pendingValue: 199.9, pendingOptionalCheckout: { count: 1, value: 99.9 },
+    receivedCount: 1, receivedValue: 100, canceledCount: 1, canceledValue: 75, overdueCount: 1, overdueValue: 100,
+    allCount: 4, allValue: 374.9,
+  };
+  const state = { data, loading: false, error: false };
+  const onlyOptional = { ...state, data: { ...data, pendingCount: 1, pendingValue: 99.9 } };
+  assert.match(renderToStaticMarkup(createElement(ReceivablesResultTotal, { scope: 'pending', state })), /199,90.*incluindo R\$\s99,90 em compras opcionais/);
+  assert.match(renderToStaticMarkup(createElement(ReceivablesResultTotal, { scope: 'pending', state: onlyOptional })), /99,90<\/strong> em compras opcionais/);
+  assert.match(renderToStaticMarkup(createElement(ReceivablesResultTotal, { scope: 'overdue', state })), /100,00<\/strong> em aberto/);
+  const cards = renderToStaticMarkup(createElement(ReceivablesSummaryCards, {
+    scope: 'upcoming', summary: state, upcoming: onlyOptional, onScopeChange: unexpected, disabled: false,
+  }));
+  assert.match(cards, /Compras opcionais com vencimento hoje ou depois/);
 });
