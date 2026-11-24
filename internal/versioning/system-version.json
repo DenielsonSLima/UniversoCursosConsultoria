@@ -1,8 +1,8 @@
 {
-  "version": "4.8.368",
+  "version": "4.8.369",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 377,
-  "releasedAt": "2026-11-20",
-  "summary": "Corrige a abertura do menu de ações no Emissor NFS-e"
+  "revision": 378,
+  "releasedAt": "2026-11-23",
+  "summary": "Define vencimentos do segundo ciclo e organiza os encargos no Contrato do Aluno"
 }
