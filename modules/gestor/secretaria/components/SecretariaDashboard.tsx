@@ -85,6 +85,8 @@ const sections = [
   },
 ];
 
+const titleOrder = new Intl.Collator('pt-BR', { sensitivity: 'base' });
+
 const SecretariaDashboard: React.FC<SecretariaDashboardProps> = ({ onNavigate, onPreload, allowedTabs, showEadCoupons = false }) => {
   const visibleCards = React.useMemo(() => {
     return cards.filter(card => (card.id !== 'cupons-ead' || showEadCoupons)
@@ -94,7 +96,9 @@ const SecretariaDashboard: React.FC<SecretariaDashboardProps> = ({ onNavigate, o
   return (
     <nav aria-label="Operações da Secretaria" className="secretaria-navigation grid grid-cols-1 items-start gap-4 xl:grid-cols-3">
       {sections.map(section => {
-        const sectionCards = section.operations.flatMap(id => visibleCards.filter(card => card.id === id));
+        const sectionCards = section.operations
+          .flatMap(id => visibleCards.filter(card => card.id === id))
+          .sort((a, b) => titleOrder.compare(a.title, b.title));
         if (!sectionCards.length) return null;
 
         return (
