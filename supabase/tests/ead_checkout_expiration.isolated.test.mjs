@@ -188,5 +188,58 @@ try{
       assert.equal(await scalar('select has_function_privilege($1,$2,\'execute\') value',[role,signature]),false);
     }
   }
+
+  const calendarPatch = source('20261124001602_update_ead_japoata_2026_expiration_calendar.sql');
+  const matrix = '44444444-4444-4444-4444-444444444444';
+  const originalDates = ['2026-02-18', '2026-06-24', '2026-06-29', '2026-07-08',
+    '2026-10-28', '2026-11-23', '2026-11-25'];
+  const readConfig = (environment) => scalar(`select to_jsonb(c) value
+    from public.banese_ead_checkout_expiration_config c where environment=$1`, [environment]);
+  const novemberEligibility = () => scalar(`select internal_contas.ead_expiration_first_day(
+    '2026-11-19', verified_local_holidays)::text value
+    from public.banese_ead_checkout_expiration_config where environment='production'`);
+
+  const sandboxBefore = await readConfig('sandbox');
+  await db.query(`update public.banese_ead_checkout_expiration_config
+    set verified_local_holidays=$1::date[] where environment='production'`, [originalDates]);
+  await assert.rejects(() => db.exec(calendarPatch), /restrita à Matriz de Japoatã/);
+  await rollback();
+  await db.query(`update public.banese_ead_checkout_expiration_config
+    set verified_polo_ids=array[$1::uuid] where environment='production'`, [matrix]);
+  assert.equal(await novemberEligibility(), '2026-11-28');
+
+  await db.query(`update public.contas_receber
+    set polo_id=$1, data_vencimento='2026-11-19',
+      gateway_financial_terms=jsonb_set(gateway_financial_terms, '{dueDate}', '"2026-11-19"')
+    where id=$2`, [matrix, id(1)]);
+  await db.query(`insert into public.banese_ead_checkout_expiration_jobs (
+    receivable_id, matricula_id, inscription_id, transaction_id, environment, snapshot,
+    expected_receivable_updated_at, expected_transaction_updated_at,
+    expected_inscription_updated_at, first_expiration_day
+  )
+  select c.id, c.matricula_id, i.id, t.id, 'production', internal_contas.ead_expiration_identity(c.id),
+    c.updated_at, t.updated_at, i.updated_at, '2026-11-28'
+  from public.contas_receber c join public.inscricoes_online i on i.receivable_id=c.id
+    join public.payment_gateway_transactions t on t.receivable_id=c.id where c.id=$1`, [id(1)]);
+  await assert.rejects(() => db.exec(calendarPatch), /conflita com uma baixa EAD em preparação/);
+  await rollback();
+  assert.deepEqual((await readConfig('production')).verified_local_holidays, originalDates);
+
+  await db.query(`update public.banese_ead_checkout_expiration_jobs
+    set remote_mutation_started_at=now(), processing_mode='VERIFY' where receivable_id=$1`, [id(1)]);
+  const readHistory = () => scalar(`select to_jsonb(j) value
+    from public.banese_ead_checkout_expiration_jobs j where receivable_id=$1`, [id(1)]);
+  const historyBefore = await readHistory();
+  await db.exec(calendarPatch);
+  assert.equal(await novemberEligibility(), '2026-11-27');
+  const productionAfter = await readConfig('production');
+  assert.deepEqual(productionAfter.verified_local_holidays, [...originalDates.slice(0, 5), '2026-11-21', '2026-11-23']);
+  assert.deepEqual(productionAfter.verified_polo_ids, [matrix]);
+  assert.equal(productionAfter.enabled, true);
+  assert.deepEqual(await readConfig('sandbox'), sandboxBefore);
+  assert.deepEqual(await readHistory(), historyBefore);
+
+  await db.exec(calendarPatch);
+  assert.deepEqual(await readConfig('production'), productionAfter, 'Reapplying preserves the timestamp');
   console.log('PASS EAD expiration: verified calendar/config, canonical claim/lease, full financial/academic fences, confirmed cancel/expiry, immutable history, real academic trigger, late-payment quarantine, processing-refusal recovery, paid retry, ACL');
 }finally{await db.close();}

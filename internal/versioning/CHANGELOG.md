@@ -1,3 +1,9 @@
+## [4.8.370] - 2026-11-23
+
+- Identifica compras opcionais EAD na aba A Receber, exclui essas tentativas das obrigações no Resumo financeiro e corrige o calendário de expiração do BolePix em Japoatã.
+
+Histórico 4.8.298 preservado em [arquivo de versão](./changelog/2026-11-11-versao-4-8-298.md).
+
 ## [4.8.369] - 2026-11-23
 
 - O Contrato do Aluno calcula os vencimentos da rematrícula e das mensalidades do segundo ciclo e organiza os encargos em linhas com destaques em vermelho e negrito.
@@ -492,7 +498,3 @@ Histórico 4.8.291: [11/11/2026](./changelog/2026-11-11-versao-4-8-291.md).
 
 - Serviços usa busca única por nome, nome fantasia, CPF ou CNPJ, com seleção de parceiros PF/PJ.
 - Modelos governamentais de palestra distinguem recebimento posterior e adiantamento para prestação futura, preservando o cadastro central da matriz.
-
-## [4.8.298] - 2026-11-12
-
-- Emissão valida os dados automaticamente, com revisão/edição opcional; descrições acadêmicas e datas dos pagamentos compatíveis com o executor, após emissão e cancelamento reais nas filiais.

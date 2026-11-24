@@ -199,6 +199,67 @@ try {
  assert.equal(Number(otherSummary.all_count),1); assert.equal(Number(otherSummary.all_value),200);
  const otherRows=await call('listar_outros_creditos_secure',[polo]);
  assert.equal(otherRows.find(r=>r.id===other).payment_summary.remainingBefore,'100.00');
+
+ await db.exec(`create table public.ead_checkout_attempts(id uuid primary key,receivable_id uuid,nature text,state text);
+ create table public.banese_ead_checkout_expiration_jobs(attempt_id uuid,receivable_id uuid,remote_status text,
+   cancel_reason text,canceled_at timestamptz);
+ create function internal_contas.ead_expiration_today() returns date language sql stable as $$ select '2026-11-23'::date; $$;
+ create or replace function internal_contas.ead_checkout_is_optional(uuid) returns boolean language sql stable as $$
+   select exists(select 1 from public.contas_receber r join public.ead_checkout_attempts a
+     on a.id=r.ead_checkout_attempt_id and a.receivable_id=r.id
+     where r.id=$1 and a.nature='COMPRA_OPCIONAL' and r.status<>'PAGO'); $$;`);
+ await db.query("insert into public.cursos(id,modalidade,nome) values($1,'EAD','Curso EAD sintético')",[id(9210)]);
+ await db.query("insert into public.turmas(id,curso_id,nome) values($1,$2,'Turma EAD sintética')",[id(9211),id(9210)]);
+ const addEad = async (n,amount,patch={},state='OPEN') => {
+   const receivableId = await add(n,amount,'RECEIVABLE',{
+     categoria:'MENSALIDADE',tipo_lancamento:'MATRICULA',turma_id:id(9211),descricao:'Compra EAD sintética',
+     data_vencimento:'2026-11-19',origem_pagamento:'GATEWAY_EAD',gateway_provider:'banese_card',
+     gateway_payment_method:'BOLETO',gateway_payment_id:String(n),gateway_status:'PENDING',
+     ead_checkout_attempt_id:state ? id(n+100) : null,...patch,
+   });
+   if (state) await db.query("insert into public.ead_checkout_attempts values($1,$2,'COMPRA_OPCIONAL',$3)",
+     [id(n+100),receivableId,state]);
+   return receivableId;
+ };
+ const awaitingEad = await addEad(121,129.9,{status:'VENCIDO'});
+ const dueTodayEad = await addEad(122,59.9,{data_vencimento:'2026-11-23'});
+ const suspendedEad = await addEad(123,50,{status:'SUSPENSO'});
+ const partialEad = await addEad(124,200,{
+   gateway_provider:null,gateway_payment_method:null,gateway_payment_id:null,gateway_status:null,
+ });
+ const partialEadInput = await prepare(partialEad,input(partialEad),'RECEIVABLE');
+ await scalar("select internal_financial_payments.append_payment($1,'RECEIVABLE',$2,$3,false) value",[actor,partialEad,JSON.stringify(partialEadInput)]);
+ const debtEad = await addEad(125,75,{status:'VENCIDO',origem_pagamento:'LOCAL'},null);
+ const expiredEad = await addEad(126,60,{status:'CANCELADO',gateway_status:'CANCELED'},'EXPIRED');
+ const unconfirmedEad = await addEad(127,80,{status:'CANCELADO',gateway_status:'CANCELED'},'EXPIRED');
+ await db.query("insert into public.banese_ead_checkout_expiration_jobs values($1,$2,'CANCELED','EXPIRED_OPTIONAL',now())",
+   [id(226),expiredEad]);
+ const paidEad = await addEad(128,10,{status:'PAGO',data_pagamento:'2026-11-19',valor_pago:10,gateway_status:'PAID'},'PAID');
+ const eadSummaryArgs = ['EAD',polo,id(9211),'ead sintética','2026-11-01','2026-11-30'];
+ const eadPageArgs = ['EAD',polo,null,null,null,null,'all','none',null,1,25];
+ const summaryBeforeEadProjection = await call('get_receivables_modality_summary_v3_secure',eadSummaryArgs);
+ const eadPageBefore = await call('get_receivables_modality_page_v4_secure',eadPageArgs);
+ const technicalPageBefore = await call('get_receivables_modality_page_v4_secure',['TECNICO',...eadPageArgs.slice(1)]);
+ await db.exec(read('../migrations/20261124001601_project_ead_optional_checkout_receivables.sql'));
+ const { pending_optional_checkout_count:optionalCount, pending_optional_checkout_value:optionalValue, ...summaryAfter } =
+   await call('get_receivables_modality_summary_v3_secure',eadSummaryArgs);
+ assert.deepEqual(summaryAfter,summaryBeforeEadProjection,'Preserve every existing summary field');
+ assert.deepEqual([optionalCount,optionalValue,summaryAfter.pending_value,summaryAfter.overdue_value],[4,339.8,414.8,75]);
+ const eadPageAfter = await call('get_receivables_modality_page_v4_secure',eadPageArgs);
+ const eadStates = new Map(eadPageAfter.rows.map(row=>[row.id,row.optional_ead_checkout_status]));
+ assert.deepEqual([awaitingEad,dueTodayEad,suspendedEad,partialEad,debtEad,expiredEad,unconfirmedEad,paidEad].map(key=>eadStates.get(key)),
+   ['AWAITING_BANK_VERIFICATION','PENDING','PENDING','PENDING',undefined,'EXPIRED',undefined,undefined]);
+ assert.deepEqual({...eadPageAfter,rows:eadPageAfter.rows.map(({optional_ead_checkout_status,...row})=>row)},eadPageBefore,
+   'Add the presentation field without changing the page, ordering, or ledger evidence');
+ assert.deepEqual(await call('get_receivables_modality_page_v4_secure',['TECNICO',...eadPageArgs.slice(1)]),technicalPageBefore);
+ for (const role of ['anon','authenticated','service_role']) {
+   assert.equal(await scalar("select has_function_privilege($1,'internal_contas.ead_checkout_receivable_presentation(public.contas_receber)','EXECUTE') value",[role]),false);
+ }
+ await set('scope',false);
+ await fail(()=>call('get_receivables_modality_summary_v3_secure',eadSummaryArgs),'TEST_SCOPE_DENIED');
+ await fail(()=>call('get_receivables_modality_page_v4_secure',eadPageArgs),'TEST_SCOPE_DENIED');
+ await set('scope',true);
+
  await db.exec(`create table public.matriculas(id uuid primary key,turma_id uuid);
  create table internal_academic.technical_manual_cycle_policies(turma_id uuid,active boolean,generation_mode text);
  create table public.test_cycle_generation(enrollment_id uuid,kind text);
@@ -218,5 +279,5 @@ try {
  const legacyCycle=await add(114,200,'RECEIVABLE',{categoria:'MENSALIDADE',turma_id:id(9201),matricula_id:id(9300),tipo_lancamento:'MATRICULA'});
  await db.query("update public.contas_receber set status='PAGO' where id=$1",[legacyCycle]);
  assert.equal(await scalar('select count(*)::int value from public.test_cycle_generation'),1,'Existing non-ledger automatic flow unchanged');
- console.log('PASS financial payment SQL: partial, split, charges, replay, authorization, stale preview, history, reversal, source fences, rateio, receipt period summaries, page projections, lifecycle fences and grants');
+ console.log('PASS financial payment SQL: partial, split, charges, replay, authorization, stale preview, history, reversal, source fences, rateio, receipt period summaries, EAD checkout and page projections, lifecycle fences and grants');
 } catch(error) { console.error({message:error.message,detail:error.detail,where:error.where,position:error.position,stack:error instanceof assert.AssertionError?error.stack:undefined}); process.exitCode=1; } finally { await db.close(); }

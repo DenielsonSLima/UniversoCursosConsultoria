@@ -53,6 +53,30 @@ interface ItemProps {
 export const ReceivableStatusBadge: React.FC<{ item: ContasReceber }> = ({ item }) => {
   const underReview = isProescPaymentUnderReview(item);
   const cancellationLabel = item.paymentSummary?.hasEvents ? null : baneseCancellationLabel(item);
+  const optionalCheckout = item.optionalEadCheckoutStatus;
+  const partialPayment = hasPartialPayment(item.paymentSummary);
+  if (optionalCheckout === 'EXPIRED' && item.status === 'CANCELADO' && !cancellationLabel) {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
+        <Clock3 size={11} className="shrink-0" aria-hidden="true" /> Compra expirada
+      </span>
+    );
+  }
+  if (optionalCheckout && optionalCheckout !== 'EXPIRED' && ['PENDENTE', 'VENCIDO', 'SUSPENSO'].includes(item.status)
+    && !underReview && !cancellationLabel) {
+    const detail = partialPayment ? 'Baixa parcial' : item.status === 'SUSPENSO' ? 'Suspenso'
+      : optionalCheckout === 'AWAITING_BANK_VERIFICATION' ? 'Aguardando conferência bancária' : null;
+    return (
+      <span className="inline-flex min-w-0 flex-col items-start gap-1 text-xs">
+        <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 font-medium text-amber-800">
+          <Clock3 size={11} className="shrink-0" aria-hidden="true" /> Compra opcional
+        </span>
+        {detail ? (
+          <span className="text-[11px] leading-snug text-slate-600">{detail}</span>
+        ) : null}
+      </span>
+    );
+  }
   return (
   <span title={underReview ? 'A situação de pagamento ainda aguarda confirmação na origem.' : undefined} className={`inline-flex max-w-[220px] items-center gap-1 rounded-full px-2.5 py-1 text-[9px] font-black uppercase ${
     underReview ? 'bg-amber-50 text-amber-700' : item.status === 'PAGO'
@@ -66,7 +90,7 @@ export const ReceivableStatusBadge: React.FC<{ item: ContasReceber }> = ({ item 
             : 'bg-amber-50 text-amber-700'
   }`}>
     {item.status === 'PAGO' ? <CheckCircle2 size={11} /> : <Clock3 size={11} />}
-    {cancellationLabel || (underReview ? 'Histórico Proesc em conferência' : hasPartialPayment(item.paymentSummary) ? 'Baixa parcial' : item.status)}
+    {cancellationLabel || (underReview ? 'Histórico Proesc em conferência' : partialPayment ? 'Baixa parcial' : item.status)}
   </span>
   );
 };

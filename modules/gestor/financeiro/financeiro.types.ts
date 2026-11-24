@@ -46,6 +46,7 @@ export const isContaDisponivelNoPolo = (
 
 export interface ContasReceber {
   paymentSummary?: import('./settlements/financial-payment.summary.ts').FinancialPaymentSummary;
+  optionalEadCheckoutStatus?: 'PENDING' | 'AWAITING_BANK_VERIFICATION' | 'EXPIRED';
   otherCreditCancellationEligible?: boolean;
   operationCapabilities?: import('./financeiro.operation-capabilities').ReceivableOperationCapabilities;
   baneseCancellation?: import('./financeiro.operation-capabilities').BaneseCancellationPresentation;
@@ -213,6 +214,7 @@ export interface FinanceiroSummary {
 
 export interface ReceivablesSummary {
   pendingCount: number;
+  pendingOptionalCheckout?: { count: number; value: number };
   receivedCount: number;
   canceledCount: number;
   allCount: number;

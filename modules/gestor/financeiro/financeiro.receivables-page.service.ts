@@ -17,6 +17,10 @@ type CourseModality = 'TECNICO' | 'EAD' | 'LIVRE' | 'ESPECIALIZACAO';
 
 const mapReceivablesSummary = (row: any = {}): ReceivablesSummary => ({
   pendingCount: Number(row.pending_count || 0),
+  pendingOptionalCheckout: row.pending_optional_checkout_count == null ? undefined : {
+    count: Number(row.pending_optional_checkout_count),
+    value: Number(row.pending_optional_checkout_value || 0),
+  },
   receivedCount: Number(row.received_count || 0),
   canceledCount: Number(row.canceled_count || 0),
   overdueCount: Number(row.overdue_count || 0),
@@ -27,6 +31,17 @@ const mapReceivablesSummary = (row: any = {}): ReceivablesSummary => ({
   overdueValue: Number(row.overdue_value || 0),
   allValue: Number(row.all_value || 0),
 });
+
+const mapOptionalEadCheckoutStatus = (status: unknown): ContasReceber['optionalEadCheckoutStatus'] => {
+  switch (status) {
+    case 'PENDING':
+    case 'AWAITING_BANK_VERIFICATION':
+    case 'EXPIRED':
+      return status;
+    default:
+      return undefined;
+  }
+};
 
 const mapReceivableRpcRow = (row: any): ContasReceber => ({
   id: row.id,
@@ -42,6 +57,7 @@ const mapReceivableRpcRow = (row: any): ContasReceber => ({
   dataPagamento: row.data_pagamento || undefined,
   valorPago: row.valor_pago === null || row.valor_pago === undefined ? undefined : Number(row.valor_pago),
   status: row.status,
+  optionalEadCheckoutStatus: mapOptionalEadCheckoutStatus(row.optional_ead_checkout_status),
   categoria: row.categoria,
   categoriaFinanceiraId: row.categoria_financeira_id || undefined,
   categoriaFinanceiraNome: row.categoria_financeira_nome || undefined,

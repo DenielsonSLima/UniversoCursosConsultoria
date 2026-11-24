@@ -1,8 +1,8 @@
 {
-  "version": "4.8.369",
+  "version": "4.8.370",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 378,
+  "revision": 379,
   "releasedAt": "2026-11-23",
-  "summary": "Define vencimentos do segundo ciclo e organiza os encargos no Contrato do Aluno"
+  "summary": "Identifica compras opcionais EAD e corrige o calendário de expiração"
 }

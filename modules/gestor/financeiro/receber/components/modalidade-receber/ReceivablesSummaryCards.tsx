@@ -32,6 +32,10 @@ export function ReceivablesSummaryCards({ summary, upcoming, scope, disabled, on
         {cards.map((card) => {
           const state = card.scope === 'upcoming' ? upcoming : summary;
           const total = state.data ? getReceivablesScopeTotal(card.scope, state.data) : null;
+          const optional = card.scope === 'upcoming' ? state.data?.pendingOptionalCheckout : undefined;
+          let detail = card.detail;
+          if (optional?.count && optional.count === total?.count) detail = 'Compras opcionais com vencimento hoje ou depois';
+          else if (optional?.count) detail = 'Com vencimento hoje ou depois, incluindo compras opcionais';
           return (
             <button
               key={card.scope}
@@ -49,7 +53,7 @@ export function ReceivablesSummaryCards({ summary, upcoming, scope, disabled, on
                 {disabled ? '—' : state.error ? 'Indisponível' : state.loading || !total ? 'Carregando…' : formatCurrency(total.value)}
               </span>
               <span className="block text-[11px] font-medium text-slate-500">
-                {!disabled && !state.loading && !state.error && total ? `${total.count} cobrança(s) · ` : ''}{card.detail}
+                {!disabled && !state.loading && !state.error && total ? `${total.count} cobrança(s) · ` : ''}{detail}
               </span>
             </button>
           );
@@ -64,11 +68,18 @@ export function ReceivablesSummaryCards({ summary, upcoming, scope, disabled, on
 
 export function ReceivablesResultTotal({ scope, state }: { scope: ReceivablesScope; state: ReceivablesSummaryState }) {
   const total = state.data ? getReceivablesScopeTotal(scope, state.data) : null;
+  const optional = scope === 'pending' || scope === 'upcoming' ? state.data?.pendingOptionalCheckout : undefined;
+  let valueLabel = ' em aberto';
+  if (scope === 'all') valueLabel = ' de valor nominal, incluindo canceladas';
+  else if (scope === 'received') valueLabel = ' recebido';
+  else if (scope === 'canceled') valueLabel = ' cancelado';
+  else if (optional?.count && optional.count === total?.count) valueLabel = ' em compras opcionais';
+  else if (optional?.count) valueLabel = ` no total, incluindo ${formatCurrency(optional.value)} em compras opcionais`;
   return (
     <p role="status" className="text-xs font-semibold text-slate-600">
       {state.error ? 'Total indisponível. Tente atualizar a consulta.' : state.loading || !total ? 'Atualizando total…' : (
         <>{total.count} cobrança(s) no filtro · <strong className="text-[#001a33]">{formatCurrency(total.value)}</strong>
-          {scope === 'all' ? ' de valor nominal, incluindo canceladas' : scope === 'received' ? ' recebido' : scope === 'canceled' ? ' cancelado' : ' em aberto'}
+          {valueLabel}
         </>
       )}
     </p>

@@ -50,8 +50,11 @@ try {
     ['20260912133433_align_receivables_page_payment_period.sql','public.get_receivables_modality_page_v3_secure'],
     ['20260912133700_align_receivables_groups_payment_period.sql','public.get_receivables_modality_groups_page_v3_secure'],
     ['20260912133702_align_receivables_summary_payment_period.sql','public.get_receivables_modality_summary_v3_secure'],
+    ['20260727212018_shared_bank_accounts_canonical_cash_and_expense_rpcs.sql','public.get_financeiro_summary'],
   ];
   for(const [file,name] of baselines) await db.exec(functionSource(source(file),name));
+  await db.exec(`revoke all on function public.get_financeiro_summary(uuid,date,date) from public,anon;
+    grant execute on function public.get_financeiro_summary(uuid,date,date) to authenticated,service_role;`);
   await db.exec(source('20261004155607_classify_optional_ead_checkout.sql'));
   const add=async(n,{status='PENDENTE',origin='GATEWAY_EAD',modality='EAD',matStatus='PENDENTE',paid=null,amount=99.9}={})=>{
     const t=modality==='EAD'?turma:technical;
@@ -90,8 +93,17 @@ try {
 
   const beforeFacts=await finances(),before=await delinquency();
   assert.equal(before.receber_vencido,604.8);
+  const financeSummary = (poloId, end = '2026-10-31') => scalar(`select to_jsonb(summary) value
+    from public.get_financeiro_summary($1,'2026-10-01',$2) summary`, [poloId, end]);
+  const beforeFinanceSummary = await financeSummary(polo);
+  const beforeFinanceOverdue = await financeSummary(polo, '2026-10-03');
+  assert.equal(beforeFinanceSummary.total_a_receber, 604.8);
+  assert.equal(beforeFinanceOverdue.total_a_receber, 604.8);
+  assert.equal(beforeFinanceSummary.total_recebido, 100);
+  assert.equal(beforeFinanceOverdue.total_recebido, 0);
   const candidates=[source('20261004155625_exclude_optional_ead_from_debt.sql'),
-    source('20261004155644_exclude_optional_ead_from_overdue_receivables.sql')];
+    source('20261004155644_exclude_optional_ead_from_overdue_receivables.sql'),
+    source('20261124001600_exclude_optional_ead_from_finance_summary.sql')];
   // A missing eligibility anchor aborts instead of silently leaving old debt.
   await db.exec('begin');
   await db.exec(`create or replace function public.get_caixa_dashboard_secure(p_polo_id uuid default null)
@@ -100,6 +112,18 @@ try {
   await db.exec('rollback');
   for(const sql of candidates) await db.exec(sql);
   assert.equal(await finances(),beforeFacts,'Read-side DDL never changes bank/enrollment facts');
+  assert.deepEqual(await financeSummary(polo), { ...beforeFinanceSummary, total_a_receber: 405 });
+  assert.deepEqual(await financeSummary(polo, '2026-10-03'), { ...beforeFinanceOverdue, total_a_receber: 405 });
+  assert.equal((await financeSummary(null)).total_a_receber, 405);
+  assert.equal((await financeSummary('00000000-0000-0000-0000-000000000002')).total_a_receber, 0);
+  for (const [role, allowed] of [['anon', false], ['authenticated', true], ['service_role', true]]) {
+    assert.equal(await scalar(`select has_function_privilege($1,
+      'public.get_financeiro_summary(uuid,date,date)','execute') value`, [role]), allowed);
+  }
+  await db.exec('begin; update test_caixa.access_state set global_allowed=false; set local role authenticated');
+  assert.equal((await financeSummary(polo)).total_a_receber, 405);
+  assert.deepEqual((await db.query('select * from public.get_financeiro_summary(null)')).rows, []);
+  await db.exec('rollback');
   const after=await delinquency();
   assert.equal(after.receber_vencido,405);
   assert.equal(after.inadimplencia_mensal.base_elegivel,505);
@@ -363,6 +387,7 @@ try {
     assert.equal(await scalar("select has_function_privilege($1,'internal_contas.ead_checkout_paid_after_cutoff(uuid,date)','execute') value",[role]),false);
   }
   await db.exec('update test_caixa.access_state set global_allowed=false,scoped_allowed=false');
+  assert.deepEqual((await db.query('select * from public.get_financeiro_summary($1)', [polo])).rows, []);
   await assert.rejects(()=>summary(),e=>e.code==='42501');
   await assert.rejects(()=>scalar("select public.get_caixa_linha_corte_secure($1,'2026-10-01') value",[polo]),e=>e.code==='42501');
   assert.equal(await finances(),beforeFacts);
