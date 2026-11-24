@@ -1,10 +1,10 @@
 # Lote ativo
 
-## Lote: 2026-11-23-despesas-variaveis-agrupamento-mensal
+## Lote: 2026-11-23-secretaria-ordem-alfabetica
 
-Objetivo: agrupar por mês as abas Todos e Em aberto em Despesas variáveis e exibir o mês por extenso.
-Status: versão 4.8.371 com publicação em produção autorizada.
-Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-23-despesas-variaveis-agrupamento-mensal.md`.
-Aceite: Todos e Em aberto abrem por mês de vencimento, Mês atual abre em lista e as escolhas manuais ficam no escopo da aba.
-Base remota: 4.8.370, commit a4dd8b8dcdb16a9e706dd727df8a49ba31d60d73.
-Validação: 18 testes locais no modelo e nos componentes de despesas com dados sintéticos. Conferência remota pelos conectores.
+Objetivo: ordenar alfabeticamente as operações em cada coluna da Secretaria Digital.
+Status: versão 4.8.372 com publicação em produção autorizada.
+Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-23-secretaria-ordem-alfabetica.md`.
+Aceite: operações em ordem A–Z em cada coluna, conforme os títulos em português.
+Base remota: 4.8.371, commit a86da56456664f60d1d84ea602ed10bfbef4c629.
+Validação: teste de interação nas três colunas com navegação e permissões exercitadas.

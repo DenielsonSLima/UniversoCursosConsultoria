@@ -10,7 +10,7 @@ const base = fileURLToPath(new URL('../../../', import.meta.url));
 const jsdom = process.env.EAD_TEST_JSDOM_MODULE;
 const { JSDOM } = await import(jsdom ? pathToFileURL(resolve(jsdom)).href : 'jsdom');
 
-test('Secretaria preserva navegação e só oferece cupons quando liberados no ambiente isolado', async () => {
+test('Secretaria ordena cada coluna e preserva a navegação e as permissões', async () => {
   await mkdir(resolve(base, 'tmp'), { recursive: true });
   const temp = await mkdtemp(resolve(base, 'tmp/cupons-navigation-'));
   const dom = new JSDOM('<!doctype html><div id="root"></div>', { url: 'http://localhost/' });
@@ -33,6 +33,21 @@ test('Secretaria preserva navegação e só oferece cupons quando liberados no a
       onNavigate: id => navigation.push(id), ...props,
     })));
     const couponButton = () => [...document.querySelectorAll('button')].find(button => button.textContent.includes('Cupons EAD'));
+    const sectionTitles = id => [...document.querySelectorAll('section[aria-labelledby="secretaria-section-' + id + '"] h4')]
+      .map(title => title.textContent);
+    await render({ showEadCoupons: true });
+    assert.deepEqual(sectionTitles('atendimento'), [
+      'Busca de Aluno 360º', 'Carnês dos Alunos', 'Cupons EAD', 'Declaração de IRPF',
+      'Dependências Acadêmicas', 'Recebimentos', 'Solicitações Acadêmicas', 'Transferência',
+    ]);
+    assert.deepEqual(sectionTitles('documentos'), [
+      'Atestado de Conclusão', 'Boletim Escolar', 'Certificados', 'Contratos de Aluno',
+      'Declaração de Frequência', 'Declaração de Matrícula', 'Ficha de Matrícula', 'Histórico Escolar',
+    ]);
+    assert.deepEqual(sectionTitles('identificacao'), [
+      'Assinaturas', 'Carteirinha Estudantil', 'Crachá de Estágio', 'Crachá de Preceptor',
+      'Histórico de Emissões', 'Pasta de Identificação', 'SES', 'Termo de Estágio',
+    ]);
     await render({});
     assert.equal(couponButton(), undefined, 'a rota nova fica escondida por padrão');
     assert(document.body.textContent.includes('Carnês dos Alunos'));

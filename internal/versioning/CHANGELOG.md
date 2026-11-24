@@ -1,3 +1,9 @@
+## [4.8.372] - 2026-11-23
+
+- A Secretaria Digital exibe as operações de cada coluna em ordem alfabética.
+
+Histórico 4.8.301–4.8.302 preservado em [arquivo de versões](./changelog/2026-11-12-versoes-4-8-301-a-302.md).
+
 ## [4.8.371] - 2026-11-23
 
 - Em Despesas variáveis, as abas Todos e Em aberto agrupam os lançamentos por mês de vencimento. Os títulos mostram o mês por extenso e o ano. Mês atual abre em lista.
@@ -485,13 +491,3 @@ Histórico 4.8.291: [11/11/2026](./changelog/2026-11-11-versao-4-8-291.md).
 
 - Financeiro do aluno organizado por tipo e curso, recolhido por padrão.
 - Matrículas, histórico e abertura autenticada dos boletos EAD preservados.
-
-## [4.8.302] - 2026-11-12
-
-- Botão Abrir no financeiro do cadastro do aluno para boletos EAD já emitidos.
-- Leitura autenticada por polo disponível a gestores sem acesso ao financeiro, sem emissão ou alteração de títulos.
-- Resumos calculados no servidor e nova aba cancelável durante carregamento.
-
-## [4.8.301] - 2026-11-12
-
-- Central de Relatórios inclui NFS-e emitidas em paisagem, duas linhas por nota e totais por tributação, NBS e polo, com consolidado exclusivo da matriz.
