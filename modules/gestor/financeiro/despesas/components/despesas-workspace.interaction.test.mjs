@@ -17,7 +17,7 @@ class TestMessageChannel {
   }
 }
 
-test('abas reais: vencimento, situação, ordem e PDF usam o mesmo workspace sem agrupamento implícito', async t => {
+test('abas reais: vencimento, situação, agrupamento, ordem e PDF usam o mesmo workspace', async t => {
   const { JSDOM } = require(process.env.FINANCIAL_PAYMENT_JSDOM_PATH
     ? resolve(process.env.FINANCIAL_PAYMENT_JSDOM_PATH) : 'jsdom');
   const temporary = await mkdtemp(join(tmpdir(), 'expense-workspace-ui-'));
@@ -98,6 +98,28 @@ test('abas reais: vencimento, situação, ordem e PDF usam o mesmo workspace sem
     const report = () => globalThis.__expenseQaReport;
     const text = financialReportValueToText;
 
+    await t.test('despesas variáveis agrupam Todos e Em aberto por mês e mantêm Mês atual em lista', async () => {
+      await mount(Variable);
+      const groups = () => [...document.querySelectorAll('button.financial-group-toggle')];
+      const groupLabels = () => groups().map(element => element.querySelector('p').textContent);
+      try {
+        for (const label of ['Todos', 'Em aberto']) {
+          await click(tab(label));
+          assert.equal(picker('Agrupar despesas').value, 'Por mês');
+          assert.equal(lastParams().p_agrupamento, 'mes');
+          assert.deepEqual(groupLabels(), ['Outubro de 2026', 'Novembro de 2026', 'Dezembro de 2026']);
+        }
+        await click(groups()[2]);
+        assert.deepEqual(suffixes(), ['H - Próximo mês']);
+        await click(tab('Mês atual'));
+        assert.equal(picker('Agrupar despesas').value, 'Sem agrupamento');
+        const monthRequest = globalThis.__expenseQaClient.calls.findLast(({ params }) => params.p_status_scope === 'mes_atual');
+        assert.equal(monthRequest?.params.p_agrupamento, 'nenhum');
+        assert.deepEqual(groupLabels(), []);
+        assert.ok(rows().length > 0);
+      } finally { await close(); }
+    });
+
     for (const [type, Component, prefix] of [['DESPESA_FIXA', Fixed, 'FIXA'], ['DESPESA_VARIAVEL', Variable, 'VARIAVEL']]) {
       await t.test(`${type}: entrada mensal sem grupo e inversão da ordem recebida`, async () => {
         await mount(Component);
@@ -145,6 +167,7 @@ test('abas reais: vencimento, situação, ordem e PDF usam o mesmo workspace sem
           assert.match(document.body.textContent, /Todos os períodos/);
           await click(tab('Todos'));
           await choose('Filtrar despesas por situação', 'Pagas');
+          if (type === 'DESPESA_VARIAVEL') await choose('Agrupar despesas', 'Sem agrupamento');
           assert.deepEqual(suffixes(), ['B - Venceu antes do mês', 'A - Quitada antes do mês']);
           assert.match(summary('Total previsto'), /300,00/);
         } finally { await close(); }
@@ -155,7 +178,7 @@ test('abas reais: vencimento, situação, ordem e PDF usam o mesmo workspace sem
         try {
           await choose('Agrupar despesas', 'Por categoria');
           await click(tab('Em aberto'));
-          assert.equal(picker('Agrupar despesas').value, 'Por categoria');
+          assert.equal(picker('Agrupar despesas').value, type === 'DESPESA_VARIAVEL' ? 'Por mês' : 'Por categoria');
           assert.equal(picker('Filtrar despesas por situação').value, 'Em aberto');
           await click(tab('Mês atual'));
           assert.equal(picker('Agrupar despesas').value, 'Por categoria');
