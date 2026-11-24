@@ -54,7 +54,10 @@ const DespesasVariaveisTab: React.FC<{ poloId?: string | null; actionsContainer?
   const [categoriaId, setCategoriaId] = useState('');
   const [turmaId, setTurmaId] = useState('');
   const [viewMode, setViewMode] = useState<'tabela' | 'cards'>('tabela');
-  const [agrupamento, setAgrupamento] = useState<DespesaAgrupamentoSelection>('nenhum');
+  const [agrupamentoPorAba, setAgrupamentoPorAba] =
+    useState<Partial<Record<DespesaStatusScope, DespesaAgrupamentoSelection>>>({});
+  const agrupamento = agrupamentoPorAba[statusScope]
+    ?? (statusScope === 'todos' || statusScope === 'em_aberto' ? 'mes' : 'nenhum');
   const agrupar = agrupamento !== 'nenhum';
   const groupBy = agrupamento === 'nenhum' ? 'mes' : agrupamento;
   const [showForm, setShowForm] = useState(false);
@@ -269,7 +272,8 @@ const DespesasVariaveisTab: React.FC<{ poloId?: string | null; actionsContainer?
         <DespesaPeriodControls {...{ statusScope, situacao, ordem }}
           onSituacaoChange={setSituacao} onOrdemChange={setOrdem} />
         <DespesaViewControls viewMode={viewMode} onViewModeChange={setViewMode}
-          agrupamento={agrupamento} onAgrupamentoChange={setAgrupamento} />
+          agrupamento={agrupamento}
+          onAgrupamentoChange={(value) => setAgrupamentoPorAba((current) => ({ ...current, [statusScope]: value }))} />
       </div>
 
       <div className="space-y-3">

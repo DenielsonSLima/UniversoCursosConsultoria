@@ -1,3 +1,9 @@
+## [4.8.371] - 2026-11-23
+
+- Em Despesas variáveis, as abas Todos e Em aberto agrupam os lançamentos por mês de vencimento. Os títulos mostram o mês por extenso e o ano. Mês atual abre em lista.
+
+Histórico 4.8.299–4.8.300 preservado em [arquivo de versões](./changelog/2026-11-12-versoes-4-8-299-a-300.md).
+
 ## [4.8.370] - 2026-11-23
 
 - Identifica compras opcionais EAD na aba A Receber, exclui essas tentativas das obrigações no Resumo financeiro e corrige o calendário de expiração do BolePix em Japoatã.
@@ -489,12 +495,3 @@ Histórico 4.8.291: [11/11/2026](./changelog/2026-11-11-versao-4-8-291.md).
 ## [4.8.301] - 2026-11-12
 
 - Central de Relatórios inclui NFS-e emitidas em paisagem, duas linhas por nota e totais por tributação, NBS e polo, com consolidado exclusivo da matriz.
-
-## [4.8.300] - 2026-11-12
-
-- DANFSe resolve nomes de municípios ausentes no XML pelo código IBGE exato, preservando a nota e os nomes já identificados.
-
-## [4.8.299] - 2026-11-12
-
-- Serviços usa busca única por nome, nome fantasia, CPF ou CNPJ, com seleção de parceiros PF/PJ.
-- Modelos governamentais de palestra distinguem recebimento posterior e adiantamento para prestação futura, preservando o cadastro central da matriz.

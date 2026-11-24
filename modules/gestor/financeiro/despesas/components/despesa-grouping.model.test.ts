@@ -13,8 +13,8 @@ test('mês de vencimento separa anos e ordena dezembro antes de janeiro seguinte
   const items = [item('jan', '2027-01-05'), item('dez', '2026-12-05'), item('jan-ant', '2026-01-05')];
   const groups = buildDespesaGroups(items, [], 'mes');
   assert.deepEqual(groups.map((group) => group.key), ['2026-01', '2026-12', '2027-01']);
-  assert.equal(groups[1].label, 'dezembro de 2026');
-  assert.equal(groups[2].label, 'janeiro de 2027');
+  assert.equal(groups[1].label, 'Dezembro de 2026');
+  assert.equal(groups[2].label, 'Janeiro de 2027');
   assert.deepEqual(items.map((row) => row.id), ['jan', 'dez', 'jan-ant']);
 });
 
@@ -31,9 +31,10 @@ test('fornecedor usa ID, mantém empresas homônimas distintas e prioriza fantas
 
 test('totais, pagamentos parciais e quantidade vêm do resumo canônico', () => {
   const groups = buildDespesaGroups([item('a', '2027-01-05', { valor: 999 })], [{
-    groupKey: '2027-01', groupLabel: 'janeiro de 2027', categoriaNome: '',
+    groupKey: '2027-01', groupLabel: '01/2027', categoriaNome: '',
     totalValue: 120, paidValue: 30, itemCount: 1,
   }], 'mes');
+  assert.equal(groups[0].label, 'Janeiro de 2027');
   assert.equal(groups[0].total, 120);
   assert.equal(groups[0].pago, 30);
   assert.equal(groups[0].count, 1);

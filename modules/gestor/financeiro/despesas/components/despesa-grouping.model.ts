@@ -1,9 +1,14 @@
 import type { DespesaAgrupamento } from '../despesas.queryKeys';
 import type { DespesaGroupSummary, DespesaLancamento } from '../despesas.types';
 
-const monthLabel = (key: string) => new Intl.DateTimeFormat('pt-BR', {
+const monthFormatter = new Intl.DateTimeFormat('pt-BR', {
   month: 'long', year: 'numeric', timeZone: 'UTC',
-}).format(new Date(`${key}-01T12:00:00Z`));
+});
+
+const monthLabel = (key: string) => {
+  const label = monthFormatter.format(new Date(`${key}-01T12:00:00Z`));
+  return label.charAt(0).toLocaleUpperCase('pt-BR') + label.slice(1);
+};
 
 export function getDespesaGroupIdentity(item: DespesaLancamento, by: DespesaAgrupamento) {
   if (by === 'mes') {
@@ -41,9 +46,11 @@ export function buildDespesaGroups(
     const fantasia = by === 'fornecedor'
       ? group.items.find((item) => item.fornecedorNomeFantasia?.trim())?.fornecedorNomeFantasia?.trim()
       : undefined;
+    const label = by === 'mes' ? group.label
+      : fantasia || summary?.groupLabel || (by === 'categoria' ? summary?.categoriaNome : undefined) || group.label;
     return {
       ...group,
-      label: fantasia || summary?.groupLabel || (by === 'categoria' ? summary?.categoriaNome : undefined) || group.label,
+      label,
       // Valores e quantidade são os retornados pelo backend, sem refazer cálculos financeiros.
       total: summary?.totalValue,
       pago: summary?.paidValue,
