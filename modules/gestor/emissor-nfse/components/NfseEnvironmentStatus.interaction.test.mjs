@@ -24,6 +24,7 @@ test('environment indicator preserves scope and never turns internal reads into 
   globalThis.__nfseEnvironmentFixture = fixture;
   const output = resolve(temp, 'page.mjs');
   const mocks = {
+    useNfseDashboardTotals: 'export const useNfseDashboardTotals=()=>({data:undefined,error:null,isFetching:false});',
     useNfseEnvironment: 'export const useNfseEnvironment=()=>[globalThis.__nfseEnvironmentFixture.environment,()=>{throw new Error("Must not change environment") }];',
     useNfseQueries: 'export const useNfseWorkspace=(scope)=>{const f=globalThis.__nfseEnvironmentFixture;f.scopes.push(scope);return f.query;};export const useNfseDocuments=()=>({data:undefined,error:null,isPending:false,isFetching:false});',
     useNfseQueue: 'export const useNfseQueue=()=>globalThis.__nfseEnvironmentFixture.queue;',

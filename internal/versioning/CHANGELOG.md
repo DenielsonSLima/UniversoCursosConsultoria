@@ -1,3 +1,9 @@
+## [4.8.373] - 2026-11-26
+
+- Emissor NFS-e: Emitidas e Pendentes no mesmo card, valores mensais consolidados e por polo na Matriz, e indicador e total filtrado locais sem duplicação.
+
+Histórico 4.8.303 preservado em [arquivo de versões](./changelog/2026-11-12-versao-4-8-303.md).
+
 ## [4.8.372] - 2026-11-23
 
 - A Secretaria Digital exibe as operações de cada coluna em ordem alfabética.
@@ -486,8 +492,3 @@ Histórico 4.8.291: [11/11/2026](./changelog/2026-11-11-versao-4-8-291.md).
 
 - Relatório NFS-e: resumos paralelos por tributação, NBS e polo; identificação completa, geração com data/hora e estados coloridos/textuais.
 - Totais somente de autorizadas sem cancelamento confirmado; erros e operações sem emissão identificados separadamente, sem valores fiscais inventados.
-
-## [4.8.303] - 2026-11-12
-
-- Financeiro do aluno organizado por tipo e curso, recolhido por padrão.
-- Matrículas, histórico e abertura autenticada dos boletos EAD preservados.
