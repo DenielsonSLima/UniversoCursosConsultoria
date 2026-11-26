@@ -9,7 +9,7 @@
 .nfse-counts dd, .nfse-polo-values dd { color: #001a33; font-weight: 600; margin: 0; font-variant-numeric: tabular-nums; }
 .nfse-counts dd { font-size: 19px; }
 .nfse-dashboard-summary .nfse-metric small { display: block; margin-top: 4px; }
-.nfse-polo-values { margin-top: 5px; display: grid; gap: 3px; line-height: 1.3; }
+.nfse-polo-values { display: grid; gap: 3px; line-height: 1.3; }
 .nfse-polo-values dt, .nfse-polo-values dd { min-width: 0; overflow-wrap: anywhere; }
 .nfse-polo-values > div { grid-template-columns: minmax(0, 1fr) minmax(0, auto); }
 .nfse-polo-values dd { font-size: 12px; text-align: right; }

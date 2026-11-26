@@ -386,6 +386,7 @@ const GestorPage: React.FC = () => {
       scopedPoloId={scopedPoloId}
       isGlobal={gestorScope.isGlobal}
       currentPoloName={currentPolo?.nome}
+      visiblePoloLocations={visiblePolos}
       onRequestScrollTop={scrollContentToTop}
       permissions={gestorPermissions}
       profile={profile}

@@ -1,8 +1,8 @@
 {
-  "version": "4.8.373",
+  "version": "4.8.374",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 382,
+  "revision": 383,
   "releasedAt": "2026-11-26",
-  "summary": "Reorganiza os indicadores do Emissor NFS-e e consolida os valores por polo na Matriz"
+  "summary": "Simplifica o detalhamento do Emissor NFS-e com cidade e UF das unidades"
 }
