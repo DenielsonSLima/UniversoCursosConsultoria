@@ -21,7 +21,7 @@ import { useNfseQueueRealtime } from './fila/useNfseQueueRealtime';
 import { useNfseEnvironment } from './hooks/useNfseEnvironment';
 import NfseEnvironmentStatus from './components/NfseEnvironmentStatus';
 import { useNfseNationalHealth } from './health/useNfseNationalHealth';
-import { NfseDashboardAmounts, NfseIssueCounts } from './dashboard/NfseDashboardCards';
+import { NfseDashboardAmounts, NfseIssueCounts, type NfsePoloLocation } from './dashboard/NfseDashboardCards';
 
 const PrepararNfseTab = lazy(() => import('./preparar/PrepararNfseTab'));
 const PendentesNfseTab = lazy(() => import('./pendentes/PendentesNfseTab'));
@@ -35,6 +35,7 @@ type NfseWorkspaceTab = NfseTab | 'servicos';
 export interface EmissorNfsePageProps {
   poloId?: string | null;
   poloName?: string;
+  poloLocations?: readonly NfsePoloLocation[];
   isMatriz: boolean;
   contextKey?: string;
 }
@@ -49,7 +50,7 @@ const tabs = [
   { id: 'modelos' as const, label: 'Modelos', icon: <FileText size={15} /> },
 ];
 
-const NfseWorkspace: React.FC<EmissorNfsePageProps> = ({ poloId, poloName, isMatriz, contextKey }) => {
+const NfseWorkspace: React.FC<EmissorNfsePageProps> = ({ poloId, poloName, poloLocations, isMatriz, contextKey }) => {
   const [tab, setTab] = useState<NfseWorkspaceTab>('preparar');
   const [authorizedService, setAuthorizedService] = useState<{ document: NfseDocument; scopeKey: string } | null>(null);
   const [environment] = useNfseEnvironment({ poloId, contextKey });
@@ -109,7 +110,7 @@ const NfseWorkspace: React.FC<EmissorNfsePageProps> = ({ poloId, poloName, isMat
         <NfseIssueCounts issued={summary?.issuedCount}
           pending={!queue.error && queue.data ? queue.data.summary.preparedCount : summary?.pendingCount} />
         <div className="nfse-metric"><span>Com erro</span><strong>{summary?.errorCount ?? '—'}</strong></div>
-        {isMatriz ? <NfseDashboardAmounts scope={canRead ? scope : null} />
+        {isMatriz ? <NfseDashboardAmounts scope={canRead ? scope : null} poloLocations={poloLocations} />
           : <NfseIssuedTotalMetric scope={scope} enabled={canRead} monthlyPolo />}
       </div>
       <div className="nfse-tabs-with-actions">

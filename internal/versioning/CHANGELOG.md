@@ -1,3 +1,9 @@
+## [4.8.374] - 2026-11-26
+
+- Emissor NFS-e: detalhamento por polo exibe cidade/UF e valor, sem título visível nem nomes repetidos.
+
+Histórico 4.8.304 preservado em [arquivo de versões](./changelog/2026-11-12-versao-4-8-304.md).
+
 ## [4.8.373] - 2026-11-26
 
 - Emissor NFS-e: Emitidas e Pendentes no mesmo card, valores mensais consolidados e por polo na Matriz, e indicador e total filtrado locais sem duplicação.
@@ -487,8 +493,3 @@ Histórico 4.8.291: [11/11/2026](./changelog/2026-11-11-versao-4-8-291.md).
 
 - Emissor NFS-e respeita liberação efetiva do módulo, própria ou herdada, sem cadastro oculto do piloto.
 - Preserva vínculo de identidade, atividade, horário e guardas de polo/ambiente; revogação continua bloqueando.
-
-## [4.8.304] - 2026-11-12
-
-- Relatório NFS-e: resumos paralelos por tributação, NBS e polo; identificação completa, geração com data/hora e estados coloridos/textuais.
-- Totais somente de autorizadas sem cancelamento confirmado; erros e operações sem emissão identificados separadamente, sem valores fiscais inventados.

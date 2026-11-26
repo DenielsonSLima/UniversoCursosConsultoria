@@ -49,6 +49,7 @@ interface GestorModuleContentProps {
   scopedPoloId: string | null;
   isGlobal: boolean;
   currentPoloName?: string;
+  visiblePoloLocations?: readonly { id: string; cidade: string | null; estado: string | null }[];
   onRequestScrollTop: () => void;
   permissions: GestorPermissions;
   profile: PortalAuthProfile;
@@ -169,6 +170,7 @@ const GestorModuleContentView: React.FC<GestorModuleContentProps> = ({
   scopedPoloId,
   isGlobal,
   currentPoloName,
+  visiblePoloLocations,
   onRequestScrollTop,
   permissions,
   profile,
@@ -255,6 +257,7 @@ const GestorModuleContentView: React.FC<GestorModuleContentProps> = ({
         key={`${profile.contextId || 'sem-contexto'}:${scopedPoloId || 'sem-polo'}`}
         poloId={scopedPoloId}
         poloName={currentPoloName}
+        poloLocations={visiblePoloLocations}
         isMatriz={isMatrizSelected}
         contextKey={profile.contextId || ''}
       />
