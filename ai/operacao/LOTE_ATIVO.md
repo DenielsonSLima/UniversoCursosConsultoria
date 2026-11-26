@@ -1,10 +1,10 @@
 # Lote ativo
 
-## Lote: 2026-11-23-secretaria-ordem-alfabetica
+## Lote: 2026-11-26-nfse-kpis-por-polo
 
-Objetivo: ordenar alfabeticamente as operações em cada coluna da Secretaria Digital.
-Status: versão 4.8.372 com publicação em produção autorizada.
-Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-23-secretaria-ordem-alfabetica.md`.
-Aceite: operações em ordem A–Z em cada coluna, conforme os títulos em português.
-Base remota: 4.8.371, commit a86da56456664f60d1d84ea602ed10bfbef4c629.
-Validação: teste de interação nas três colunas com navegação e permissões exercitadas.
+Objetivo: consolidar os valores mensais de NFS-e na Matriz e simplificar os indicadores do Emissor.
+Status: versão 4.8.373 com publicação em produção autorizada, condicionada às validações.
+Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-26-nfse-kpis-por-polo.md`.
+Aceite: cinco cards na Matriz, conteúdo centralizado, últimos dois dedicados a todos os polos e ao detalhamento por polo.
+Base remota: 4.8.372, commit 163b9e939d99c35a363e8f58edd7b0478f953d75.
+Validação: ensaios de interação, consulta agregada em base sintética e prévia desktop e móvel.

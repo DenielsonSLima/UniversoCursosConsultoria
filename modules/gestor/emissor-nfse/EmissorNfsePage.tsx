@@ -21,6 +21,7 @@ import { useNfseQueueRealtime } from './fila/useNfseQueueRealtime';
 import { useNfseEnvironment } from './hooks/useNfseEnvironment';
 import NfseEnvironmentStatus from './components/NfseEnvironmentStatus';
 import { useNfseNationalHealth } from './health/useNfseNationalHealth';
+import { NfseDashboardAmounts, NfseIssueCounts } from './dashboard/NfseDashboardCards';
 
 const PrepararNfseTab = lazy(() => import('./preparar/PrepararNfseTab'));
 const PendentesNfseTab = lazy(() => import('./pendentes/PendentesNfseTab'));
@@ -103,12 +104,13 @@ const NfseWorkspace: React.FC<EmissorNfsePageProps> = ({ poloId, poloName, isMat
       {!selectedPolo ? <div className="nfse-notice"><Building2 size={18} /><div><strong>Selecione um polo</strong><p>Use o seletor de unidade no cabeçalho para preparar e acompanhar as notas do estabelecimento.</p></div></div>
         : !scope ? <div className="nfse-notice"><AlertCircle size={18} /><div><strong>{!month ? 'Escolha o mês dos recebimentos' : 'Contexto de acesso indisponível'}</strong><p>{!month ? 'Informe um mês válido para consultar os recebimentos e as notas deste polo.' : 'Selecione novamente a unidade no cabeçalho antes de consultar os registros fiscais.'}</p></div></div>
 : query.error && !unavailable ? <NfseDataState error={query.error} onRetry={() => void query.refetch()} /> : null}
-      <div className="nfse-summary nfse-summary-with-issued-total" aria-label="Resumo fiscal do período">
+      <div className={`nfse-summary nfse-dashboard-summary${isMatriz ? ' nfse-dashboard-matrix' : ''}`} aria-label="Resumo fiscal do período">
         <div className="nfse-metric"><span>Recebido no mês</span><strong>{formatNfseMoney(summary?.receivedAmount)}</strong></div>
-        <div className="nfse-metric"><span>Pendentes</span><strong>{!queue.error && queue.data ? queue.data.summary.preparedCount : summary?.pendingCount ?? '—'}</strong></div>
-        <div className="nfse-metric"><span>Emitidas</span><strong>{summary?.issuedCount ?? '—'}</strong></div>
-        <NfseIssuedTotalMetric scope={scope} enabled={canRead} />
+        <NfseIssueCounts issued={summary?.issuedCount}
+          pending={!queue.error && queue.data ? queue.data.summary.preparedCount : summary?.pendingCount} />
         <div className="nfse-metric"><span>Com erro</span><strong>{summary?.errorCount ?? '—'}</strong></div>
+        {isMatriz ? <NfseDashboardAmounts scope={canRead ? scope : null} />
+          : <NfseIssuedTotalMetric scope={scope} enabled={canRead} monthlyPolo />}
       </div>
       <div className="nfse-tabs-with-actions">
         <FinancialUnderlineTabs items={tabs} value={tab} onChange={setTab} ariaLabel="Abas do Emissor NFS-e" idPrefix="nfse" compact />

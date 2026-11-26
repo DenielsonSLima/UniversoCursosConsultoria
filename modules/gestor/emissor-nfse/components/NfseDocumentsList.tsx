@@ -89,7 +89,11 @@ export default function NfseDocumentsList({ status, issuedState, errorArchiveMod
         {selection && rows.length > 0 && <label className="nfse-issued-page-selection"><input type="checkbox" aria-label="Selecionar todas as notas desta página"
         checked={allSelected} ref={node => { if (node) node.indeterminate = someSelected && !allSelected; }} disabled={!available || selection.disabled || !selectableRows.length}
         onChange={event => selection.onTogglePage(selectableRows, event.target.checked)} />Selecionar página</label>}
-        <span className="nfse-inline-help">{data ? `${data.totalItems} registro(s)` : 'Registros do período'}</span>
+        <span className="nfse-inline-help">{data ? `${data.totalItems} registro(s)` : 'Registros do período'}
+          {issuedState === 'ACTIVE' && canRead && !invalidDates && !query.error && !sharedPeriod?.isSettling
+            && search.trim() === deferredSearch && query.data?.totalAmount != null
+            && <> · Total dos resultados: <strong>{formatNfseMoney(query.data.totalAmount)}</strong></>}
+        </span>
         <div className="nfse-issued-utility-actions">{actions}{selectionActions?.(rows.filter(item => selection?.ids.has(item.id)), available)}</div>
       </div>}
       {status === 'EMITIDA' && query.error && <p className="nfse-issued-filter-hint" role="alert">Não foi possível atualizar esta consulta. Corrija os filtros e tente novamente.{data ? ' Exibindo a última lista carregada neste estabelecimento e ambiente.' : ''}

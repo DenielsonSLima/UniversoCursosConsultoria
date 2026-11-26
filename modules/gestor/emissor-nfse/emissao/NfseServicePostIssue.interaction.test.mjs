@@ -50,12 +50,14 @@ async function compile(temp) {
       fixture(/nfse-individual\.service$/, 'individual');
       fixture(/NfseXmlViewerModal$/, 'viewer');
       fixture(/lib\/supabase$/, 'blocked');
+      builder.onResolve({ filter: /useNfseDashboardTotals$/ }, () => ({ path: 'dashboard', namespace: 'fixture' }));
       builder.onLoad({ filter: /.*/, namespace: 'fixture' }, args => ({ loader: 'js', resolveDir: base, contents: ({
         queries: `import {useQuery} from '@tanstack/react-query';
           import {nfseQueryKeys} from './modules/gestor/emissor-nfse/queries/nfse.queryKeys';
           export const useNfseWorkspace=()=>globalThis.__postIssue.workspace();
           export const useNfseDocuments=(scope,filters,enabled)=>useQuery({queryKey:nfseQueryKeys.documents(scope,filters),
             enabled:!!scope&&enabled,retry:false,queryFn:()=>globalThis.__postIssue.documents(filters)});`,
+        dashboard: 'export const useNfseDashboardTotals=()=>({data:undefined,error:null,isFetching:false});',
         queue: 'export const useNfseQueue=()=>({data:{summary:{preparedCount:0}},error:null});',
         services: `export const useNfsePartnerServices=()=>globalThis.__postIssue.services();
           export const useRemoveNfsePartnerServices=()=>({isPending:false,mutateAsync:async()=>{throw new Error('Removal forbidden')}});`,

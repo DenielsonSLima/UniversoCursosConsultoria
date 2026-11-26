@@ -1,0 +1,28 @@
+.nfse-summary.nfse-dashboard-summary { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.nfse-summary.nfse-dashboard-summary.nfse-dashboard-matrix { grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(0, 1.2fr) minmax(0, 1.55fr); }
+.nfse-dashboard-summary .nfse-metric { display: flex; flex-direction: column; justify-content: center; min-height: 88px; min-width: 0; }
+.nfse-dashboard-summary .nfse-metric strong { overflow-wrap: anywhere; }
+.nfse-counts, .nfse-polo-values { margin: 0; }
+.nfse-counts > div, .nfse-polo-values > div { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; gap: 8px; }
+.nfse-counts > div + div { border-top: 1px solid #edf1f5; margin-top: 4px; padding-top: 4px; }
+.nfse-counts dt, .nfse-polo-values dt, .nfse-dashboard-summary .nfse-metric small { color: #64748b; font-size: 12px; }
+.nfse-counts dd, .nfse-polo-values dd { color: #001a33; font-weight: 600; margin: 0; font-variant-numeric: tabular-nums; }
+.nfse-counts dd { font-size: 19px; }
+.nfse-dashboard-summary .nfse-metric small { display: block; margin-top: 4px; }
+.nfse-polo-values { margin-top: 5px; display: grid; gap: 3px; line-height: 1.3; }
+.nfse-polo-values dt, .nfse-polo-values dd { min-width: 0; overflow-wrap: anywhere; }
+.nfse-polo-values > div { grid-template-columns: minmax(0, 1fr) minmax(0, auto); }
+.nfse-polo-values dd { font-size: 12px; text-align: right; }
+@media (max-width: 1180px) {
+  .nfse-summary.nfse-dashboard-summary.nfse-dashboard-matrix { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .nfse-dashboard-matrix > .nfse-metric { grid-column: span 2; }
+  .nfse-dashboard-matrix > .nfse-metric:nth-child(n + 4) { grid-column: span 3; }
+}
+@media (max-width: 760px) {
+  .nfse-summary.nfse-dashboard-summary, .nfse-summary.nfse-dashboard-summary.nfse-dashboard-matrix { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .nfse-dashboard-matrix > .nfse-metric:nth-child(n) { grid-column: auto; }
+  .nfse-dashboard-matrix > .nfse-metric:last-child { grid-column: 1 / -1; }
+}
+@media (max-width: 330px) {
+  .nfse-summary.nfse-dashboard-summary, .nfse-summary.nfse-dashboard-summary.nfse-dashboard-matrix { grid-template-columns: minmax(0, 1fr); }
+}

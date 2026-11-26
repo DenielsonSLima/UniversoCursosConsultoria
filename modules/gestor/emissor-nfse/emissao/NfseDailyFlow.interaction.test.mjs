@@ -45,8 +45,10 @@ test('daily workspace has seven operational tabs and preserves cancelled authori
       builder.onResolve({ filter: /(?:PrepararNfseTab|PendentesNfseTab|EmitidasNfseTab|CanceladasNfseTab|ErrosNfseTab|ModelosNfseTab|NfsePartnerServiceModal)$/ }, () => ({ path: 'empty', namespace: 'fixture' }));
       builder.onResolve({ filter: /NfseSourceEmissionModal$/ }, () => ({ path: 'modal', namespace: 'fixture' }));
       builder.onResolve({ filter: /lib\/supabase$/ }, () => ({ path: 'blocked', namespace: 'fixture' }));
+      builder.onResolve({ filter: /useNfseDashboardTotals$/ }, () => ({ path: 'dashboard', namespace: 'fixture' }));
       builder.onLoad({ filter: /.*/, namespace: 'fixture' }, args => ({ loader: 'js', resolveDir: base, contents: ({
         queries: 'export const useNfseWorkspace=(s)=>globalThis.__dailyWorkspace(s); export const useNfseDocuments=()=>globalThis.__dailyDocuments();',
+        dashboard: 'export const useNfseDashboardTotals=()=>({data:undefined,error:null,isFetching:false});',
         queue: 'export const useNfseQueue=()=>({data:{summary:{preparedCount:0}},error:null});',
         services: 'export const useNfsePartnerServices=(s)=>globalThis.__dailyServices(s); export const useRemoveNfsePartnerServices=()=>({isPending:false,mutateAsync:async()=>{throw new Error("Removal forbidden in daily read test")}});',
         realtime: 'export const useNfseRealtime=()=>{}; export const useNfseQueueRealtime=()=>{}; export const useNfsePartnerServicesRealtime=()=>{};',
