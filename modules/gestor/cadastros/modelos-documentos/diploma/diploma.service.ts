@@ -2,10 +2,7 @@
 // REGRA ABSOLUTA: ZERO localStorage. Supabase é a única fonte de dados.
 
 import { supabase } from '../../../../../lib/supabase';
-import { hasCertificatePeriod } from './components/diploma-preview.model';
-
-const EAD_FRONT_TEXT =
-  'Certificamos que o(a) aluno(a) <strong>{{nome_aluno}}</strong>, inscrito(a) no CPF {{cpf}}, concluiu com êxito o curso de <strong>{{curso_nome}}</strong>, com carga horária de {{carga_horaria}} hora(s), na modalidade EAD, realizado através da Universo Cursos e Consultoria, cumprindo todas as atividades previstas, de acordo com a legislação aplicável à formação profissional (LDB nº 9.394/1996, Decreto nº 5.154/2004 e Portaria MEC nº 1.015/2018).<br /><br />No período de {{data_inicio}} até {{data_fim}}.<br />Código do certificado: {{codigo_certificado}}';
+import { EAD_FRONT_TEXT, ensureInstitutionalEadCertificatePeriod } from './components/diploma-preview.model';
 
 const PRESENTIAL_FRONT_TEXT =
   'Certificamos que o(a) aluno(a) <strong>{{nome_aluno}}</strong>, inscrito(a) no CPF {{cpf}}, concluiu com êxito o curso presencial de <strong>{{curso_nome}}</strong>, com carga horária de {{carga_horaria}} hora(s), realizado através da Universo Cursos e Consultoria, cumprindo todas as atividades previstas, de acordo com a legislação aplicável à formação e qualificação profissional (LDB nº 9.394/1996 e Decreto nº 5.154/2004).<br /><br />No período de {{data_inicio}} até {{data_fim}}.<br />Código do certificado: {{codigo_certificado}}';
@@ -290,9 +287,7 @@ const normalizeFixedTemplates = (templates: any[] = []) => {
 
     if (normalized.id === 'certificado_ead') {
       const frontText = String(normalized.textoFrente || '');
-      if (!hasCertificatePeriod(frontText) && !/LDB n[º°]\s*9\.394\/1996|V[aá]lido em todo o pa[ií]s/i.test(frontText)) {
-        normalized.textoFrente = EAD_FRONT_TEXT;
-      }
+      normalized.textoFrente = ensureInstitutionalEadCertificatePeriod(frontText || EAD_FRONT_TEXT);
       if (!/DECRETO PRESIDENCIAL N[°º]\s*5\.154/i.test(String(normalized.textoVerso || ''))) {
         normalized.textoVerso = EAD_BACK_TEXT;
       }

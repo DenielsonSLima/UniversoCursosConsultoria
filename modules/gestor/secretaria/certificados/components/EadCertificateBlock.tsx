@@ -1,7 +1,7 @@
 import React from 'react';
 import DiplomaBlockContent from '../../../cadastros/modelos-documentos/diploma/components/DiplomaBlockContent';
 import type { CertificadoAcademico, EadCertificatePage } from '../certificados.types';
-import { buildEadCertificateTemplateVars, prepareEadCertificateTemplate, readEadStudyStart, replaceEadCertificateVars } from './certificado-preview.utils';
+import { buildEadCertificateTemplateVars, prepareEadCertificateTemplate, replaceEadCertificateVars } from './certificado-preview.utils';
 import { MISSING_EAD_CURRICULUM_TABLE } from './ead-certificate-curriculum';
 import { removePublicValidationReferences, shouldRenderCertificateQrBlock } from './certificate-validation-rendering';
 import type { AssinaturasData } from '../../../configuracoes/assinaturas/assinaturas.service';
@@ -28,9 +28,6 @@ const EadCertificateBlock: React.FC<EadCertificateBlockProps> = (props) => {
   const templateText = (text: string) => prepareEadCertificateTemplate(
     props.validationPublic ? text : removePublicValidationReferences(text), certificate,
   );
-  const usesMigratedIssueDate = ['{{cidade_uf}}, {{data_emissao}}', '{{cidade_uf}}, {{data_emissao_extenso}}.'].includes(block.content);
-  const blockContent = block.eadLegacyDateContent && usesMigratedIssueDate && !readEadStudyStart(certificate)
-    ? block.eadLegacyDateContent : block.content;
   const previewData = buildEadCertificateTemplateVars(certificate, {
     curriculumText: isCurriculumTable && !curriculumPage?.rows
       ? MISSING_EAD_CURRICULUM_TABLE : curriculumPage?.lines?.join('\n') || props.curriculumText,
@@ -45,7 +42,7 @@ const EadCertificateBlock: React.FC<EadCertificateBlockProps> = (props) => {
   });
 
   return <DiplomaBlockContent
-    block={{ ...block, content: templateText(blockContent || ''),
+    block={{ ...block, content: templateText(block.content || ''),
       title: templateText(block.title || ''), signerNameContent: templateText(block.signerNameContent || '') }}
     corTexto={props.model?.corTexto || '#1e293b'}
     isEditable={false}

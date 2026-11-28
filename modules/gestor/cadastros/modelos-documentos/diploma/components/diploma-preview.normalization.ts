@@ -5,12 +5,14 @@ import {
   PRESENTIAL_FRONT_TEXT,
   PRESENTIAL_VALIDITY_TEXT,
   TECHNICAL_FRONT_TEXT,
+  ensureInstitutionalEadCertificatePeriod,
   hasCertificatePeriod,
   isEadCertificate,
   isPresentialProfessionalCertificate,
   isTechnicalCertificate,
   posicoesPadrao,
   technicalValidationSiteContent,
+  upgradeEadCertificatePeriodText,
   usesProgrammaticBackLayout,
   validationSiteContent,
 } from './diploma-preview.model';
@@ -134,11 +136,13 @@ export const normalizeLegacyBlock = (block: any, formData: any) => {
 
   if (normalized.id === 'texto' && (ead || presentialProfessional)) {
     const content = stripEadValidityText(String(normalized.content || ''));
+    const eadContent = hasCertificatePeriod(content) || /LDB n[º°]\s*9\.394\/1996/i.test(content) ? content : EAD_FRONT_TEXT;
     normalized = {
       ...normalized,
       content: presentialProfessional
         ? (hasEadTerms(content) || !/LDB n[º°]\s*9\.394\/1996/i.test(content) ? PRESENTIAL_FRONT_TEXT : content)
-        : (hasCertificatePeriod(content) || /LDB n[º°]\s*9\.394\/1996/i.test(content) ? content : EAD_FRONT_TEXT),
+        : formData.id === 'certificado_ead' ? ensureInstitutionalEadCertificatePeriod(content || EAD_FRONT_TEXT)
+          : upgradeEadCertificatePeriodText(eadContent),
     };
   }
 

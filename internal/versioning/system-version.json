@@ -1,8 +1,8 @@
 {
-  "version": "4.8.375",
+  "version": "4.8.376",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 384,
+  "revision": 385,
   "releasedAt": "2026-11-28",
-  "summary": "Libera provas EAD após sete dias e permite retificar o período dos certificados com auditoria"
+  "summary": "Exibe o período previsto do curso nos certificados EAD e corrige a justificativa para antecipar a prova"
 }

@@ -47,6 +47,7 @@ const buildDefaultPreviewData = (formData: any): Record<string, string> => ({
   data_inicio: '04/12/2025',
   data_fim: '30/12/2025',
   periodo: '04/12/2025 até 30/12/2025',
+  periodo_previsto_ead: '04/12/2025 a 11/12/2025',
   data_emissao: '05/01/2026',
   data_emissao_extenso: '5 de janeiro de 2026',
   data_conclusao: '20 de Maio de 2026',

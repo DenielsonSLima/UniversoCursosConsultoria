@@ -27,13 +27,6 @@ export interface EadCertificatePage {
   rows?: EadCertificateCurriculumRow[];
 }
 
-export interface EadHistoricalStudyEvidence {
-  inicioData: string;
-  conclusaoData: string;
-  referencia: string;
-  fonte: 'AUDITORIA_PROGRESSO';
-}
-
 export interface CertificadoAcademico {
   id: string;
   matricula_id: string;

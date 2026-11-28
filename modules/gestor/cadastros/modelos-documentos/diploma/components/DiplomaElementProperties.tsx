@@ -107,6 +107,7 @@ const DiplomaElementProperties: React.FC<DiplomaElementPropertiesProps> = ({
               <span className="block text-[8px] font-black text-purple-700 uppercase tracking-widest">Variáveis Suportadas</span>
               <div className="grid grid-cols-1 gap-1 text-[8px]">
                 {token('{{nome_aluno}}', 'Nome do Aluno')}{token('{{cpf}}', 'CPF')}{token('{{curso_nome}}', 'Curso')}{token('{{carga_horaria}}', 'Carga')}{token('{{data_inicio}}', 'Início')}{token('{{data_fim}}', 'Fim')}{token('{{periodo}}', 'Período')}{token('{{data_conclusao}}', 'Conclusão')}{token('{{data_emissao}}', 'Emissão (EAD)')}{token('{{codigo_certificado}}', 'Código')}{token('{{url_validacao}}', 'Link de Validação')}
+                {token('{{periodo_previsto_ead}}', 'Período previsto (EAD)')}
               </div>
             </div>
           )}
