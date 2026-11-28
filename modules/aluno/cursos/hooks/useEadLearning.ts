@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useMutation, useQuery, type QueryClient } from '@tanstack/react-query';
+import { useMutation, type QueryClient } from '@tanstack/react-query';
 import { supabase } from '../../../../lib/supabase';
 import { useAlunoEadCertificate } from './useAlunoEadCertificate';
 import { useAlunoEadCertificateModel } from './useAlunoEadCertificateModel';
 import { useEadAssessmentRevision } from './useEadAssessmentRevision';
+import { useEadStudyProgress } from './useEadStudyProgress';
 import { getEffectiveEadConfig } from '../eadAssessmentRevision';
 import {
   getStudentCourseAccessKey,
@@ -127,19 +128,12 @@ export const useEadLearning = ({ alunoId, hasAlunoContext, selectedCourse, query
     () => ['ead-aluno-progresso', alunoId, selectedCourse?.id],
     [alunoId, selectedCourse?.id],
   );
-  const progressQuery = useQuery<EadProgressState>({
+  const progressQuery = useEadStudyProgress({
+    alunoId,
+    courseId: selectedCourse?.id,
+    enrollmentId: selectedCourse?.alunoMatricula?.id,
+    enabled: hasAlunoContext && hasEadAccess(selectedCourse),
     queryKey: progressQueryKey,
-    enabled: hasAlunoContext && !!selectedCourse?.id && hasEadAccess(selectedCourse),
-    queryFn: async () => {
-      if (!alunoId) throw new Error('Aluno não identificado para este contexto.');
-      const { data, error } = await supabase.rpc('ead_get_aluno_progress', {
-        p_aluno_id: alunoId,
-        p_curso_id: selectedCourse!.id,
-      });
-      if (error) throw error;
-      return data as EadProgressState;
-    },
-    refetchInterval: selectedCourse?.id ? 30000 : false,
   });
   const accessExpired = !hasEadAccess(selectedCourse);
   const temporaryReadUnavailable = progressQuery.isError
@@ -277,7 +271,7 @@ export const useEadLearning = ({ alunoId, hasAlunoContext, selectedCourse, query
   const canTakeQuiz = summary?.canTakeQuiz === true;
   const completedAt = summary?.completedAt || progress?.completedAt;
   const completedAtDate = completedAt ? new Date(Number(completedAt)) : null;
-  const startedAtDate = progress?.startedAt ? new Date(Number(progress.startedAt)) : null;
+  const startedAtDate = summary?.studyStartedAt ? new Date(summary.studyStartedAt) : null;
   const completedLessonCount = Array.isArray(progress?.completedContentIds) ? progress.completedContentIds.length : 0;
 
   const { data: alunoCertificado, isLoading: certificateLoading, isError: certificateError } =
@@ -481,5 +475,3 @@ export const useEadLearning = ({ alunoId, hasAlunoContext, selectedCourse, query
     isProgressUpdatePending, updateProgress,
   };
 };
-
-

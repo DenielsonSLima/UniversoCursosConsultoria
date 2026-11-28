@@ -19,6 +19,7 @@ export const SECRETARIA_ACCESS_OPTIONS = [
   { id: 'transferencia', label: 'Transferência', legacyTab: 'solicitacoes' },
   { id: 'solicitacoes', label: 'Solicitações Acadêmicas', legacyTab: 'solicitacoes' },
   { id: 'dependencias-academicas', label: 'Dependências Acadêmicas', legacyTab: 'solicitacoes' },
+  { id: 'provas-ead', label: 'Provas EAD', legacyTab: null, inheritsLegacy: false },
   { id: 'certificados', label: 'Certificados', legacyTab: 'historico' },
   { id: 'historico-emissoes', label: 'Histórico de Emissões', legacyTab: 'historico' },
   { id: 'assinatura-eletronica', label: 'Assinaturas', legacyTab: null, inheritsLegacy: false },

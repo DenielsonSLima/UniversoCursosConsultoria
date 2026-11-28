@@ -59,11 +59,14 @@ const EadCourseRoom: React.FC<EadCourseRoomProps> = ({ view }) => {
       ? new Date(alunoCertificado.data_inscricao)
       : startedAtDate;
     const enrollmentDateLabel = enrollmentDate && !Number.isNaN(enrollmentDate.getTime())
-      ? enrollmentDate.toLocaleDateString('pt-BR')
+      ? enrollmentDate.toLocaleDateString('pt-BR', { timeZone: 'America/Maceio' })
       : 'Data não informada';
-    const completionDateLabel = completedAtDate
-      ? completedAtDate.toLocaleDateString('pt-BR')
-      : 'Hoje';
+    const completionDate = alunoCertificado?.data_conclusao
+      ? new Date(`${alunoCertificado.data_conclusao}T12:00:00Z`)
+      : completedAtDate;
+    const completionDateLabel = completionDate && !Number.isNaN(completionDate.getTime())
+      ? completionDate.toLocaleDateString('pt-BR', { timeZone: 'America/Maceio' })
+      : 'Data não informada';
     if (quizPassed && !showCompletedLessons) {
       return (
         <div className="aluno-ead-room space-y-4 animate-fadeIn">
@@ -142,7 +145,7 @@ const EadCourseRoom: React.FC<EadCourseRoomProps> = ({ view }) => {
                   <div className="rounded-2xl border border-emerald-100 bg-white p-4">
                     <p className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-slate-400">
                       <CalendarDays size={13} />
-                      Data da inscrição
+                      {alunoCertificado?.data_inscricao ? 'Data da inscrição' : 'Início do estudo'}
                     </p>
                     <p className="mt-1 text-lg font-black text-[#001a33]">{enrollmentDateLabel}</p>
                   </div>

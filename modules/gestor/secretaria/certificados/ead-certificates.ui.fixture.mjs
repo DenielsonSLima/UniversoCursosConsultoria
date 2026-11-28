@@ -33,6 +33,19 @@ export const mockModules = {
     export const useFinalizarCertificadoMutation = () => ({isPending:false,
       mutateAsync:async(value)=>{ window.testIssuances.push(value); }});
   `,
+  '../certificados.queries': `
+    import {useState} from 'react';
+    export const useEadHistoricalStudyEvidence = () => ({
+      isPending: false, isError: false, data: window.testPeriodEvidence || null,
+    });
+    export const useRetificarPeriodoEadMutation = () => {
+      const [data, setData] = useState(null);
+      return {isPending: false, isSuccess: Boolean(data), data, error: null, mutate: (input) => {
+        window.testPeriodCorrection = input;
+        setData('CERT-SINTETICO-NOVO');
+      }};
+    };
+  `,
   './usePersistedEadCertificateTemplates': `
     export const usePersistedEadCertificateTemplates = () => ({refetch:async()=>{
       window.testTemplateFetches = (window.testTemplateFetches || 0) + 1;

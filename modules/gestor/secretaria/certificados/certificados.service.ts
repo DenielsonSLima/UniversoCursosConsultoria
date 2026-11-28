@@ -1,5 +1,5 @@
 import { supabase } from '../../../../lib/supabase';
-import { CertificadoAcademico, CertificadoModalidade, CertificadoStatus } from './certificados.types';
+import { CertificadoAcademico, CertificadoModalidade, CertificadoStatus, EadHistoricalStudyEvidence } from './certificados.types';
 import {
   normalizeSecretariaSearch,
   secretariaSearchIncludes,
@@ -82,5 +82,39 @@ export const certificadosService = {
     if (error) throw error;
     return data;
   },
-};
 
+  async retificarPeriodoEad(input: {
+    certificateId: string;
+    originalCode: string;
+    startedOn: string;
+    evidenceReference: string;
+    reason: string;
+    useProgressAudit: boolean;
+  }): Promise<string> {
+    const { data, error } = await supabase.rpc('retificar_periodo_certificado_ead', {
+      p_certificado_id: input.certificateId,
+      p_codigo_original: input.originalCode,
+      p_inicio_comprovado: input.startedOn,
+      p_referencia_evidencia: input.evidenceReference,
+      p_motivo: input.reason,
+      p_usar_evidencia_interna: input.useProgressAudit,
+    });
+    if (error) throw error;
+    if (typeof data !== 'string' || !data.trim()) throw new Error('Não foi possível confirmar o novo código de validação.');
+    return data;
+  },
+
+  async getEadHistoricalStudyEvidence(certificateId: string): Promise<EadHistoricalStudyEvidence | null> {
+    const { data, error } = await supabase.rpc('secretaria_get_ead_certificate_study_evidence', {
+      p_certificado_id: certificateId,
+    });
+    if (error) throw error;
+    if (data === null) return null;
+    const isDate = (value: unknown): value is string => typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value);
+    if (data?.fonte !== 'AUDITORIA_PROGRESSO' || !isDate(data.inicioData) || !isDate(data.conclusaoData)
+      || typeof data.referencia !== 'string' || !data.referencia.trim()) {
+      throw new Error('Não foi possível confirmar as datas na auditoria de progresso.');
+    }
+    return data;
+  },
+};

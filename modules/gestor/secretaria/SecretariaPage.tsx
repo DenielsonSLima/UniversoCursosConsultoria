@@ -4,7 +4,7 @@
 import React, { lazy, Suspense, useState, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { FileText, ArrowLeft, Loader2 } from 'lucide-react';
-import { canAccessTab } from '../access-control';
+import { canAccessGestorModule, canAccessTab } from '../access-control';
 import SecretariaDashboard from './components/SecretariaDashboard';
 import { secretariaDocumentoDefinitions } from './shared/secretaria-documentos.definitions';
 import { secretariaCarteirinhasWorkspaceQueryOptions } from './carteirinhas/secretaria-carteirinhas.service';
@@ -15,6 +15,7 @@ import './secretaria-workspace.css';
 
 const moduleLoaders = {
   'cupons-ead': () => import('./cupons-ead/CuponsEadPage'),
+  'provas-ead': () => import('./provas-ead/SecretariaProvasEadPage'),
   alunos: () => import('./alunos/SecretariaAlunosPage'),
   boletim: () => import('./boletins/SecretariaBoletinsPage'),
   carteirinha: () => import('./carteirinhas/SecretariaCarteirinhasPage'),
@@ -64,11 +65,16 @@ const SecretariaFichaMatriculaPage = lazy(moduleLoaders['ficha-matricula']);
 const SecretariaTransferenciaPage = lazy(moduleLoaders.transferencia);
 const SecretariaDocumentoEmissionPage = lazy(moduleLoaders.documento);
 const CuponsEadPage = lazy(moduleLoaders['cupons-ead']);
+const SecretariaProvasEadPage = lazy(moduleLoaders['provas-ead']);
 
 const secretariaModuleHeaders: Record<string, { title: string; description: string }> = {
   'cupons-ead': {
     title: 'Cupons EAD',
     description: 'Benefícios, disponibilidade e histórico de utilização dos cursos EAD.',
+  },
+  'provas-ead': {
+    title: 'Provas EAD',
+    description: 'Acompanhe o prazo de sete dias e registre liberações antecipadas por matrícula.',
   },
   alunos: {
     title: 'Busca de Aluno 360',
@@ -183,6 +189,9 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({
   const hasCouponManagementAccess = Boolean(poloId) && hasEadCouponManagementAccess(gestorPermissions, isMatriz);
   const couponsAvailable = useEadCouponsAvailability(gestorContextId, hasCouponManagementAccess);
   const canManageCoupons = hasCouponManagementAccess && couponsAvailable;
+  const canManageEadExams = Boolean(poloId && gestorPermissions
+    && canAccessGestorModule(gestorPermissions, 'secretaria')
+    && canAccessTab(gestorPermissions, 'secretaria', 'provas-ead'));
 
   useLayoutEffect(() => {
     let scrollParent = pageRef.current?.parentElement || null;
@@ -217,9 +226,9 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({
     if (!gestorPermissions) return null;
     const operations = SECRETARIA_ACCESS_OPTIONS
       .map(option => option.id)
-      .filter(id => canAccessTab(gestorPermissions, 'secretaria', id));
+      .filter(id => id === 'provas-ead' ? canManageEadExams : canAccessTab(gestorPermissions, 'secretaria', id));
     return canManageCoupons ? [...operations, 'cupons-ead'] : operations;
-  }, [gestorPermissions, canManageCoupons]);
+  }, [gestorPermissions, canManageCoupons, canManageEadExams]);
 
   useEffect(() => {
     if (activeModule !== 'dashboard' && allowedTabsList && !allowedTabsList.includes(activeModule)) {
@@ -242,6 +251,10 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({
     switch (activeModule) {
       case 'cupons-ead':
         return <CuponsEadPage poloId={poloId} canManage={canManageCoupons} contextId={gestorContextId} showHeading={false} />;
+      case 'provas-ead':
+        return canManageEadExams && poloId
+          ? <SecretariaProvasEadPage key={`${gestorContextId}:${poloId}`} poloId={poloId} contextId={gestorContextId} />
+          : null;
       case 'alunos':
         return <SecretariaAlunosPage poloId={poloId} />;
       case 'declaracao-matricula':

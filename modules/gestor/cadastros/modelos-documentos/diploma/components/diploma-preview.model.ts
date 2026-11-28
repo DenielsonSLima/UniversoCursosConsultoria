@@ -11,6 +11,9 @@ export interface DiplomaPreviewProps {
   onChangeBlocks?: (blocks: any[]) => void;
 }
 
+export const hasCertificatePeriod = (text: string) => text.includes('{{periodo}}')
+  || (text.includes('{{data_inicio}}') && text.includes('{{data_fim}}'));
+
 export const posicoesPadrao: Record<string, { x: number; y: number }> = {
   selo: { x: 46.0, y: 10.0 },
   titulo: { x: 10.0, y: 27.0 },
@@ -103,4 +106,3 @@ export const getTemplateBackgroundUrl = (template: any, page: 'frente' | 'verso'
   }
   return template.bgVersoUrl || template.versoUrl || template.backgroundVersoUrl || template.bg_verso_url || '';
 };
-

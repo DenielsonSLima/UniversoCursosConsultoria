@@ -5,6 +5,7 @@ import {
   PRESENTIAL_FRONT_TEXT,
   PRESENTIAL_VALIDITY_TEXT,
   TECHNICAL_FRONT_TEXT,
+  hasCertificatePeriod,
   isEadCertificate,
   isPresentialProfessionalCertificate,
   isTechnicalCertificate,
@@ -137,7 +138,7 @@ export const normalizeLegacyBlock = (block: any, formData: any) => {
       ...normalized,
       content: presentialProfessional
         ? (hasEadTerms(content) || !/LDB n[º°]\s*9\.394\/1996/i.test(content) ? PRESENTIAL_FRONT_TEXT : content)
-        : (/LDB n[º°]\s*9\.394\/1996/i.test(content) ? content : EAD_FRONT_TEXT),
+        : (hasCertificatePeriod(content) || /LDB n[º°]\s*9\.394\/1996/i.test(content) ? content : EAD_FRONT_TEXT),
     };
   }
 

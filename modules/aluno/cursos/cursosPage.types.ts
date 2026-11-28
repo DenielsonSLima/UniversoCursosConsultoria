@@ -39,6 +39,9 @@ export interface EadProgressSummary {
   retryAvailableAt?: number | null;
   completedAt?: number | null;
   certificateId?: string | null;
+  studyStartedAt?: number | null;
+  quizAvailableAt?: number | null;
+  quizWaiting?: boolean;
 }
 
 export interface EadActivityAssessmentFeedback {

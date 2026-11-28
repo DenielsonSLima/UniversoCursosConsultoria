@@ -56,7 +56,7 @@ jobs:
       - name: Validar autorização, prazo e preservação financeira
         env:
           PGLITE_MODULE_PATH: ${{ runner.temp }}/ead-trust/node_modules/@electric-sql/pglite/dist/index.js
-        run: node --test modules/aluno/cursos/eadTrustAccess.test.mjs supabase/tests/ead_trust_*.isolated.test.mjs
+        run: node --test modules/aluno/cursos/eadTrustAccess.test.mjs supabase/tests/ead_trust_*.isolated.test.mjs supabase/tests/ead_quiz_release.isolated.test.mjs supabase/tests/secretaria_ead_quiz_wait.isolated.test.mjs supabase/tests/ead_historical_study_evidence.isolated.test.mjs supabase/tests/ead_certificate_period.isolated.test.mjs scripts/ead-catalog/publication.test.mjs
 
       - name: Validar visibilidade temporária EAD
         run: node --test modules/aluno/shared/ead-temporary-access.test.ts modules/aluno/shared/ead-portal-trust.contract.test.mjs modules/aluno/turmas/ead-trust-visibility.test.mjs
@@ -64,7 +64,7 @@ jobs:
       - name: Validar liberação pela Gestão sem Financeiro
         env:
           EAD_TEST_JSDOM_MODULE: ${{ runner.temp }}/ead-trust/node_modules/jsdom/lib/api.js
-        run: node --test modules/gestor/gestao/ead/detalhes/ead-trust-access.interaction.test.mjs modules/aluno/cursos/eadTrustLearning.interaction.test.mjs modules/aluno/cursos/eadCertificateDelivery.interaction.test.mjs
+        run: node --test modules/gestor/gestao/ead/detalhes/ead-trust-access.interaction.test.mjs modules/aluno/cursos/eadTrustLearning.interaction.test.mjs modules/aluno/cursos/eadCertificateDelivery.interaction.test.mjs modules/gestor/secretaria/provas-ead/provas-ead.interaction.test.mjs
 
       - name: Validar concorrência de conclusão, pagamento e expiração
         env:
