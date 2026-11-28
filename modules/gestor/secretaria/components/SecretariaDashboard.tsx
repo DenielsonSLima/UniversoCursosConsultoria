@@ -53,6 +53,7 @@ const cards = [
   { id: 'transferencia', title: 'Transferência', desc: 'Transferência externa e emissão de guia.', icon: ArrowRightLeft, color: 'orange' },
   { id: 'solicitacoes', title: 'Solicitações Acadêmicas', desc: 'Análise e homologação de requerimentos.', icon: ClipboardList, color: 'red' },
   { id: 'dependencias-academicas', title: 'Dependências Acadêmicas', desc: 'Reoferta por disciplina, cobrança Banese e diário de destino.', icon: BookOpenCheck, color: 'cyan' },
+  { id: 'provas-ead', title: 'Provas EAD', desc: 'Prazo de liberação e antecipações por matrícula.', icon: ClipboardCheck, color: 'indigo' },
   { id: 'certificados', title: 'Certificados', desc: 'Fila de concluintes, registros, SISTEC e emissão por modalidade.', icon: Award, color: 'emerald' },
   { id: 'historico-emissoes', title: 'Histórico de Emissões', desc: 'Controle, filtros e 2ª via de todos os documentos emitidos.', icon: History, color: 'blue' },
   { id: 'assinatura-eletronica', title: 'Assinaturas', desc: 'Acompanhe pendências e consulte o acervo de documentos assinados.', icon: FileSignature, color: 'blue' },
@@ -65,7 +66,7 @@ const sections = [
     description: 'Consultas, solicitações e recebimentos',
     accent: 'bg-blue-600',
     badge: 'bg-blue-50 text-blue-700',
-    operations: ['alunos', 'solicitacoes', 'transferencia', 'dependencias-academicas', 'consulta-financeira', 'carnes-alunos', 'declaracao-irpf', 'cupons-ead'],
+    operations: ['alunos', 'solicitacoes', 'transferencia', 'dependencias-academicas', 'provas-ead', 'consulta-financeira', 'carnes-alunos', 'declaracao-irpf', 'cupons-ead'],
   },
   {
     id: 'documentos',
@@ -90,6 +91,7 @@ const titleOrder = new Intl.Collator('pt-BR', { sensitivity: 'base' });
 const SecretariaDashboard: React.FC<SecretariaDashboardProps> = ({ onNavigate, onPreload, allowedTabs, showEadCoupons = false }) => {
   const visibleCards = React.useMemo(() => {
     return cards.filter(card => (card.id !== 'cupons-ead' || showEadCoupons)
+      && (card.id !== 'provas-ead' || allowedTabs?.includes('provas-ead'))
       && (!allowedTabs || allowedTabs.includes(card.id)));
   }, [allowedTabs, showEadCoupons]);
 

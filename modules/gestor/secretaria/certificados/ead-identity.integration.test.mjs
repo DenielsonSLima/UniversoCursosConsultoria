@@ -31,7 +31,7 @@ const compiled = await build({
     export {getAlunoEadCertificate} from '../../../aluno/cursos/ead-certificate.service.ts';
     export {historicoEmissoesService} from '../historico-emissoes/historico-emissoes.service.ts';
     export {buildEadCertificateTemplateVars,replaceEadCertificateVars} from './components/certificado-preview.utils.ts';
-    export {withCertificateEmissionIdentity} from './certificate-identity-snapshot.ts';
+    export {withCertificateEmissionSnapshot} from './certificate-identity-snapshot.ts';
   `, resolveDir: directory }, bundle:true, format:'esm', platform:'node', write:false,
   nodePaths:process.env.EAD_UI_NODE_MODULES ? [process.env.EAD_UI_NODE_MODULES] : [],
   plugins:[{name:'projection-aware-database-io',setup(plugin){
@@ -46,7 +46,7 @@ const compiled = await build({
 });
 const {
   getAlunoEadCertificate, historicoEmissoesService, buildEadCertificateTemplateVars,
-  replaceEadCertificateVars, withCertificateEmissionIdentity,
+  replaceEadCertificateVars, withCertificateEmissionSnapshot,
 } = await import(`data:text/javascript;base64,${Buffer.from(compiled.outputFiles[0].text).toString('base64')}`);
 
 const identityFields = ['nome','cpf_cnpj','rg','tipo_documento','orgao_emissor','rg_uf_emissao','rg_data_emissao'];
@@ -130,7 +130,7 @@ test('actual historical identity adapter preserves explicit snapshot values, inc
     [{studentDocumentType:'CIN',studentCpf:'',studentRg:'RESIDUAL'},'CIN',''],
     [{},'CIN','123.456.789-09'],
   ]){
-    const restored=withCertificateEmissionIdentity(history.certificate,snapshot);
+    const restored=withCertificateEmissionSnapshot(history.certificate,snapshot);
     const values=buildEadCertificateTemplateVars(restored);
     assert.equal(values.cpf,expectedCpf);
     const text=replaceEadCertificateVars('CPF: {{cpf}}',restored,values,false);

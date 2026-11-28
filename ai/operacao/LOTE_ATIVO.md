@@ -1,10 +1,10 @@
 # Lote ativo
 
-## Lote: 2026-11-26-nfse-cidade-uf
+## Lote: 2026-11-28-provas-e-certificados-ead
 
-Objetivo: identificar cada polo pelo município e UF no detalhamento do Emissor.
-Status: versão 4.8.374 com publicação em produção autorizada, condicionada às validações.
-Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-26-nfse-cidade-uf.md`.
-Aceite: mostrar só cidade/UF e valor em cada linha; manter totais, layout e acesso.
-Base remota: 4.8.373, commit d42404fcbb60b3ce32b657011fbb06cdf4bcb088.
-Validação: ensaio desktop e móvel com metadados e valores sintéticos, sem operação fiscal.
+Objetivo: liberar provas EAD após sete dias, registrar antecipações da Secretaria e corrigir períodos de certificados com evidências.
+Status: versão 4.8.375 com publicação em produção autorizada, condicionada às validações.
+Manifesto explícito: `ai/operacao/registros/alteracoes/2026-11-28-provas-e-certificados-ead.md`.
+Aceite: prazo de sete dias e conferência de acesso no servidor, antecipação com permissão por polo, emissão e retificação de períodos comprovados com rastreabilidade.
+Base remota: 4.8.374, commit 81ab5968c6de4640e72b430c489fdc33dc3b509c.
+Validação: PostgreSQL isolado, fluxo da Secretaria e do aluno, TypeScript, build e PDF vetorial. O lote inclui conferência em produção e retificação dos certificados históricos com auditoria comprovada.

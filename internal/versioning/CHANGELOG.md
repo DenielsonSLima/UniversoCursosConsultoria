@@ -1,3 +1,10 @@
+## [4.8.375] - 2026-11-28
+
+- O portal EAD libera a prova após sete dias completos de estudo ou antecipação auditada da Secretaria.
+- Os certificados EAD registram o período de realização e a emissão. A Secretaria pode revisar as datas e retificar um certificado com base em evidência.
+
+Histórico 4.8.305 preservado em [arquivo de versões](./changelog/2026-11-12-versao-4-8-305.md).
+
 ## [4.8.374] - 2026-11-26
 
 - Emissor NFS-e: detalhamento por polo exibe cidade/UF e valor, sem título visível nem nomes repetidos.
@@ -488,8 +495,3 @@ Histórico 4.8.291: [11/11/2026](./changelog/2026-11-11-versao-4-8-291.md).
 - Lista de notas emitidas compacta com CPF/CNPJ formatado, cidade e UF do tomador quando presentes no XML autorizado.
 - Indicadores preservam valores durante atualização da mesma consulta e mantêm cache breve de leitura na navegação, sem relaxar permissões ou isolamento.
 - Regressões de interação e XML verificam identificação, ações e limites de acesso; sem alteração de valores ou operação fiscal.
-
-## [4.8.305] - 2026-11-12
-
-- Emissor NFS-e respeita liberação efetiva do módulo, própria ou herdada, sem cadastro oculto do piloto.
-- Preserva vínculo de identidade, atividade, horário e guardas de polo/ambiente; revogação continua bloqueando.

@@ -30,8 +30,10 @@ test('pending EAD trust follows server quiz flags and hides cached protected con
     ead_config: { conteudos: [], atividades: [], provas: [{ questoes: questions }], regras: {} },
     alunoMatricula: { id: 'enrollment-synthetic', status: 'PENDENTE', acessoTemporarioAte: new Date(now + 60_000).toISOString() } };
   let state = { progress: { startedAt: now, completedContentIds: [], completedActivityIds: [], completedVideoIds: [], activityAnswers: {}, quizAnswers: {} },
-    summary: { temporaryAccess: true, canTakeQuiz: true, allLessonsDone: true, allActivitiesDone: true, allVideosDone: true,
+    summary: { temporaryAccess: true, canTakeQuiz: false, allLessonsDone: true, allActivitiesDone: true, allVideosDone: true,
+      studyStartedAt: now, quizAvailableAt: now + 168 * 3_600_000, quizWaiting: true,
       quizRetryBlocked: false, quizPassed: false, questionsTotal: 10, minimumQuestions: 10, progressPercent: 90 },
+    effectiveEadConfig: { ...selected.ead_config, provas: [{ questoes: [] }] },
     assessmentFeedback: { activities: {}, quiz: { submitted: false, score: null, passed: false, results: {} } } };
   let denied = false;
   const calls = [], certificateReads = [];
@@ -88,7 +90,26 @@ test('pending EAD trust follows server quiz flags and hides cached protected con
     root = createRoot(document.getElementById('root'));
     const settle = async () => act(async () => { await new Promise(done => setTimeout(done, 30)); });
     const refresh = async () => { await act(async () => client.invalidateQueries({ queryKey: ['ead-aluno-progresso', 'student-synthetic', selected.id] })); await settle(); };
+    let resolveCatalog;
+    const catalogRequest = client.fetchQuery({
+      queryKey: ['ead-aluno-progresso', 'student-synthetic', selected.id],
+      queryFn: () => new Promise(resolve => { resolveCatalog = resolve; }),
+    });
     await act(async () => root.render(React.createElement(QueryClientProvider, { client }, React.createElement(Harness)))); await settle();
+    assert.equal(calls[0].name, 'ead_start_study');
+    assert.equal(view.canTakeQuiz, false);
+    assert.equal(view.randomizedQuizQuestions.length, 0, 'The gated server configuration takes priority over cached questions');
+    assert.match(document.body.textContent, /disponível a partir de 19\/11\/2026/);
+    assert.equal(document.querySelector('fieldset'), null);
+    await act(async () => {
+      resolveCatalog({ ...state, summary: { ...state.summary, studyStartedAt: null, quizAvailableAt: null } });
+      await catalogRequest;
+    });
+    await settle();
+    assert.equal(view.summary.studyStartedAt, now);
+    state = { ...state, effectiveEadConfig: undefined, summary: { ...state.summary, canTakeQuiz: true, quizWaiting: false } };
+    await refresh();
+    assert.equal(calls.filter(call => call.name === 'ead_start_study').length, 1);
     assert.equal(view.canTakeQuiz, true); assert.equal(view.isProgressReady, true); assert.equal(selected.alunoMatricula.status, 'PENDENTE');
     await act(async () => view.setQuizAnswers(Object.fromEntries(questions.map(question => [question.id, 0])))); await settle();
     const submit = [...document.querySelectorAll('button')].find(button => button.textContent === 'Corrigir prova');

@@ -1,5 +1,5 @@
 import { buildEadCertificatePdf } from '../certificados/ead-certificate-pdf';
-import { withCertificateEmissionIdentity } from '../certificados/certificate-identity-snapshot';
+import { withCertificateEmissionSnapshot } from '../certificados/certificate-identity-snapshot';
 import { isPublicDocumentValidationEnabled } from './document-validation-rendering';
 import { getEmissionRenderKey, waitForCanonicalEmissionRender } from './reissue-flow';
 import type { EmissionLog, PreviewResources } from './historico-emissoes.types';
@@ -16,7 +16,7 @@ export const getEadHistoryPdfKey = (emission: EmissionLog, preview: PreviewResou
   return JSON.stringify({
     code: emission.codigo,
     template: preview.template,
-    certificate: withCertificateEmissionIdentity(preview.certificate, emission.dados_emissao),
+    certificate: withCertificateEmissionSnapshot(preview.certificate, emission.dados_emissao),
     curriculum: emission.dados_emissao?.eadCurriculum ?? null,
     curriculumTable: emission.dados_emissao?.eadCurriculumTable ?? null,
     validationPublic: isPublicDocumentValidationEnabled(emission),

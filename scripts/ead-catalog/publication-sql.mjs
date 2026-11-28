@@ -50,6 +50,7 @@ DECLARE
   v_course public.cursos;
   v_package internal_academic.ead_revision_publication_packages;
   v_keys internal_academic.ead_assessment_answer_keys;
+  v_previous_config jsonb;
   v_progress_before text;
   v_certificates_before text;
 BEGIN
@@ -81,6 +82,11 @@ BEGIN
     END IF;
     SELECT * INTO STRICT v_keys FROM internal_academic.ead_assessment_answer_keys
     WHERE course_id=v_course.id FOR UPDATE;
+    v_previous_config := v_course.ead_config;
+    IF to_regprocedure('internal_academic.ead_restore_quiz_questions(jsonb,jsonb)') IS NOT NULL THEN
+      v_previous_config := internal_academic.ead_restore_quiz_questions(
+        v_previous_config, to_jsonb(v_keys) -> 'quiz_provas');
+    END IF;
     SELECT md5(coalesce(jsonb_agg(
       (to_jsonb(ep)-'updated_at'-'progress') || jsonb_build_object('progress',ep.progress-'assessmentRevision')
       ORDER BY ep.aluno_id)::text,'[]')) INTO v_progress_before
@@ -90,7 +96,7 @@ BEGIN
     INSERT INTO internal_academic.ead_course_revisions
       (course_id,revision,config,activity_answers,quiz_answers)
     VALUES (v_course.id,'legacy-20261027',
-      internal_academic.ead_revision_snapshot_config(v_course.ead_config)
+      internal_academic.ead_revision_snapshot_config(v_previous_config)
         || jsonb_build_object('assessmentRevision','legacy-20261027'),
       v_keys.activity_answers,v_keys.quiz_answers);
     UPDATE public.ead_aluno_progresso ep

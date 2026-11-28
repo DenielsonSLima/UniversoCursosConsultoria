@@ -43,6 +43,12 @@ export const EadQuizPanel: React.FC<EadQuizPanelProps> = ({ view }) => {
     isProgressUpdatePending,
     updateProgress,
   } = view;
+  const quizWaiting = summary?.quizWaiting === true;
+  const quizAvailabilityLabel = typeof summary?.quizAvailableAt === 'number'
+    ? new Date(summary.quizAvailableAt).toLocaleString('pt-BR', {
+      timeZone: 'America/Maceio', dateStyle: 'short', timeStyle: 'short',
+    })
+    : '';
   const quizReviewMode = quizPassed || quizRetryBlocked;
   const quizFeedback = assessmentFeedback?.quiz;
   const authoritativeQuizAnswers = Object.fromEntries(
@@ -54,9 +60,9 @@ export const EadQuizPanel: React.FC<EadQuizPanelProps> = ({ view }) => {
   const quizAnswerProgress = getEadQuizAnswerProgress(randomizedQuizQuestions, quizAnswers);
   const { answeredQuestions, allQuestionsAnswered, isConfigurationValid } = quizAnswerProgress;
   const quizSubmitting = isProgressUpdatePending('finish_quiz', null);
-  const canSubmitQuiz = canTakeQuiz && !quizReviewMode && isConfigurationValid
+  const canSubmitQuiz = canTakeQuiz && !quizWaiting && !quizReviewMode && isConfigurationValid
     && allQuestionsAnswered && !isUpdatingProgress && !quizSubmitting;
-  const showQuizQuestions = (canTakeQuiz || quizReviewMode)
+  const showQuizQuestions = !quizWaiting && (canTakeQuiz || quizReviewMode)
     && randomizedQuizQuestions.length > 0
     && isConfigurationValid;
 
@@ -72,12 +78,20 @@ export const EadQuizPanel: React.FC<EadQuizPanelProps> = ({ view }) => {
       <div className="flex items-center justify-between gap-4">
         <div>
           <h3 className="text-lg font-black uppercase tracking-tight text-[#001a33]">Prova final</h3>
-          <p className="text-xs font-medium text-slate-500">A prova libera quando etapas, vídeos e atividades estiverem concluídos.</p>
+          <p className="text-xs font-medium text-slate-500">Conclua as etapas, os vídeos e as atividades para fazer a prova.</p>
         </div>
         <span className={`rounded-xl px-3 py-1 text-[10px] font-black uppercase tracking-widest ${statusClass}`}>
           {statusLabel}
         </span>
       </div>
+
+      {quizWaiting && (
+        <div role="status" className="rounded-2xl border border-amber-100 bg-amber-50 p-4 text-sm text-amber-800">
+          {quizAvailabilityLabel
+            ? `A prova fica disponível a partir de ${quizAvailabilityLabel}, após cumprir os requisitos do curso.`
+            : 'A prova fica disponível após 7 dias completos desde o início do curso.'}
+        </div>
+      )}
 
       {!canTakeQuiz && (
         <div className="space-y-3">

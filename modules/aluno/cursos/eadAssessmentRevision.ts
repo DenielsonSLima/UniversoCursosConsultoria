@@ -6,8 +6,7 @@ export const getAvailableRevisionLessons = (catalogConfig: any, revision?: EadPr
 );
 
 export const getEffectiveEadConfig = (catalogConfig: any, state?: EadProgressState) => {
-  if (state?.assessmentRevision) return state.effectiveEadConfig || null;
-  return catalogConfig || {};
+  return state?.effectiveEadConfig || (state?.assessmentRevision ? null : catalogConfig || {});
 };
 
 export const canStartEadRevision = (state?: EadProgressState) => (

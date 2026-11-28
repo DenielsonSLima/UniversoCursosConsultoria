@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { getSecretariaContext } from '../shared/secretaria-documentos.service';
 import CertificadoPreview from './components/CertificadoPreview';
+import EadCertificatePeriodCorrection from './components/EadCertificatePeriodCorrection';
 import EadCertificatePreviewPortal from './components/EadCertificatePreviewPortal';
 import { EadCertificatePdfView, useEadCertificatePdf } from './useEadCertificatePdf';
 import {
@@ -54,6 +55,7 @@ const SecretariaCertificadosPage: React.FC = () => {
   const [groupBy, setGroupBy] = useState<'nenhum' | 'polo' | 'turma'>('turma');
   const [selected, setSelected] = useState<CertificadoAcademico | null>(null);
   const [preview, setPreview] = useState<CertificadoAcademico | null>(null);
+  const [periodCorrection, setPeriodCorrection] = useState<CertificadoAcademico | null>(null);
   const previewRequestRef = useRef(0);
   const [eadPreviewTemplates, setEadPreviewTemplates] = useState<{
     status: 'loading' | 'ready' | 'error'; models: any[];
@@ -361,6 +363,12 @@ const SecretariaCertificadosPage: React.FC = () => {
                         {item.status === 'PENDENTE' && item.modalidade === 'EAD' && <span className="px-3 py-2 text-[10px] font-bold text-slate-500">Aguardando liberação automática</span>}
                         {item.status === 'FINALIZADO' && <button onClick={() => void openPreview(item)} className="rounded-lg border border-slate-200 p-2 text-slate-500 hover:text-blue-600" title="Pré-visualizar"><Eye size={15} /></button>}
                         {item.status === 'FINALIZADO' && <button onClick={() => void openPreview(item)} className="flex items-center gap-1.5 rounded-lg bg-[#001a33] px-3 py-2 text-[10px] font-black uppercase text-white"><Printer size={13} /> 2ª Via</button>}
+                        {item.status === 'FINALIZADO' && item.modalidade === 'EAD' && item.codigo_validacao && (
+                          <button type="button" onClick={() => setPeriodCorrection(item)}
+                            className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700">
+                            Retificar período
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -397,6 +405,8 @@ const SecretariaCertificadosPage: React.FC = () => {
         </div>
       )}
 
+      {periodCorrection && <EadCertificatePeriodCorrection certificate={periodCorrection}
+        onClose={() => setPeriodCorrection(null)} />}
       {preview?.modalidade === 'EAD' ? (
         <EadCertificatePreviewPortal onClose={closePreview}>
           {previewContent}

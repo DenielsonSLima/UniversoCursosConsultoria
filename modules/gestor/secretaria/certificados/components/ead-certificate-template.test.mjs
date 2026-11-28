@@ -40,6 +40,28 @@ test('the adapter cannot be used to change another certificate modality', () => 
   assert.throws(() => buildEadCertificateTemplateVars({ ...certificate, modalidade: 'TECNICO' }), /exclusivo/);
 });
 
+test('the configured certificate distinguishes verified study dates and the issue date in Sergipe', () => {
+  const issued = { ...certificate, data_inscricao: '2026-09-01T13:00:00Z', emitido_em: '2026-10-10T01:30:00Z',
+    metadados: { eadStudyPeriod: { startedOn: '2026-09-29', completedOn: '2026-10-08', source: 'VERIFIED_STUDY_ACTIVITY' } } };
+  const values = buildEadCertificateTemplateVars(issued);
+  assert.equal(values.data_inicio, '29/09/2026');
+  assert.equal(values.data_fim, '08/10/2026');
+  assert.equal(values.periodo, '29/09/2026 até 08/10/2026');
+  assert.equal(values.data_emissao, '09/10/2026');
+  assert.equal(values.data_emissao_extenso, '9 de outubro de 2026');
+});
+
+test('a legacy enrollment date does not fill a missing historical study date', () => {
+  const legacy = { ...certificate, data_inscricao: '2026-09-01T13:00:00Z' };
+  const values = buildEadCertificateTemplateVars(legacy);
+  assert.equal(values.data_inicio, 'A comprovar');
+  assert.equal(values.periodo, 'Início a comprovar · conclusão em 08/10/2026');
+  assert.equal(replaceEadCertificateVars('No período de {{data_inicio}} até {{data_fim}}.', legacy, values, false),
+    'Início a comprovar. Conclusão em 08/10/2026.');
+  assert.equal(replaceEadCertificateVars('Texto oficial.<br />Período de realização · {{periodo}}.', legacy, values, false),
+    'Texto oficial.');
+});
+
 test('table detection and page count use effective editor blocks, including a default history block', () => {
   const model = { tipoCurso: 'Educação a Distância (EAD)', hasVerso: true,
     blocks: [{ id: 'titulo', type: 'text', page: 'frente', visible: true, content: 'Certificado' }] };

@@ -126,7 +126,9 @@ export const getBlocks = (formData: any) => {
       id: 'cidadeData', type: 'text', label: 'Cidade e Data', page: 'frente',
       x: pos.cidadeData?.x ?? posicoesPadrao.cidadeData.x, y: pos.cidadeData?.y ?? posicoesPadrao.cidadeData.y,
       fontSize: formData.tamanhoFonteCidadeData || 12, width: 650, color: formData.corTexto || '#1e293b',
-      fontFamily: 'sans-serif', fontWeight: '700', textAlign: 'center', content: '{{cidade_uf}}, {{data_conclusao}}',
+      fontFamily: 'sans-serif', fontWeight: '700', textAlign: 'center',
+      content: ead ? '{{cidade_uf}}, {{data_emissao}}' : '{{cidade_uf}}, {{data_conclusao}}',
+      ...(ead ? { eadLegacyDateContent: '{{cidade_uf}}, {{data_conclusao}}' } : {}),
       visible: formData.exibirCidadeData !== false,
     },
     {

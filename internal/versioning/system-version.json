@@ -1,8 +1,8 @@
 {
-  "version": "4.8.374",
+  "version": "4.8.375",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 383,
-  "releasedAt": "2026-11-26",
-  "summary": "Simplifica o detalhamento do Emissor NFS-e com cidade e UF das unidades"
+  "revision": 384,
+  "releasedAt": "2026-11-28",
+  "summary": "Libera provas EAD após sete dias e permite retificar o período dos certificados com auditoria"
 }

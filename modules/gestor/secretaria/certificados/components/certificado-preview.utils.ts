@@ -8,6 +8,22 @@ import { buildEadCertificateIdentityVars, prepareEadCertificateIdentityTemplate 
 const formatCertificateDate = (date?: string | null) =>
   date ? new Date(date.includes('T') ? date : `${date}T12:00:00`).toLocaleDateString('pt-BR') : '';
 
+const formatEadIssueDate = (date?: string | null, long = false) =>
+  date ? new Date(date).toLocaleDateString('pt-BR', {
+    timeZone: 'America/Maceio',
+    ...(long ? { day: 'numeric', month: 'long', year: 'numeric' } as const : {}),
+  }) : '';
+
+export const readEadStudyStart = (certificate: CertificadoAcademico): string | null => {
+  const period = certificate.metadados?.eadStudyPeriod;
+  if (!period || typeof period !== 'object' || Array.isArray(period)) return null;
+  const { startedOn, completedOn, source } = period as Record<string, unknown>;
+  if (source !== 'VERIFIED_STUDY_ACTIVITY' && source !== 'DOCUMENTARY_CORRECTION') return null;
+  if (typeof startedOn !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(startedOn)
+    || completedOn !== certificate.data_conclusao || startedOn > certificate.data_conclusao) return null;
+  return startedOn;
+};
+
 const formatCertificateDateLong = (date?: string | null) =>
   date
     ? new Date(date.includes('T') ? date : `${date}T12:00:00`).toLocaleDateString('pt-BR', {
@@ -46,7 +62,11 @@ const inferTechnologicalAxis = (certificado: CertificadoAcademico) => {
 };
 
 const buildCertificateTemplateVars = (certificado: CertificadoAcademico) => {
-  const dataInicio = formatCertificateDate(certificado.data_inscricao);
+  const isEad = certificado.modalidade === 'EAD';
+  const studyStart = isEad ? readEadStudyStart(certificado) : null;
+  const dataInicio = isEad
+    ? formatCertificateDate(studyStart) || 'A comprovar'
+    : formatCertificateDate(certificado.data_inscricao);
   const dataFim = formatCertificateDate(certificado.data_conclusao);
   const dataFimExtenso = formatCertificateDateLong(certificado.data_conclusao);
   const identity = resolveStudentIdentityDocument(certificado.aluno);
@@ -67,7 +87,12 @@ const buildCertificateTemplateVars = (certificado: CertificadoAcademico) => {
     cidade_uf: `${certificado.polo?.cidade || 'Não informado'}/${certificado.polo?.estado || 'Não informado'}`,
     data_inicio: dataInicio,
     data_fim: dataFim,
-    periodo: dataInicio && dataFim ? `${dataInicio} até ${dataFim}` : dataFim,
+    periodo: isEad && !studyStart ? `Início a comprovar · conclusão em ${dataFim}`
+      : dataInicio && dataFim ? `${dataInicio} até ${dataFim}` : dataFim,
+    ...(isEad ? {
+      data_emissao: formatEadIssueDate(certificado.emitido_em),
+      data_emissao_extenso: formatEadIssueDate(certificado.emitido_em, true),
+    } : {}),
     data_conclusao: dataFim,
     data_conclusao_extenso: dataFimExtenso || dataFim,
     grade_curricular: curriculumTextToHtml(getCertificateCurriculumText(certificado)),
@@ -109,8 +134,14 @@ export const buildEadCertificateTemplateVars = (
   return values;
 };
 
-export const prepareEadCertificateTemplate = (text: string, certificado: CertificadoAcademico): string =>
-  prepareEadCertificateIdentityTemplate(text, certificado);
+export const prepareEadCertificateTemplate = (text: string, certificado: CertificadoAcademico): string => {
+  const template = !readEadStudyStart(certificado)
+    ? text.replace(/<br\s*\/?>Período de realização · \{\{periodo\}\}\./gi, '')
+      .replace(/No período de \{\{data_inicio\}\} até \{\{data_fim\}\}\./gi,
+        'Início a comprovar. Conclusão em {{data_fim}}.')
+    : text;
+  return prepareEadCertificateIdentityTemplate(template, certificado);
+};
 
 export const replaceEadCertificateVars = (
   text: string,
@@ -179,4 +210,3 @@ export const replaceVarsPlain = (
   certificado: CertificadoAcademico,
   extraVars: Record<string, string> = {},
 ) => replaceCertificateVars(text, certificado, extraVars, false);
-

@@ -106,7 +106,7 @@ const DiplomaElementProperties: React.FC<DiplomaElementPropertiesProps> = ({
             <div className="bg-purple-50/50 p-3 rounded-xl border border-purple-100/50 space-y-2">
               <span className="block text-[8px] font-black text-purple-700 uppercase tracking-widest">Variáveis Suportadas</span>
               <div className="grid grid-cols-1 gap-1 text-[8px]">
-                {token('{{nome_aluno}}', 'Nome do Aluno')}{token('{{cpf}}', 'CPF')}{token('{{curso_nome}}', 'Curso')}{token('{{carga_horaria}}', 'Carga')}{token('{{data_inicio}}', 'Início')}{token('{{data_fim}}', 'Fim')}{token('{{periodo}}', 'Período')}{token('{{data_conclusao}}', 'Data')}{token('{{codigo_certificado}}', 'Código')}{token('{{url_validacao}}', 'Link de Validação')}
+                {token('{{nome_aluno}}', 'Nome do Aluno')}{token('{{cpf}}', 'CPF')}{token('{{curso_nome}}', 'Curso')}{token('{{carga_horaria}}', 'Carga')}{token('{{data_inicio}}', 'Início')}{token('{{data_fim}}', 'Fim')}{token('{{periodo}}', 'Período')}{token('{{data_conclusao}}', 'Conclusão')}{token('{{data_emissao}}', 'Emissão (EAD)')}{token('{{codigo_certificado}}', 'Código')}{token('{{url_validacao}}', 'Link de Validação')}
               </div>
             </div>
           )}

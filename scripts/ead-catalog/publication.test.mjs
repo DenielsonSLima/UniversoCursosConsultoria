@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import {
   database, applyRevisions, alumno, unit, configFor, course as mathematicsCourse,
 } from '../../supabase/tests/ead_assessment_revision.harness.mjs';
+import { newTrustCertificateDatabase, source } from '../../supabase/tests/ead_trust_certificate.fixture.mjs';
 import { generatePrivateStaging, generatePublication } from './publication-sql.mjs';
 
 const course = '99999999-9999-4999-8999-999999999999';
@@ -28,9 +29,9 @@ const keyring = { [revision.revisionId]: Object.fromEntries(
   [...revision.activities, ...revision.exam].map((q, i) => [q.id, { correctIndex: i % 4,
     explanation: `Fixture técnica ${q.id}, sem pretensão de resolução pedagógica.` }]),
 ) };
-const setup = async () => {
-  const db = await database();
-  await applyRevisions(db);
+const setup = async ({ protectQuestions = false } = {}) => {
+  const db = protectQuestions ? await newTrustCertificateDatabase() : await database();
+  if (!protectQuestions) await applyRevisions(db);
   await db.query('INSERT INTO cursos(id,nome,modalidade,ead_config,carga_horaria) VALUES($1,$2,$3,$4,120)',
     [course, revision.courseName, 'EAD', configFor('catalog-old')]);
   await db.query('INSERT INTO turmas(id,curso_id,polo_id) VALUES($1,$2,$3)', [turma, course, unit]);
@@ -38,6 +39,10 @@ const setup = async () => {
     [enrollment, alumno, turma, 'ATIVO']);
   await db.query('INSERT INTO ead_aluno_progresso(aluno_id,curso_id,progress) VALUES($1,$2,$3)',
     [alumno, course, { completedContentIds: ['catalog-old-lesson'], quizAnswers: {} }]);
+  if (protectQuestions) {
+    for (const name of ['20261128130000_ead_study_periods.sql', '20261128130010_ead_quiz_release_guard.sql',
+      '20261128130015_protect_ead_quiz_questions.sql']) await db.exec(await source(name));
+  }
   const baseline = (await db.query(`SELECT id,nome,carga_horaria,ead_config,
     md5(ead_config::text) AS config_hash FROM cursos WHERE id=$1`, [course])).rows
     .map(row => ({ ...row, carga_horaria: Number(row.carga_horaria) }));
@@ -46,6 +51,22 @@ const setup = async () => {
 const readProgress = async db => (await db.query(
   'SELECT ead_get_aluno_progress($1,$2) AS result', [alumno, course],
 )).rows[0].result;
+
+test('a primeira revisão congela as questões legadas vindas do cofre privado', async () => {
+  const { db, baseline } = await setup({ protectQuestions: true });
+  try {
+    assert.equal(baseline[0].ead_config.provas[0].questoes, undefined);
+    await db.exec(generatePrivateStaging(revision, baseline, keyring));
+    await db.exec(generatePublication([revision], baseline));
+    const frozen = (await db.query(`SELECT config #>> '{provas,0,questoes,0,id}' AS question_id
+      FROM internal_academic.ead_course_revisions WHERE course_id=$1 AND revision='legacy-20261027'`, [course])).rows[0];
+    assert.equal(frozen.question_id, 'catalog-old-q0');
+    const historical = await readProgress(db);
+    assert.equal(historical.assessmentRevision.current, 'legacy-20261027');
+    assert.equal(historical.summary.questionsTotal, 10);
+    assert.equal(historical.effectiveEadConfig.provas[0].questoes, undefined);
+  } finally { await db.close(); }
+});
 
 test('curso fora das matemáticas recebe revisão sem reescrever histórico nem expor gabarito', async () => {
   const { db, baseline } = await setup();
