@@ -1,3 +1,9 @@
+## [4.8.376] - 2026-11-28
+
+- A Secretaria pode antecipar a prova EAD com uma justificativa de 5 a 500 caracteres, conforme a validação exibida na tela.
+
+Histórico 4.8.306 preservado em [arquivo de versões](./changelog/2026-11-12-versao-4-8-306.md).
+
 ## [4.8.375] - 2026-11-28
 
 - O portal EAD libera a prova após sete dias completos de estudo ou antecipação auditada da Secretaria.
@@ -489,9 +495,3 @@ Histórico 4.8.291: [11/11/2026](./changelog/2026-11-11-versao-4-8-291.md).
 - Gestão EAD permite liberar estudo por confiança durante 24 horas com autorização por turma e registro auditável.
 - Prazo único não dá baixa financeira, não altera a situação da matrícula e não libera certificado ou prova antes da confirmação do pagamento.
 - Portal respeita vencimento, contexto do aluno e acesso após pagamento; regressões isoladas cobrem expiração, repetição e tentativas não autorizadas.
-
-## [4.8.306] - 2026-11-12
-
-- Lista de notas emitidas compacta com CPF/CNPJ formatado, cidade e UF do tomador quando presentes no XML autorizado.
-- Indicadores preservam valores durante atualização da mesma consulta e mantêm cache breve de leitura na navegação, sem relaxar permissões ou isolamento.
-- Regressões de interação e XML verificam identificação, ações e limites de acesso; sem alteração de valores ou operação fiscal.

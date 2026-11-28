@@ -27,6 +27,7 @@ async function database() {
   await db.exec(await source('20261128130015_protect_ead_quiz_questions.sql'));
   await db.exec(await source('20261128130020_secretaria_ead_quiz_wait.sql'));
   await db.exec(await source('20261128130040_freeze_ead_certificate_study_period.sql'));
+  await db.exec(await source('20261128134500_fix_ead_quiz_early_release_reason_minimum.sql'));
   return db;
 }
 
@@ -49,13 +50,19 @@ test('Secretaria lista apenas carência em aberto e registra uma antecipação j
     assert.equal((await list(db, unit, 'curso de fora')).total, 0);
     assert.deepEqual((await list(db, unit, null, 2)).items, []);
     await assert.rejects(release(db, unit, enrollment, '   '), error => error.code === '22023');
-    const released = await release(db);
+    await assert.rejects(release(db, unit, enrollment, 'Erro'), error => error.code === '22023');
+    await assert.rejects(db.query(`
+      INSERT INTO internal_academic.ead_quiz_early_releases (matricula_id, granted_at, granted_by, reason)
+      VALUES ($1, now(), $2, 'Erro')
+    `, [enrollment, other]), error => error.code === '23514');
+    const released = await release(db, unit, enrollment, 'Prazo');
     assert.equal(released.matriculaId, enrollment);
-    assert.deepEqual(await release(db), released);
+    assert.deepEqual(await release(db, unit, enrollment, ' Prazo '), released);
     await assert.rejects(release(db, unit, enrollment, 'Outra justificativa.'), error => error.code === 'PT409');
     assert.equal((await list(db)).total, 0);
     assert.equal(await scalar(db, 'SELECT quiz_waiting AS value FROM internal_academic.ead_quiz_wait_state($1)', [enrollment]), false);
     assert.equal(await scalar(db, 'SELECT granted_by AS value FROM internal_academic.ead_quiz_early_releases'), other);
+    assert.equal(await scalar(db, 'SELECT reason AS value FROM internal_academic.ead_quiz_early_releases'), 'Prazo');
     assert.equal((await submit(db)).summary.quizPassed, true);
     const certificate = await scalar(db, "SELECT metadados->'eadStudyPeriod' AS value FROM public.certificados_academicos");
     assert.equal(certificate.source, 'VERIFIED_STUDY_ACTIVITY');
