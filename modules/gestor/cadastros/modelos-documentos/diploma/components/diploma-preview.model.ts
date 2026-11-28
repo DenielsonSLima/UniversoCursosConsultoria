@@ -11,7 +11,9 @@ export interface DiplomaPreviewProps {
   onChangeBlocks?: (blocks: any[]) => void;
 }
 
-export const hasCertificatePeriod = (text: string) => text.includes('{{periodo}}')
+const scheduledEadPeriodLine = 'Período previsto do curso · {{periodo_previsto_ead}}.';
+
+export const hasCertificatePeriod = (text: string) => text.includes('{{periodo_previsto_ead}}') || text.includes('{{periodo}}')
   || (text.includes('{{data_inicio}}') && text.includes('{{data_fim}}'));
 
 export const posicoesPadrao: Record<string, { x: number; y: number }> = {
@@ -53,7 +55,19 @@ export const posicoesPadrao: Record<string, { x: number; y: number }> = {
 };
 
 export const EAD_FRONT_TEXT =
-  'Certificamos que o(a) aluno(a) <strong>{{nome_aluno}}</strong>, inscrito(a) no CPF {{cpf}}, concluiu com êxito o curso de <strong>{{curso_nome}}</strong>, com carga horária de {{carga_horaria}} hora(s), na modalidade EAD, realizado através da Universo Cursos e Consultoria, cumprindo todas as atividades previstas, de acordo com a legislação aplicável à formação profissional (LDB nº 9.394/1996, Decreto nº 5.154/2004 e Portaria MEC nº 1.015/2018).<br /><br />No período de {{data_inicio}} até {{data_fim}}.<br />Código do certificado: {{codigo_certificado}}';
+  `Certificamos que o(a) aluno(a) <strong>{{nome_aluno}}</strong>, inscrito(a) no CPF {{cpf}}, concluiu com êxito o curso de <strong>{{curso_nome}}</strong>, com carga horária de {{carga_horaria}} hora(s), na modalidade EAD, realizado através da Universo Cursos e Consultoria, cumprindo todas as atividades previstas, de acordo com a legislação aplicável à formação profissional (LDB nº 9.394/1996, Decreto nº 5.154/2004 e Portaria MEC nº 1.015/2018).<br /><br />${scheduledEadPeriodLine}<br />Código do certificado: {{codigo_certificado}}`;
+
+export const upgradeEadCertificatePeriodText = (text: string) => {
+  if (text === EAD_FRONT_TEXT.replace(scheduledEadPeriodLine, 'No período de {{data_inicio}} até {{data_fim}}.')) {
+    return EAD_FRONT_TEXT;
+  }
+  return text.replace(/Período de realização · \{\{periodo\}\}\./gi, scheduledEadPeriodLine);
+};
+
+export const ensureInstitutionalEadCertificatePeriod = (text: string) => {
+  const upgraded = upgradeEadCertificatePeriodText(text);
+  return upgraded.includes('{{periodo_previsto_ead}}') ? upgraded : `${upgraded}<br />${scheduledEadPeriodLine}`;
+};
 
 export const PRESENTIAL_FRONT_TEXT =
   'Certificamos que o(a) aluno(a) <strong>{{nome_aluno}}</strong>, inscrito(a) no CPF {{cpf}}, concluiu com êxito o curso presencial de <strong>{{curso_nome}}</strong>, com carga horária de {{carga_horaria}} hora(s), realizado através da Universo Cursos e Consultoria, cumprindo todas as atividades previstas, de acordo com a legislação aplicável à formação e qualificação profissional (LDB nº 9.394/1996 e Decreto nº 5.154/2004).<br /><br />No período de {{data_inicio}} até {{data_fim}}.<br />Código do certificado: {{codigo_certificado}}';

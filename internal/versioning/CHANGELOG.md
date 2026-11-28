@@ -1,5 +1,6 @@
 ## [4.8.376] - 2026-11-28
 
+- Os certificados EAD mostram o período previsto do curso, da matrícula até sete dias depois, e preservam os códigos de autenticação.
 - A Secretaria pode antecipar a prova EAD com uma justificativa de 5 a 500 caracteres, conforme a validação exibida na tela.
 
 Histórico 4.8.306 preservado em [arquivo de versões](./changelog/2026-11-12-versao-4-8-306.md).

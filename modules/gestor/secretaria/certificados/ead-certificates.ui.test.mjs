@@ -81,25 +81,15 @@ test('technical preparation preserves book, page, certificate number and require
   } finally { await page.close(); }
 });
 
-test('EAD rectification reviews its audit dates and explicitly confirms the replacement', async () => {
+test('EAD allows downloading a second copy without offering reissuance', async () => {
   const page = await browser.newPage();
   try {
     await page.goto(origin);
-    await page.evaluate(() => { window.testPeriodEvidence = {
-      inicioData: '2026-09-02', conclusaoData: '2026-10-07', referencia: 'Auditoria de progresso SINTETICA',
-    }; });
     await page.getByRole('button', { name: 'EAD / Online', exact: true }).click();
-    await page.getByRole('button', { name: 'Retificar período', exact: true }).click();
-    await page.getByText('07/10/2026', { exact: true }).waitFor();
-    assert.equal(await page.getByRole('button', { name: 'Emitir certificado retificado', exact: true }).isDisabled(), true);
-    await page.getByLabel('Motivo da retificação').fill('Conferência da auditoria de progresso');
-    await page.getByRole('button', { name: 'Emitir certificado retificado', exact: true }).click();
-    await page.getByText('CERT-SINTETICO-NOVO', { exact: true }).waitFor();
-    assert.deepEqual(await page.evaluate(() => window.testPeriodCorrection), {
-      certificateId: 'ead-finalizado', originalCode: 'CODE-ead-finalizado', startedOn: '2026-09-02',
-      evidenceReference: 'Auditoria de progresso SINTETICA', reason: 'Conferência da auditoria de progresso',
-      useProgressAudit: true,
-    });
+    await page.getByRole('button', { name: '2ª Via', exact: true }).click();
+    await page.getByTestId('certificate-document').waitFor();
+    assert.equal(await page.getByRole('button', { name: 'Retificar período', exact: true }).count(), 0);
+    assert.deepEqual(await page.evaluate(() => window.testIssuances), []);
   } finally { await page.close(); }
 });
 

@@ -4,5 +4,5 @@
   "stage": "stable",
   "revision": 385,
   "releasedAt": "2026-11-28",
-  "summary": "Corrige a antecipação de provas EAD para aceitar justificativas de 5 a 500 caracteres"
+  "summary": "Exibe o período previsto do curso nos certificados EAD e corrige a justificativa para antecipar a prova"
 }

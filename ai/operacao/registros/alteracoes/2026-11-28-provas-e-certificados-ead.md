@@ -2,7 +2,7 @@
 
 Data de trabalho · 28/11/2026  
 Versão · 4.8.375, revisão 384
-Estado · Publicação autorizada com ativação em duas etapas
+Estado · Versão 4.8.375 publicada, com a abordagem dos certificados revista na versão 4.8.376
 
 ## Etapas
 
@@ -40,6 +40,8 @@ As funções de início, Secretaria e certificação foram instaladas antes do d
 - Retificação · `20261128130801`
 - Preservação da validação pública · `20261128130803`
 
+A versão 4.8.376 substitui a reemissão individual pela exibição do período previsto, preserva os códigos originais e retira o componente `modules/gestor/secretaria/certificados/components/EadCertificatePeriodCorrection.tsx`. O componente continua no histórico da versão 4.8.375.
+
 ## Manifesto explícito
 
 - `.github/workflows/ead-trust-access.yml`
@@ -71,7 +73,6 @@ As funções de início, Secretaria e certificação foram instaladas antes do d
 - `modules/gestor/secretaria/certificados/certificate-identity-snapshot.test.mjs`
 - `modules/gestor/secretaria/certificados/certificate-identity-snapshot.ts`
 - `modules/gestor/secretaria/certificados/components/EadCertificateBlock.tsx`
-- `modules/gestor/secretaria/certificados/components/EadCertificatePeriodCorrection.tsx`
 - `modules/gestor/secretaria/certificados/components/certificado-preview.utils.ts`
 - `modules/gestor/secretaria/certificados/components/ead-certificate-template.test.mjs`
 - `modules/gestor/secretaria/certificados/ead-certificates.ui.fixture.mjs`
@@ -102,4 +103,4 @@ As funções de início, Secretaria e certificação foram instaladas antes do d
 - `supabase/tests/ead_quiz_release.isolated.test.mjs`
 - `supabase/tests/secretaria_ead_quiz_wait.isolated.test.mjs`
 
-Total: 59 arquivos.
+Total: 58 arquivos.

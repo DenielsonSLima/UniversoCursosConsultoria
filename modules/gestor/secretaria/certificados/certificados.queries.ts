@@ -17,8 +17,6 @@ export const certificadosKeys = {
   turmas: (modalidade: CertificadoModalidade, poloId?: string) =>
     [...certificadosKeys.all, 'turmas', modalidade, poloId || 'todos'] as const,
   templates: () => [...certificadosKeys.all, 'templates'] as const,
-  evidence: (certificateId: string, code: string | null) =>
-    [...certificadosKeys.all, 'ead-period-evidence', certificateId, code] as const,
 };
 
 export const useCertificadosQuery = (filters: CertificadosFilters) => useQuery({
@@ -61,28 +59,3 @@ export const useFinalizarCertificadoMutation = () => {
     },
   });
 };
-
-export const useRetificarPeriodoEadMutation = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: certificadosService.retificarPeriodoEad,
-    onSuccess: async (_, input) => {
-      await Promise.all([
-        queryClient.invalidateQueries({
-          queryKey: certificadosKeys.lists(),
-          predicate: query => (query.queryKey[2] as Partial<CertificadosFilters> | undefined)?.modalidade === 'EAD',
-        }),
-        queryClient.invalidateQueries({
-          queryKey: ['certificate-validation-snapshot', input.originalCode],
-          exact: true,
-        }),
-      ]);
-    },
-  });
-};
-
-export const useEadHistoricalStudyEvidence = (certificateId: string, code: string | null) => useQuery({
-  queryKey: certificadosKeys.evidence(certificateId, code),
-  queryFn: () => certificadosService.getEadHistoricalStudyEvidence(certificateId),
-  retry: false,
-});

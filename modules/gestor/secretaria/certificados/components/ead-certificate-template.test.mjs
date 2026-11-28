@@ -8,9 +8,13 @@ const requireTool = createRequire(process.env.EAD_UI_NODE_MODULES
   ? pathToFileURL(resolve(process.env.EAD_UI_NODE_MODULES, '../ead-template-test.mjs')) : import.meta.url);
 const { build } = requireTool('esbuild');
 const bundled = await build({ stdin: { contents: `export * from './certificado-preview.utils.ts';
-  export * from './ead-certificate-layout.ts';`, resolveDir: fileURLToPath(new URL('.', import.meta.url)) },
+  export * from './ead-certificate-layout.ts';
+  export { withCertificateEmissionSnapshot } from '../certificate-identity-snapshot.ts';
+  export { getBlocks } from '../../../cadastros/modelos-documentos/diploma/components/diploma-preview.blocks.ts';`,
+  resolveDir: fileURLToPath(new URL('.', import.meta.url)) },
   bundle: true, platform: 'node', format: 'esm', write: false });
-const { buildEadCertificateTemplateVars, replaceEadCertificateVars, hasEadCurriculumTableBlock, getCertificatePreviewPageCount } = await import(
+const { buildEadCertificateTemplateVars, replaceEadCertificateVars, hasEadCurriculumTableBlock, getCertificatePreviewPageCount,
+  getBlocks, withCertificateEmissionSnapshot } = await import(
   `data:text/javascript;base64,${Buffer.from(bundled.outputFiles[0].text).toString('base64')}`,
 );
 const certificate = {
@@ -44,6 +48,7 @@ test('the configured certificate distinguishes verified study dates and the issu
   const issued = { ...certificate, data_inscricao: '2026-09-01T13:00:00Z', emitido_em: '2026-10-10T01:30:00Z',
     metadados: { eadStudyPeriod: { startedOn: '2026-09-29', completedOn: '2026-10-08', source: 'VERIFIED_STUDY_ACTIVITY' } } };
   const values = buildEadCertificateTemplateVars(issued);
+  assert.equal(values.periodo_previsto_ead, '01/09/2026 a 08/09/2026');
   assert.equal(values.data_inicio, '29/09/2026');
   assert.equal(values.data_fim, '08/10/2026');
   assert.equal(values.periodo, '29/09/2026 até 08/10/2026');
@@ -51,15 +56,54 @@ test('the configured certificate distinguishes verified study dates and the issu
   assert.equal(values.data_emissao_extenso, '9 de outubro de 2026');
 });
 
-test('a legacy enrollment date does not fill a missing historical study date', () => {
-  const legacy = { ...certificate, data_inscricao: '2026-09-01T13:00:00Z' };
+test('a second copy renders its scheduled dates with the original code and actual issuance date', () => {
+  const legacy = withCertificateEmissionSnapshot({
+    ...certificate, data_inscricao: '2026-09-29T01:30:00Z', emitido_em: '2026-10-10T01:30:00Z',
+  }, { studentDocumentType: 'CIN' });
   const values = buildEadCertificateTemplateVars(legacy);
+  assert.equal(values.periodo_previsto_ead, '28/09/2026 a 05/10/2026');
+  assert.equal(values.data_conclusao, '08/10/2026');
+  assert.equal(values.data_emissao, '09/10/2026');
+  assert.equal(values.codigo_certificado, 'CERT-TESTE');
+  assert.equal(values.codigo_validacao, 'CERT-TESTE');
+  assert.ok(values.url_validacao.includes('CERT-TESTE'));
   assert.equal(values.data_inicio, 'A comprovar');
   assert.equal(values.periodo, 'Início a comprovar · conclusão em 08/10/2026');
   assert.equal(replaceEadCertificateVars('No período de {{data_inicio}} até {{data_fim}}.', legacy, values, false),
     'Início a comprovar. Conclusão em 08/10/2026.');
   assert.equal(replaceEadCertificateVars('Texto oficial.<br />Período de realização · {{periodo}}.', legacy, values, false),
-    'Texto oficial.');
+    'Texto oficial.<br />Período previsto do curso · 28/09/2026 a 05/10/2026.');
+});
+
+test('scheduled dates use calendar days without offsetting date-only enrollments', () => {
+  for (const [enrollment, expected] of [
+    ['2028-02-23', '23/02/2028 a 01/03/2028'],
+    ['2026-12-28T01:00:00Z', '27/12/2026 a 03/01/2027'],
+    [null, ''],
+    ['2026-02-31', ''],
+  ]) {
+    const issued = { ...certificate, data_inscricao: enrollment };
+    const values = buildEadCertificateTemplateVars(issued);
+    assert.equal(values.periodo_previsto_ead, expected);
+    if (expected === '') {
+      assert.equal(replaceEadCertificateVars('Texto.<br />Período previsto do curso · {{periodo_previsto_ead}}.', issued, values, false),
+        'Texto.');
+    }
+  }
+});
+
+test('the institutional EAD editor and PDF share the upgraded period line and preserve the configured block', () => {
+  const model = { id: 'certificado_ead', tipoCurso: 'Educação a Distância (EAD)' };
+  const original = { id: 'texto', type: 'text', page: 'frente', visible: true,
+    x: 19.26, y: 27.09, width: 790, fontFamily: 'serif', fontSize: 23 };
+  for (const content of ['Texto da instituição.', 'Texto da instituição.<br />Período de realização · {{periodo}}.']) {
+    const amended = getBlocks({ ...model, blocks: [{ ...original, content }] }).find(block => block.id === 'texto');
+    assert.deepEqual(amended, { ...original,
+      content: 'Texto da instituição.<br />Período previsto do curso · {{periodo_previsto_ead}}.' });
+    const issued = { ...certificate, data_inscricao: '2026-09-29' };
+    assert.equal(replaceEadCertificateVars(amended.content, issued, buildEadCertificateTemplateVars(issued), false),
+      'Texto da instituição.<br />Período previsto do curso · 29/09/2026 a 06/10/2026.');
+  }
 });
 
 test('table detection and page count use effective editor blocks, including a default history block', () => {

@@ -1,6 +1,7 @@
 import { prepareStudentIdentityTemplate } from '../../../../shared/utils/student-document-presentation';
 import { getDocumentValidationUrl } from '../../../../shared/document-validation/document-validation.url';
 import { resolveStudentIdentityDocument } from '../../../../shared/utils/studentIdentityDocument';
+import { upgradeEadCertificatePeriodText } from '../../../cadastros/modelos-documentos/diploma/components/diploma-preview.model';
 import { CertificadoAcademico } from '../certificados.types';
 import { curriculumTextToHtml, escapeCurriculumHtml, getCertificateCurriculumText, getEadCertificateCurriculum } from './ead-certificate-curriculum';
 import { buildEadCertificateIdentityVars, prepareEadCertificateIdentityTemplate } from './ead-certificate-identity';
@@ -14,7 +15,26 @@ const formatEadIssueDate = (date?: string | null, long = false) =>
     ...(long ? { day: 'numeric', month: 'long', year: 'numeric' } as const : {}),
   }) : '';
 
-export const readEadStudyStart = (certificate: CertificadoAcademico): string | null => {
+const enrollmentDayInSergipe = new Intl.DateTimeFormat('sv-SE', {
+  timeZone: 'America/Maceio',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+});
+
+const formatEadScheduledPeriod = (enrollmentDate: string | null) => {
+  if (!enrollmentDate) return '';
+  const enrollment = new Date(enrollmentDate);
+  if (!Number.isFinite(enrollment.getTime())) return '';
+  const startDay = /^\d{4}-\d{2}-\d{2}$/.test(enrollmentDate)
+    ? enrollmentDate : enrollmentDayInSergipe.format(enrollment);
+  const end = new Date(`${startDay}T00:00:00Z`);
+  if (end.toISOString().slice(0, 10) !== startDay) return '';
+  end.setUTCDate(end.getUTCDate() + 7);
+  return `${formatCertificateDate(startDay)} a ${formatCertificateDate(end.toISOString().slice(0, 10))}`;
+};
+
+const readEadStudyStart = (certificate: CertificadoAcademico): string | null => {
   const period = certificate.metadados?.eadStudyPeriod;
   if (!period || typeof period !== 'object' || Array.isArray(period)) return null;
   const { startedOn, completedOn, source } = period as Record<string, unknown>;
@@ -90,6 +110,7 @@ const buildCertificateTemplateVars = (certificado: CertificadoAcademico) => {
     periodo: isEad && !studyStart ? `Início a comprovar · conclusão em ${dataFim}`
       : dataInicio && dataFim ? `${dataInicio} até ${dataFim}` : dataFim,
     ...(isEad ? {
+      periodo_previsto_ead: formatEadScheduledPeriod(certificado.data_inscricao),
       data_emissao: formatEadIssueDate(certificado.emitido_em),
       data_emissao_extenso: formatEadIssueDate(certificado.emitido_em, true),
     } : {}),
@@ -135,11 +156,14 @@ export const buildEadCertificateTemplateVars = (
 };
 
 export const prepareEadCertificateTemplate = (text: string, certificado: CertificadoAcademico): string => {
-  const template = !readEadStudyStart(certificado)
-    ? text.replace(/<br\s*\/?>Período de realização · \{\{periodo\}\}\./gi, '')
-      .replace(/No período de \{\{data_inicio\}\} até \{\{data_fim\}\}\./gi,
-        'Início a comprovar. Conclusão em {{data_fim}}.')
-    : text;
+  let template = upgradeEadCertificatePeriodText(text);
+  if (!formatEadScheduledPeriod(certificado.data_inscricao)) {
+    template = template.replace(/(?:<br\s*\/?>)?Período previsto do curso · \{\{periodo_previsto_ead\}\}\./gi, '');
+  }
+  if (!readEadStudyStart(certificado)) {
+    template = template.replace(/No período de \{\{data_inicio\}\} até \{\{data_fim\}\}\./gi,
+      'Início a comprovar. Conclusão em {{data_fim}}.');
+  }
   return prepareEadCertificateIdentityTemplate(template, certificado);
 };
 
