@@ -27,7 +27,7 @@ const EadCertificatePeriodCorrection = ({ certificate, onClose }: Props) => {
   const error = mutation.error as { message?: string } | null;
   const close = () => { if (!mutation.isPending) onClose(); };
 
-  const submit = (event: React.FormEvent<HTMLFormElement>) => {
+  const submit = (event: React.FormEvent) => {
     event.preventDefault();
     const originalCode = certificate.codigo_validacao;
     if (!canSubmit || !originalCode) return;
