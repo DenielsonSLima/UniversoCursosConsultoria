@@ -56,6 +56,7 @@ As funções de início, Secretaria e certificação foram instaladas antes do d
 - `modules/aluno/cursos/eadTrustLearning.interaction.test.mjs`
 - `modules/aluno/cursos/hooks/useEadLearning.ts`
 - `modules/aluno/cursos/hooks/useEadStudyProgress.ts`
+- `modules/gestor/access-control.test.ts`
 - `modules/gestor/cadastros/modelos-documentos/diploma/components/DiplomaElementProperties.tsx`
 - `modules/gestor/cadastros/modelos-documentos/diploma/components/DiplomaPreview.tsx`
 - `modules/gestor/cadastros/modelos-documentos/diploma/components/diploma-preview.blocks.ts`
@@ -101,4 +102,4 @@ As funções de início, Secretaria e certificação foram instaladas antes do d
 - `supabase/tests/ead_quiz_release.isolated.test.mjs`
 - `supabase/tests/secretaria_ead_quiz_wait.isolated.test.mjs`
 
-Total: 58 arquivos.
+Total: 59 arquivos.

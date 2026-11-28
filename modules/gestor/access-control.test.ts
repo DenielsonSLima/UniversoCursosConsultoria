@@ -182,11 +182,13 @@ test('expande os seis grupos legados para as operações reais da Secretaria', (
     'fichas',
   ]);
 
-  assert.equal(legacy.length, SECRETARIA_ACCESS_OPTIONS.length - 1);
+  assert.equal(legacy.length, SECRETARIA_ACCESS_OPTIONS.length - 2);
   assert.equal(legacy.includes('alunos'), true);
   assert.equal(legacy.includes('cracha-periodo-eleitoral'), true);
   assert.equal(legacy.includes('certificados'), true);
   assert.equal(legacy.includes('assinatura-eletronica'), false);
+  assert.equal(legacy.includes('provas-ead'), false);
+  assert.deepEqual(normalizeSecretariaAccessTabs(['provas-ead']), ['provas-ead']);
 });
 
 test('descarta a permissão removida de rematrícula sem afetar o grupo legado', () => {
