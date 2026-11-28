@@ -14,19 +14,23 @@ export async function manualDatabase(options={}){
   ledger.indexOf('CREATE FUNCTION internal_financial_payments.append_payment('));
  await db.exec('CREATE SCHEMA IF NOT EXISTS internal_financial_payments');
  await db.exec(owner);
+ await db.exec(await source('20261128121107_activate_ead_checkout_after_manual_payment.sql'));
  return db;
 }
 export async function settleTrustManual(db,{receivableId=id(1),eventId=id(901),principalCents=10000,
- paymentCents=10000,discountCents=0,reversed=false,poloId=unit}={}){
+ paymentCents=10000,discountCents=0,reversed=false,poloId=unit,paymentMethod}={}){
  await db.exec('BEGIN');
  try{
-  await db.query("UPDATE public.contas_receber SET gateway_status='CANCELED' WHERE id=$1",[receivableId]);
-  await db.query("UPDATE public.payment_gateway_transactions SET remote_status='CANCELED' WHERE receivable_id=$1",[receivableId]);
   await db.query(`INSERT INTO public.financial_payment_events(id,source_kind,source_id,polo_id,
    original_cents,principal_cents,discount_cents,payment_cents,reversed_at)
    VALUES($1,'RECEIVABLE',$2,$3,10000,$4,$5,$6,CASE WHEN $7 THEN now() END)`,
    [eventId,receivableId,poloId,principalCents,discountCents,paymentCents,reversed]);
+  if(paymentMethod)await db.query('INSERT INTO public.financial_payment_components VALUES($1,1,$2,$3,$4)',
+   [eventId,id(100),paymentMethod,paymentCents]);
   await scalar(db,"SELECT internal_financial_payments.refresh_source('RECEIVABLE',$1) value",[receivableId]);
+  // The production confirmation records the receipt before projecting the bank cancellation.
+  await db.query("UPDATE public.payment_gateway_transactions SET remote_status='CANCELED' WHERE receivable_id=$1",[receivableId]);
+  await db.query("UPDATE public.contas_receber SET gateway_status='CANCELED' WHERE id=$1",[receivableId]);
   await db.exec('COMMIT');
  }catch(error){await db.exec('ROLLBACK');throw error;}
 }

@@ -13,6 +13,21 @@ const academicState=db=>scalar(db,`SELECT jsonb_build_object(
  'transaction',(SELECT remote_status FROM public.payment_gateway_transactions WHERE id=$5)) value`,
  [enrollment,id(2),id(4),id(1),id(3)]);
 
+test('a full manual card receipt activates the checkout EAD enrollment without a prior trust grant',async()=>{
+ const db=await manualDatabase();
+ try{
+  await seedFinancial(db,{managed:true});
+  await settleTrustManual(db,{paymentMethod:'CARTAO'});
+  assert.equal(await scalar(db,`SELECT status || ':' || forma_pagamento value
+   FROM public.contas_receber WHERE id=$1`,[id(1)]),'PAGO:CARTAO');
+  assert.deepEqual(await academicState(db),{
+   enrollment:'ATIVO',inscription:'PAGO',attempt:'PAID',bank:'CANCELED',transaction:'CANCELED',
+  });
+  assert.equal(await scalar(db,'SELECT internal_academic.ead_has_confirmed_payment($1) value',[enrollment]),true);
+  assert.equal(await scalar(db,'SELECT count(*)::int value FROM internal_academic.ead_trust_access_audit'),0);
+ }finally{await db.close();}
+});
+
 test('a paid amount with null bank evidence cannot pass the real managed academic trigger',async()=>{
  const db=await manualDatabase();
  try{
@@ -78,10 +93,20 @@ test('own completed manual-settlement audit is accepted without inventing a paid
  }finally{await db.close();}
 });
 
-test('manual confirmation remains bound to its audit, current attempt, exact inscription, transaction and academic polo',async()=>{
+test('the old enrollment-level projection still requires prior trust when there is no exact checkout attempt',async()=>{
+ const db=await manualDatabase();
+ try{
+  await seedFinancial(db);
+  await settleTrustManual(db);
+  assert.equal(await own(db),false);
+  assert.equal((await academicState(db)).enrollment,'PENDENTE');
+ }finally{await db.close();}
+});
+
+test('manual confirmation without trust still requires the current attempt, exact inscription, transaction and academic polo',async()=>{
  for(const [label,change] of [
-  ['missing audit',null],
   ['old purchase',"UPDATE public.ead_checkout_attempts SET is_current=false"],
+  ['payment under review',"UPDATE public.ead_checkout_attempts SET state='PAID_REVIEW'"],
   ['another inscription student',"UPDATE public.inscricoes_online SET aluno_id='99999999-9999-4999-8999-999999999999'"],
   ['another inscription enrollment',"UPDATE public.inscricoes_online SET matricula_id='99999999-9999-4999-8999-999999999999'"],
   ['another gateway inscription',"UPDATE public.payment_gateway_transactions SET inscricao_online_id='99999999-9999-4999-8999-999999999999'"],
@@ -93,8 +118,8 @@ test('manual confirmation remains bound to its audit, current attempt, exact ins
  ]){
   const db=await manualDatabase();
   try{
-   await seedFinancial(db,{managed:true});if(change!==null)await grant(db);
-   if(change)await db.exec(change);
+   await seedFinancial(db,{managed:true});
+   await db.exec(change);
    await settleTrustManual(db);
    assert.equal(await own(db),false,label);
    assert.equal(await scalar(db,'SELECT internal_academic.ead_has_confirmed_payment($1) value',[enrollment]),false,label);
